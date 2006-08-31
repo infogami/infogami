@@ -1,0 +1,16 @@
+$def with (versions)
+
+<h1>history</h1>
+
+<p>[<a href="$changequery(m=None)">view</a>][<a href="$changequery(m='edit')">edit</a>]</p>
+
+<table>
+<tr>
+  <th>when</th>
+</tr>
+$for v in versions:
+    <tr>
+      <td><a href="$changequery(m=None, v=numify(v.created))">$datestr(v.created)</a></td>
+      <td>
+    </tr>
+</table>

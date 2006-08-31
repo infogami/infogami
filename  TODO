@@ -1,0 +1,18 @@
+THINK
+    What should the URIs for old versions be?
+
+FEATURES
+    history
+        revert
+        diff
+    plugins
+        backlinks
+        recent changes
+        page list
+        random
+    
+    templates
+    users
+
+BUGS
+    keyencode redirects

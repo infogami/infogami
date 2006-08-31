@@ -1,0 +1,9 @@
+$def with (map)
+
+<table>
+$for row in map:
+    $ key = row[0]
+    $ a = row[1]
+    $ b = row[2]
+    <tr><th>$key</th><td>$(a or 'does not exist')</td><td>$(b or 'does not exist')</td></tr>
+</table>

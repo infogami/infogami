@@ -1,0 +1,7 @@
+$def with (d)
+
+<h1>$d.data.title</h1>
+
+<p>$:format(d.data.body)</p>
+
+<p>[<a href="$changequery(m='edit')">edit</a>][<a href="$changequery(m='history')">history</a>] last modified $datestr(d.created)</p>

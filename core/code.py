@@ -1,4 +1,5 @@
 import web
+from utils import delegate
 from config import db
 from view import render
 
@@ -6,7 +7,7 @@ def notfound():
     web.ctx.status = '404 Not Found'
     print render.special.do404()
 
-class view:
+class view (delegate.mode):
     def GET(self, site, path):
         try:
             d = db.get_version(site, path, web.input(v=None).v)
@@ -15,7 +16,7 @@ class view:
         
         print render.view(d)
 
-class edit:
+class edit (delegate.mode):
     def GET(self, site, path):
         try:
             d = db.get_version(site, path)
@@ -29,7 +30,7 @@ class edit:
         d = db.new_version(site, path, dict(title=i.title, body=i.body))
         return web.seeother(web.changequery(m=None))
 
-class history:
+class history (delegate.mode):
     def GET(self, site, path):
         d = db.get_all_versions(site, path)
         print render.history(d)

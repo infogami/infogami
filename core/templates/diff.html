@@ -1,9 +1,46 @@
-$def with (map)
+$def with (map, ta, tb)
 
-<table>
+<html>
+<head>
+<link rel="stylesheet" href="/static/diff.css" type="text/css">
+</head>
+<body>
+
+<h1>diff</h1>
+
+<p>[<a href="$changequery(m=None)">view</a>][<a href="$changequery(m='edit')">edit</a>]</p>
+
+<div class="diff">
+   <div id="legend">
+    <h3>Legend:</h3>
+    <dl>
+     <dt class="unmod"></dt><dd>Unmodified</dd>
+     <dt class="add"></dt><dd>Added</dd>
+     <dt class="rem"></dt><dd>Removed</dd>
+     <dt class="mod"></dt><dd>Modified</dd>
+    </dl>
+   </div>
+
+<table class="sidebyside" summary="Differences">
+    <colgroup class="l"><col class="lineno" /><col class="content" /></colgroup>
+    <colgroup class="r"><col class="lineno" /><col class="content" /></colgroup>
+    <thead>
+	<tr> 
+	    <th colspan="2">$ta</th> 
+	    <th colspan="2">$tb</th>
+	</tr>
+    </thead>
 $for row in map:
     $ key = row[0]
-    $ a = row[1]
-    $ b = row[2]
-    <tr><th>$key</th><td>$(a or 'does not exist')</td><td>$(b or 'does not exist')</td></tr>
+    $ ai = row[1]
+    $ a = row[2]
+    $ bi = row[3]
+    $ b = row[4]
+    <tbody class="$key">
+    <tr><th>$ai</th><td class='l'>$(a or '')</td><th>$bi</th><td class='r'>$(b or '')</td></tr>
+    </tbody>
 </table>
+</div>
+
+</body>
+</html>

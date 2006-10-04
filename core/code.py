@@ -1,8 +1,8 @@
 import web
 from utils import delegate
+from utils.diff import better_diff
 from config import db
 from view import render 
-from diffutil import better_diff
 
 def notfound():
     web.ctx.status = '404 Not Found'
@@ -40,11 +40,10 @@ class diff(delegate.mode):
     def GET(self, site, path):
         i = web.input(a=None, b=None)
 
-	a = db.get_version(site, path, i.a)
-	b = db.get_version(site, path, i.b)
-	alines = a.data.body.splitlines()
-	blines = b.data.body.splitlines()
-
-	map = better_diff(alines, blines)
-	print render.diff(map, a.created, b.created)
-
+        a = db.get_version(site, path, i.a)
+        b = db.get_version(site, path, i.b)
+        alines = a.data.body.splitlines()
+        blines = b.data.body.splitlines()
+        
+        map = better_diff(alines, blines)
+        print render.diff(map, a.created, b.created)

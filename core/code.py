@@ -20,7 +20,7 @@ class view (delegate.mode):
 class edit (delegate.mode):
     def GET(self, site, path):
         try:
-            d = db.get_version(site, path)
+            d = db.get_version(site, path, web.input(v=None).v)
         except IndexError:
             d = web.storage({'data': web.storage({'title': '', 'body': ''})})
         
@@ -36,14 +36,18 @@ class history (delegate.mode):
         d = db.get_all_versions(site, path)
         print render.history(d)
 
-class diff(delegate.mode):
+class diff (delegate.mode):
     def GET(self, site, path):
         i = web.input(a=None, b=None)
 
-        a = db.get_version(site, path, i.a)
-        b = db.get_version(site, path, i.b)
+        try:
+            a = db.get_version(site, path, i.a)
+            b = db.get_version(site, path, i.b)
+        except:
+            return notfound()
         alines = a.data.body.splitlines()
         blines = b.data.body.splitlines()
         
         map = better_diff(alines, blines)
         print render.diff(map, a.created, b.created)
+

@@ -13,6 +13,7 @@ $for v in versions:
     <tr>
       <td><input type="radio" name="a" value="$numify(v.created)"></td>
       <td><input type="radio" name="b" value="$numify(v.created)"></td>
+      <td><a href="$changequery(m='edit', v=numify(v.created))">edit</a></td>
       <td><a href="$changequery(m=None, v=numify(v.created))">$datestr(v.created)</a></td>
       <td>
     </tr>

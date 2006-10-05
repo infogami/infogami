@@ -55,5 +55,5 @@ class SQL(DB):
           JOIN page ON (version.page_id = page.id) \
           JOIN site ON (page.site_id = site.id) \
           WHERE site.url = $url AND page.path = $path \
-          ORDER BY version.id", vars=locals())
+          ORDER BY version.id DESC", vars=locals())
         return d

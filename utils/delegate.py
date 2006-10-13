@@ -2,7 +2,7 @@ import glob, os.path
 import web, config
 
 urls = (
-  '/(.*)', 'page'
+  '/(.*)', 'item'
 )
 
 modes = {}
@@ -37,7 +37,7 @@ def delegate(f):
         return getattr(modes[what](), f)(config.site, path)
     return idelegate
 
-class page:
+class item:
     GET = delegate('GET')
     POST = delegate('POST')
 

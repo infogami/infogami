@@ -1,25 +1,11 @@
-THINK
-    What should the URIs for old versions be?
-
-WRITE
-    Design decisions
-        URIs for edit/history (query arguments)
-        URIs for old versions
-    Layout of the code base
-    Test cases
-
 FEATURES
-    history
-        revert
-        diff
-    plugins
-        backlinks
-        recent changes
-        page list
-        random
+    backlinks
+    recent changes
+    page list
+    random
     
     templates
     users
 
 BUGS
-    keyencode redirects
+    /foo%20bar should redirect to /foo_bar

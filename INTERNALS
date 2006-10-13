@@ -1,9 +1,0 @@
-The project is laid out like this:
-
-    db.py -- the database-independent data store interface
-    tests/ -- test cases
-
-Running the test cases:
-
-    $ python tests/all.py
-    Success.

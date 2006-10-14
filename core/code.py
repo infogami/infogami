@@ -1,7 +1,7 @@
 import web
 from utils import delegate
 from utils.diff import better_diff
-from config import db
+import db
 from view import render 
 
 def notfound():

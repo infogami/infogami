@@ -47,3 +47,9 @@ def _load():
     for plugin in glob.glob('plugins/*'):
         if os.path.isdir(plugin):
             __import__(plugin.replace('/', '.')+'.code', locals(), globals(), ['plugins'])
+
+def pickdb(g):
+    """Looks up the db type to use in config and exports its functions."""
+    instance = g[config.db_kind]()
+    for k in dir(instance):
+        g[k] = getattr(instance, k)

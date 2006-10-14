@@ -7,3 +7,6 @@ class SQL:
     def get_links(self, site, tail_path):
         tail = db.get_page(site, tail_path).id
         return web.select('backlinks_link', where="tail = $tail", vars=locals())
+
+from utils.delegate import pickdb
+pickdb(globals())

@@ -57,3 +57,6 @@ class SQL(DB):
           WHERE site.url = $url AND page.path = $path \
           ORDER BY version.id DESC", vars=locals())
         return d
+
+from utils.delegate import pickdb
+pickdb(globals())

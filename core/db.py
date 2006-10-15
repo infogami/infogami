@@ -1,4 +1,5 @@
 import web
+from utils import delegate
 
 class DB: pass
 
@@ -17,12 +18,14 @@ class SQL(DB):
         return web.insert('site', url=url)
 
     def new_page(self, url, path):
-        return web.insert('page', path=path, site_id=self.get_site(url))
+        return web.insert('page', path=path, site_id=self.get_site_id(url))
 
     def new_version(self, url, path, data):
-        page_id = self.get_page(url, path) or self.new_page(url, path)
+        page_id = self.get_page_id(url, path) or self.new_page(url, path)
         id = web.insert('version', page_id=page_id)
         self._set_data(id, data)
+        #XXX: is it a good idea to make this a decorator?
+        delegate.run_hooks('on_new_version', url, path, data['body'])
         return id
 
     def _version_query(self, date):
@@ -35,14 +38,14 @@ class SQL(DB):
             q += " AND date_trunc('second', created) = date_trunc('second', TIMESTAMP $date)"
         return q
     
-    def get_site(self, url):
+    def get_site_id(self, url):
         return web.select('site', where='url = $url', vars=locals())[0].id
     
-    def get_page(self, url, path):
-        d = web.query("SELECT page.id FROM page JOIN site ON page.site_id = site.id \
+    def get_page_id(self, url, path):
+        d = web.query("SELECT page.* FROM page JOIN site ON page.site_id = site.id \
           WHERE site.url = $url AND page.path = $path", vars=locals())
         return (d and d[0].id) or None
-    
+
     def get_version(self, url, path, date=None):
         date = date and web.dateify(date)
         vd = web.query(self._version_query(date), vars=locals())[0]

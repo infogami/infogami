@@ -31,6 +31,11 @@ class hook (object):
 
         return web.Storage(attrs)
 
+def run_hooks(name, *args):
+    items = hooks.get(name, [])
+    for i in items:
+        i(None, *args)
+
 def delegate(f):
     def idelegate(self, path):
         what = web.input().get('m', 'view')

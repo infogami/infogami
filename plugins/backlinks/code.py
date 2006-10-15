@@ -5,6 +5,11 @@ Creates a new set of database tables to keep track of link structure
 and creates a new `m=backlinks` to display the results.
 """
 from utils import delegate
+import db
+import web
+from core import view
+
+render = web.template.render('plugins/backlinks/templates/')
 
 class hooks:
     __metaclass__ = delegate.hook

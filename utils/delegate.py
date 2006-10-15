@@ -7,6 +7,7 @@ urls = (
 
 modes = {}
 hooks = {}
+pages = {}
 
 # I'm going to hell for this...
 
@@ -23,6 +24,18 @@ class metamode (type):
 class mode:
     __metaclass__ = metamode
 
+class metapage(type):
+    def __init__(self, *a, **kw):
+        type.__init__(self, *a, **kw)
+        pages[self.__name__] = self
+
+class page:
+    __metaclass__ = metapage
+
+# mode and page are just base classes.
+del modes['mode']
+del pages['page']
+
 class hook (object):
     def __new__(klass, name, bases, attrs):
         for thing in attrs:
@@ -37,6 +50,9 @@ def run_hooks(name, *args, **kwargs):
 
 def delegate(f):
     def idelegate(self, path):
+        if path in pages:
+            return getattr(pages[path](), f)(config.site)
+
         what = web.input().get('m', 'view')
         return getattr(modes[what](), f)(config.site, path)
     return idelegate

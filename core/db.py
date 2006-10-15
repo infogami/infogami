@@ -46,6 +46,15 @@ class SQL(DB):
           WHERE site.url = $url AND page.path = $path", vars=locals())
         return (d and d[0].id) or None
 
+    def get_random_page(self, url):
+        d = web.query("SELECT page.* FROM page JOIN site ON page.site_id = site.id \
+          WHERE site.url = $url ORDER BY RANDOM() LIMIT 1", vars=locals())
+        return (d and d[0]) or None
+    
+    def get_all_pages(self, url):
+        return web.query("SELECT page.* FROM page JOIN site ON page.site_id = site.id \
+          WHERE site.url = $url ORDER BY page.path", vars=locals())
+
     def get_version(self, url, path, date=None):
         date = date and web.dateify(date)
         vd = web.query(self._version_query(date), vars=locals())[0]

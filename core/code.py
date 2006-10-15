@@ -51,3 +51,13 @@ class diff (delegate.mode):
         map = better_diff(alines, blines)
         print render.diff(map, a.created, b.created)
 
+class random(delegate.page):
+    def GET(self, site):
+        p = db.random_page(site)
+        web.seeother(p.path)
+
+class pagelist(delegate.page):
+    def GET(self, site):
+        d = db.get_all_pages(site)
+        print render.pagelist(d)
+

@@ -54,7 +54,7 @@ class diff (delegate.mode):
 class random(delegate.page):
     def GET(self, site):
         p = db.random_page(site)
-        web.seeother(p.path)
+        return web.seeother(p.path)
 
 class pagelist(delegate.page):
     def GET(self, site):

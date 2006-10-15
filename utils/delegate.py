@@ -52,9 +52,9 @@ def delegate(f):
     def idelegate(self, path):
         if path in pages:
             return getattr(pages[path](), f)(config.site)
-
-        what = web.input().get('m', 'view')
-        return getattr(modes[what](), f)(config.site, path)
+        else:
+            what = web.input().get('m', 'view')
+            return getattr(modes[what](), f)(config.site, path)
     return idelegate
 
 class item:

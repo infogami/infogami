@@ -13,7 +13,7 @@ render = web.template.render('plugins/backlinks/templates/')
 
 class hooks:
     __metaclass__ = delegate.hook
-    def on_new_version(self, site, path, data):
+    def on_new_version(site, path, data):
         for link in view.do_links(data, links=True):
             db.new_link(site, path, link)
 

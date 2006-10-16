@@ -9,7 +9,7 @@ import db
 import web
 from core import view
 
-render = web.template.render('core/templates/')
+render = web.template.render('plugins/backlinks/templates/')
 
 class hooks:
     __metaclass__ = delegate.hook
@@ -19,4 +19,4 @@ class hooks:
 class backlinks (delegate.mode):
     def GET(self, site, path):
         links = db.get_links(site, path)
-        print render.pagelist(links)
+        print render.backlinks(links)

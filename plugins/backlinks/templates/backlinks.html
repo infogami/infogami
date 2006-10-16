@@ -1,0 +1,11 @@
+$def with (links)
+
+<h1>backlinks</h1>
+<p>[<a href="$changequery(m=None)">view</a>][<a href="$changequery(m='edit')">edit</a>]</p>
+
+<ul>
+$for link in links:
+    <li><a href="$link.path">$link.path</a></li>
+</ul>
+
+

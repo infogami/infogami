@@ -28,14 +28,18 @@ class SQL(DB):
         delegate.run_hooks('on_new_version', url, path, data['body'])
         return id
 
-    def _version_query(self, date):
+    def _version_query(self, date, before=None):
         q = "SELECT version.* FROM version JOIN page ON (version.page_id = page.id) \
           JOIN site ON (page.site_id = site.id) \
           WHERE site.url = $url AND page.path = $path"
         if date is None:
-            q += " ORDER BY created DESC LIMIT 1"
+            if before is None:
+                q += " ORDER BY created DESC LIMIT 1"
+            else:
+                q += " AND date_trunc('second', created) < date_trunc('second', TIMESTAMP $before) \
+                    ORDER BY created DESC LIMIT 1"
         else:
-            q += " AND date_trunc('second', created) = date_trunc('second', TIMESTAMP $date)"
+                q += " AND date_trunc('second', created) = date_trunc('second', TIMESTAMP $date)"
         return q
     
     def get_site_id(self, url):
@@ -55,9 +59,10 @@ class SQL(DB):
         return web.query("SELECT page.* FROM page JOIN site ON page.site_id = site.id \
           WHERE site.url = $url ORDER BY page.path", vars=locals())
 
-    def get_version(self, url, path, date=None):
+    def get_version(self, url, path, date=None, before=None):
         date = date and web.dateify(date)
-        vd = web.query(self._version_query(date), vars=locals())[0]
+        before = before and web.dateify(before)
+        vd = web.query(self._version_query(date, before), vars=locals())[0]
         dd = web.query("SELECT * FROM datum WHERE version_id = $vd.id", vars=locals())
         vd.data = self._get_data(dd)
         return vd

@@ -41,10 +41,14 @@ class diff (delegate.mode):
         i = web.input(a=None, b=None)
 
         try:
-            a = db.get_version(site, path, i.a)
-            b = db.get_version(site, path, i.b)
+            a = db.get_version(site, path, date=i.a)
+            if i.b is None:
+                b = db.get_version(site, path, before=i.a)
+            else:
+                b = db.get_version(site, path, date=i.b)
         except:
             return notfound()
+
         alines = a.data.body.splitlines()
         blines = b.data.body.splitlines()
         

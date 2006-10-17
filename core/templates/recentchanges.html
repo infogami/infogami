@@ -1,0 +1,22 @@
+$def with (changes)
+
+<h1>Recent Changes</h1>
+
+<table>
+<tr>
+  <th>when</th>
+  <th>path</th>
+  <th>actions</th>
+</tr>
+
+$for c in changes:
+    <tr>
+    <td>$datestr(c.created)</td>
+    <td>$c.path</td>
+    <td>
+    <a href="$c.path?m=view&v=$numify(c.created)">view</a>&nbsp;
+    <a href="$c.path?m=edit&v=$numify(c.created)">edit</a>
+    </td>
+    </tr>
+
+</table>

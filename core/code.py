@@ -61,3 +61,8 @@ class pagelist(delegate.page):
         d = db.get_all_pages(site)
         print render.pagelist(d)
 
+class recentchanges(delegate.page):
+    def GET(self, site):
+        d = db.get_recent_changes(site)
+        print render.recentchanges(d)
+        

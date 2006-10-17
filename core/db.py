@@ -70,5 +70,12 @@ class SQL(DB):
           ORDER BY version.id DESC", vars=locals())
         return d
 
+    def get_recent_changes(self, url):
+        return web.query("SELECT version.created, page.path FROM version \
+            JOIN page ON version.page_id = page.id \
+            JOIN site ON page.site_id = site.id \
+            WHERE site.url = $url \
+            ORDER BY version.created DESC", vars=locals())
+
 from utils.delegate import pickdb
 pickdb(globals())

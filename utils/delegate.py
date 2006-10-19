@@ -66,7 +66,7 @@ def _load():
     from core import code
     for plugin in glob.glob('plugins/*'):
         if os.path.isdir(plugin):
-            __import__(plugin.replace('/', '.')+'.code', locals(), globals(), ['plugins'])
+            __import__(plugin.replace('/', '.')+'.code', globals(), locals(), ['plugins'])
 
 def pickdb(g):
     """Looks up the db type to use in config and exports its functions."""

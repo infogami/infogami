@@ -18,7 +18,7 @@ def do_links(text, links=False):
         anchor = matches[1] or link
         link = keyencode(link)
         linksto.append(link)
-        return '<a class="internal" href="/%s">%s</a>' % (link, anchor)
+        return '<a class="internal" href="%s/%s">%s</a>' % (web.ctx.homepath, link, anchor)
 
     text = re.sub(link_re, mangle, text)
     if links: return linksto

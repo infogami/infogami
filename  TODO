@@ -1,8 +1,0 @@
-FEATURES
-    recent changes
-    
-    templates
-    users
-
-BUGS
-    /foo%20bar should redirect to /foo_bar

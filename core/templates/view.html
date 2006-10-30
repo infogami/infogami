@@ -1,7 +1,7 @@
 $def with (d)
 
-<h1><a href="$changequery(m='backlinks')">$d.data.title</a></h1>
+<h1>$d.data.title</h1>
 
 <p>$:format(d.data.body)</p>
 
-<p>[<a href="$changequery(m='edit')">edit</a>][<a href="$changequery(m='history')">history</a>] last modified $datestr(d.created)</p>
+<p>[<a href="$changequery(m='edit')">edit</a>][<a href="$changequery(m='history')">history</a>][<a href="$changequery(m='backlinks')">backlinks</a>] last modified $datestr(d.created)</p>

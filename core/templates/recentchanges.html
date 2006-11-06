@@ -14,9 +14,9 @@ $for c in changes:
     <td>$datestr(c.created)</td>
     <td>$c.path</td>
     <td>
-    <a href="/$c.path?m=view&v=$numify(c.created)">view</a>&nbsp;
-    <a href="/$c.path?m=edit&v=$numify(c.created)">edit</a>&nbsp;
-    <a href="/$c.path?m=diff&a=$numify(c.created)">diff</a>&nbsp;
+    <a href="$c.path?m=view&v=$numify(c.created)">view</a>&nbsp;
+    <a href="$c.path?m=edit&v=$numify(c.created)">edit</a>&nbsp;
+    <a href="$c.path?m=diff&a=$numify(c.created)">diff</a>&nbsp;
     </td>
     </tr>
 

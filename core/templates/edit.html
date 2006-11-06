@@ -1,11 +1,17 @@
-$def with (d)
+$def with (data, preview=False)
 
 <p>[<a href="$changequery(m=None)">view</a>][<a href="$changequery(m='history')">history</a>]</p>
 
+$if preview:
+    <p>$:format(data.body)</p>
+
 <form method="post" action="">
 
-<strong>title</strong> <input type="text" name="title" value="$d.data.title" /><br />
-<textarea name="body" rows="15" cols="80">$d.data.body</textarea>
+<strong>title</strong> <input type="text" name="title" value="$data.title" /><br />
+<textarea name="body" rows="15" cols="80">$data.body</textarea>
 
-<p><input type="submit" value="Save" /></p>
+<p>
+<input type="submit" name='clicked' value="Save" />
+<input type="submit" name='clicked' value="Preview" />
+</p>
 </form>

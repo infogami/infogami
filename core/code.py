@@ -19,17 +19,21 @@ class view (delegate.mode):
 
 class edit (delegate.mode):
     def GET(self, site, path):
+        i = web.input(v=None)
         try:
-            d = db.get_version(site, path, web.input(v=None).v)
+            data = db.get_version(site, path, i.v).data
         except IndexError:
-            d = web.storage({'data': web.storage({'title': '', 'body': ''})})
+            data = web.storage({'title': '', 'body': ''})
         
-        print render.edit(d)
+        print render.edit(data)
     
     def POST(self, site, path):
         i = web.input()
-        d = db.new_version(site, path, dict(title=i.title, body=i.body))
-        return web.seeother(web.changequery(m=None))
+        if i.clicked == 'Preview':
+            print render.edit(i, preview=True)
+        else:
+            d = db.new_version(site, path, dict(title=i.title, body=i.body))
+            return web.seeother(web.changequery(m=None))
 
 class history (delegate.mode):
     def GET(self, site, path):

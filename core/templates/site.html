@@ -1,0 +1,16 @@
+$def with (page, stylesheets=[])
+
+<html>
+<head>
+    <title>$page.title (infogami)</title>
+$for s in stylesheets:
+    <link rel="stylesheet" type="text/css" href="$s">
+</head>
+<body>
+<h1>Infogami</h1>
+<h2>$page.title</h2>
+<p>
+$:page
+</p>
+</body>
+</html>

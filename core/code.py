@@ -57,6 +57,7 @@ class diff (delegate.mode):
         blines = b.data.body.splitlines()
         
         map = better_diff(alines, blines)
+        delegate.add_stylesheet('/static/diff.css')
         return render.diff(map, a.created, b.created)
 
 class random(delegate.page):

@@ -51,8 +51,12 @@ def run_hooks(name, *args, **kwargs):
     for hook in hooks.get(name, []):
         hook(*args, **kwargs)
 
+def add_stylesheet(path):
+    web.ctx.stylesheets.append(path)
+
 def delegate(f):
     def idelegate(self, path):
+        web.ctx.stylesheets = []
         if path in pages:
             out = getattr(pages[path](), f)(config.site)
         else:
@@ -60,7 +64,8 @@ def delegate(f):
             out = getattr(modes[what](), f)(config.site, path)
 
         if out:
-            print render.site(out)
+            stylesheets = [web.ctx.homepath + s for s in web.ctx.stylesheets]
+            print render.site(out, stylesheets)
 
     return idelegate
 

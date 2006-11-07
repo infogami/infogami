@@ -73,3 +73,8 @@ def pickdb(g):
     instance = g[config.db_kind]()
     for k in dir(instance):
         g[k] = getattr(instance, k)
+
+
+wiki_processors = []
+def register_wiki_processor(p):
+    wiki_processors.append(p)

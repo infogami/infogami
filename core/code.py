@@ -6,7 +6,7 @@ from view import render
 
 def notfound():
     web.ctx.status = '404 Not Found'
-    print render.special.do404()
+    return render.special.do404()
 
 class view (delegate.mode):
     def GET(self, site, path):
@@ -15,7 +15,7 @@ class view (delegate.mode):
         except IndexError:
             return notfound()
         
-        print render.view(d)
+        return render.view(d)
 
 class edit (delegate.mode):
     def GET(self, site, path):
@@ -25,12 +25,12 @@ class edit (delegate.mode):
         except IndexError:
             data = web.storage({'title': '', 'body': ''})
         
-        print render.edit(data)
+        return render.edit(data)
     
     def POST(self, site, path):
         i = web.input()
         if i.clicked == 'Preview':
-            print render.edit(i, preview=True)
+            return render.edit(i, preview=True)
         else:
             d = db.new_version(site, path, dict(title=i.title, body=i.body))
             return web.seeother(web.changequery(m=None))
@@ -38,7 +38,7 @@ class edit (delegate.mode):
 class history (delegate.mode):
     def GET(self, site, path):
         d = db.get_all_versions(site, path)
-        print render.history(d)
+        return render.history(d)
 
 class diff (delegate.mode):
     def GET(self, site, path):
@@ -57,7 +57,7 @@ class diff (delegate.mode):
         blines = b.data.body.splitlines()
         
         map = better_diff(alines, blines)
-        print render.diff(map, a.created, b.created)
+        return render.diff(map, a.created, b.created)
 
 class random(delegate.page):
     def GET(self, site):
@@ -67,10 +67,10 @@ class random(delegate.page):
 class pagelist(delegate.page):
     def GET(self, site):
         d = db.get_all_pages(site)
-        print render.pagelist(d)
+        return render.pagelist(d)
 
 class recentchanges(delegate.page):
     def GET(self, site):
         d = db.get_recent_changes(site)
-        print render.recentchanges(d)
+        return render.recentchanges(d)
         

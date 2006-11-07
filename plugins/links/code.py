@@ -22,5 +22,5 @@ class hooks:
 class backlinks (delegate.mode):
     def GET(self, site, path):
         links = db.get_links(site, path)
-        print render.backlinks(links)
+        return render.backlinks(links)
 

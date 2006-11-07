@@ -1,6 +1,9 @@
 import glob, os.path
 import web, config
 
+# not very nice
+from core.view import render
+
 urls = (
   '/(.*)', 'item'
 )
@@ -51,10 +54,14 @@ def run_hooks(name, *args, **kwargs):
 def delegate(f):
     def idelegate(self, path):
         if path in pages:
-            return getattr(pages[path](), f)(config.site)
+            out = getattr(pages[path](), f)(config.site)
         else:
             what = web.input().get('m', 'view')
-            return getattr(modes[what](), f)(config.site, path)
+            out = getattr(modes[what](), f)(config.site, path)
+
+        if out:
+            print render.site(out)
+
     return idelegate
 
 class item:

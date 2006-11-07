@@ -1,9 +1,6 @@
 import glob, os.path
 import web, config
 
-# not very nice
-from core.view import render
-
 urls = (
   '/(.*)', 'item'
 )
@@ -55,6 +52,9 @@ def add_stylesheet(path):
     web.ctx.stylesheets.append(path)
 
 def delegate(f):
+    # not very nice
+    from core.view import render
+    
     def idelegate(self, path):
         web.ctx.stylesheets = []
         if path in pages:

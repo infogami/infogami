@@ -52,10 +52,10 @@ def add_stylesheet(path):
     web.ctx.stylesheets.append(path)
 
 def delegate(f):
-    # not very nice
-    from core.view import render
-    
     def idelegate(self, path):
+        # not very nice
+        from core.view import render
+
         web.ctx.stylesheets = []
         if path in pages:
             out = getattr(pages[path](), f)(config.site)

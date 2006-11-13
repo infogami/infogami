@@ -1,3 +1,4 @@
+#!/usr/bin/python
 import web
 
 if __name__ == "__main__":

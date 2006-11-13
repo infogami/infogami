@@ -4,17 +4,17 @@ from core import view
 from utils import delegate
 
 def get_links(text):
-    """Returns all links in the text."""
+    """Returns all distinct links in the text."""
     doc = view.get_doc(text)
     def is_link(e):
         return e.type == 'element'      \
             and e.nodeName == 'a'       \
             and e.attribute_values.get('class', '') == 'internal'
 
-    links = []
-    for a in  doc.find(is_link):
-       links.append(a.attribute_values['href']) 
-
+    links = set()
+    for a in doc.find(is_link):
+        links.add(a.attribute_values['href'])
+    
     return links
 
 link_re = web.re_compile(r'(?<!\\)\[\[(.*?)(?:\|(.*?))?\]\]')

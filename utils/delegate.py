@@ -1,5 +1,6 @@
 import glob, os.path
 import web, config
+import view
 
 urls = (
   '/(.*)', 'item'
@@ -48,24 +49,21 @@ def run_hooks(name, *args, **kwargs):
     for hook in hooks.get(name, []):
         hook(*args, **kwargs)
 
-def add_stylesheet(path):
-    web.ctx.stylesheets.append(path)
-
 def delegate(f):
     def idelegate(self, path):
-        # not very nice
-        from core.view import render
-
         web.ctx.stylesheets = []
         if path in pages:
             out = getattr(pages[path](), f)(config.site)
+        elif path.startswith('static/'):
+            # quickfix
+            out = None
+            print view.get_static_resource(path)
         else:
             what = web.input().get('m', 'view')
             out = getattr(modes[what](), f)(config.site, path)
 
         if out:
-            stylesheets = [web.ctx.homepath + s for s in web.ctx.stylesheets]
-            print render.site(out, stylesheets)
+            print view.render_site(out)
 
     return idelegate
 
@@ -86,7 +84,3 @@ def pickdb(g):
     for k in dir(instance):
         g[k] = getattr(instance, k)
 
-
-wiki_processors = []
-def register_wiki_processor(p):
-    wiki_processors.append(p)

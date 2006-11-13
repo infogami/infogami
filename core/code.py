@@ -1,8 +1,10 @@
 import web
+import utils
 from utils import delegate
-from utils.diff import better_diff
+from diff import better_diff
 import db
-from view import render 
+
+render = web.template.render('core/templates/', cache=False)
 
 def notfound():
     web.ctx.status = '404 Not Found'
@@ -57,7 +59,7 @@ class diff (delegate.mode):
         blines = b.data.body.splitlines()
         
         map = better_diff(alines, blines)
-        delegate.add_stylesheet('/static/diff.css')
+        utils.view.add_stylesheet('core', 'diff.css')
         return render.diff(map, a.created, b.created)
 
 class random(delegate.page):

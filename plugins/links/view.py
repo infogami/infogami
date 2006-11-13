@@ -1,7 +1,6 @@
 import re
 import web
-from core import view
-from utils import delegate
+from utils import view
 
 def get_links(text):
     """Returns all distinct links in the text."""
@@ -74,5 +73,5 @@ class wikilinks:
             new_nodes = self.process_links(node)
             self.replace_node(node, new_nodes)
 
-delegate.register_wiki_processor(wikilinks())
+view.register_wiki_processor(wikilinks())
 

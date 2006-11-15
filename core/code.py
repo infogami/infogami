@@ -1,9 +1,9 @@
 import web
 import utils
 from utils import delegate
+from utils import path
 from diff import better_diff
 import db
-import path
 
 render = web.template.render('core/templates/', cache=False)
 

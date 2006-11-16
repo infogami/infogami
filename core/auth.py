@@ -8,7 +8,7 @@ def setcookie(user):
     text = "%d,%s" % (user.id, t)
     text += "," + _digest(text)
     web.setcookie("infogami_session", text)
-    print >> web.debug, 'setcookie', text
+    #print >> web.debug, 'setcookie', text
     
 def get_user():
     """Returns the current user from the session."""
@@ -19,5 +19,5 @@ def get_user():
             return db.get_user(int(user_id))
 
 def _digest(text):
-    print >> web.debug, 'digest', text
+    #print >> web.debug, 'digest', text
     return hmac.HMAC(text).hexdigest()

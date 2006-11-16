@@ -3,6 +3,8 @@ import time, datetime
 import hmac
 import web
 
+SECRET = "ofu889e4i5kfem" #@@ make configurable
+
 def setcookie(user):
     t = datetime.datetime(*time.gmtime()[:6]).isoformat()
     text = "%d,%s" % (user.id, t)
@@ -20,4 +22,4 @@ def get_user():
 
 def _digest(text):
     #print >> web.debug, 'digest', text
-    return hmac.HMAC(text).hexdigest()
+    return hmac.HMAC(SECRET, text).hexdigest()

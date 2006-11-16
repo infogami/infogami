@@ -1,6 +1,8 @@
 import urllib
 import web
-from utils.view import keyencode
+
+def keyencode(text): return text.replace(' ', '_')
+def keydecode(text): return text.replace('_', ' ')
 
 def _changepath(new_path):
     return web.ctx.homepath + new_path + web.ctx.query

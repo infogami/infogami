@@ -2,9 +2,6 @@ from utils import markdown
 import web
 import os
 
-def keyencode(text): return text.replace(' ', '_')
-def keydecode(text): return text.replace('_', ' ')
-
 wiki_processors = []
 def register_wiki_processor(p):
     wiki_processors.append(p)

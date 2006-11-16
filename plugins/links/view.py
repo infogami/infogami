@@ -1,6 +1,6 @@
 import re
 import web
-from utils import view
+from utils import path, view
 
 def get_links(text):
     """Returns all distinct links in the text."""
@@ -12,7 +12,7 @@ def get_links(text):
 
     links = set()
     for a in doc.find(is_link):
-        links.add(a.attribute_values['href'])
+        links.add(path.keyencode(a.attribute_values['href']))
     
     return links
 

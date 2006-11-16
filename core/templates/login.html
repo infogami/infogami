@@ -1,0 +1,37 @@
+$def with (error=None)
+
+$var title: log in
+
+$if error:
+    <p><font color="red">$error</font></p>
+
+<p>If you have an infogami account, log in:</p>
+
+<form name="login" method="POST">
+    <label for="name">Username</label>
+    <input type="text" name="name"></br>
+
+    <label for="password">Password</label>
+    <input type="password" name="password"></br>
+
+    <input type="hidden" name="action" value="login">
+	<input type="submit" name="submit" value="Login">
+</form>
+
+<p>($:link("/login_reminder", "Forgot your username or password?")</p>
+
+<p>Otherwise, create a new account -- it just takes a second:</p>
+
+<form name="register" method="POST">
+    <label for="name">Username</label>
+    <input type="text" name="name"></br>
+
+    <label for="email">Email</label>
+    <input type="text" name="email"></br>
+
+    <label for="password">Password</label>
+    <input type="password" name="password"></br>
+
+    <input type="hidden" name="action" value="register">
+	<input type="submit" name="submit" value="Register">
+</form>

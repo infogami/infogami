@@ -1,4 +1,4 @@
-$def with (page, stylesheets=[])
+$def with (page, user, stylesheets=[])
 
 <html>
 <head>
@@ -8,6 +8,12 @@ $for s in stylesheets:
 </head>
 <body>
 <h1>Infogami</h1>
+$if user:
+    [Welcome $user.name | $:link('/logout', 'logout')]
+$else:
+    [$:link('/login', 'login')]
+
+<hr>
 <h2>$page.title</h2>
 <p>
 $:page

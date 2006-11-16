@@ -22,3 +22,10 @@ CREATE TABLE datum (
   key text,
   value text
 );
+
+CREATE TABLE login (
+  id serial primary key,
+  name text unique,
+  email text,
+  password text
+);

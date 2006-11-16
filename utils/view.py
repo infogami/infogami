@@ -17,11 +17,15 @@ def get_doc(text):
 def format(text): 
     return str(get_markdown(text))
 
+def link(path, text=None):
+	return '<a href="%s">%s</a>' % (web.ctx.homepath + path, text or path)
+
 web.template.Template.globals.update(dict(
   changequery = web.changequery,
   datestr = web.datestr,
   numify = web.numify,
   format = format,
+  link = link,
 ))
 
 render = web.template.render('utils/templates/')
@@ -31,7 +35,9 @@ def add_stylesheet(plugin, path):
     web.ctx.stylesheets.append(fullpath)
 
 def render_site(page):
-    return render.site(page, web.ctx.stylesheets)
+    from core import auth
+    user = auth.get_user()
+    return render.site(page, user, web.ctx.stylesheets)
 
 def get_static_resource(path):
     rx = web.re_compile(r'^static/([^/]*)/(.*)$')

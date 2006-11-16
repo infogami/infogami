@@ -4,6 +4,7 @@ from utils import delegate
 from utils import path
 from diff import better_diff
 import db
+import auth
 
 render = web.template.render('core/templates/', cache=False)
 
@@ -38,7 +39,8 @@ class edit (delegate.mode):
         if i.clicked == 'Preview':
             return render.edit(i, preview=True)
         else:
-            author=web.ctx.ip
+            user = auth.get_user()
+            author = (user and user.name) or web.ctx.ip
             d = db.new_version(site, path, author, dict(title=i.title, body=i.body))
             return web.seeother(web.changequery(m=None))
 
@@ -83,7 +85,33 @@ class recentchanges(delegate.page):
     def GET(self, site):
         d = db.get_recent_changes(site)
         return render.recentchanges(web.ctx.homepath, d)
-        
+    
+    
 class login(delegate.page):
     def GET(self, site):
-        pass
+        return render.login()
+
+    def POST(self, site):
+        i = web.input()
+        if i.action == 'register':
+            if db.get_user_by_name(i.name) is not None:
+                return render.login(error='That username already exists.')
+            else:
+                user = db.new_user(i.name, i.email, i.password)
+        else:
+            user = db.login(i.name, i.password)
+
+        if user is None:
+            return render.login(error='Invalid username or password.')
+
+        auth.setcookie(user)
+        web.seeother(web.ctx.homepath + "/")
+
+class logout(delegate.page):
+    def GET(self, site):
+        web.setcookie("infogami_session", "", expires=-1)
+        web.seeother(web.ctx.homepath + '/')
+
+class login_reminder(delegate.page):
+    def GET(self, site):
+        print "Not yet implemented."

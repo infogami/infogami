@@ -97,7 +97,7 @@ class login(delegate.page):
             if db.get_user_by_name(i.name) is not None:
                 return render.login(error='That username already exists.')
             else:
-                user = db.new_user(i.name, i.email, i.password)
+                user = db.get_user(db.new_user(i.name, i.email, i.password))
         else:
             user = db.login(i.name, i.password)
 

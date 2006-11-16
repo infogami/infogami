@@ -1,4 +1,4 @@
-$def with (changes)
+$def with (root, changes)
 
 $var title: Recent Changes
 
@@ -6,6 +6,7 @@ $var title: Recent Changes
 <tr>
   <th>when</th>
   <th>path</th>
+  <th>who</th>
   <th>actions</th>
 </tr>
 
@@ -13,10 +14,11 @@ $for c in changes:
     <tr>
     <td>$datestr(c.created)</td>
     <td>$c.path</td>
+    <td>$c.author</td>
     <td>
-    <a href="$c.path?m=view&v=$numify(c.created)">view</a>&nbsp;
-    <a href="$c.path?m=edit&v=$numify(c.created)">edit</a>&nbsp;
-    <a href="$c.path?m=diff&a=$numify(c.created)">diff</a>&nbsp;
+    <a href="$root/$c.path?m=view&v=$numify(c.created)">view</a>&nbsp;
+    <a href="$root/$c.path?m=edit&v=$numify(c.created)">edit</a>&nbsp;
+    <a href="$root/$c.path?m=diff&a=$numify(c.created)">diff</a>&nbsp;
     </td>
     </tr>
 

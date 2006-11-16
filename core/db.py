@@ -20,11 +20,10 @@ class SQL(DB):
     def new_page(self, url, path):
         return web.insert('page', path=path, site_id=self.get_site_id(url))
 
-    def new_version(self, url, path, data):
+    def new_version(self, url, path, author, data):
         page_id = self.get_page_id(url, path) or self.new_page(url, path)
-        id = web.insert('version', page_id=page_id)
+        id = web.insert('version', page_id=page_id, author=author)
         self._set_data(id, data)
-        #XXX: is it a good idea to make this a decorator?
         delegate.run_hooks('on_new_version', url, path, data['body'])
         return id
 
@@ -76,7 +75,7 @@ class SQL(DB):
         return d
 
     def get_recent_changes(self, url):
-        return web.query("SELECT version.created, page.path FROM version \
+        return web.query("SELECT version.author, version.created, page.path FROM version \
             JOIN page ON version.page_id = page.id \
             JOIN site ON page.site_id = site.id \
             WHERE site.url = $url \

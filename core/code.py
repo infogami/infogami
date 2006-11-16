@@ -38,7 +38,8 @@ class edit (delegate.mode):
         if i.clicked == 'Preview':
             return render.edit(i, preview=True)
         else:
-            d = db.new_version(site, path, dict(title=i.title, body=i.body))
+            author=web.ctx.ip
+            d = db.new_version(site, path, author, dict(title=i.title, body=i.body))
             return web.seeother(web.changequery(m=None))
 
 class history (delegate.mode):
@@ -81,5 +82,8 @@ class pagelist(delegate.page):
 class recentchanges(delegate.page):
     def GET(self, site):
         d = db.get_recent_changes(site)
-        return render.recentchanges(d)
+        return render.recentchanges(web.ctx.homepath, d)
         
+class login(delegate.page):
+    def GET(self, site):
+        pass

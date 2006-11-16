@@ -12,6 +12,7 @@ CREATE TABLE page (
 CREATE TABLE version (
   id serial primary key,
   page_id int references page,
+  author text,
   created timestamp default (current_timestamp at time zone 'utc')
 );
 

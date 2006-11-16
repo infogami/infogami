@@ -7,6 +7,10 @@ $var title: history
 <form>
 <table>
 <tr>
+  <th></th>
+  <th></th>
+  <th></th>
+  <th>who</th>
   <th>when</th>
 </tr>
 $for v in versions:
@@ -14,6 +18,7 @@ $for v in versions:
       <td><input type="radio" name="a" value="$numify(v.created)"></td>
       <td><input type="radio" name="b" value="$numify(v.created)"></td>
       <td><a href="$changequery(m='edit', v=numify(v.created))">edit</a></td>
+      <td>$v.author</td>
       <td><a href="$changequery(m=None, v=numify(v.created))">$datestr(v.created)</a></td>
       <td>
     </tr>

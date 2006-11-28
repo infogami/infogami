@@ -49,27 +49,38 @@ def run_hooks(name, *args, **kwargs):
     for hook in hooks.get(name, []):
         hook(*args, **kwargs)
 
-def delegate(f):
-    def idelegate(self, path):
-        web.ctx.stylesheets = []
-        if path in pages:
-            out = getattr(pages[path](), f)(config.site)
-        elif path.startswith('static/'):
-            # quickfix
-            out = None
-            print view.get_static_resource(path)
-        else:
-            what = web.input().get('m', 'view')
-            out = getattr(modes[what](), f)(config.site, path)
+def _keyencode(text): return text.replace(' ', '_')
+def _changepath(new_path):
+    return web.ctx.homepath + new_path + web.ctx.query
 
-        if out:
-            print view.render_site(out)
+def delegate(path):
+    method = web.ctx.method
+    web.ctx.stylesheets = []
+    if path in pages:
+        out = getattr(pages[path](), method)(config.site)
+    elif path.startswith('static/'):
+        # quickfix
+        out = None
+        print view.get_static_resource(path)
+    else: # mode
+        normalized = _keyencode(path)
+        if path != normalized:
+            if method == 'GET':
+                return web.seeother(_changepath('/' + normalized))
+            elif method == 'POST':
+                return web.notfound()
 
-    return idelegate
+        what = web.input().get('m', 'view')
+        out = getattr(modes[what](), method)(config.site, path)
+
+    if out:
+        print view.render_site(out)
 
 class item:
-    GET = delegate('GET')
-    POST = delegate('POST')
+    def handle(self, path): return delegate(path)
+        
+    GET = handle
+    POST = handle
 
 def _load():
     """Imports the files from the plugins directory."""

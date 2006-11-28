@@ -77,10 +77,7 @@ def delegate(path):
         print view.render_site(out)
 
 class item:
-    def handle(self, path): return delegate(path)
-        
-    GET = handle
-    POST = handle
+    GET = POST = lambda self, path: delegate(path)
 
 def _load():
     """Imports the files from the plugins directory."""

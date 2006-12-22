@@ -34,10 +34,19 @@ def add_stylesheet(plugin, path):
     fullpath = "%s/static/%s/%s" % (web.ctx.homepath, plugin, path)
     web.ctx.stylesheets.append(fullpath)
 
-def render_site(page):
+def get_site_template(url):
+    from core import db
+    try:
+        d = db.get_version(url, "sitetemplate")
+        t = "$def with (page, user, stylesheets=[])\n" + d.data.body
+        return web.template.Template(t)
+    except:
+        return render.site
+
+def render_site(url, page):
     from core import auth
     user = auth.get_user()
-    return render.site(page, user, web.ctx.stylesheets)
+    return get_site_template(url)(page, user, web.ctx.stylesheets)
 
 def get_static_resource(path):
     rx = web.re_compile(r'^static/([^/]*)/(.*)$')

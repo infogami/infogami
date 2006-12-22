@@ -74,7 +74,7 @@ def delegate(path):
         out = getattr(modes[what](), method)(config.site, path)
 
     if out:
-        print view.render_site(out)
+        print view.render_site(config.site, out)
 
 class item:
     GET = POST = lambda self, path: delegate(path)

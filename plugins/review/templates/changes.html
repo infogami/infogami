@@ -19,5 +19,7 @@ $for c in changes:
     <a href="$root/$c.path?m=review&a=$c.reviewed_revision&b=$c.revision">review</a>
     </td>
     </tr>
+$else:
+    <tr><td colspan="3"><em>No new changes to review.</em></td></tr>
 </table>
 

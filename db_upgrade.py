@@ -53,10 +53,7 @@ def add_login_table():
           password text
         )""")
 
-@upgrade
-def add_version_revision():
-    """revision column is added to version table."""
-    web.query("ALTER TABLE version ADD COLUMN revision int")
+def initialize_revisions():
     pages = web.query("SELECT * FROM page")
 
     for p in pages:
@@ -65,6 +62,12 @@ def add_version_revision():
         for i, v in enumerate(versions):
             id = v.id
             web.update('version', where='id=$id', revision=i+1, vars=locals())
+
+@upgrade
+def add_version_revision():
+    """revision column is added to version table."""
+    web.query("ALTER TABLE version ADD COLUMN revision int")
+    initialize_revisions()
 
 if __name__ == "__main__":
     web.load()

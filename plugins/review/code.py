@@ -20,18 +20,6 @@ def require_login(f):
         return f(*a, **kw)
     return g
 
-class hooks:
-    __metaclass__ = delegate.hook
-
-    def on_new_version(site, path, data):
-        user = core.auth.get_user()
-
-        if user:
-            # editing a page also means reviewing it.
-            #@@ query should be avoided
-            v = core.db.get_version(site, path)
-            db.review(site, path, user.id, v.revision)
-
 class changes (delegate.page):
     @require_login
     def GET(self, site):

@@ -1,0 +1,9 @@
+$def with (path, diff, a, b)
+
+$var title: review $path
+
+<p>
+[<a href="$changequery(m='approve', a=None, b=None, v=b)">approve</a>]
+[<a href="$changequery(m='edit', a=None, b=None, v=b - 1)">revert</a>]</p>
+
+$:diff

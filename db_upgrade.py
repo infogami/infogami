@@ -36,11 +36,6 @@ def apply_upgrades():
         web.commit()
         print 'upgrade successful.'
 
-@upgrade
-def add_metadata():
-    """metadata table is added to database to keep track of db version."""
-    web.query("CREATE TABLE metadata (id serial primary key, version int)"); 
-    web.insert("metadata", version=0)
 
 @upgrade
 def add_login_table():
@@ -52,6 +47,12 @@ def add_login_table():
           email text,
           password text
         )""")
+
+@upgrade
+def add_metadata():
+    """metadata table is added to database to keep track of db version."""
+    web.query("CREATE TABLE metadata (id serial primary key, version int)"); 
+    web.insert("metadata", version=0)
 
 def initialize_revisions():
     pages = web.query("SELECT * FROM page")
@@ -62,28 +63,6 @@ def initialize_revisions():
         for i, v in enumerate(versions):
             id = v.id
             web.update('version', where='id=$id', revision=i+1, vars=locals())
-
-@upgrade
-def add_login_table():
-    """add login table"""
-    web.query("""
-        CREATE TABLE login (
-          id serial primary key,
-          name text unique,
-          email text,
-          password text
-        )""")
-
-@upgrade
-def add_login_table():
-    """add login table"""
-    web.query("""
-        CREATE TABLE login (
-          id serial primary key,
-          name text unique,
-          email text,
-          password text
-        )""")
 
 @upgrade
 def add_version_revision():
@@ -104,18 +83,6 @@ def add_review_table():
             unique (site_id, page_id, user_id)
         )""")
 
-@upgrade
-def add_review_table():
-    """adding review column to support user review for pages."""
-    web.query("""
-        CREATE TABLE review (
-            id serial primary key,
-            site_id int references site,
-            page_id int references page,
-            user_id int references login,
-            revision int,
-            unique (site_id, page_id, user_id)
-        )""")
 
 if __name__ == "__main__":
     web.load()

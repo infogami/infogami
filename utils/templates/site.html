@@ -3,17 +3,20 @@ $def with (page, user, stylesheets=[])
 <html>
 <head>
     <title>$page.title (infogami)</title>
+    <style type="text/css">
+    .login { text-align: right; }
+    .login, .status { color: lightgray }
+    .login :link, .login :visited, .status :link, .status :visited { color: gray; text-decoration: underline;}
+    </style>
 $for s in stylesheets:
     <link rel="stylesheet" type="text/css" href="$s">
 </head>
 <body>
-<h1>Infogami</h1>
 $if user:
-    [Welcome $user.name | $:link('/logout', 'logout')]
+    <p class="login"><strong>$user.name</strong> [$:link('/logout', 'log out')]</p>
 $else:
-    [$:link('/login', 'login')]
+    <p class="login">[$:link('/login', 'log in')]</p>
 
-<hr>
 <h2>$page.title</h2>
 <p>
 $:page

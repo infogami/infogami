@@ -75,6 +75,17 @@ def add_login_table():
         )""")
 
 @upgrade
+def add_login_table():
+    """add login table"""
+    web.query("""
+        CREATE TABLE login (
+          id serial primary key,
+          name text unique,
+          email text,
+          password text
+        )""")
+
+@upgrade
 def add_version_revision():
     """revision column is added to version table."""
     web.query("ALTER TABLE version ADD COLUMN revision int")

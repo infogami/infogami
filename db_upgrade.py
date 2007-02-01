@@ -64,10 +64,34 @@ def initialize_revisions():
             web.update('version', where='id=$id', revision=i+1, vars=locals())
 
 @upgrade
+def add_login_table():
+    """add login table"""
+    web.query("""
+        CREATE TABLE login (
+          id serial primary key,
+          name text unique,
+          email text,
+          password text
+        )""")
+
+@upgrade
 def add_version_revision():
     """revision column is added to version table."""
     web.query("ALTER TABLE version ADD COLUMN revision int")
     initialize_revisions()
+
+@upgrade
+def add_review_table():
+    """adding review column to support user review for pages."""
+    web.query("""
+        CREATE TABLE review (
+            id serial primary key,
+            site_id int references site,
+            page_id int references page,
+            user_id int references login,
+            revision int,
+            unique (site_id, page_id, user_id)
+        )""")
 
 if __name__ == "__main__":
     web.load()

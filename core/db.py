@@ -22,23 +22,28 @@ class SQL(DB):
     
     def new_version(self, url, path, author, data):
         page_id = self.get_page_id(url, path) or self.new_page(url, path)
-        id = web.insert('version', page_id=page_id, author=author)
+        web.transact()
+        try:
+            id = web.insert('version', page_id=page_id, author=author)
+            web.query('UPDATE version SET revision=(SELECT max(revision)+1 FROM version WHERE page_id=$page_id) WHERE id=$id', vars=locals())
+        except:
+            web.rollback()
+            raise
+        else:
+            web.commit()
+
         self._set_data(id, data)
         delegate.run_hooks('on_new_version', url, path, data['body'])
         return id
     
-    def _version_query(self, date, before=None):
+    def _version_query(self, revision=None):
         q = "SELECT version.* FROM version JOIN page ON (version.page_id = page.id) \
           JOIN site ON (page.site_id = site.id) \
           WHERE site.url = $url AND page.path = $path"
-        if date is None:
-            if before is None:
-                q += " ORDER BY created DESC LIMIT 1"
-            else:
-                q += " AND date_trunc('second', created) < date_trunc('second', TIMESTAMP $before) \
-                    ORDER BY created DESC LIMIT 1"
+        if revision is None:
+            q += " ORDER BY revision DESC LIMIT 1"
         else:
-                q += " AND date_trunc('second', created) = date_trunc('second', TIMESTAMP $date)"
+            q += " AND revision=$revision"
         return q
     
     def get_site_id(self, url):
@@ -58,10 +63,8 @@ class SQL(DB):
         return web.query("SELECT page.* FROM page JOIN site ON page.site_id = site.id \
           WHERE site.url = $url ORDER BY page.path", vars=locals())
     
-    def get_version(self, url, path, date=None, before=None):
-        date = date and web.dateify(date)
-        before = before and web.dateify(before)
-        vd = web.query(self._version_query(date, before), vars=locals())[0]
+    def get_version(self, url, path, revision=None):
+        vd = web.query(self._version_query(revision), vars=locals())[0]
         dd = web.query("SELECT * FROM datum WHERE version_id = $vd.id", vars=locals())
         vd.data = self._get_data(dd)
         return vd
@@ -75,7 +78,7 @@ class SQL(DB):
         return d
     
     def get_recent_changes(self, url):
-        return web.query("SELECT version.author, version.created, page.path FROM version \
+        return web.query("SELECT version.author, version.revision, version.created, page.path FROM version \
             JOIN page ON version.page_id = page.id \
             JOIN site ON page.site_id = site.id \
             WHERE site.url = $url \

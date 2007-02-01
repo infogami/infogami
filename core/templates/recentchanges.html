@@ -16,9 +16,9 @@ $for c in changes:
     <td>$c.path</td>
     <td>$c.author</td>
     <td>
-    <a href="$root/$c.path?m=view&v=$numify(c.created)">view</a>&nbsp;
-    <a href="$root/$c.path?m=edit&v=$numify(c.created)">edit</a>&nbsp;
-    <a href="$root/$c.path?m=diff&a=$numify(c.created)">diff</a>&nbsp;
+    <a href="$root/$c.path?m=view&v=$c.revision">view</a>&nbsp;
+    <a href="$root/$c.path?m=edit&v=$c.revision">edit</a>&nbsp;
+    <a href="$root/$c.path?m=diff&b=$c.revision">diff</a>&nbsp;
     </td>
     </tr>
 

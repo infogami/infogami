@@ -31,7 +31,7 @@ web.template.Template.globals.update(dict(
 render = web.template.render('utils/templates/')
 
 def add_stylesheet(plugin, path):
-    fullpath = "%s/static/%s/%s" % (web.ctx.homepath, plugin, path)
+    fullpath = "%s/files/%s/%s" % (web.ctx.homepath, plugin, path)
     web.ctx.stylesheets.append(fullpath)
 
 def get_site_template(url):
@@ -49,7 +49,7 @@ def render_site(url, page):
     return get_site_template(url)(page, user, web.ctx.stylesheets)
 
 def get_static_resource(path):
-    rx = web.re_compile(r'^static/([^/]*)/(.*)$')
+    rx = web.re_compile(r'^files/([^/]*)/(.*)$')
     result = rx.match(path)
     if not result:
         return web.notfound()
@@ -58,9 +58,9 @@ def get_static_resource(path):
 
     # this distinction will go away when core is also treated like a plugin.
     if plugin == 'core':
-        fullpath = "core/static/%s" % (path)
+        fullpath = "core/files/%s" % (path)
     else:
-        fullpath = "plugins/%s/static/%s" % (plugin, path)
+        fullpath = "plugins/%s/files/%s" % (plugin, path)
 
     if not os.path.exists(fullpath):
         return web.notfound()

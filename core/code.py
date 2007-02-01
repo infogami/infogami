@@ -1,7 +1,6 @@
 import web
 import utils
 from utils import delegate
-from utils import path
 from diff import better_diff
 import db
 import auth
@@ -48,23 +47,21 @@ class history (delegate.mode):
 
 class diff (delegate.mode):
     def GET(self, site, path):
-        i = web.input(a=None, b=None)
+        i = web.input("b", a=None)
+        i.a = i.a or int(i.b)-1
 
         try:
-            a = db.get_version(site, path, date=i.a)
-            if i.b is None:
-                b = db.get_version(site, path, before=i.a)
-            else:
-                b = db.get_version(site, path, date=i.b)
+            a = db.get_version(site, path, revision=i.a)
+            b = db.get_version(site, path, revision=i.b)
         except:
-            return notfound()
+            return web.badrequest()
 
         alines = a.data.body.splitlines()
         blines = b.data.body.splitlines()
         
         map = better_diff(alines, blines)
         utils.view.add_stylesheet('core', 'diff.css')
-        return render.diff(map, a.created, b.created)
+        return render.diff(map, a, b)
 
 class random(delegate.page):
     def GET(self, site):

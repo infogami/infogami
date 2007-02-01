@@ -1,4 +1,4 @@
-$def with (map, ta, tb)
+$def with (map, a, b)
 
 $var title: diff
 
@@ -11,8 +11,8 @@ $var title: diff
     <colgroup class="r"><col class="lineno" /><col class="content" /></colgroup>
     <thead>
           <tr> 
-              <th colspan="2">$ta</th> 
-              <th colspan="2">$tb</th>
+              <th colspan="2">$a.created (#$a.revision)</th> 
+              <th colspan="2">$b.created (#$b.revision)</th>
           </tr>
     </thead>
 $for row in map:

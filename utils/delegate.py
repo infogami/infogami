@@ -58,7 +58,7 @@ def delegate(path):
     web.ctx.stylesheets = []
     if path in pages:
         out = getattr(pages[path](), method)(config.site)
-    elif path.startswith('static/'):
+    elif path.startswith('files/'):
         # quickfix
         out = None
         print view.get_static_resource(path)

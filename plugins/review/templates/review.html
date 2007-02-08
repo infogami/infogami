@@ -1,9 +1,12 @@
-$def with (path, diff, a, b)
+$def with (path, diff, a, b, c)
 
 $var title: review $path
 
 <p>
-[<a href="$changequery(m='approve', a=None, b=None, v=b)">approve</a>]
-[<a href="$changequery(m='edit', a=None, b=None, v=b - 1)">revert</a>]</p>
+<form method="POST" action="$changequery(m=None)">
+<input type="submit" name='m' value="approve" />
+<input type="submit" name='m' value="revert"/>
+</form>
+</p>
 
 $:diff

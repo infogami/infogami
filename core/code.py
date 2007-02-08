@@ -5,7 +5,7 @@ from diff import better_diff
 import db
 import auth
 
-render = web.template.render('core/templates/', cache=False)
+render = utils.view.render.core
 
 def notfound():
     web.ctx.status = '404 Not Found'
@@ -100,7 +100,7 @@ class login(delegate.page):
         web.seeother(web.ctx.homepath + "/")
 
 class logout(delegate.page):
-    def GET(self, site):
+    def POST(self, site):
         web.setcookie("infogami_session", "", expires=-1)
         web.seeother(web.ctx.homepath + '/')
 

@@ -7,13 +7,25 @@ $def with (page, user, stylesheets=[])
     .login { text-align: right; }
     .login, .status { color: lightgray }
     .login :link, .login :visited, .status :link, .status :visited { color: gray; text-decoration: underline;}
+
+    .linky {
+        color: blue; background-color: transparent;
+        border: none; cursor: pointer;
+        font-size: 1em; margin: 0px; padding: 0px; vertical-align: bottom;
+        display: inline;
+        text-align: right;
+     }
     </style>
 $for s in stylesheets:
     <link rel="stylesheet" type="text/css" href="$s">
 </head>
 <body>
 $if user:
-    <p class="login"><strong>$user.name</strong> [$:link('/logout', 'log out')]</p>
+    <form action="$url('/logout')">
+    <p class="login"><strong>$user.name</strong>
+    [<button class="linky" type="submit">logout</button>]
+    </p>
+    </form>
 $else:
     <p class="login">[$:link('/login', 'log in')]</p>
 

@@ -11,8 +11,9 @@ import db
 import web
 import view
 import re
+import utils
 
-render = web.template.render('plugins/links/templates/')
+render = utils.view.render.links
 
 class hooks:
     __metaclass__ = delegate.hook

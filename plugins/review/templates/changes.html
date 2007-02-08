@@ -1,6 +1,6 @@
 $def with (root, changes)
 
-$var title: Unreviewd Changes
+$var title: Unreviewed Changes
 
 <table>
 <tr>
@@ -16,7 +16,7 @@ $for c in changes:
     <td>$(c.reviewed_revision or "-")</td>
     <td>$c.revision</td>
     <td>
-    <a href="$root/$c.path?m=review&a=$c.reviewed_revision&b=$c.revision">review</a>
+    <a href="$root/$c.path?m=review&a=$c.reviewed_revision&b=$c.revision&c=$c.revision">review</a>
     </td>
     </tr>
 $else:

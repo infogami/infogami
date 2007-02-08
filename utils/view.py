@@ -1,6 +1,7 @@
 from utils import markdown
 import web
 import os
+import config
 
 wiki_processors = []
 def register_wiki_processor(p):
@@ -18,7 +19,10 @@ def format(text):
     return str(get_markdown(text))
 
 def link(path, text=None):
-	return '<a href="%s">%s</a>' % (web.ctx.homepath + path, text or path)
+    return '<a href="%s">%s</a>' % (web.ctx.homepath + path, text or path)
+
+def url(path):
+    return web.ctx.homepath + path
 
 web.template.Template.globals.update(dict(
   changequery = web.changequery,
@@ -26,9 +30,18 @@ web.template.Template.globals.update(dict(
   numify = web.numify,
   format = format,
   link = link,
+  url = url,
 ))
 
-render = web.template.render('utils/templates/')
+render = web.storage()
+
+def load_templates(dir):
+    cache = getattr(config, 'cache_templates', True)
+
+    path = dir + "/templates/"
+    if os.path.exists(path):
+        name = os.path.basename(dir)
+        render[name] = web.template.render(path, cache=cache)
 
 def add_stylesheet(plugin, path):
     fullpath = "%s/files/%s/%s" % (web.ctx.homepath, plugin, path)
@@ -41,7 +54,7 @@ def get_site_template(url):
         t = "$def with (page, user, stylesheets=[])\n" + d.data.body
         return web.template.Template(t)
     except:
-        return render.site
+        return render.utils.site
 
 def render_site(url, page):
     from core import auth

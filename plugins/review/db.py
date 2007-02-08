@@ -1,9 +1,9 @@
-from core import db
+import core
 import web
 
 class SQL:
     def get_modified_pages(self, url, user_id):
-        site_id = db.get_site_id(url)
+        site_id = core.db.get_site_id(url)
 
         #@@ improve later
         d = web.query("""
@@ -24,7 +24,6 @@ class SQL:
         return d
 
     def approve(self, url, user_id, path, revision):
-        import core
         site_id = core.db.get_site_id(url)
         page_id = core.db.get_page_id(url, path)
 
@@ -38,6 +37,11 @@ class SQL:
             raise
         else:
             web.commit()
+
+    def revert(self, url, path, author, revision):
+	    """Reverts a page to an older version."""
+	    data = core.db.get_version(url, path, revision).data
+	    core.db.new_version(url, path, author, data)
 
 from utils.delegate import pickdb
 pickdb(globals())

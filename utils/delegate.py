@@ -80,11 +80,16 @@ class item:
     GET = POST = lambda self, path: delegate(path)
 
 def _load():
-    """Imports the files from the plugins directory."""
+    """Imports the files from the plugins directory and loads templates."""
+    view.load_templates('utils')
+    view.load_templates('core')
+
     from core import code
     for plugin in glob.glob('plugins/*'):
         if os.path.isdir(plugin):
+            view.load_templates(plugin)
             __import__(plugin.replace('/', '.')+'.code', globals(), locals(), ['plugins'])
+
 
 def pickdb(g):
     """Looks up the db type to use in config and exports its functions."""

@@ -36,6 +36,11 @@ def apply_upgrades():
         web.commit()
         print 'upgrade successful.'
 
+@upgrade
+def add_metadata():
+    """metadata table is added to database to keep track of db version."""
+    web.query("CREATE TABLE metadata (id serial primary key, version int)"); 
+    web.insert("metadata", version=0)
 
 @upgrade
 def add_login_table():
@@ -47,12 +52,6 @@ def add_login_table():
           email text,
           password text
         )""")
-
-@upgrade
-def add_metadata():
-    """metadata table is added to database to keep track of db version."""
-    web.query("CREATE TABLE metadata (id serial primary key, version int)"); 
-    web.insert("metadata", version=0)
 
 def initialize_revisions():
     pages = web.query("SELECT * FROM page")
@@ -83,6 +82,10 @@ def add_review_table():
             unique (site_id, page_id, user_id)
         )""")
 
+@upgrade
+def review_bug():
+    web.query("""ALTER TABLE version ALTER revision SET DEFAULT 0""")
+    initialize_revisions()
 
 if __name__ == "__main__":
     web.load()

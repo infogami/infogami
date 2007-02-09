@@ -21,7 +21,7 @@ $for s in stylesheets:
 </head>
 <body>
 $if user:
-    <form action="$url('/logout')">
+    <form action="$url('/logout')" method='POST'>
     <p class="login"><strong>$user.name</strong>
     [<button class="linky" type="submit">logout</button>]
     </p>

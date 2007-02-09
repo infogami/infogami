@@ -69,6 +69,7 @@ def initialize_revisions():
 @upgrade
 def add_version_revision():
     """revision column is added to version table."""
-    web.query("ALTER TABLE version ADD COLUMN revision int default 0")
+    web.query("ALTER TABLE version ADD COLUMN revision int")
+    web.query("ALTER TABLE version ALTER COLUMN revision SET DEFAULT 0")
     initialize_revisions()
 

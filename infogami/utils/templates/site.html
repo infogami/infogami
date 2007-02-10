@@ -14,7 +14,9 @@ $def with (page, user, stylesheets=[])
         font-size: 1em; margin: 0px; padding: 0px; vertical-align: bottom;
         display: inline;
         text-align: right;
-     }
+    }
+    form th { text-align: right; color: gray; font-weight: normal; text-transform: lowercase; }
+    form .wrong { color: red; font-weight: bold; }
     </style>
 $for s in stylesheets:
     <link rel="stylesheet" type="text/css" href="$s">

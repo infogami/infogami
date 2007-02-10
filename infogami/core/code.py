@@ -4,6 +4,7 @@ from infogami.utils import delegate
 from diff import better_diff
 import db
 import auth
+import forms
 
 render = utils.view.render.core
 
@@ -81,20 +82,23 @@ class recentchanges(delegate.page):
     
 class login(delegate.page):
     def GET(self, site):
-        return render.login()
+        return render.login(forms.login(), forms.register())
 
     def POST(self, site):
         i = web.input()
         if i.action == 'register':
-            if db.get_user_by_name(i.name) is not None:
-                return render.login(error='That username already exists.')
+            f = forms.register()
+            if not f.validates(i):
+                    return render.login(forms.login(), f)
             else:
-                user = db.get_user(db.new_user(i.name, i.email, i.password))
+                user = db.get_user(db.new_user(i.username, i.email, i.password))
         else:
-            user = db.login(i.name, i.password)
+            user = db.login(i.username, i.password)
 
         if user is None:
-            return render.login(error='Invalid username or password.')
+            f = forms.login()
+            f.validates(i)
+            return render.login(f, forms.register(), error='Invalid username or password.')
 
         auth.setcookie(user)
         web.seeother(web.ctx.homepath + "/")

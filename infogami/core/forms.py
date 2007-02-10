@@ -3,7 +3,8 @@ import db
 
 login = Form(
     Textbox('username'),
-    Password('password')
+    Password('password'),
+    Checkbox('remember', description='remember me')
 )
 
 register = Form(

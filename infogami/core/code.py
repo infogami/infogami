@@ -85,7 +85,7 @@ class login(delegate.page):
         return render.login(forms.login(), forms.register())
 
     def POST(self, site):
-        i = web.input()
+        i = web.input(remember=False)
         if i.action == 'register':
             f = forms.register()
             if not f.validates(i):
@@ -100,7 +100,7 @@ class login(delegate.page):
             f.validates(i)
             return render.login(f, forms.register(), error='Invalid username or password.')
 
-        auth.setcookie(user)
+        auth.setcookie(user, i.remember)
         web.seeother(web.ctx.homepath + "/")
 
 class logout(delegate.page):

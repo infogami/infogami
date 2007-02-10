@@ -5,12 +5,13 @@ import web
 
 SECRET = "ofu889e4i5kfem" #@@ make configurable
 
-def setcookie(user):
+def setcookie(user, remember=False):
     t = datetime.datetime(*time.gmtime()[:6]).isoformat()
     text = "%d,%s" % (user.id, t)
     text += "," + _digest(text)
-    web.setcookie("infogami_session", text)
-    #print >> web.debug, 'setcookie', text
+
+    expires = (remember and 3600*24*7) or ""
+    web.setcookie("infogami_session", text, expires=expires)
     
 def get_user():
     """Returns the current user from the session."""
@@ -21,5 +22,4 @@ def get_user():
             return db.get_user(int(user_id))
 
 def _digest(text):
-    #print >> web.debug, 'digest', text
     return hmac.HMAC(SECRET, text).hexdigest()

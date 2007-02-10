@@ -8,21 +8,30 @@ import glob
 modules = []
 
 class module:
-    def __init__(self, name):
+    def __init__(self, name, schema):
         self.name = name
+        self.schema = schema
         self.upgrades = []
         modules.append(self)
+
+        self.upgrade(self.setup)
 
     def get_version(self):
         try:
             name = self.name
-            d = web.query("SELECT * from metadata where name=$name", vars=locals())[0].version
+            return web.query("SELECT * from metadata where name=$name", vars=locals())[0].version
         except:
             return 0
 
     def upgrade(self, f):
         self.upgrades.append(f)
         return f
+
+    def setup(self):
+        """initial setup."""
+        tables = [t for t in self.schema.split(';') if t.strip() != '']
+        for t in tables:
+            web.query(t)
 
     def apply_upgrades(self):
         version = self.get_version()
@@ -36,19 +45,15 @@ class module:
         else:
             web.update("metadata", where="name=$name", version=len(self.upgrades), vars=locals())
 
-upgrade = module("system").upgrade
+schema = """
+CREATE TABLE metadata (
+    id serial primary key, 
+    name text unique,
+    version int
+);
+"""
 
-@upgrade
-def setup():
-    """setup db upgrade system."""
-
-    web.query("""
-        CREATE TABLE metadata (
-            id serial primary key, 
-            name text unique,
-            version int
-        )
-    """);
+upgrade = module("system", schema).upgrade
 
 def _load():
     import config

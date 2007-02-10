@@ -71,9 +71,9 @@ def get_static_resource(path):
 
     # this distinction will go away when core is also treated like a plugin.
     if plugin == 'core':
-        fullpath = "core/files/%s" % (path)
+        fullpath = "infogami/core/files/%s" % (path)
     else:
-        fullpath = "plugins/%s/files/%s" % (plugin, path)
+        fullpath = "infogami/plugins/%s/files/%s" % (plugin, path)
 
     if not os.path.exists(fullpath):
         return web.notfound()

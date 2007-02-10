@@ -20,11 +20,11 @@ class SQL(DB):
     def new_page(self, url, path):
         return web.insert('page', path=path, site_id=self.get_site_id(url))
     
-    def new_version(self, url, path, author, data):
+    def new_version(self, url, path, author_id, data):
         page_id = self.get_page_id(url, path) or self.new_page(url, path)
         web.transact()
         try:
-            id = web.insert('version', page_id=page_id, author=author)
+            id = web.insert('version', page_id=page_id, author_id=author_id, ip_address=web.ctx.ip)
             web.query('UPDATE version SET revision=(SELECT max(revision)+1 FROM version WHERE page_id=$page_id) WHERE id=$id', vars=locals())
         except:
             web.rollback()
@@ -37,8 +37,10 @@ class SQL(DB):
         return id
     
     def _version_query(self, revision=None):
-        q = "SELECT version.* FROM version JOIN page ON (version.page_id = page.id) \
+        q = "SELECT version.*, login.name as author FROM version \
+          JOIN page ON (version.page_id = page.id) \
           JOIN site ON (page.site_id = site.id) \
+          LEFT JOIN login ON (login.id = version.author_id) \
           WHERE site.url = $url AND page.path = $path"
         if revision is None:
             q += " ORDER BY revision DESC LIMIT 1"
@@ -70,17 +72,19 @@ class SQL(DB):
         return vd
     
     def get_all_versions(self, url, path):
-        return web.query("SELECT version.* FROM version \
+        return web.query("SELECT version.*, login.name AS author FROM version \
           JOIN page ON (version.page_id = page.id) \
           JOIN site ON (page.site_id = site.id) \
+          LEFT OUTER JOIN login ON (login.id = version.author_id) \
           WHERE site.url = $url AND page.path = $path \
           ORDER BY version.id DESC", vars=locals())
         return d
     
     def get_recent_changes(self, url):
-        return web.query("SELECT version.author, version.revision, version.created, page.path FROM version \
+        return web.query("SELECT login.name AS author, version.revision, version.created, version.ip_address, page.path FROM version \
             JOIN page ON version.page_id = page.id \
             JOIN site ON page.site_id = site.id \
+            LEFT OUTER JOIN login ON (login.id = version.author_id) \
             WHERE site.url = $url \
             ORDER BY version.created DESC", vars=locals())
     

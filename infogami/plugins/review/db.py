@@ -38,10 +38,10 @@ class SQL:
         else:
             web.commit()
 
-    def revert(self, url, path, author, revision):
+    def revert(self, url, path, author_id, revision):
 	    """Reverts a page to an older version."""
 	    data = core.db.get_version(url, path, revision).data
-	    core.db.new_version(url, path, author, data)
+	    core.db.new_version(url, path, author_id, data)
 
 from infogami.utils.delegate import pickdb
 pickdb(globals())

@@ -66,10 +66,10 @@ class approve (delegate.mode):
         user = core.auth.get_user()
 
         if i.b != i.c: # user requested for some reverts before approving this
-            db.revert(site, path, user.name, i.b)
+            db.revert(site, path, user.id, i.b)
             revision = i.c + 1 # one new version has been added by revert
         else:
-	        revision = i.b
+            revision = i.b
 
         db.approve(site, user.id, path, revision)
         web.seeother(web.changequery(m=None, a=None, b=None, c=None))

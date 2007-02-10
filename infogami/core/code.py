@@ -36,8 +36,8 @@ class edit (delegate.mode):
             return render.edit(i, preview=True)
         else:
             user = auth.get_user()
-            author = (user and user.name) or web.ctx.ip
-            d = db.new_version(site, path, author, dict(title=i.title, body=i.body))
+            author_id = user and user.id
+            d = db.new_version(site, path, author_id, dict(title=i.title, body=i.body))
             return web.seeother(web.changequery(m=None))
 
 class history (delegate.mode):

@@ -14,7 +14,7 @@ $for c in changes:
     <tr>
     <td>$datestr(c.created)</td>
     <td>$c.path</td>
-    <td>$c.author</td>
+    <td>$(c.author or c.ip_address)</td>
     <td>
     <a href="$root/$c.path?m=view&v=$c.revision">view</a>&nbsp;
     <a href="$root/$c.path?m=edit&v=$c.revision">edit</a>&nbsp;

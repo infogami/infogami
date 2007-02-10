@@ -66,3 +66,28 @@ def add_version_revision():
 def bad_revision_bug():
     """bug fix in initializing revisions"""
     initialize_revisions()
+
+@upgrade
+def author_ipaddress():
+    """author_id and ip_address instead of author in version table."""
+    versions = list(web.query('SELECT id, author FROM version'))
+    web.query('ALTER TABLE version DROP COLUMN author')
+    web.query('ALTER TABLE version ADD COLUMN author_id int references login')
+    web.query('ALTER TABLE version ADD COLUMN ip_address text')
+    
+    for v in versions:
+        if not v.author:
+            continue
+
+        if v.author[0] in '0123456789':
+            author_id = None
+            ip_address = v.author
+        else:
+            name = v.author
+            d = web.query('SELECT id FROM login WHERE name=$name', vars=locals())
+            author_id = (d and d[0].id) or None
+            ip_address = None
+                
+        id = v.id
+        web.update('version', where='id=$id', author_id=author_id, ip_address=ip_address, vars=locals())
+

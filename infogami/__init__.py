@@ -20,9 +20,12 @@ def _setup():
         
     web.webapi.internalerror = config.internalerror
     web.config.db_parameters = config.db_parameters
+    web.config.db_printing = config.db_printing
 
 def db_upgrade():
     from infogami.utils import dbsetup
+    _setup()
+    web.load()
     dbsetup.apply_upgrades()
 
 def start_server():

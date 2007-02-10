@@ -1,6 +1,6 @@
 import web
-import utils
-from utils import delegate
+from infogami import utils
+from infogami.utils import delegate
 from diff import better_diff
 import db
 import auth

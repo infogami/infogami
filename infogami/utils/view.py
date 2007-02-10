@@ -1,7 +1,7 @@
-from utils import markdown
+from infogami.utils import markdown
 import web
 import os
-import config
+from infogami import config
 
 wiki_processors = []
 def register_wiki_processor(p):
@@ -48,7 +48,7 @@ def add_stylesheet(plugin, path):
     web.ctx.stylesheets.append(fullpath)
 
 def get_site_template(url):
-    from core import db
+    from infogami.core import db
     try:
         d = db.get_version(url, "sitetemplate")
         t = "$def with (page, user, stylesheets=[])\n" + d.data.body
@@ -57,7 +57,7 @@ def get_site_template(url):
         return render.utils.site
 
 def render_site(url, page):
-    from core import auth
+    from infogami.core import auth
     user = auth.get_user()
     return get_site_template(url)(page, user, web.ctx.stylesheets)
 

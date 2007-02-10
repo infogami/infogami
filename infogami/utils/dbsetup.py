@@ -56,10 +56,9 @@ CREATE TABLE metadata (
 upgrade = module("system", schema).upgrade
 
 def _load():
-    import config
     web.load()
-    from core import schema
-    for f in glob.glob('plugins/*/schema.py'):
+    from infogami.core import schema
+    for f in glob.glob('infogami/plugins/*/schema.py'):
         module = f.replace('/', '.')[:-3]
         __import__(module, globals(), locals(), ['plugins'])
 

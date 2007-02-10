@@ -1,5 +1,5 @@
+from infogami.utils import delegate
 import web
-from utils import delegate
 
 class DB: pass
 
@@ -99,5 +99,5 @@ class SQL(DB):
         d = web.query("SELECT * FROM login WHERE name=$name", vars=locals())
         return (d and d[0]) or None
 
-from utils.delegate import pickdb
+from infogami.utils.delegate import pickdb
 pickdb(globals())

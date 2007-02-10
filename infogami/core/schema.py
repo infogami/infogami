@@ -3,7 +3,7 @@ db schema for infogami core.
 """
 
 import web
-from utils import dbsetup
+from infogami.utils import dbsetup
 
 schema = """
 CREATE TABLE site (

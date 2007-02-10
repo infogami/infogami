@@ -1,4 +1,4 @@
-import core
+from infogami import core
 import web
 
 class SQL:
@@ -43,5 +43,5 @@ class SQL:
 	    data = core.db.get_version(url, path, revision).data
 	    core.db.new_version(url, path, author, data)
 
-from utils.delegate import pickdb
+from infogami.utils.delegate import pickdb
 pickdb(globals())

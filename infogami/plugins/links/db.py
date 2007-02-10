@@ -1,4 +1,4 @@
-from core import db
+from infogami.core import db
 import web
 
 class SQL:
@@ -19,5 +19,5 @@ class SQL:
           AND backlinks.link = $path
         """, vars=locals())
 
-from utils.delegate import pickdb
+from infogami.utils.delegate import pickdb
 pickdb(globals())

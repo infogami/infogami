@@ -1,9 +1,10 @@
+from infogami.utils import view
+#Anand: fix later
+from infogami.utils.delegate import _keyencode as keyencode
+
 import re
 import web
-from utils import view
 
-#Anand: fix later
-from utils.delegate import _keyencode as keyencode
 
 def get_links(text):
     """Returns all distinct links in the text."""

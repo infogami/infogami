@@ -6,12 +6,14 @@ Creates a new set of database tables to keep track of them.
 Creates a new `m=backlinks` to display the results.
 """
 
-from utils import delegate
-import db
-import web
+from infogami.utils import delegate
+from infogami import utils
+
 import view
+import db
+
+import web
 import re
-import utils
 
 render = utils.view.render.links
 

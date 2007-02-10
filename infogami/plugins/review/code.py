@@ -5,12 +5,12 @@ Creates a new set of database tables to keep track of user reviews.
 Creates '/changes' page for displaying modifications since last review.
 """
 
-from utils import delegate, view
-from utils.view import render
+from infogami.utils import delegate, view
+from infogami.utils.view import render
+from infogami import core
 
 import db
 import web
-import core
 
 def require_login(f):
     def g(*a, **kw):

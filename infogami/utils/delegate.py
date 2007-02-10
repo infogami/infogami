@@ -1,5 +1,7 @@
 import glob, os.path
-import web, config
+import web
+
+from infogami import config
 import view
 
 urls = (
@@ -81,15 +83,15 @@ class item:
 
 def _load():
     """Imports the files from the plugins directory and loads templates."""
-    view.load_templates('utils')
-    view.load_templates('core')
+    view.load_templates('infogami/utils')
+    view.load_templates('infogami/core')
 
-    from core import code
-    for plugin in glob.glob('plugins/*'):
+    from infogami.core import code
+    
+    for plugin in glob.glob('infogami/plugins/*'):
         if os.path.isdir(plugin):
             view.load_templates(plugin)
             __import__(plugin.replace('/', '.')+'.code', globals(), locals(), ['plugins'])
-
 
 def pickdb(g):
     """Looks up the db type to use in config and exports its functions."""

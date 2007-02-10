@@ -1,8 +1,8 @@
 """
 db schema for links plugin.
 """
+from infogami.utils import dbsetup
 import web
-from utils import dbsetup
 
 schema = """
 CREATE TABLE backlinks (

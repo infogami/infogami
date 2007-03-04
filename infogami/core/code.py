@@ -15,11 +15,11 @@ def notfound():
 class view (delegate.mode):
     def GET(self, site, path):
         try:
-            d = db.get_version(site, path, web.input(v=None).v)
+            p = db.get_version(site, path, web.input(v=None).v)
         except IndexError:
             return notfound()
         
-        return render.view(d)
+        return render.view(p)
 
 class edit (delegate.mode):
     def GET(self, site, path):
@@ -27,18 +27,20 @@ class edit (delegate.mode):
         try:
             data = db.get_version(site, path, i.v).data
         except IndexError:
-            data = web.storage({'title': '', 'body': ''})
-        
-        return render.edit(data)
+            data = web.storage({'title': '', 'template': 'page', 'body': ''})
+
+        p = web.storage(data=data)
+        return render.edit(p)
     
     def POST(self, site, path):
         i = web.input()
         if i.clicked == 'Preview':
-            return render.edit(i, preview=True)
+            p = web.storage(data=i)
+            return render.edit(p, preview=True)
         else:
             user = auth.get_user()
             author_id = user and user.id
-            d = db.new_version(site, path, author_id, dict(title=i.title, body=i.body))
+            d = db.new_version(site, path, author_id, dict(title=i.title, template=i.template, body=i.body))
             return web.seeother(web.changequery(m=None))
 
 class history (delegate.mode):
@@ -61,7 +63,6 @@ class diff (delegate.mode):
         blines = b.data.body.splitlines()
         
         map = better_diff(alines, blines)
-        utils.view.add_stylesheet('core', 'diff.css')
         return render.diff(map, a, b)
 
 class random(delegate.page):

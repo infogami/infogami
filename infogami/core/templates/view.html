@@ -1,7 +1,7 @@
-$def with (d)
+$def with (page)
 
-$var title: $d.data.title
+$var title: $page.data.title
 
-<p>$:format(d.data.body)</p>
+<p>$:format(page.data.body)</p>
 
-<p class="status">[<a href="$changequery(m='edit')" accesskey="e"><em>e</em>dit</a>][<a href="$changequery(m='history')">history</a>][<a href="$changequery(m='backlinks')">backlinks</a>] last modified $datestr(d.created)</p>
+<p class="status">[<a href="$changequery(m='edit')" accesskey="e"><em>e</em>dit</a>][<a href="$changequery(m='history')">history</a>][<a href="$changequery(m='backlinks')">backlinks</a>] last modified $datestr(page.created)</p>

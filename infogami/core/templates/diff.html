@@ -1,8 +1,10 @@
 $def with (map, a, b)
 
+$add_stylesheet('/files/core/diff.css')
+
 $var title: diff
 
-<p>[<a href="$changequery(m=None)">view</a>][<a href="$changequery(m='edit')">edit</a>]</p>
+<p>[<a href="$changequery(m=None, a=None, b=None)">view</a>][<a href="$changequery(m='edit', a=None, b=None)">edit</a>]</p>
 
 <div class="diff">
 
@@ -11,8 +13,8 @@ $var title: diff
     <colgroup class="r"><col class="lineno" /><col class="content" /></colgroup>
     <thead>
           <tr> 
-              <th colspan="2">$a.created (#$a.revision)</th> 
-              <th colspan="2">$b.created (#$b.revision)</th>
+              <th colspan="2">Revision $a.revision</th> 
+              <th colspan="2">Revision $b.revision</th>
           </tr>
     </thead>
 $for row in map:
@@ -22,7 +24,7 @@ $for row in map:
     $ bi = row[3]
     $ b = row[4]
     <tbody class="$key">
-    <tr><th><pre>$ai</pre></th><td class='l'><pre>$(a or '')</pre></td><th><pre>$bi</pre></th><td class='r'><pre>$(b or '')</pre></td></tr>
+    <tr><th>$ai</th><td class='l'>$:spacesafe(a or ' ')</td><th>$bi</th><td class='r'>$:spacesafe(b or ' ')</td></tr>
     </tbody>
 </table>
 

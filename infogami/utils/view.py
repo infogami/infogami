@@ -22,7 +22,19 @@ def link(path, text=None):
     return '<a href="%s">%s</a>' % (web.ctx.homepath + path, text or path)
 
 def url(path):
-    return web.ctx.homepath + path
+    if path.startswith('/'):
+        return web.ctx.homepath + path
+    else:
+        return path
+
+def add_stylesheet(path):
+    web.ctx.stylesheets.append(url(path))
+    return ""
+
+def spacesafe(text):
+    text = web.websafe(text)
+    text = text.replace(' ', '&nbsp;');
+    return text
 
 web.template.Template.globals.update(dict(
   changequery = web.changequery,
@@ -31,6 +43,8 @@ web.template.Template.globals.update(dict(
   format = format,
   link = link,
   url = url,
+  add_stylesheet = add_stylesheet,
+  spacesafe = spacesafe,
 ))
 
 render = web.storage()
@@ -42,10 +56,6 @@ def load_templates(dir):
     if os.path.exists(path):
         name = os.path.basename(dir)
         render[name] = web.template.render(path, cache=cache)
-
-def add_stylesheet(plugin, path):
-    fullpath = "%s/files/%s/%s" % (web.ctx.homepath, plugin, path)
-    web.ctx.stylesheets.append(fullpath)
 
 def get_site_template(url):
     from infogami.core import db

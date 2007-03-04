@@ -91,3 +91,9 @@ def author_ipaddress():
         id = v.id
         web.update('version', where='id=$id', author_id=author_id, ip_address=ip_address, vars=locals())
 
+@upgrade
+def page_template():
+    """add template for every version."""
+    versions = web.query('SELECT id FROM version')
+    for v in versions:
+        web.insert('datum', version_id=v.id, key='template', value='page')

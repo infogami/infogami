@@ -37,7 +37,7 @@ class SQL(DB):
         return id
     
     def _version_query(self, revision=None):
-        q = "SELECT version.*, login.name as author FROM version \
+        q = "SELECT version.*, page.path, site.url, login.name as author FROM version \
           JOIN page ON (version.page_id = page.id) \
           JOIN site ON (page.site_id = site.id) \
           LEFT JOIN login ON (login.id = version.author_id) \

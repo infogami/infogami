@@ -57,19 +57,10 @@ def load_templates(dir):
         name = os.path.basename(dir)
         render[name] = web.template.render(path, cache=cache)
 
-def get_site_template(url):
-    from infogami.core import db
-    try:
-        d = db.get_version(url, "sitetemplate")
-        t = "$def with (page, user, stylesheets=[])\n" + d.data.body
-        return web.template.Template(t)
-    except:
-        return render.utils.site
-
 def render_site(url, page):
     from infogami.core import auth
     user = auth.get_user()
-    return get_site_template(url)(page, user, web.ctx.stylesheets)
+    return render.core.site(page, user, web.ctx.stylesheets)
 
 def get_static_resource(path):
     rx = web.re_compile(r'^files/([^/]*)/(.*)$')

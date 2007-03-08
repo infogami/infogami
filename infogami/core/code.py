@@ -40,7 +40,13 @@ class edit (delegate.mode):
         else:
             user = auth.get_user()
             author_id = user and user.id
-            d = db.new_version(site, path, author_id, dict(title=i.title, template=i.template, body=i.body))
+            try:
+                d = db.new_version(site, path, author_id, 
+                    web.storage(title=i.title, template=i.template, body=i.body))
+            except db.ValidationException, e:
+                utils.view.set_error(str(e))
+                p = web.storage(data=i)
+                return render.edit(p)
             return web.seeother(web.changequery(m=None))
 
 class history (delegate.mode):

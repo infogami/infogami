@@ -28,13 +28,20 @@ def url(path):
         return path
 
 def add_stylesheet(path):
-    web.ctx.stylesheets.append(url(path))
+    web.ctx.infogami_ctx.stylesheets.append(url(path))
     return ""
 
 def spacesafe(text):
     text = web.websafe(text)
     text = text.replace(' ', '&nbsp;');
     return text
+
+class InfogamiContext:
+    def __getattr__(self, key):
+        return getattr(web.ctx.infogami_ctx, key)
+
+    def __setattr__(self, key, value):
+        setattr(web.ctx.infogami_ctx, key, value)
 
 web.template.Template.globals.update(dict(
   changequery = web.changequery,
@@ -45,9 +52,13 @@ web.template.Template.globals.update(dict(
   url = url,
   add_stylesheet = add_stylesheet,
   spacesafe = spacesafe,
+  ctx = InfogamiContext()
 ))
 
 render = web.storage()
+
+def set_error(msg):
+    web.ctx.infogami_ctx.error = msg
 
 def load_templates(dir):
     cache = getattr(config, 'cache_templates', True)
@@ -60,7 +71,7 @@ def load_templates(dir):
 def render_site(url, page):
     from infogami.core import auth
     user = auth.get_user()
-    return render.core.site(page, user, web.ctx.stylesheets)
+    return render.core.site(page, user, web.ctx.infogami_ctx.stylesheets)
 
 def get_static_resource(path):
     rx = web.re_compile(r'^files/([^/]*)/(.*)$')

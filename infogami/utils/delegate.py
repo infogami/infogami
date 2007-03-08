@@ -42,7 +42,7 @@ del pages['page']
 class hook (object):
     def __new__(klass, name, bases, attrs):
         for thing in attrs:
-            if thing.startswith('on_'):
+            if thing.startswith('on_') or thing.startswith('before_'):
                 hooks.setdefault(thing, []).append(attrs[thing])
 
         return web.Storage(attrs)
@@ -57,7 +57,10 @@ def _changepath(new_path):
 
 def delegate(path):
     method = web.ctx.method
-    web.ctx.stylesheets = []
+    web.ctx.infogami_ctx = web.storage()
+    web.ctx.infogami_ctx.error = None
+    web.ctx.infogami_ctx.stylesheets = []
+
     if path in pages:
         out = getattr(pages[path](), method)(config.site)
     elif path.startswith('files/'):

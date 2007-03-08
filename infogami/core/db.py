@@ -1,6 +1,8 @@
 from infogami.utils import delegate
 import web
 
+class ValidationException(Exception): pass
+
 class DB: pass
 
 class SQL(DB):
@@ -21,19 +23,21 @@ class SQL(DB):
         return web.insert('page', path=path, site_id=self.get_site_id(url))
     
     def new_version(self, url, path, author_id, data):
+        delegate.run_hooks('before_new_version', url, path, data)
+
         page_id = self.get_page_id(url, path) or self.new_page(url, path)
         web.transact()
         try:
             id = web.insert('version', page_id=page_id, author_id=author_id, ip_address=web.ctx.ip)
             web.query('UPDATE version SET revision=(SELECT max(revision)+1 FROM version WHERE page_id=$page_id) WHERE id=$id', vars=locals())
+            self._set_data(id, data)
         except:
             web.rollback()
             raise
         else:
             web.commit()
 
-        self._set_data(id, data)
-        delegate.run_hooks('on_new_version', url, path, data['body'])
+        delegate.run_hooks('on_new_version', url, path, data)
         return id
     
     def _version_query(self, revision=None):

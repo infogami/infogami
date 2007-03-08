@@ -8,6 +8,8 @@ $def with (page, user, stylesheets=[])
     .login, .status { color: lightgray }
     .login :link, .login :visited, .status :link, .status :visited { color: gray; text-decoration: underline;}
 
+    .error { color: red; font-weight: bold; }
+
     .linky {
         color: blue; background-color: transparent;
         border: none; cursor: pointer;
@@ -32,6 +34,10 @@ $else:
     <p class="login">[$:link('/login', 'log in')]</p>
 
 <h1>$page.title</h1>
+
+$if ctx.error:
+    <p class="error">$ctx.error</p>
+
 <p>
 $:page
 </p>

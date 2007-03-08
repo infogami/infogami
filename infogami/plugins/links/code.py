@@ -20,7 +20,8 @@ render = utils.view.render.links
 class hooks:
     __metaclass__ = delegate.hook
     def on_new_version(site, path, data):
-        db.new_links(site, path, view.get_links(data))
+        if data.template == "page":
+            db.new_links(site, path, view.get_links(data.body))
 
 class backlinks (delegate.mode):
     def GET(self, site, path):

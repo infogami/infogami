@@ -14,7 +14,8 @@ class module:
         self.upgrades = []
         modules.append(self)
 
-        self.upgrade(self.setup)
+        if schema is not None:
+            self.upgrade(self.setup)
 
     def get_version(self):
         try:

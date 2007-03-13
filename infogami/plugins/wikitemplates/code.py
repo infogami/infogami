@@ -92,7 +92,7 @@ def saferender(template, default_template, *a, **kw):
         return default_template(*a, **kw)
     else:
         try:
-            web.header('Content-type', 'text/html')
+            web.header('Content-Type', 'text/html; charset=utf-8')
             return template(*a, **kw)
         except Exception, e:
             set_error(str(e))

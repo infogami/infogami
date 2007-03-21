@@ -1,0 +1,34 @@
+$def with (page, preview=False)
+
+$var title: $_.EDIT
+
+$if preview:
+	<table>
+	$for plugin in get_plugins():
+	    <tr><th>$plugin</th></tr>
+	    $for key in get_i18n_keys(plugin):
+	        <tr><td>$key</td><td>$page.data.get(key, "-")</td>
+	</table>
+
+<script>
+function changeTemplate() {
+    var t = document.edit.template.value;
+    document.location.href += '&t=' + t;
+}
+</script>
+
+<form name="edit" method="POST">
+<strong>$_.KIND</strong> <input type="text" name="template" value="$page.data.template" />
+<input type="button" onclick="changeTemplate()" value="$_.CHANGE"/><br /><br />
+
+$for plugin in get_plugins():
+    <h3>$plugin</h3>
+    <table id="table_$plugin">
+    $for key in get_i18n_keys(plugin):
+        <tr><td>$key</td><td><input type="text" value="$page.data.get(key, '')"/></td>
+    </table>
+
+<input type="submit" name="clicked" value="Save" />
+<input type="submit" name="clicked" value="Preview" />
+</form>
+

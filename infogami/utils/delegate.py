@@ -3,6 +3,7 @@ import web
 
 from infogami import config
 import view
+import i18n
 
 urls = (
   '/(.*)', 'item'
@@ -55,11 +56,18 @@ def _keyencode(text): return text.replace(' ', '_')
 def _changepath(new_path):
     return web.ctx.homepath + new_path + web.ctx.query
 
+def initialize_context():
+    from infogami.core import auth
+    
+    web.ctx.infogami_ctx = ctx = web.storage()
+    ctx.error = None
+    ctx.stylesheets = []
+    ctx.javascripts = []
+    ctx.user = auth.get_user()
+
 def delegate(path):
     method = web.ctx.method
-    web.ctx.infogami_ctx = web.storage()
-    web.ctx.infogami_ctx.error = None
-    web.ctx.infogami_ctx.stylesheets = []
+    initialize_context()
 
     if path in pages:
         out = getattr(pages[path](), method)(config.site)
@@ -84,14 +92,20 @@ def delegate(path):
 class item:
     GET = POST = lambda self, path: delegate(path)
 
+plugins = []
+
+@view.public
+def get_plugins():
+    return [os.path.basename(p) for p in plugins]
+
 def _load():
     """Imports the files from the plugins directory and loads templates."""
-    view.load_templates('infogami/utils')
-    view.load_templates('infogami/core')
+    global plugins
 
-    from infogami.core import code
-    
-    for plugin in glob.glob('infogami/plugins/*'):
+    plugins = ["infogami/core"] + \
+              [f for f in glob.glob('infogami/plugins/*') if os.path.isdir(f)]
+
+    for plugin in plugins:
         if os.path.isdir(plugin):
             view.load_templates(plugin)
             __import__(plugin.replace('/', '.')+'.code', globals(), locals(), ['plugins'])

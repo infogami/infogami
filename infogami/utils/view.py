@@ -2,6 +2,7 @@ from infogami.utils import markdown
 import web
 import os
 from infogami import config
+from infogami.utils.i18n import i18n
 
 wiki_processors = []
 def register_wiki_processor(p):
@@ -31,6 +32,10 @@ def add_stylesheet(path):
     web.ctx.infogami_ctx.stylesheets.append(url(path))
     return ""
 
+def add_javascript(path):
+    web.ctx.infogami_ctx.javascripts.append(url(path))
+    return ""
+
 def spacesafe(text):
     text = web.websafe(text)
     text = text.replace(' ', '&nbsp;');
@@ -52,10 +57,16 @@ web.template.Template.globals.update(dict(
   url = url,
   add_stylesheet = add_stylesheet,
   spacesafe = spacesafe,
-  ctx = InfogamiContext()
+  ctx = InfogamiContext(),
+  _ = i18n(),
 ))
 
 render = web.storage()
+
+def public(f):
+    """Exposes a funtion in templates."""
+    web.template.Template.globals[f.__name__] = f
+    return f
 
 def set_error(msg):
     web.ctx.infogami_ctx.error = msg
@@ -69,9 +80,7 @@ def load_templates(dir):
         render[name] = web.template.render(path, cache=cache)
 
 def render_site(url, page):
-    from infogami.core import auth
-    user = auth.get_user()
-    return render.core.site(page, user, web.ctx.infogami_ctx.stylesheets)
+    return render.core.site(page)
 
 def get_static_resource(path):
     rx = web.re_compile(r'^files/([^/]*)/(.*)$')

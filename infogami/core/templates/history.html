@@ -1,8 +1,8 @@
 $def with (versions)
 
-$var title: history
+$var title: $_.HISTORY
 
-<p>[<a href="$changequery(m=None)">view</a>][<a href="$changequery(m='edit')">edit</a>]</p>
+<p>[<a href="$changequery(m=None)">$_.VIEW</a>][<a href="$changequery(m='edit')">$_.EDIT</a>]</p>
 
 <form>
 <table>
@@ -11,20 +11,20 @@ $var title: history
   <th></th>
   <th></th>
   <th></th>
-  <th>who</th>
-  <th>when</th>
+  <th>$_.WHO</th>
+  <th>$_.WHEN</th>
 </tr>
 $for v in versions:
     <tr>
       <td>$v.revision</td>
       <td><input type="radio" name="a" value="$v.revision"></td>
       <td><input type="radio" name="b" value="$v.revision"></td>
-      <td><a href="$changequery(m='edit', v=v.revision)">edit</a></td>
+      <td><a href="$changequery(m='edit', v=v.revision)">$_.EDIT</a></td>
       <td>$(v.author or v.ip_address)</td>
       <td><a href="$changequery(m=None, v=v.revision)">$datestr(v.created)</a></td>
       <td>
     </tr>
 </table>
 <input type="hidden" name='m' value="diff">
-<input type="submit" value="Compare">
+<input type="submit" value="$_.COMPARE">
 </form>

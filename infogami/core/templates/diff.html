@@ -2,19 +2,19 @@ $def with (map, a, b)
 
 $add_stylesheet('/files/core/diff.css')
 
-$var title: diff
+$var title: $_.DIFF
 
-<p>[<a href="$changequery(m=None, a=None, b=None)">view</a>][<a href="$changequery(m='edit', a=None, b=None)">edit</a>]</p>
+<p>[<a href="$changequery(m=None, a=None, b=None)">$_.VIEW</a>][<a href="$changequery(m='edit', a=None, b=None)">$_.EDIT</a>]</p>
 
 <div class="diff">
 
-<table class="sidebyside" summary="Differences">
+<table class="sidebyside" summary="$_.DIFFERENCES">
     <colgroup class="l"><col class="lineno" /><col class="content" /></colgroup>
     <colgroup class="r"><col class="lineno" /><col class="content" /></colgroup>
     <thead>
           <tr> 
-              <th colspan="2">Revision $a.revision</th> 
-              <th colspan="2">Revision $b.revision</th>
+              <th colspan="2">$_.REVISION $a.revision</th> 
+              <th colspan="2">$_.REVISION $b.revision</th>
           </tr>
     </thead>
 $for row in map:
@@ -29,12 +29,12 @@ $for row in map:
 </table>
 
    <div id="legend">
-    <h3>Legend:</h3>
+    <h3>$_.LEGEND:</h3>
     <dl>
-     <dt class="unmod"></dt><dd>Unmodified</dd>
-     <dt class="add"></dt><dd>Added</dd>
-     <dt class="rem"></dt><dd>Removed</dd>
-     <dt class="mod"></dt><dd>Modified</dd>
+     <dt class="unmod"></dt><dd>$_.UNMODIFIED</dd>
+     <dt class="add"></dt><dd>$_.ADDED</dd>
+     <dt class="rem"></dt><dd>$_.REMOVED</dd>
+     <dt class="mod"></dt><dd>$_.MODIFIED</dd>
     </dl>
    </div>
 </div>

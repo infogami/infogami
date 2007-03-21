@@ -20,6 +20,6 @@ def add_template(title, path, dbpath):
 @upgrade
 def add_wikitemplates():
     web.ctx.ip = ""
-    add_template("View Template", "core/templates/view.html", "templates/page/view.tmpl")
-    add_template("Edit Template", "core/templates/edit.html", "templates/page/edit.tmpl")
-    add_template("Site Template", "core/templates/site.html", "templates/site.tmpl")
+    #add_template("View Template", "core/templates/view.html", "templates/page/view.tmpl")
+    #add_template("Edit Template", "core/templates/edit.html", "templates/page/edit.tmpl")
+    #add_template("Site Template", "core/templates/site.html", "templates/site.tmpl")

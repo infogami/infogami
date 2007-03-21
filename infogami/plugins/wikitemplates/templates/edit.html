@@ -2,10 +2,10 @@ $def with (page, preview=False)
 
 $var title: $_.EDIT $page.data.title
 
-<p>[<a href="$changequery(m=None)">$_.VIEW</a>][<a href="$changequery(m='history')">$_.HISTORY</a>]</p>
+<p>[<a href="$changequery(m=None)">view</a>][<a href="$changequery(m='history')">history</a>]</p>
 
 $if preview:
-    <p>$:format(page.data.body)</p>
+    <pre>$page.data.body</pre>
 
 <script>
 function changeTemplate() {
@@ -17,10 +17,12 @@ function changeTemplate() {
 <form name="edit" method="post" action="">
 
 <strong>$_.KIND</strong> <input type="text" name="template" value="$page.data.template" />
-<input type="button" onclick="changeTemplate()" value="$_.CHANGE"/><br /><br />
+<input type="button" onclick="changeTemplate()" value="Change"/>
+<br /><br/>
 
 <strong>$_.TITLE</strong> <input type="text" name="title" value="$page.data.title" /><br />
-<textarea name="body" rows="15" cols="80">$page.data.body</textarea>
+<textarea name="body" rows="25" cols="80">$page.data.body</textarea>
+
 <p>
 <input type="submit" name='clicked' value="Save" />
 <input type="submit" name='clicked' value="Preview" />

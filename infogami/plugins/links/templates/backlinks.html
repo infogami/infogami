@@ -1,8 +1,8 @@
 $def with (links)
 
-$var title: backlinks
+$var title: $_.BACKLINKS
 
-<p>[<a href="$changequery(m=None)">view</a>][<a href="$changequery(m='edit')">edit</a>]</p>
+<p>[<a href="$changequery(m=None)">$_.VIEW</a>][<a href="$changequery(m='edit')">$_.EDIT</a>]</p>
 
 <ul>
 $for link in links:

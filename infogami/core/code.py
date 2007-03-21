@@ -23,11 +23,13 @@ class view (delegate.mode):
 
 class edit (delegate.mode):
     def GET(self, site, path):
-        i = web.input(v=None)
+        i = web.input(v=None, t=None)
         try:
             data = db.get_version(site, path, i.v).data
+            if i.t:
+                data.template = i.t
         except IndexError:
-            data = web.storage({'title': '', 'template': 'page', 'body': ''})
+            data = web.storage({'title': '', 'template': i.t or 'page', 'body': ''})
 
         p = web.storage(data=data)
         return render.edit(p)
@@ -41,8 +43,8 @@ class edit (delegate.mode):
             user = auth.get_user()
             author_id = user and user.id
             try:
-                d = db.new_version(site, path, author_id, 
-                    web.storage(title=i.title, template=i.template, body=i.body))
+                data = web.storage((k, v) for k, v in i.items() if k not in ['clicked', 'm'])
+                d = db.new_version(site, path, author_id, data)
             except db.ValidationException, e:
                 utils.view.set_error(str(e))
                 p = web.storage(data=i)

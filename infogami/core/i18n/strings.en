@@ -1,0 +1,43 @@
+DIFF = "Diff"
+LEGEND = "Legend"
+ADDED = "Added"
+REMOVED = "Removed"
+MODIFIED = "Modified"
+REVISION = "Revision"
+DIFFERENCES = "Differences"
+BACKLINKS  = "backlinks"
+
+EDIT = "edit"
+TITLE = "Title"
+KIND = "Kind"
+CHANGE = "Change"
+SAVE = "Save"
+PREVIEW = "Preview"
+
+HISTORY = "history"
+WHO = "who"
+WHEN = "when"
+COMPARE = "Compare"
+
+LOGIN = "log in"
+REGISTER = "Register"
+
+PAGELIST = "Pagelist"
+
+RECENT_CHANGES = "Recent Changes"
+PATH = "path"
+ACTIONS = "actions"
+VIEW = "view"
+
+LOGOUT = "logout"
+
+LAST_MODIFIED = "last modified"
+
+USERNAME = "Username"
+PASSWORD = "Password"
+EMAIL = "E-Mail"
+REMEMBER_ME = "Remember me"
+
+LOGIN_STMT = "If you have an infogami account, log in:"
+FORGOT_PASSWORD = "Forgot your username or password?"
+CREATE_ACCOUNT = "Otherwise, create a new account -- it just takes a second:"

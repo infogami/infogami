@@ -11,6 +11,23 @@ dbupgrade       upgrade the database
 help            show this
 """
 
+_actions = []
+def action(f):
+    """Decorator to register an infogami action."""
+    _actions.append(f)
+    return f
+
+_install_hooks = []
+def install_hook(f):
+    """Decorator to register install hook."""
+    _install_hooks.append(f)
+    return f
+
+def find_action(name):
+    for a in _actions:
+        if a.__name__ == name:
+            return a
+        
 def _setup():
     if config.db_parameters is None:
         raise Exception('infogami.config.db_parameters is not specified')
@@ -22,28 +39,64 @@ def _setup():
     web.config.db_parameters = config.db_parameters
     web.config.db_printing = config.db_printing
 
-def db_upgrade():
+    from infogami.utils import delegate
+    delegate._load()
+
+@action
+def startserver():
+    """Start webserver."""
+    from infogami.utils import delegate
+    web.run(delegate.urls, delegate.__dict__, *config.middleware)
+
+@action
+def help(name=None):
+    """Show this help."""
+    
+    a = name and find_action(name)
+
+    print "Infogami Help"
+    print ""
+
+    if a:
+        print "    %s\t%s" %  (a.__name__, a.__doc__)
+    else:
+        print "Available actions"
+        for a in _actions:
+            print "    %s\t%s" %  (a.__name__, a.__doc__)
+
+@install_hook
+@action
+def dbupgrade():
+    """Upgrade the database."""
     from infogami.utils import dbsetup
-    _setup()
     web.load()
     dbsetup.apply_upgrades()
 
-def start_server():
-    _setup()
-    from infogami.utils import delegate
-    delegate._load()
-    web.run(delegate.urls, delegate.__dict__)
+@install_hook
+@action
+def createsite():
+    """Add config.site to database."""
+    web.load()
+    web.insert("site", url=config.site)
+
+@action
+def install():
+    """Setup everything."""
+    for a in _install_hooks:
+        a()
+
+def run_action(name, args=[]):
+    a = find_action(name)
+    if a:
+        a(*args)
+    else:
+        print >> sys.stderr, 'unknown command', sys.argv[1]
+        help()
 
 def run():
     import sys
-    if len(sys.argv) == 1 or sys.argv[1] == 'run':
-        # web.py expects port as argv[1]
-        sys.argv = [sys.argv[0]]
-        start_server()
-    elif sys.argv[1] == 'dbupgrade':
-        db_upgrade()
-    elif sys.argv[1] == 'help':
-        print usage
+    _setup()
+    if len(sys.argv) == 1:
+        run_action("startserver")
     else:
-        print >> sys.stderr, 'unknown command', sys.argv[1]
-        print usage
+        run_action(sys.argv[1], sys.argv[2:])

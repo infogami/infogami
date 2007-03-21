@@ -1,24 +1,24 @@
 $def with (flogin, fregister, error=None)
 
-$var title: log in
+$var title: $_.LOGIN
 
 $if error:
     <p><font color="red">$error</font></p>
 
-<p>If you have an infogami account, log in:</p>
+<p>$_.LOGIN_STMT</p>
 
 <form name="login" method="POST">
 $:flogin.render()
     <input type="hidden" name="action" value="login">
-    <input type="submit" name="submit" value="Login">
+    <input type="submit" name="submit" value="$_.LOGIN">
 </form>
 
-<p>($:link("/login_reminder", "Forgot your username or password?"))</p>
+<p>($:link("/login_reminder", _.FORGOT_PASSWORD))</p>
 
-<p>Otherwise, create a new account -- it just takes a second:</p>
+<p>$_.CREATE_ACCOUNT</p>
 
 <form name="register" method="POST">
 $:fregister.render()
     <input type="hidden" name="action" value="register">
-    <input type="submit" name="submit" value="Register">
+    <input type="submit" name="submit" value="$_.REGISTER">
 </form>

@@ -1,4 +1,4 @@
-$def with (root, changes)
+$def with (changes)
 
 $var title: $_.RECENT_CHANGES
 
@@ -16,9 +16,9 @@ $for c in changes:
     <td>$c.path</td>
     <td>$(c.author or c.ip_address)</td>
     <td>
-    <a href="$root/$c.path?m=view&v=$c.revision">$_.VIEW</a>&nbsp;
-    <a href="$root/$c.path?m=edit&v=$c.revision">$_.EDIT</a>&nbsp;
-    <a href="$root/$c.path?m=diff&b=$c.revision">$_.DIFF</a>&nbsp;
+    <a href="$homepath()/$c.path?m=view&v=$c.revision">$_.VIEW</a>&nbsp;
+    <a href="$homepath()/$c.path?m=edit&v=$c.revision">$_.EDIT</a>&nbsp;
+    <a href="$homepath()/$c.path?m=diff&b=$c.revision">$_.DIFF</a>&nbsp;
     </td>
     </tr>
 

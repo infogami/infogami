@@ -8,16 +8,10 @@ Creates '/changes' page for displaying modifications since last review.
 from infogami.utils import delegate, view
 from infogami.utils.view import render
 from infogami import core
+from infogami.core.auth import require_login
 
 import db
 import web
-
-def require_login(f):
-    def g(*a, **kw):
-        if not core.auth.get_user():
-            return web.seeother(web.ctx.homepath + "/login")
-        return f(*a, **kw)
-    return g
 
 class changes (delegate.page):
     @require_login

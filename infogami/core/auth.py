@@ -2,6 +2,7 @@ import db
 import time, datetime
 import hmac
 import web
+import urllib
 
 SECRET = "ofu889e4i5kfem" #@@ make configurable
 
@@ -23,3 +24,19 @@ def get_user():
 
 def _digest(text):
     return hmac.HMAC(SECRET, text).hexdigest()
+
+def require_login(f):
+    def g(*a, **kw):
+        if not get_user():
+            return login_redirect()
+        return f(*a, **kw)
+        
+    return g
+
+def login_redirect(path=None):
+    if path is None:
+        path = web.ctx.path
+    
+    query = urllib.urlencode({"redirect":path})
+    web.seeother(web.ctx.homepath + "/login?" + query)
+    raise StopIteration

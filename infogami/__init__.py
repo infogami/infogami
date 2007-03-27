@@ -1,5 +1,6 @@
 import web
 import config
+import sys
 
 usage = """
 Infogami
@@ -43,9 +44,10 @@ def _setup():
     delegate._load()
 
 @action
-def startserver():
+def startserver(*args):
     """Start webserver."""
     from infogami.utils import delegate
+    sys.argv = [sys.argv[0]] + list(args)
     web.run(delegate.urls, delegate.__dict__, *config.middleware)
 
 @action
@@ -64,21 +66,6 @@ def help(name=None):
         for a in _actions:
             print "    %s\t%s" %  (a.__name__, a.__doc__)
 
-@install_hook
-@action
-def dbupgrade():
-    """Upgrade the database."""
-    from infogami.utils import dbsetup
-    web.load()
-    dbsetup.apply_upgrades()
-
-@install_hook
-@action
-def createsite():
-    """Add config.site to database."""
-    web.load()
-    web.insert("site", url=config.site)
-
 @action
 def install():
     """Setup everything."""
@@ -94,7 +81,6 @@ def run_action(name, args=[]):
         help()
 
 def run():
-    import sys
     _setup()
     if len(sys.argv) == 1:
         run_action("startserver")

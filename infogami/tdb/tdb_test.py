@@ -178,6 +178,7 @@ class tdbtest(unittest.TestCase):
         assert t.v.comment == 'first draft'
         assert t.v.ip == '1.2.3.4'
         assert t.v.revision == 1
+        assert t.latest_revision == 1
         assert t.v.author == aaron
         assert list(t.h) == [t.v]
         v1 = t.v
@@ -188,6 +189,7 @@ class tdbtest(unittest.TestCase):
         assert t.v.ip == None
         assert t.v.comment == 'second draft'
         assert t.v.revision == 2
+        assert t.latest_revision == 2    
         assert t.v.author == anand
         assert list(t.h) == [t.v, v1]
         

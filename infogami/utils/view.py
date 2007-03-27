@@ -47,6 +47,11 @@ def url(path):
         return web.ctx.homepath + path
     else:
         return path
+
+@public
+def homepath():
+    return web.ctx.homepath        
+
 @public
 def add_stylesheet(path):
     context.stylesheets.append(url(path))

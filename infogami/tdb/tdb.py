@@ -8,11 +8,11 @@ class Thing:
     @staticmethod
     def _reserved(attr):
         return attr.startswith('_') or attr in [
-          'id', 'parent', 'name', 'type', 'v', 'h', 'd', 'latest', 'versions', 'save']
+          'id', 'parent', 'name', 'type', 'latest_revision', 'v', 'h', 'd', 'latest', 'versions', 'save']
     
-    def __init__(self, id, name, parent, type, d, v):
-        self.id, self.name, self.parent, self.type, self.d, self.v = \
-            id and int(id), name, parent, type, d, v
+    def __init__(self, id, name, parent, type, d, v=None, latest_revision=0):
+        self.id, self.name, self.parent, self.type, self.d, self.v, self.latest_revision = \
+            id and int(id), name, parent, type, d, v, latest_revision
         self.h = (self.id and History(self.id)) or None
         self._dirty = False
             
@@ -121,6 +121,7 @@ class Thing:
         self.id = tid
         self.v = LazyVersion(vid)
         self.h = History(self.id)
+        self.latest_revision = revision
         self._dirty = False
         _run_hooks("on_new_version", self)
 
@@ -135,8 +136,8 @@ class LazyThing(Thing):
         elif attr.startswith('__'):
             Thing.__getattr__(self, attr)
         else:
-            id, name, parent, type, d, v = withID(self.id, self._revision, raw=True)
-            Thing.__init__(self, id, name, parent, type, d, v)
+            args = withID(self.id, self._revision, raw=True)
+            Thing.__init__(self, *args)
             self.__class__ = Thing
             return getattr(self, attr)
             
@@ -176,7 +177,7 @@ def withID(id, revision=None, raw=False):
         t = web.select('thing', where="thing.id = $id", vars=locals())[0]
         revision = revision or t.latest_revision
         
-        v = web.select('version', 
+        v = web.select('version',
             where='version.thing_id = $id AND version.revision = $revision', 
             vars=locals())[0]
         v = Version(**v)
@@ -202,10 +203,11 @@ def withID(id, revision=None, raw=False):
                 d[r.key] = value
         
         type = d.pop('__type__')
+        args = id, t.name, LazyThing(t.parent_id), type, d, v, t.latest_revision
         if raw:
-            return id, t.name, LazyThing(t.parent_id), type, d, v
+            return args
         else:
-            return Thing(id, t.name, LazyThing(t.parent_id), type, d, v)
+            return Thing(*args)
     except IndexError:
         raise NotFound, id
 

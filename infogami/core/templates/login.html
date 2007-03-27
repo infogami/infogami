@@ -1,24 +1,14 @@
-$def with (flogin, fregister, error=None)
+$def with (f)
 
 $var title: $_.LOGIN
-
-$if error:
-    <p><font color="red">$error</font></p>
 
 <p>$_.LOGIN_STMT</p>
 
 <form name="login" method="POST">
-$:flogin.render()
-    <input type="hidden" name="action" value="login">
+$:f.render()
     <input type="submit" name="submit" value="$_.LOGIN">
 </form>
 
-<p>($:link("/login_reminder", _.FORGOT_PASSWORD))</p>
+<p>(<a href="$homepath()/login_reminder">$_.FORGOT_PASSWORD</a>)</p>
 
-<p>$_.CREATE_ACCOUNT</p>
-
-<form name="register" method="POST">
-$:fregister.render()
-    <input type="hidden" name="action" value="register">
-    <input type="submit" name="submit" value="$_.REGISTER">
-</form>
+<p>$:_.LINK_CREATE_ACCOUNT(url("/register"))</p>

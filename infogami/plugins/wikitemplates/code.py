@@ -117,6 +117,7 @@ def saferender(templates, *a, **kw):
             web.header('Content-Type', 'text/html; charset=utf-8', unique=True)
             return t(*a, **kw)
         except Exception, e:
+            print >> web.debug, str(e)
             set_error(str(e))
                 
 def get_user_template(path):
@@ -151,8 +152,11 @@ def sitetemplate(name, default_template):
         
 render.core.view = pagetemplate("view", render.core.view)
 render.core.edit = pagetemplate("edit", render.core.edit)
-render.core.history = sitetemplate("history", render.core.history)
+
 render.core.site = sitetemplate('site', render.core.site)
+render.core.history = sitetemplate("history", render.core.history)
+render.core.login = sitetemplate("login", render.core.login)
+render.core.register = sitetemplate("register", render.core.register)
 
 class template_preferences:
     def GET(self, site):
@@ -206,6 +210,8 @@ register_wiki_template("Site Template", "core/templates/site.html", "templates/s
 register_wiki_template("Page View Template", "core/templates/view.html", "templates/page/view.tmpl")
 register_wiki_template("Page Edit Template", "core/templates/edit.html", "templates/page/edit.tmpl")
 register_wiki_template("History Template", "core/templates/history.html", "templates/history.tmpl")
+register_wiki_template("Login Template", "core/templates/login.html", "templates/login.tmpl")
+register_wiki_template("Register Template", "core/templates/register.html", "templates/register.tmpl")
 
 # register template templates
 register_wiki_template("Template View Template",        

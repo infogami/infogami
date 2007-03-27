@@ -54,10 +54,14 @@ def load_plugin(plugin):
     path = os.path.join(plugin, "i18n", "strings.*")
 
     strings = {}
+    
     for p in glob.glob(path):
-        _, extn = os.path.splitext(p)
-        lang = extn[1:] # strip dot
-        strings[lang] = _read_strings(p)
+        try:
+            _, extn = os.path.splitext(p)
+            lang = extn[1:] # strip dot
+            strings[lang] = _read_strings(p)
+        except:
+            print >> web.debug, "failed to load strings from", p    
 
     return strings
     
@@ -116,6 +120,9 @@ class i18n_string(object):
         if lang not in strings:
             return None
         return strings[lang].get(key, None)
+        
+    def __call__(self, *a): 
+        return str(self) % a
 
     def __str__(self):
         self._setup()

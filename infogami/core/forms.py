@@ -14,19 +14,22 @@ login = Form(
 register = Form(
     Textbox('username', 
             Validator(
-                'Username already exists', 
+                _.USERNAME_ALREADY_EXISTS,
                 lambda name: not db.get_user_by_name(name)),
             description=_.USERNAME),
-    Textbox('email', description=_.EMAIL),
-    Password('password', description=_.PASSWORD)
+    Textbox('email', notnull, description=_.EMAIL),
+    Password('password', notnull, description=_.PASSWORD),
+    Password('password2', notnull, description=_.CONFIRM_PASSWORD),
+    validators = [
+        Validator(_.PASSWORDS_DID_NOT_MATCH, lambda i: i.password == i.password2)]    
 )
 
 login_preferences = Form(
-    Password("oldpassword", notnull, description="Current Password"),
-    Password("password", notnull, description="New Password"),
-    Password("password2", notnull, description="Re-enter Password"),
+    Password("oldpassword", notnull, description=_.CURRENT_PASSWORD),
+    Password("password", notnull, description=_.NEW_PASSWORD),
+    Password("password2", notnull, description=_.CONFIRM_PASSWORD),
     Button("Save"),
     validators = [
-        Validator("Incorrect password.", lambda i: i.oldpassword == context.user.password),
-        Validator("Passwords didn't match.", lambda i: i.password == i.password2)]
+        Validator(_.INCORRECT_PASSWORD, lambda i: i.oldpassword == context.user.password),
+        Validator(_.PASSWORDS_DID_NOT_MATCH, lambda i: i.password == i.password2)]
 )

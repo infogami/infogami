@@ -5,6 +5,7 @@ import infogami
 from infogami.tdb import NotFound
 
 #@@ move to some better place
+@infogami.install_hook
 @infogami.action
 def tdbsetup():
     """setup tdb for infogami."""

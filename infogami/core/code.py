@@ -108,27 +108,34 @@ class recentchanges(delegate.page):
     
 class login(delegate.page):
     def GET(self, site):
-        return render.login(forms.login(), forms.register())
+        return render.login(forms.login())
 
     def POST(self, site):
-        i = web.input(remember=False)
-        if i.action == 'register':
-            f = forms.register()
-            if not f.validates(i):
-                    return render.login(forms.login(), f)
-            else:
-                user = db.new_user(i.username, i.email, i.password)
-                user.save()
-        else:
-            user = db.login(i.username, i.password)
-
+        i = web.input(remember=False, redirect='/')
+        user = db.login(i.username, i.password)
         if user is None:
             f = forms.login()
-            f.validates(i)
-            return render.login(f, forms.register(), error='Invalid username or password.')
+            f.fill(i)
+            f.note = 'Invalid username or password.'
+            return render.login(f)
 
         auth.setcookie(user, i.remember)
-        web.seeother(web.ctx.homepath + "/")
+        web.seeother(web.ctx.homepath + i.redirect)
+        
+class register(delegate.page):
+    def GET(self, site):
+        return render.register(forms.register())
+        
+    def POST(self, site):
+        i = web.input(remember=False, redirect='/')
+        f = forms.register()
+        if not f.validates(i):
+            return render.register(f)
+        else:
+            user = db.new_user(i.username, i.email, i.password)
+            user.save()
+            auth.setcookie(user, i.remember)
+            web.seeother(web.ctx.homepath + i.redirect)
 
 class logout(delegate.page):
     def POST(self, site):
@@ -164,7 +171,7 @@ class login_preferences:
         return render.login_preferences(f)
         
     def POST(self, site):
-        i = web.input("password", "password2")
+        i = web.input("email", "password", "password2")
         f = forms.login_preferences()
         if not f.validates(i):
             return render.login_preferences(f)

@@ -7,7 +7,7 @@ $if preview:
 	$for plugin in get_plugins():
 	    <tr><th>$plugin</th></tr>
 	    $for key in get_i18n_keys(plugin):
-	        <tr><td>$key</td><td>$page.data.get(key, "-")</td>
+	        <tr><td>$key</td><td>$page.data.get(plugin + '.' + key, "-")</td>
 	</table>
 
 <script>
@@ -25,7 +25,7 @@ $for plugin in get_plugins():
     <h3>$plugin</h3>
     <table id="table_$plugin">
     $for key in get_i18n_keys(plugin):
-        <tr><td>$key</td><td><input type="text" value="$page.data.get(key, '')"/></td>
+        <tr><td>$key</td><td><input type="text" value="$page.data.get(plugin + '.' + key, '')"/></td>
     </table>
 
 <input type="submit" name="clicked" value="Save" />

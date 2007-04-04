@@ -1,6 +1,13 @@
 import web
 
 class NotFound(Exception): pass
+class BadData(Exception): pass
+
+debug = False
+
+def log(*a):
+    if debug:
+        print >> web.debug, " ".join(map(str, a))
 
 class Thing:
     @staticmethod
@@ -15,11 +22,13 @@ class Thing:
         self.type = LazyThing(type_id)
         self.h = (self.id and History(self.id)) or None
         self._dirty = False
+        
+        log('thing:', self.id, self.name, self.parent_id, self.type_id, self.d)
     
     def __repr__(self):
         return '<Thing "%s" at %s>' % (self.name, self.id)
 
-    def __str__(self): return '<Thing "%s" with %s>' % (self.name, self.d)
+    def __str__(self): return self.name
     
     def __cmp__(self, other):
         return cmp(self.id, other.id)
@@ -34,6 +43,9 @@ class Thing:
         if not Thing._reserved(attr) and self.d.has_key(attr):
             return self.d[attr]
         raise AttributeError, attr
+    
+    def get(self, key, default=None):
+        return getattr(self, key, default)
     
     def __setattr__(self, attr, value):
         if Thing._reserved(attr):
@@ -50,6 +62,10 @@ class Thing:
             self.d[attr] = value
             self._dirty = True
     
+    def setdata(self, d):
+        self.d = d
+        self._dirty = True
+            
     def save(self, comment='', author_id=None, ip=None):
         def savedatum(vid, key, value, ordering=None):
             if isinstance(value, str):
@@ -57,13 +73,21 @@ class Thing:
             elif isinstance(value, Thing):
                 dt = 1
                 value = value.id
-            elif isinstance(value, int):
+            elif isinstance(value, (int, long)):
                 dt = 2
             elif isinstance(value, float):
                 dt = 3
+            else:
+                print >> web.debug, 'bad data', type(value), value
+                raise BadData, value
             web.insert('datum', False, 
               version_id=vid, key=key, value=value, data_type=dt, ordering=ordering)
         
+        if self._dirty is not True:
+            return
+        
+        log('save thing:', self.id, self.name, self.parent_id, self.type_id, self.d)
+        _run_hooks("before_new_version", self)
         web.transact()
         if self.id is None:
             tid = web.insert('thing', name=self.name, parent_id=self.parent_id)
@@ -86,6 +110,7 @@ class Thing:
         self.v = LazyVersion(vid)
         self.h = History(self.id)
         self._dirty = False
+        _run_hooks("on_new_version", self)
 
 class LazyThing(Thing):
     def __init__(self, id, revision=None):
@@ -138,6 +163,7 @@ def new(name, parent_id, type_id, d=None):
     return t
 
 def withID(id, revision=None, raw=False):
+    log('withID:', id, revision)
     try:
         t = web.select('thing', where="thing.id = $id", vars=locals())[0]
         if revision is None:
@@ -178,10 +204,11 @@ def withID(id, revision=None, raw=False):
     except IndexError:
         raise NotFound, id
 
-def withName(name, parent_id):
+def withName(name, parent_id, revision=None):
+    log('withName:', name, parent_id, revision)
     try:
         id = web.select('thing', where='parent_id = $parent_id AND name = $name', vars=locals())[0].id
-        return withID(id)
+        return withID(id, revision)
     except IndexError:
         raise NotFound, name
 
@@ -190,6 +217,14 @@ class Things:
         what = ['thing']
         n = 0
         where = "1=1"
+        
+        if 'parent_id' in query:
+            parent_id = query.pop('parent_id')
+            where += web.reparam(' AND thing.parent_id = $parent_id', locals())
+        
+        if 'type_id' in query:
+            type_id = query.pop('type_id')
+            query['__type__'] = type_id
         
         for k, v in query.items():
             n += 1
@@ -234,6 +269,25 @@ class History(Versions):
     def __init__(self, thing_id):
         Versions.__init__(self, thing_id=thing_id)
 
+# hooks can be registered by extending the hook class
+hooks = []
+class metahook(type):
+    def __init__(self, name, bases, attrs):
+        hooks.append(self())
+        type.__init__(self, name, bases, attrs)
+        
+class hook:
+    __metaclass__ = metahook
+
+#remove hook from hooks    
+hooks.pop()
+        
+def _run_hooks(name, thing):
+    for h in hooks:
+        m = getattr(h, name, None)
+        if m:
+            m(thing)
+    
 metatype = LazyThing(1)
 usertype = LazyThing(2)
 

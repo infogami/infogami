@@ -20,7 +20,7 @@ $for v in versions:
       <td><input type="radio" name="a" value="$v.revision"></td>
       <td><input type="radio" name="b" value="$v.revision"></td>
       <td><a href="$changequery(m='edit', v=v.revision)">$_.EDIT</a></td>
-      <td>$(v.author or v.ip_address)</td>
+      <td>$(v.author or v.ip)</td>
       <td><a href="$changequery(m=None, v=v.revision)">$datestr(v.created)</a></td>
       <td>
     </tr>

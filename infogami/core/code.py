@@ -15,46 +15,54 @@ def notfound():
 class view (delegate.mode):
     def GET(self, site, path):
         try:
-            p = db.get_version(site, path, web.input(v=None).v)
-        except IndexError:
+            p = db.get_version(site.id, path, web.input(v=None).v)
+        except db.NotFound:
             return notfound()
+        else:
+            return render.view(p)
         
-        return render.view(p)
-
 class edit (delegate.mode):
     def GET(self, site, path):
         i = web.input(v=None, t=None)
+        
+        if i.t:
+            type = db.get_type(i.t) or db.new_type(i.t)
+        else:
+            type = db.get_type('page')
+            
         try:
-            data = db.get_version(site, path, i.v).data
+            p = db.get_version(site.id, path, i.v)
             if i.t:
-                data.template = i.t
-        except IndexError:
-            data = web.storage({'title': '', 'template': i.t or 'page', 'body': ''})
+                p.type = type
+        except db.NotFound:
+            data = web.storage(title='', body='')
+            p = db.new_version(site.id, path, type.id, data)
 
-        p = web.storage(data=data)
         return render.edit(p)
     
     def POST(self, site, path):
-        i = web.input()
+        i = web.input(type="page")
+        data = web.storage((k, v) for k, v in i.items() if k not in ['clicked', 'type', 'm'])
+        p = db.new_version(site.id, path, db.get_type(i.type).id, data)
+
         if i.clicked == 'Preview':
-            p = web.storage(data=i)
             return render.edit(p, preview=True)
         else:
             user = auth.get_user()
             author_id = user and user.id
             try:
-                data = web.storage((k, v) for k, v in i.items() if k not in ['clicked', 'm'])
-                d = db.new_version(site, path, author_id, data)
+                p.save(author_id=author_id, ip=web.ctx.ip)
+                delegate.run_hooks('on_new_version', site, path, p)
             except db.ValidationException, e:
                 utils.view.set_error(str(e))
-                p = web.storage(data=i)
                 return render.edit(p)
+
             return web.seeother(web.changequery(m=None))
 
 class history (delegate.mode):
     def GET(self, site, path):
-        d = db.get_all_versions(site, path)
-        return render.history(d)
+        p = db.get_version(site.id, path)
+        return render.history(p.h)
 
 class diff (delegate.mode):
     def GET(self, site, path):
@@ -62,13 +70,13 @@ class diff (delegate.mode):
         i.a = i.a or int(i.b)-1
 
         try:
-            a = db.get_version(site, path, revision=i.a)
-            b = db.get_version(site, path, revision=i.b)
+            a = db.get_version(site.id, path, revision=i.a)
+            b = db.get_version(site.id, path, revision=i.b)
         except:
             return web.badrequest()
 
-        alines = a.data.body.splitlines()
-        blines = b.data.body.splitlines()
+        alines = a.body.splitlines()
+        blines = b.body.splitlines()
         
         map = better_diff(alines, blines)
         return render.diff(map, a, b)
@@ -88,7 +96,6 @@ class recentchanges(delegate.page):
         d = db.get_recent_changes(site)
         return render.recentchanges(web.ctx.homepath, d)
     
-    
 class login(delegate.page):
     def GET(self, site):
         return render.login(forms.login(), forms.register())
@@ -100,7 +107,8 @@ class login(delegate.page):
             if not f.validates(i):
                     return render.login(forms.login(), f)
             else:
-                user = db.get_user(db.new_user(i.username, i.email, i.password))
+                user = db.new_user(i.username, i.email, i.password)
+                user.save()
         else:
             user = db.login(i.username, i.password)
 

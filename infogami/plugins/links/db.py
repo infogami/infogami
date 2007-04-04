@@ -1,23 +1,24 @@
 from infogami.core import db
-import web
+from infogami import tdb
 
-class SQL:
-    def new_links(self, url, path, links):
-        site_id = db.get_site_id(url)
-        page_id = db.get_page_id(url, path)
-        web.transact()
-        web.delete('backlinks', where="site_id=$site_id AND page_id=$page_id", vars=locals())
-        for link in links:
-            web.insert('backlinks', False, site_id=site_id, page_id=page_id, link=link)
-        web.commit()
+def get_links_type():
+    linkstype = db.get_type('links') or db.new_type('links')
+    linkstype.save()
+    return linkstype
     
-    def get_links(self, url, path):
-        site_id = db.get_site_id(url)
-        return web.query("""SELECT page.* FROM page 
-          JOIN backlinks ON page.id = backlinks.page_id
-          WHERE page.site_id = $site_id AND backlinks.site_id = $site_id
-          AND backlinks.link = $path
-        """, vars=locals())
+def new_links(page, links):
+    # for links thing: parent=page, type=linkstype
+    site_id = page.parent_id
+    path = page.name
+    d = {'site_id': site_id, 'path': path, 'links': list(links)}
+    
+    try:
+        backlinks = tdb.withName("links", page.id)
+        backlinks.setdata(d)
+        backlinks.save()
+    except tdb.NotFound:
+        backlinks = tdb.new("links", page.id, get_links_type().id, d)
+        backlinks.save()
 
-from infogami.utils.delegate import pickdb
-pickdb(globals())
+def get_links(site_id, path):
+    return tdb.Things(type_id=get_links_type().id, site_id=site_id, links=path)

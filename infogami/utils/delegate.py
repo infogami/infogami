@@ -84,7 +84,9 @@ def delegate(path):
                 return web.notfound()
 
         what = web.input().get('m', 'view')
-        out = getattr(modes[what](), method)(config.site, path)
+        from infogami.core import db
+        site = db.get_site(config.site)
+        out = getattr(modes[what](), method)(site, path)
 
     if out:
         print view.render_site(config.site, out)
@@ -102,8 +104,12 @@ def _load():
     """Imports the files from the plugins directory and loads templates."""
     global plugins
 
-    plugins = ["infogami/core"] + \
-              [f for f in glob.glob('infogami/plugins/*') if os.path.isdir(f)]
+    plugins = ["infogami/core"]
+    
+    if config.plugins is not None:
+        plugins += ["infogami/plugins/" + p for p in config.plugins]
+    else:
+        plugins += [f for f in glob.glob('infogami/plugins/*') if os.path.isdir(f)]
 
     for plugin in plugins:
         if os.path.isdir(plugin):

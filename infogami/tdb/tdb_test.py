@@ -13,7 +13,7 @@ def simplething(name):
 def setup():
     web.config.db_parameters = dict(dbn='postgres', db='tdbtest', user='postgres', pw='')
     web.db._hasPooling = False
-    #web.config.db_printing = True
+    web.config.db_printing = True
     web.load()
     tdb.setup()
     

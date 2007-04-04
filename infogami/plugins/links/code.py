@@ -6,25 +6,23 @@ Creates a new set of database tables to keep track of them.
 Creates a new `m=backlinks` to display the results.
 """
 
-from infogami.utils import delegate
 from infogami import utils
+from infogami.utils import delegate
 
 import view
+from infogami import tdb
 import db
-
 import web
-import re
 
 render = utils.view.render.links
 
-class hooks:
-    __metaclass__ = delegate.hook
-    def on_new_version(site, path, data):
-        if data.template == "page":
-            db.new_links(site, path, view.get_links(data.body))
+class hook(tdb.hook):
+    def on_new_version(self, page):
+        print >> web.debug, "on_new_version", page.type.name, page.name, page.d
+        if page.type.name == "page":
+            db.new_links(page, view.get_links(page.body))
 
 class backlinks (delegate.mode):
     def GET(self, site, path):
-        links = db.get_links(site, path)
+        links = db.get_links(site.id, path)
         return render.backlinks(links)
-

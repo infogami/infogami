@@ -1,7 +1,88 @@
 from infogami.utils import delegate
 import web
+from infogami import tdb
+import infogami
+from infogami.tdb import NotFound
 
+#@@ move to some better place
+@infogami.action
+def tdbsetup():
+    """setup tdb for infogami."""
+    from infogami import config
+    web.load()
+    # hack to disable tdb hooks
+    tdb.tdb.hooks = []
+    tdb.setup()
+    sitetype = get_type('site') or new_type('site')
+    sitetype.save()
+    pagetype = get_type('page') or new_type('page')
+    pagetype.save()
+
+    try:
+        tdb.withName(config.site, sitetype.id)
+    except:
+        tdb.new(config.site, sitetype.id, sitetype.id).save()
+    
 class ValidationException(Exception): pass
+
+def get_version(site_id, path, revision=None):
+    return tdb.withName(path, site_id, revision=revision and int(revision))
+
+def new_version(site_id, path, type_id, data):
+    try:
+        v = tdb.withName(path, site_id)
+        v.type_id = type_id
+        v.setdata(data)
+    except tdb.NotFound:
+        v = tdb.new(path, site_id, type_id, data)
+    
+    return v
+    
+def get_user(userid):
+    return tdb.withID(userid)
+
+def get_user_by_name(username):
+    try:
+        return tdb.withName(username, tdb.usertype.id)
+    except NotFound:
+        return None
+    
+def login(username, password):
+    try:
+        u = get_user(username)
+        if u and u.password == password:
+            return u
+        else:
+            return None
+    except tdb.NotFound:
+        return None
+    
+def new_user(username, email, password):
+    d = dict(email=email, password=password)
+    return tdb.new(username, tdb.usertype.id, tdb.usertype.id, d)
+    
+def get_recent_changes(site_id):
+    raise Exception, "Not implemented"
+    
+def pagelist(site_id):
+    raise Exception, "Not implemented"
+
+def get_type(name, create=False):
+    try:
+        return tdb.withName(name, tdb.metatype.id)
+    except tdb.NotFound:
+        if create:
+            type = new_type(name)
+            type.save()
+            return type
+        else:
+            return None
+
+def new_type(name):
+    return tdb.new(name, tdb.metatype.id, tdb.metatype.id)
+
+def get_site(name):
+    return tdb.withName(name, get_type("site").id)
 
 class DB: pass
 
@@ -107,5 +188,5 @@ class SQL(DB):
         d = web.query("SELECT * FROM login WHERE name=$name", vars=locals())
         return (d and d[0]) or None
 
-from infogami.utils.delegate import pickdb
-pickdb(globals())
+#from infogami.utils.delegate import pickdb
+#pickdb(globals())

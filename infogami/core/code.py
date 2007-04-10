@@ -15,7 +15,7 @@ def notfound():
 class view (delegate.mode):
     def GET(self, site, path):
         try:
-            p = db.get_version(site.id, path, web.input(v=None).v)
+            p = db.get_version(site, path, web.input(v=None).v)
         except db.NotFound:
             return notfound()
         else:
@@ -31,27 +31,26 @@ class edit (delegate.mode):
             type = db.get_type('page')
             
         try:
-            p = db.get_version(site.id, path, i.v)
+            p = db.get_version(site, path, i.v)
             if i.t:
                 p.type = type
         except db.NotFound:
             data = web.storage(title='', body='')
-            p = db.new_version(site.id, path, type.id, data)
+            p = db.new_version(site, path, type, data)
 
         return render.edit(p)
     
     def POST(self, site, path):
         i = web.input(type="page")
         data = web.storage((k, v) for k, v in i.items() if k not in ['clicked', 'type', 'm'])
-        p = db.new_version(site.id, path, db.get_type(i.type).id, data)
+        p = db.new_version(site, path, db.get_type(i.type), data)
 
         if i.clicked == 'Preview':
             return render.edit(p, preview=True)
         else:
-            user = auth.get_user()
-            author_id = user and user.id
+            author = auth.get_user()
             try:
-                p.save(author_id=author_id, ip=web.ctx.ip)
+                p.save(author=author, ip=web.ctx.ip)
                 delegate.run_hooks('on_new_version', site, path, p)
             except db.ValidationException, e:
                 utils.view.set_error(str(e))
@@ -61,7 +60,7 @@ class edit (delegate.mode):
 
 class history (delegate.mode):
     def GET(self, site, path):
-        p = db.get_version(site.id, path)
+        p = db.get_version(site, path)
         return render.history(p.h)
 
 class diff (delegate.mode):
@@ -70,8 +69,8 @@ class diff (delegate.mode):
         i.a = i.a or int(i.b)-1
 
         try:
-            a = db.get_version(site.id, path, revision=i.a)
-            b = db.get_version(site.id, path, revision=i.b)
+            a = db.get_version(site, path, revision=i.a)
+            b = db.get_version(site, path, revision=i.b)
         except:
             return web.badrequest()
 

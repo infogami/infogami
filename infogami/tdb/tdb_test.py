@@ -6,14 +6,14 @@ import unittest
 testtype = None
 
 def simplething(name):
-    t = tdb.new(name, testtype.id, testtype.id, {'title' : name})
+    t = tdb.new(name, testtype, testtype, {'title' : name})
     t.save('saving ' + name);
     return t
     
 def setup():
     web.config.db_parameters = dict(dbn='postgres', db='tdbtest', user='postgres', pw='')
     web.db._hasPooling = False
-    web.config.db_printing = True
+    web.config.db_printing = False
     web.load()
     tdb.setup()
     
@@ -24,19 +24,16 @@ def setup():
     web.query('delete from thing where id > 2')
     
     global testtype
-    testtype = tdb.new('test', tdb.metatype.id, tdb.metatype.id)
+    testtype = tdb.new('test', tdb.metatype, tdb.metatype)
     testtype.save()
     
     simplething('test1')
     simplething('test2')
     simplething('test3')
 
-def new(name, parent_id=None, type_id=None, d=None):
-    if parent_id is None: parent_id = testtype.id
-    if type_id is None: type_id = testtype.id
-    if d is None: d = {}
-    
-    return tdb.new(name, parent_id, type_id, d)
+def new(name, parent=None, type=None, d=None):
+    if d is None: d = {}    
+    return tdb.new(name, parent or testtype, type or testtype, d)
 
 class tdbtest(unittest.TestCase):
     def test_new(self):
@@ -69,13 +66,13 @@ class tdbtest(unittest.TestCase):
         t.save('')
         
         assert t == tdb.withID(t.id)
-        assert t == tdb.withName(t.name, testtype.id)
-        assert tdb.withID(t.id) == tdb.withName(t.name, testtype.id)
+        assert t == tdb.withName(t.name, testtype)
+        assert tdb.withID(t.id) == tdb.withName(t.name, testtype)
 
     def test_list(self):
         subjects = ['Foo', 'Stories']
         authors = ['Joe Jacobson']
-        test1 = tdb.withName('test1', testtype.id)
+        test1 = tdb.withName('test1', testtype)
 
         t = new('list')
         t.subjects = subjects
@@ -92,19 +89,19 @@ class tdbtest(unittest.TestCase):
         assert test1.id in [x.id for x in t.related]
 
     def test_repr(self):
-        t = tdb.withName('test1', testtype.id)
+        t = tdb.withName('test1', testtype)
         t.id = 1
         t.name = 'foo'
         assert repr(t) == '<Thing "foo" at 1>'
 
     def test_things(self):
-        x = tdb.withName('test1', testtype.id)
+        x = tdb.withName('test1', testtype)
         tl = tdb.Things(title='test1').list()
         assert tl == [x]
 
         y = new('test11', d={'title' : 'test1', 'body' : 'a'})
         y.save('y')
-        z = new('test11', parent_id=y.id, d={'title' : 'test1', 'body' : 'a'})
+        z = new('test11', parent=y, d={'title' : 'test1', 'body' : 'a'})
         z.save('z')
 
         tl = tdb.Things(title='test1').list()
@@ -134,22 +131,19 @@ class tdbtest(unittest.TestCase):
     def test_parent(self):
         a = new('parent', d={'title' : 'parent'})
         a.save('save parent')
-        assert a.parent_id == testtype.id
         assert a.parent == testtype
 
-        b = new('child', parent_id=a.id, d={'title' : 'child'})
-        assert b.parent_id == a.id
+        b = new('child', parent=a, d={'title' : 'child'})
         assert b.parent == a
         b.save('save child')
 
         b = tdb.withID(b.id)
-        assert b.parent_id == a.id
         assert b.parent == a
         
         # it should be possible to create 2 things with same name, but different parents
-        x = new('cat', parent_id=a.id)
+        x = new('cat', parent=a)
         x.save('')
-        y = new('cat', parent_id=b.id)
+        y = new('cat', parent=b)
         y.save('')        
         assert x.name == y.name
         
@@ -162,10 +156,10 @@ class tdbtest(unittest.TestCase):
             raise Exception, "%s should be raised" % (exc)
     
     def testExceptions(self):
-        t1 = tdb.withName('test1', testtype.id)
+        t1 = tdb.withName('test1', testtype)
         # NotFound is raised when thing is not found
         self.assertException(tdb.NotFound, tdb.withID, t1.id+1000)
-        self.assertException(tdb.NotFound, tdb.withName, 'nothing', testtype.id)
+        self.assertException(tdb.NotFound, tdb.withName, 'nothing', testtype)
         
         # AttributeError is raised when attr is not available
         self.assertException(AttributeError, getattr, t1, 'nothing')
@@ -174,24 +168,23 @@ class tdbtest(unittest.TestCase):
         self.assertException(Exception, new('test1').save)
     
     def testVersion(self):
-        aaron = new('aaron', parent_id=tdb.usertype.id, type_id=tdb.usertype.id, d={'email': 'aaron@tdb.org'})
+        aaron = new('aaron', parent=tdb.usertype, type=tdb.usertype, d={'email': 'aaron@tdb.org'})
         aaron.save()
-        anand = new('anand', parent_id=tdb.usertype.id, type_id=tdb.usertype.id, d={'email': 'anand@tdb.org'})
+        anand = new('anand', parent=tdb.usertype, type=tdb.usertype, d={'email': 'anand@tdb.org'})
         anand.save()
 
         t = new('tdb', d={'title' : 'tdb v1'})
-        t.save(comment='first draft', ip='1.2.3.4', author_id=aaron.id)
+        t.save(comment='first draft', ip='1.2.3.4', author=aaron)
         assert t.v.thing == t
         assert t.v.comment == 'first draft'
         assert t.v.ip == '1.2.3.4'
         assert t.v.revision == 1
-        assert t.v.author_id == aaron.id
         assert t.v.author == aaron
         assert list(t.h) == [t.v]
         v1 = t.v
 
         t.title = 'tdb v2'
-        t.save(comment='second draft', author_id=anand.id)
+        t.save(comment='second draft', author=anand)
         assert t.v.thing == t
         assert t.v.ip == None
         assert t.v.comment == 'second draft'
@@ -207,16 +200,14 @@ class tdbtest(unittest.TestCase):
         a = new('typetest')
         a.save()
         
-        assert a.type_id == testtype.id
         assert a.type == testtype
         
-        a = tdb.withName('typetest', testtype.id)
-        assert a.type_id == testtype.id
+        a = tdb.withName('typetest', testtype)
         assert a.type == testtype
         
         # change type        
         a.type = tdb.usertype
-        assert a.type_id == tdb.usertype.id
+        assert a.type == tdb.usertype
         assert a._dirty
         a.save()
         assert a.v.revision == 2
@@ -225,7 +216,7 @@ class tdbtest(unittest.TestCase):
         assert a.h[1].thing.type == testtype
 
         # change type_id
-        a.type_id = tdb.metatype.id
+        a.type = tdb.metatype
         assert a.type == tdb.metatype
         a.save()
         

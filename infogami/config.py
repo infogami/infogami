@@ -7,7 +7,7 @@ import web
 internalerror = web.debugerror
 middleware = [web.reloader]
 
-web.db._hasPooling = False
+web.config._hasPooling = False
 
 db_printing = True
 db_kind = 'SQL'

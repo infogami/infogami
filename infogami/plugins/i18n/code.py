@@ -24,14 +24,14 @@ class hook(tdb.hook):
                 lang = result.group(1)
                 update_strings(lang, page.d)
 
-def get_site_id():
+def get_site():
     from infogami.core import db
-    return db.get_site(config.site).id
+    return db.get_site(config.site)
 
 def load_strings():
     """Load strings from wiki."""
     # This function is called from the first request that uses i18n
-    pages = db.get_all_strings(get_site_id())
+    pages = db.get_all_strings(get_site())
     for page in pages:
         result = re_i18n.match(page.name)
         if result:
@@ -74,10 +74,10 @@ def movestrings():
             for key, value in d.iteritems():
                 strings[lang][name + '.' + key] = value
                 
-    type_id = db.get_type('i18n', create=True).id
+    type = db.get_type('i18n', create=True)
     for lang, d in strings.iteritems():
         wikipath = "i18n/strings." + lang
-        db.new_version(get_site_id(), wikipath, type_id, d).save()
+        db.new_version(get_site(), wikipath, type, d).save()
 
 @public
 def get_i18n_keys(plugin):

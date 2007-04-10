@@ -13,20 +13,19 @@ class Thing:
     @staticmethod
     def _reserved(attr):
         return attr.startswith('_') or attr in [
-          'id', 'parent_id', 'parent', 'name', 'type_id', 'type', 'v', 'h', 'd', 'latest', 'versions', 'save']
+          'id', 'parent', 'name', 'type', 'v', 'h', 'd', 'latest', 'versions', 'save']
     
-    def __init__(self, id, name, parent_id, type_id, d, v):
-        self.id, self.name, self.parent_id, self.type_id, self.d, self.v = \
-            id and int(id), name, parent_id, type_id, d, v
-        self.parent = LazyThing(parent_id)
-        self.type = LazyThing(type_id)
+    def __init__(self, id, name, parent, type, d, v):
+        self.id, self.name, self.parent, self.type, self.d, self.v = \
+            id and int(id), name, parent, type, d, v
         self.h = (self.id and History(self.id)) or None
         self._dirty = False
         
-        log('thing:', self.id, self.name, self.parent_id, self.type_id, self.d)
+        log('thing:', self.id, self.name, self.parent, self.type, self.d)
     
     def __repr__(self):
-        return '<Thing "%s" at %s>' % (self.name, self.id)
+        dirty = (self._dirty and " dirty") or ""
+        return '<Thing "%s" at %s%s>' % (self.name, self.id, dirty)
 
     def __str__(self): return self.name
     
@@ -50,13 +49,7 @@ class Thing:
     def __setattr__(self, attr, value):
         if Thing._reserved(attr):
             self.__dict__[attr] = value
-            
-            # type and type_id must always be in sync.
             if attr == 'type':
-                self.__dict__['type_id'] = self.type.id
-                self._dirty = True
-            elif attr == 'type_id':
-                self.__dict__['type'] = LazyThing(self.type_id)
                 self._dirty = True
         else:
             self.d[attr] = value
@@ -66,7 +59,7 @@ class Thing:
         self.d = d
         self._dirty = True
             
-    def save(self, comment='', author_id=None, ip=None):
+    def save(self, comment='', author=None, ip=None):
         def savedatum(vid, key, value, ordering=None):
             if isinstance(value, str):
                 dt = 0
@@ -78,7 +71,6 @@ class Thing:
             elif isinstance(value, float):
                 dt = 3
             else:
-                print >> web.debug, 'bad data', type(value), value
                 raise BadData, value
             web.insert('datum', False, 
               version_id=vid, key=key, value=value, data_type=dt, ordering=ordering)
@@ -86,14 +78,14 @@ class Thing:
         if self._dirty is not True:
             return
         
-        log('save thing:', self.id, self.name, self.parent_id, self.type_id, self.d)
+        log('save thing:', self.id, self.name, self.parent, self.type, self.d)
         _run_hooks("before_new_version", self)
         web.transact()
         if self.id is None:
-            tid = web.insert('thing', name=self.name, parent_id=self.parent_id)
+            tid = web.insert('thing', name=self.name, parent_id=self.parent.id)
         else:
             tid = self.id
-        vid = web.insert('version', thing_id=tid, comment=comment, author_id=author_id, ip=ip)
+        vid = web.insert('version', thing_id=tid, comment=comment, author_id=author and author.id, ip=ip)
         web.query('UPDATE version SET revision=(SELECT max(revision)+1 \
                    FROM version WHERE thing_id=$tid) WHERE id=$vid', 
                    vars=locals())
@@ -103,8 +95,8 @@ class Thing:
                     savedatum(vid, k, item, n)
             else:
                 savedatum(vid, k, v)
-        savedatum(vid, '__type__', LazyThing(self.type_id))
-        web.update('thing', latest_version_id=vid, where="thing.id = $tid", vars=locals())
+        savedatum(vid, '__type__', self.type)
+        web.update('thing', latest_version_id=vid, where="id = $tid", vars=locals())
         web.commit()
         self.id = tid
         self.v = LazyVersion(vid)
@@ -123,8 +115,8 @@ class LazyThing(Thing):
         elif attr.startswith('__'):
             Thing.__getattr__(self, attr)
         else:
-            id, name, parent_id, type_id, d, v = withID(self.id, self._revision, raw=True)
-            Thing.__init__(self, id, name, parent_id, type_id, d, v)
+            id, name, parent, type, d, v = withID(self.id, self._revision, raw=True)
+            Thing.__init__(self, id, name, parent, type, d, v)
             self.__class__ = Thing
             return getattr(self, attr)
             
@@ -141,7 +133,7 @@ class Version:
         return not (self == other)
     
     def __repr__(self): 
-        return '<Version %s@%s at %s>' % (self.thing_id, self.revision, self.id)
+        return '<Version %s@%s at %s>' % (self.thing.id, self.revision, self.id)
 
 class LazyVersion(Version):
     def __init__(self, id):
@@ -156,9 +148,9 @@ class LazyVersion(Version):
             self.__class__ = Version
             return getattr(self, attr)
 
-def new(name, parent_id, type_id, d=None):
+def new(name, parent, type, d=None):
     if d == None: d = {}
-    t = Thing(None, name, parent_id, type_id, d, None)
+    t = Thing(None, name, parent, type, d, None)
     t._dirty = True
     return t
 
@@ -175,7 +167,7 @@ def withID(id, revision=None, raw=False):
                 where='version.thing_id = $id AND version.revision = $revision', 
                 vars=locals())[0]
         v = Version(**v)             
-        data = web.select('datum', 
+        data = web.select('datum',
                 where="version_id = $v.id", 
                 order="key ASC, ordering ASC",
                 vars=locals())
@@ -198,16 +190,16 @@ def withID(id, revision=None, raw=False):
         
         type = d.pop('__type__')
         if raw:
-            return id, t.name, t.parent_id, type.id, d, v
+            return id, t.name, LazyThing(t.parent_id), type, d, v
         else:
-            return Thing(id, t.name, t.parent_id, type.id, d, v)
+            return Thing(id, t.name, LazyThing(t.parent_id), type, d, v)
     except IndexError:
         raise NotFound, id
 
-def withName(name, parent_id, revision=None):
-    log('withName:', name, parent_id, revision)
+def withName(name, parent, revision=None):
+    log('withName:', name, parent, revision)
     try:
-        id = web.select('thing', where='parent_id = $parent_id AND name = $name', vars=locals())[0].id
+        id = web.select('thing', where='parent_id = $parent.id AND name = $name', vars=locals())[0].id
         return withID(id, revision)
     except IndexError:
         raise NotFound, name
@@ -218,16 +210,18 @@ class Things:
         n = 0
         where = "1=1"
         
-        if 'parent_id' in query:
-            parent_id = query.pop('parent_id')
-            where += web.reparam(' AND thing.parent_id = $parent_id', locals())
+        if 'parent' in query:
+            parent = query.pop('parent')
+            where += web.reparam(' AND thing.parent_id = $parent.id', locals())
         
-        if 'type_id' in query:
-            type_id = query.pop('type_id')
-            query['__type__'] = type_id
+        if 'type' in query:
+            type = query.pop('type')
+            query['__type__'] = type.id
         
         for k, v in query.items():
             n += 1
+            if isinstance(v, Thing):
+                v = v.id
             what.append('datum AS d%s' % n)
             where += ' AND d%s.version_id = thing.latest_version_id AND ' % n + \
               web.reparam('d%s.key = $k AND d%s.value = $v' % (n, n), locals())
@@ -293,8 +287,15 @@ usertype = LazyThing(2)
 
 def setup():
     try:
-       withID(1)
+        print withID(1)
     except NotFound:
         # create metatype and user type
-        new("metatype", 1, 1).save()
-        new("user", 1, 1).save()
+        print "notfound"
+        new("metatype", metatype, metatype).save()
+        new("user", metatype, metatype).save()
+
+if __name__ == "__main__":
+    import sys
+    web.config.db_parameters = dict(dbn="postgres", db=sys.argv[1], user="anand", pw="anand123")
+    web.load()
+    setup()

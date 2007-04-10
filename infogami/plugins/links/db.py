@@ -8,17 +8,17 @@ def get_links_type():
     
 def new_links(page, links):
     # for links thing: parent=page, type=linkstype
-    site_id = page.parent_id
+    site = page.parent
     path = page.name
-    d = {'site_id': site_id, 'path': path, 'links': list(links)}
+    d = {'site': site, 'path': path, 'links': list(links)}
     
     try:
-        backlinks = tdb.withName("links", page.id)
+        backlinks = tdb.withName("links", page)
         backlinks.setdata(d)
         backlinks.save()
     except tdb.NotFound:
-        backlinks = tdb.new("links", page.id, get_links_type().id, d)
+        backlinks = tdb.new("links", page, get_links_type(), d)
         backlinks.save()
 
-def get_links(site_id, path):
-    return tdb.Things(type_id=get_links_type().id, site_id=site_id, links=path)
+def get_links(site, path):
+    return tdb.Things(type=get_links_type(), site=site, links=path)

@@ -22,16 +22,16 @@ validation_enabled = True
 class hooks(tdb.hook):
     def on_new_version(self, page):
         if page.type.name == 'template':
-            site_id = page.parent_id
-            _load_template(site_id, page)
+            site = page.parent
+            _load_template(site, page)
 
     def before_new_version(self, page):
         if page.type.name == 'template':
-            site_id = page.parent_id
+            site = page.parent
             path = page.name
             
             # ensure that templates are loaded
-            get_templates(site_id)
+            get_templates(site)
 
             if path.endswith('page/view.tmpl') or path.endswith('page/edit.tmpl'):
                 _validate_pagetemplate(page.body)
@@ -75,7 +75,7 @@ def dummypage(title, body):
     page = web.storage(data=data, created=datetime.datetime.utcnow())
     return page
 
-def _load_template(site_id, page):
+def _load_template(site, page):
     """load template from a wiki page."""
     try:
         t = web.template.Template(page.body, filter=web.websafe)
@@ -83,27 +83,27 @@ def _load_template(site_id, page):
         print >> web.debug, 'load template', page.path, 'failed'
         pass
     else:
-        if site_id not in cache:
-            cache[site_id] = web.storage()
-        cache[site_id][page.name] = t
+        if site.id not in cache:
+            cache[site.id] = web.storage()
+        cache[site.id][page.name] = t
 
-def load_templates(site_id):
+def load_templates(site):
     """Load all templates from a site.
     """
-    pages = db.get_all_templates(site_id)
+    pages = db.get_all_templates(site)
     
     for p in pages:
-        _load_template(site_id, p)
+        _load_template(site, p)
 
-def get_templates(site_id):
-    if site_id not in cache:
-        cache[site_id] = web.storage()
-        load_templates(site_id)
-    return cache[site_id]
+def get_templates(site):
+    if site.id not in cache:
+        cache[site.id] = web.storage()
+        load_templates(site)
+    return cache[site.id]
 
-def get_site_id():
+def get_site():
     from infogami.core import db
-    return db.get_site(config.site).id
+    return db.get_site(config.site)
 
 def saferender(template, default_template, *a, **kw):
     if template is None:
@@ -119,14 +119,14 @@ def saferender(template, default_template, *a, **kw):
 def pagetemplate(name, default_template):
     def render(page, *a, **kw):
         path = "templates/%s/%s.tmpl" % (page.type.name, name)
-        t = get_templates(get_site_id()).get(path, None)
+        t = get_templates(get_site()).get(path, None)
         return saferender(t, default_template, page, *a, **kw)
     return render
 
 def sitetemplate(default_template):
     def render(*a, **kw):
         path = 'templates/site.tmpl'
-        t = get_templates(get_site_id()).get(path, None)
+        t = get_templates(get_site()).get(path, None)
         return saferender(t, default_template, *a, **kw)
     return render
         
@@ -147,7 +147,7 @@ def _move_template(title, path, dbpath):
     body = open(root + "/" + path).read()
     d = web.storage(title=title, body=body)
     type = db.get_type("template", create=True)
-    db.new_version(get_site_id(), dbpath, type.id, d).save()
+    db.new_version(get_site(), dbpath, type, d).save()
 
 
 @infogami.install_hook
@@ -161,7 +161,7 @@ def movetemplates():
 
     validation_enabled = False
 
-    load_templates(get_site_id())
+    load_templates(get_site())
     for name, filepath, wikipath in wikitemplates:
         print "*** %s\t%s -> %s" % (name, filepath, wikipath)
         _move_template(name, filepath, wikipath)
@@ -179,4 +179,3 @@ register_wiki_template("Template View Template",
 register_wiki_template("Template Edit Template", 
                        "plugins/wikitemplates/templates/edit.html", 
                        "templates/template/edit.tmpl")    
-

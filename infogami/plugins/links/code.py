@@ -18,11 +18,10 @@ render = utils.view.render.links
 
 class hook(tdb.hook):
     def on_new_version(self, page):
-        print >> web.debug, "on_new_version", page.type.name, page.name, page.d
         if page.type.name == "page":
             db.new_links(page, view.get_links(page.body))
 
 class backlinks (delegate.mode):
     def GET(self, site, path):
-        links = db.get_links(site.id, path)
+        links = db.get_links(site, path)
         return render.backlinks(links)

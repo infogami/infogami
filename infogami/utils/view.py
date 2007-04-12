@@ -1,8 +1,10 @@
 from infogami.utils import markdown
+from context import context
 import web
 import os
 from infogami import config
 from infogami.utils.i18n import i18n
+
 
 wiki_processors = []
 def register_wiki_processor(p):
@@ -16,48 +18,11 @@ def get_markdown(text):
 def get_doc(text):
     return get_markdown(text)._transform()
 
-def format(text): 
-    return str(get_markdown(text))
-
-def link(path, text=None):
-    return '<a href="%s">%s</a>' % (web.ctx.homepath + path, text or path)
-
-def url(path):
-    if path.startswith('/'):
-        return web.ctx.homepath + path
-    else:
-        return path
-
-def add_stylesheet(path):
-    web.ctx.infogami_ctx.stylesheets.append(url(path))
-    return ""
-
-def add_javascript(path):
-    web.ctx.infogami_ctx.javascripts.append(url(path))
-    return ""
-
-def spacesafe(text):
-    text = web.websafe(text)
-    text = text.replace(' ', '&nbsp;');
-    return text
-
-class InfogamiContext:
-    def __getattr__(self, key):
-        return getattr(web.ctx.infogami_ctx, key)
-
-    def __setattr__(self, key, value):
-        setattr(web.ctx.infogami_ctx, key, value)
-
 web.template.Template.globals.update(dict(
   changequery = web.changequery,
   datestr = web.datestr,
   numify = web.numify,
-  format = format,
-  link = link,
-  url = url,
-  add_stylesheet = add_stylesheet,
-  spacesafe = spacesafe,
-  ctx = InfogamiContext(),
+  ctx = context,
   _ = i18n(),
 ))
 
@@ -68,6 +33,36 @@ def public(f):
     web.template.Template.globals[f.__name__] = f
     return f
 
+@public
+def format(text): 
+    return str(get_markdown(text))
+
+@public
+def link(path, text=None):
+    return '<a href="%s">%s</a>' % (web.ctx.homepath + path, text or path)
+
+@public
+def url(path):
+    if path.startswith('/'):
+        return web.ctx.homepath + path
+    else:
+        return path
+@public
+def add_stylesheet(path):
+    context.stylesheets.append(url(path))
+    return ""
+    
+@public
+def add_javascript(path):
+    context.javascripts.append(url(path))
+    return ""
+
+@public
+def spacesafe(text):
+    text = web.websafe(text)
+    text = text.replace(' ', '&nbsp;');
+    return text
+    
 def set_error(msg):
     web.ctx.infogami_ctx.error = msg
 

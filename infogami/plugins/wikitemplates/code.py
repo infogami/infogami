@@ -8,11 +8,13 @@ import os
 
 import infogami
 from infogami.utils import delegate
+from infogami.utils.context import context
 from infogami.utils.view import render, set_error
 from infogami import config
 from infogami.core.db import ValidationException
+from infogami import core
 from infogami import tdb
-import db
+import db, forms
 
 cache = web.storage()
 
@@ -105,34 +107,68 @@ def get_site():
     from infogami.core import db
     return db.get_site(config.site)
 
-def saferender(template, default_template, *a, **kw):
-    if template is None:
-        return default_template(*a, **kw)
-    else:
+def saferender(templates, *a, **kw):
+    """Renders using the first successful template from the list of templates."""
+    
+    for t in templates:
+        if t is None:
+            continue
         try:
             web.header('Content-Type', 'text/html; charset=utf-8', unique=True)
-            return template(*a, **kw)
+            return t(*a, **kw)
         except Exception, e:
             set_error(str(e))
-            return default_template(*a, **kw)
-
+                
+def get_user_template(path):
+    from infogami.core import db
+    if context.user is None:
+        return None
+    else:
+        preferences = db.get_user_preferences(context.user)
+        root = getattr(preferences, 'wikitemplates.template_root', None)
+        if root is None or root.strip() == "":
+            return None
+        path = "%s/%s" % (root, path)
+        return get_templates(get_site()).get(path, None)
+    
+def get_wiki_template(path):
+    path = "templates/" + path
+    return get_templates(get_site()).get(path, None)
+    
 def pagetemplate(name, default_template):
     def render(page, *a, **kw):
-        path = "templates/%s/%s.tmpl" % (page.type.name, name)
-        t = get_templates(get_site()).get(path, None)
-        return saferender(t, default_template, page, *a, **kw)
+        path = "%s/%s.tmpl" % (page.type.name, name)
+        templates = [get_user_template(path), get_wiki_template(path), default_template]
+        return saferender(templates, page, *a, **kw)
     return render
 
-def sitetemplate(default_template):
+def sitetemplate(name, default_template):
     def render(*a, **kw):
-        path = 'templates/site.tmpl'
-        t = get_templates(get_site()).get(path, None)
-        return saferender(t, default_template, *a, **kw)
+        path = name + '.tmpl'
+        templates = [get_user_template(path), get_wiki_template(path), default_template]
+        return saferender(templates, *a, **kw)
     return render
         
 render.core.view = pagetemplate("view", render.core.view)
 render.core.edit = pagetemplate("edit", render.core.edit)
-render.core.site = sitetemplate(render.core.site)
+render.core.history = sitetemplate("history", render.core.history)
+render.core.site = sitetemplate('site', render.core.site)
+
+class template_preferences:
+    def GET(self, site):
+        prefs = core.db.get_user_preferences(context.user)
+        path = prefs.get('wikitemplates.template_root', "")
+        f = forms.template_preferences()
+        f.fill(dict(path=path))
+        return render.wikitemplates.template_preferences(f)
+        
+    def POST(self, site):
+        i = web.input()
+        prefs = core.db.get_user_preferences(context.user)
+        prefs['wikitemplates.template_root'] = i.path
+        prefs.save()
+        
+core.code.register_preferences("template_preferences", template_preferences())
 
 wikitemplates = []
 def register_wiki_template(name, filepath, wikipath):
@@ -148,7 +184,6 @@ def _move_template(title, path, dbpath):
     d = web.storage(title=title, body=body)
     type = db.get_type("template", create=True)
     db.new_version(get_site(), dbpath, type, d).save()
-
 
 @infogami.install_hook
 @infogami.action
@@ -167,9 +202,10 @@ def movetemplates():
         _move_template(name, filepath, wikipath)
 
 # register site and page templates
-register_wiki_template("Site Template", "core/templates/site.html", "templates/site.tmpl") 
+register_wiki_template("Site Template", "core/templates/site.html", "templates/site.tmpl")
 register_wiki_template("Page View Template", "core/templates/view.html", "templates/page/view.tmpl")
 register_wiki_template("Page Edit Template", "core/templates/edit.html", "templates/page/edit.tmpl")
+register_wiki_template("History Template", "core/templates/history.html", "templates/history.tmpl")
 
 # register template templates
 register_wiki_template("Template View Template",        

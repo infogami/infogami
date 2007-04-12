@@ -12,6 +12,10 @@ def notfound():
     web.ctx.status = '404 Not Found'
     return render.special.do404()
 
+def deleted():
+    web.ctx.status = '404 Not Found'
+    return render.special.deleted()
+
 class view (delegate.mode):
     def GET(self, site, path):
         try:
@@ -19,7 +23,10 @@ class view (delegate.mode):
         except db.NotFound:
             return notfound()
         else:
-            return render.view(p)
+            if p.type.name == 'delete':
+                return deleted()
+            else:
+                return render.view(p)
         
 class edit (delegate.mode):
     def GET(self, site, path):
@@ -41,27 +48,31 @@ class edit (delegate.mode):
         return render.edit(p)
     
     def POST(self, site, path):
-        i = web.input(type="page")
-        data = web.storage((k, v) for k, v in i.items() if k not in ['clicked', 'type', 'm'])
-        p = db.new_version(site, path, db.get_type(i.type), data)
-
-        if i.clicked == 'Preview':
+        i = web.input(type="page", _method='post')
+        data = web.storage((k, v) for k, v in i.items() if not k.startswith('_'))
+        p = db.new_version(site, path, db.get_type(i._type), data)
+        
+        if '_preview' in i:
             return render.edit(p, preview=True)
-        else:
+        elif '_save' in i:
             author = auth.get_user()
             try:
                 p.save(author=author, ip=web.ctx.ip)
                 delegate.run_hooks('on_new_version', site, path, p)
+                return web.seeother(web.changequery(m=None))
             except db.ValidationException, e:
                 utils.view.set_error(str(e))
                 return render.edit(p)
-
+        elif '_delete' in i:
+            p.type = db.get_type('delete', create=True)
+            p.save()
             return web.seeother(web.changequery(m=None))
+            
 
 class history (delegate.mode):
     def GET(self, site, path):
         p = db.get_version(site, path)
-        return render.history(p.h)
+        return render.history(p)
 
 class diff (delegate.mode):
     def GET(self, site, path):
@@ -127,3 +138,40 @@ class logout(delegate.page):
 class login_reminder(delegate.page):
     def GET(self, site):
         print "Not yet implemented."
+
+_preferences = {}
+def register_preferences(name, handler):
+    _preferences[name] = handler
+
+class preferences(delegate.page):
+    @auth.require_login    
+    def GET(self, site):
+        d = dict((name, p.GET(site)) for name, p in _preferences.iteritems())
+        return render.preferences(d.values())
+
+    @auth.require_login    
+    def POST(self, site):
+        i = web.input("_action")
+        result = _preferences[i._action].POST(site)
+        d = dict((name, p.GET(site)) for name, p in _preferences.iteritems())
+        if result:
+            d[i._action] = result
+        return render.preferences(d.values())
+
+class login_preferences:
+    def GET(self, site):
+        f = forms.login_preferences()
+        return render.login_preferences(f)
+        
+    def POST(self, site):
+        i = web.input("password", "password2")
+        f = forms.login_preferences()
+        if not f.validates(i):
+            return render.login_preferences(f)
+        else:
+            user = auth.get_user()
+            user.password = i.password
+            user.save()
+            return self.GET(site)
+
+register_preferences("login_preferences", login_preferences())

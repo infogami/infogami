@@ -42,7 +42,12 @@ class Thing:
         if not Thing._reserved(attr) and self.d.has_key(attr):
             return self.d[attr]
         raise AttributeError, attr
-    
+        
+    def __getitem__(self, attr):
+        if not Thing._reserved(attr) and self.d.has_key(attr):
+            return self.d[attr]
+        raise KeyError, attr
+
     def get(self, key, default=None):
         return getattr(self, key, default)
     
@@ -54,6 +59,8 @@ class Thing:
         else:
             self.d[attr] = value
             self._dirty = True
+            
+    __setitem__ = __setattr__
     
     def setdata(self, d):
         self.d = d
@@ -125,13 +132,10 @@ class Version:
         web.autoassign(self, locals())
         self.thing = LazyThing(thing_id, revision)
         self.author = (author_id and LazyThing(author_id)) or None
-        
-    def __eq__(self, other):
-        return self.id == other.id
-        
-    def __ne__(self, other):
-        return not (self == other)
     
+    def __cmp__(self, other):
+        return cmp(self.id, other.id)
+        
     def __repr__(self): 
         return '<Version %s@%s at %s>' % (self.thing.id, self.revision, self.id)
 

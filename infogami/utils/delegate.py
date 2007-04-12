@@ -2,7 +2,9 @@ import glob, os.path
 import web
 
 from infogami import config
+
 import view
+from context import context
 import i18n
 
 urls = (
@@ -59,11 +61,11 @@ def _changepath(new_path):
 def initialize_context():
     from infogami.core import auth
     
-    web.ctx.infogami_ctx = ctx = web.storage()
-    ctx.error = None
-    ctx.stylesheets = []
-    ctx.javascripts = []
-    ctx.user = auth.get_user()
+    context.load()
+    context.error = None
+    context.stylesheets = []
+    context.javascripts = []
+    context.user = auth.get_user()
 
 def delegate(path):
     method = web.ctx.method

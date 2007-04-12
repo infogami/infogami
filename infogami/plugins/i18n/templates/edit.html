@@ -18,7 +18,7 @@ function changeTemplate() {
 </script>
 
 <form name="edit" method="POST">
-<strong>$_.KIND</strong> <input type="text" name="type" value="$page.type.name" />
+<strong>$_.KIND</strong> <input type="_text" name="type" value="$page.type.name" />
 <input type="button" onclick="changeTemplate()" value="$_.CHANGE"/><br /><br />
 
 $for plugin in get_plugins():
@@ -28,7 +28,8 @@ $for plugin in get_plugins():
         <tr><td>$key</td><td><input type="text" name="$(plugin + '.' + key)" value="$page.get(plugin + '.' + key, '')"/></td>
     </table>
 
-<input type="submit" name="clicked" value="Save" />
-<input type="submit" name="clicked" value="Preview" />
+<input type="submit" name="_save" value="$_.SAVE" />
+<input type="submit" name="_preview" value="$_.PREVIEW" />
+<input type="submit" name="_delete" value="$_.DELETE" />
 </form>
 

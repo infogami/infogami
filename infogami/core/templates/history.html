@@ -1,4 +1,4 @@
-$def with (versions)
+$def with (page)
 
 $var title: $_.HISTORY
 
@@ -14,7 +14,7 @@ $var title: $_.HISTORY
   <th>$_.WHO</th>
   <th>$_.WHEN</th>
 </tr>
-$for v in versions:
+$for v in page.h:
     <tr>
       <td>$v.revision</td>
       <td><input type="radio" name="a" value="$v.revision"></td>

@@ -60,6 +60,13 @@ def login(username, password):
 def new_user(username, email, password):
     d = dict(email=email, password=password)
     return tdb.new(username, tdb.usertype, tdb.usertype, d)
+
+def get_user_preferences(user):
+    type = get_type('preferences', create=True)
+    try:
+        return tdb.withName('preferences', user)
+    except NotFound:
+        return tdb.new('preferences', user, type)
     
 def get_recent_changes(site):
     raise Exception, "Not implemented"
@@ -83,3 +90,4 @@ def new_type(name):
 
 def get_site(name):
     return tdb.withName(name, get_type("site"))
+

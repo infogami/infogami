@@ -1,13 +1,8 @@
 import web
+import logger
 
 class NotFound(Exception): pass
 class BadData(Exception): pass
-
-debug = False
-
-def log(*a):
-    if debug:
-        print >> web.debug, " ".join(map(str, a))
 
 class Thing:
     @staticmethod
@@ -20,9 +15,7 @@ class Thing:
             id and int(id), name, parent, type, d, v
         self.h = (self.id and History(self.id)) or None
         self._dirty = False
-        
-        log('thing:', self.id, self.name, self.parent, self.type, self.d)
-    
+            
     def __repr__(self):
         dirty = (self._dirty and " dirty") or ""
         return '<Thing "%s" at %s%s>' % (self.name, self.id, dirty)
@@ -82,20 +75,27 @@ class Thing:
             web.insert('datum', False, 
               version_id=vid, key=key, value=value, data_type=dt, ordering=ordering)
         
+
         if self._dirty is not True:
             return
         
-        log('save thing:', self.id, self.name, self.parent, self.type, self.d)
         _run_hooks("before_new_version", self)
         web.transact()
         if self.id is None:
-            tid = web.insert('thing', name=self.name, parent_id=self.parent.id)
+            tid = web.insert('thing', name=self.name, parent_id=self.parent.id, latest_revision=1)
+            revision = 1
         else:
             tid = self.id
-        vid = web.insert('version', thing_id=tid, comment=comment, author_id=author and author.id, ip=ip)
-        web.query('UPDATE version SET revision=(SELECT max(revision)+1 \
-                   FROM version WHERE thing_id=$tid) WHERE id=$vid', 
-                   vars=locals())
+            result = web.query("SELECT revision FROM version \
+                WHERE thing_id=$tid ORDER BY revision DESC LIMIT 1 \
+                FOR UPDATE NOWAIT", vars=locals())
+            revision = result[0].revision+1
+            web.update('thing', where='id=$tid', latest_revision=revision, vars=locals())
+            
+        author_id = author and author.id
+        vid = web.insert('version', thing_id=tid, comment=comment, 
+            author_id=author_id, ip=ip, revision=revision)
+        
         for k, v in self.d.items():
             if isinstance(v, list):
                 for n, item in enumerate(v):
@@ -103,8 +103,21 @@ class Thing:
             else:
                 savedatum(vid, k, v)
         savedatum(vid, '__type__', self.type)
-        web.update('thing', latest_version_id=vid, where="id = $tid", vars=locals())
-        web.commit()
+        
+        logger.transact()
+        try:
+            if revision == 1:
+                logger.log('thing', tid, name=self.name, parent_id=self.parent.id)
+
+            logger.log('version', vid, thing_id=tid, author_id=author_id, ip=ip, 
+                comment=comment, revision=revision, __type__=self.type, **self.d)
+                
+            web.commit()
+        except:
+            logger.rollback()
+            raise
+        else:
+            logger.commit()
         self.id = tid
         self.v = LazyVersion(vid)
         self.h = History(self.id)
@@ -159,18 +172,14 @@ def new(name, parent, type, d=None):
     return t
 
 def withID(id, revision=None, raw=False):
-    log('withID:', id, revision)
     try:
         t = web.select('thing', where="thing.id = $id", vars=locals())[0]
-        if revision is None:
-            v = web.select('version', 
-                where='version.id = $t.latest_version_id',
-                vars=locals())[0]
-        else:
-            v = web.select('version', 
-                where='version.thing_id = $id AND version.revision = $revision', 
-                vars=locals())[0]
-        v = Version(**v)             
+        revision = revision or t.latest_revision
+        
+        v = web.select('version', 
+            where='version.thing_id = $id AND version.revision = $revision', 
+            vars=locals())[0]
+        v = Version(**v)
         data = web.select('datum',
                 where="version_id = $v.id", 
                 order="key ASC, ordering ASC",
@@ -201,7 +210,6 @@ def withID(id, revision=None, raw=False):
         raise NotFound, id
 
 def withName(name, parent, revision=None):
-    log('withName:', name, parent, revision)
     try:
         id = web.select('thing', where='parent_id = $parent.id AND name = $name', vars=locals())[0].id
         return withID(id, revision)
@@ -210,9 +218,10 @@ def withName(name, parent, revision=None):
 
 class Things:
     def __init__(self, **query):
-        what = ['thing']
+        tables = ['thing', 'version']
+        what = 'thing.id'
         n = 0
-        where = "1=1"
+        where = "thing.id = version.thing_id AND thing.latest_revision = version.revision"
         
         if 'parent' in query:
             parent = query.pop('parent')
@@ -226,12 +235,12 @@ class Things:
             n += 1
             if isinstance(v, Thing):
                 v = v.id
-            what.append('datum AS d%s' % n)
-            where += ' AND d%s.version_id = thing.latest_version_id AND ' % n + \
+            tables.append('datum AS d%s' % n)
+            where += ' AND d%s.version_id = version.id AND ' % n + \
               web.reparam('d%s.key = $k AND d%s.value = $v' % (n, n), locals())
         
-        self.values = [r.id for r in web.select(what, where=where)]
-    
+        self.values = [r.id for r in web.select(tables, what=what, where=where)]
+        
     def __iter__(self):
         for item in self.values:
             yield withID(item)
@@ -291,10 +300,9 @@ usertype = LazyThing(2)
 
 def setup():
     try:
-        print withID(1)
+        withID(1)
     except NotFound:
         # create metatype and user type
-        print "notfound"
         new("metatype", metatype, metatype).save()
         new("user", metatype, metatype).save()
 

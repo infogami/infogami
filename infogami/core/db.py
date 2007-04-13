@@ -39,7 +39,10 @@ def new_version(site, path, type, data):
     return p
     
 def get_user(userid):
-    return tdb.withID(userid)
+    try:
+        return tdb.withID(userid)
+    except NotFound:
+        return None
 
 def get_user_by_name(username):
     try:

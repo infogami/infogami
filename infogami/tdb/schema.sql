@@ -2,20 +2,20 @@ CREATE TABLE thing (
   id serial primary key,
   parent_id int references thing,
   name varchar(4000),
+  latest_revision int,
   unique(parent_id, name)
 );
 
 CREATE TABLE version (
   id serial primary key,
-  revision int default 0,
+  revision int,
   thing_id int references thing,
   author_id int references thing,
   ip inet,
   comment text,
-  created timestamp default (current_timestamp at time zone 'utc')
+  created timestamp default (current_timestamp at time zone 'utc'),
+  unique (thing_id, revision)
 );
-
-ALTER TABLE thing ADD latest_version_id int references version;
 
 CREATE TABLE datum (
   version_id int references version,

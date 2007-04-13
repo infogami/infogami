@@ -18,7 +18,6 @@ def setup():
     tdb.setup()
     
     # clear the database
-    web.query('update thing set latest_version_id=null where id > 2')
     web.query('delete from datum where version_id > 2')
     web.query('delete from version where thing_id > 2')
     web.query('delete from thing where id > 2')
@@ -223,7 +222,8 @@ class tdbtest(unittest.TestCase):
         assert a.h[0].thing.type == tdb.metatype
         assert a.h[1].thing.type == tdb.usertype
         assert a.h[2].thing.type == testtype
-        
+                
 if __name__ == "__main__":
     setup()
     unittest.main()
+    #tdbtest().testVersion()

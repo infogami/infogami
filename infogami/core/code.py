@@ -48,7 +48,7 @@ class edit (delegate.mode):
         return render.edit(p)
     
     def POST(self, site, path):
-        i = web.input(type="page", _method='post')
+        i = web.input(_type="page", _method='post')
         data = web.storage((k, v) for k, v in i.items() if not k.startswith('_'))
         p = db.new_version(site, path, db.get_type(i._type), data)
         

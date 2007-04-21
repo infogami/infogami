@@ -60,16 +60,25 @@ def _changepath(new_path):
 
 def initialize_context():
     from infogami.core import auth
+    from infogami.core import db
     
     context.load()
     context.error = None
     context.stylesheets = []
     context.javascripts = []
     context.user = auth.get_user()
-
+    context.site = db.get_site(config.site)
+    
+    i = web.input(_mode='GET', rescue="false")
+    context.rescue_mode = (i.rescue.lower() == 'true')
+    
 def delegate(path):
     method = web.ctx.method
     initialize_context()
+
+    # redirect foo/ to foo
+    if path.endswith('/'):
+        return web.seeother('/' + path[:-1])
 
     if path in pages:
         out = getattr(pages[path](), method)(config.site)
@@ -86,12 +95,13 @@ def delegate(path):
                 return web.notfound()
 
         what = web.input().get('m', 'view')
-        from infogami.core import db
-        site = db.get_site(config.site)
-        out = getattr(modes[what](), method)(site, path)
+        out = getattr(modes[what](), method)(context.site, path)
 
-    if out:
-        print view.render_site(config.site, out)
+    if out is not None:
+        if hasattr(out, 'rawtext'):
+            print out.rawtext
+        else:
+            print view.render_site(config.site, out)
 
 class item:
     GET = POST = lambda self, path: delegate(path)
@@ -123,4 +133,4 @@ def pickdb(g):
     instance = g[config.db_kind]()
     for k in dir(instance):
         g[k] = getattr(instance, k)
-
+        

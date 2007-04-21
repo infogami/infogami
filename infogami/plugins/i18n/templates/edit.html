@@ -12,13 +12,13 @@ $if preview:
 
 <script>
 function changeTemplate() {
-    var t = document.edit.type.value;
+    var t = document.edit._type.value;
     document.location.href += '&t=' + t;
 }
 </script>
 
 <form name="edit" method="POST">
-<strong>$_.KIND</strong> <input type="_text" name="type" value="$page.type.name" />
+<strong>$_.PAGETYPE</strong> <input type="text" name="_type" value="$page.type.name" />
 <input type="button" onclick="changeTemplate()" value="$_.CHANGE"/><br /><br />
 
 $for plugin in get_plugins():

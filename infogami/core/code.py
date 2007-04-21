@@ -1,6 +1,7 @@
 import web
 from infogami import utils
 from infogami.utils import delegate
+from infogami.utils.macro import macro
 from diff import better_diff
 import db
 import auth
@@ -50,7 +51,11 @@ class edit (delegate.mode):
     def POST(self, site, path):
         i = web.input(_type="page", _method='post')
         data = web.storage((k, v) for k, v in i.items() if not k.startswith('_'))
-        p = db.new_version(site, path, db.get_type(i._type), data)
+        
+        type = db.get_type(i._type) or db.new_type(i._type)
+        type.save()
+        
+        p = db.new_version(site, path,type, data)
         
         if '_preview' in i:
             return render.edit(p, preview=True)
@@ -74,8 +79,15 @@ class history (delegate.mode):
         p = db.get_version(site, path)
         return render.history(p)
 
+@macro
+def PageList(path):
+    from infogami.utils.context import context 
+    pages = db.list_pages(context.site, path)
+    for p in pages:
+        yield "* [%s](/%s)" % (p.name, p.name)
+    
 class diff (delegate.mode):
-    def GET(self, site, path):
+    def GET(self, site, path):  
         i = web.input("b", a=None)
         i.a = i.a or int(i.b)-1
 
@@ -96,10 +108,11 @@ class random(delegate.page):
         p = db.get_random_page(site)
         return web.seeother(p.path)
 
-class pagelist(delegate.page):
-    def GET(self, site):
-        d = db.get_all_pages(site)
-        return render.pagelist(d)
+#@@ pagelist can be a macro now.
+#class pagelist(delegate.page):
+#    def GET(self, site):
+#        d = db.get_all_pages(site)
+#        return render.pagelist(d)
 
 class recentchanges(delegate.page):
     def GET(self, site):

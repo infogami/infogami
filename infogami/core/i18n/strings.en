@@ -10,7 +10,7 @@ BACKLINKS  = "backlinks"
 
 EDIT = "edit"
 TITLE = "Title"
-KIND = "Kind"
+PAGETYPE = "Page type"
 CHANGE = "Change"
 SAVE = "Save"
 PREVIEW = "Preview"

@@ -164,6 +164,7 @@ render.core.site = sitetemplate('site', render.core.site)
 render.core.history = sitetemplate("history", render.core.history)
 render.core.login = sitetemplate("login", render.core.login)
 render.core.register = sitetemplate("register", render.core.register)
+render.core.diff = sitetemplate("diff", render.core.diff)
 
 class template_preferences:
     def GET(self, site):
@@ -219,6 +220,7 @@ register_wiki_template("Page Edit Template", "core/templates/edit.html", "templa
 register_wiki_template("History Template", "core/templates/history.html", "templates/history.tmpl")
 register_wiki_template("Login Template", "core/templates/login.html", "templates/login.tmpl")
 register_wiki_template("Register Template", "core/templates/register.html", "templates/register.tmpl")
+register_wiki_template("Diff Template", "core/templates/diff.html", "templates/diff.tmpl")
 
 # register template templates
 register_wiki_template("Template View Template",        

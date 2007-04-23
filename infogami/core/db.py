@@ -95,3 +95,13 @@ def new_type(name):
 def get_site(name):
     return tdb.withName(name, get_type("site"))
 
+def list_pages(site, path):
+    """Lists all pages with name path/*"""
+    
+    if path == "":
+        pattern = '%'
+    else:
+        pattern = path + '/%'
+    return web.query("SELECT id, name FROM thing \
+            WHERE parent_id=$site.id AND name LIKE $pattern \
+            ORDER BY name", vars=locals())

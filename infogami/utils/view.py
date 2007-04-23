@@ -11,7 +11,9 @@ def register_wiki_processor(p):
     wiki_processors.append(p)
 
 def get_markdown(text):
+    import macro
     md = markdown.Markdown(source=text, safe_mode=False)
+    md = macro.macromarkdown(md)
     md.postprocessors += wiki_processors
     return md
 

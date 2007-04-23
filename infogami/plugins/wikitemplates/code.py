@@ -80,7 +80,7 @@ def dummypage(title, body):
 def _load_template(site, page):
     """load template from a wiki page."""
     try:
-        t = web.template.Template(page.body, filter=web.websafe)
+        t = web.template.Template(page.body, filter=web.websafe, filename=page.name)
     except web.template.ParseError:
         print >> web.debug, 'load template', page.path, 'failed'
         pass
@@ -109,7 +109,6 @@ def get_site():
 
 def saferender(templates, *a, **kw):
     """Renders using the first successful template from the list of templates."""
-    
     for t in templates:
         if t is None:
             continue
@@ -138,16 +137,22 @@ def get_wiki_template(path):
     
 def pagetemplate(name, default_template):
     def render(page, *a, **kw):
-        path = "%s/%s.tmpl" % (page.type.name, name)
-        templates = [get_user_template(path), get_wiki_template(path), default_template]
-        return saferender(templates, page, *a, **kw)
+        if context.rescue_mode:
+            return default_template(page, *a, **kw)
+        else:
+            path = "%s/%s.tmpl" % (page.type.name, name)
+            templates = [get_user_template(path), get_wiki_template(path), default_template]
+            return saferender(templates, page, *a, **kw)
     return render
 
 def sitetemplate(name, default_template):
     def render(*a, **kw):
-        path = name + '.tmpl'
-        templates = [get_user_template(path), get_wiki_template(path), default_template]
-        return saferender(templates, *a, **kw)
+        if context.rescue_mode:
+            return default_template(*a, **kw)
+        else:
+            path = name + '.tmpl'
+            templates = [get_user_template(path), get_wiki_template(path), default_template]
+            return saferender(templates, *a, **kw)
     return render
         
 render.core.view = pagetemplate("view", render.core.view)

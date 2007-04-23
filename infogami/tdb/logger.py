@@ -120,7 +120,7 @@ def _encode(value):
     from tdb import Thing
 
     if isinstance(value, list):
-        return '[%s]' % ", ".join([encode(v) for v in value])
+        return '[%s]' % ", ".join([_encode(v) for v in value])
     elif isinstance(value, str):
         return xrepr(value)
     elif isinstance(value, unicode):

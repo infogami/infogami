@@ -80,9 +80,9 @@ def dummypage(title, body):
 def _load_template(site, page):
     """load template from a wiki page."""
     try:
-        t = web.template.Template(page.body, filter=web.websafe, filename=page.name)
+        t = web.template.Template(page.body, filter=web.websafe)
     except web.template.ParseError:
-        print >> web.debug, 'load template', page.path, 'failed'
+        print >> web.debug, 'load template', page.name, 'failed'
         pass
     else:
         if site.id not in cache:
@@ -113,8 +113,10 @@ def saferender(templates, *a, **kw):
         if t is None:
             continue
         try:
-            web.header('Content-Type', 'text/html; charset=utf-8', unique=True)
-            return t(*a, **kw)
+            result = t(*a, **kw)
+            content_type = getattr(result, 'ContentType', 'text/html; charset=utf-8').strip()
+            web.header('Content-Type', content_type, unique=True)
+            return result
         except Exception, e:
             print >> web.debug, str(e)
             set_error(str(e))

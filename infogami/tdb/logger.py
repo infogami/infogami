@@ -177,7 +177,11 @@ def parse(filename):
 def load(filename):
     """Loads a tdb log file into database."""
     def savedatum(vid, key, value, ordering=None):
-        if isinstance(value, str):
+        if isinstance(value, list):
+            for n, item in enumerate(v):
+                savedatum(vid, k, item, n)
+            
+        elif isinstance(value, str):
             dt = 0
         elif isinstance(value, Thing):
             dt = 1
@@ -198,10 +202,9 @@ def load(filename):
         if key == 'thing':
             web.insert('thing', id=id, **data)
         elif key == 'version':
-            keys = ['id', 'thing_id', 'author_id', 'ip', 'comment', 'revision']
-            vd = dict([(k, data.pop(k)) for k in keys])
-            vid = web.insert('version', **vd)
-            
+            web.insert('version', id=id, **data)
+        elif key == 'data':
+            vid = id
             for k, v in data.items():
                 if isinstance(v, list):
                     for n, item in enumerate(v):
@@ -209,7 +212,7 @@ def load(filename):
                 else:
                     savedatum(vid, k, v)
     web.commit()
-    
+
 if __name__ == "__main__":
     import sys
     for key, id, data in parse(sys.argv[1]):

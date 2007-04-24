@@ -108,10 +108,9 @@ class Thing:
         try:
             if revision == 1:
                 logger.log('thing', tid, name=self.name, parent_id=self.parent.id)
-
             logger.log('version', vid, thing_id=tid, author_id=author_id, ip=ip, 
-                comment=comment, revision=revision, __type__=self.type, **self.d)
-                
+                comment=comment, revision=revision)           
+            logger.log('data', vid, __type__=self.type, **self.d)
             web.commit()
         except:
             logger.rollback()

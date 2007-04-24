@@ -53,10 +53,9 @@ def commit():
         f = open(txfilename)
         msg = f.read()
         f.close()
-        import web
         logfile.write(msg)
+        logfile.flush()
         os.fsync(logfile.fileno())
-
         _release()
 
 def rollback():

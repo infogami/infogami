@@ -43,23 +43,53 @@ class edit (delegate.mode):
             if i.t:
                 p.type = type
         except db.NotFound:
-            data = web.storage(title='', body='')
+            schema = db.get_schema(site, type)
+            schema.pop('*', None)
+            data = web.storage()
+            for k in schema:
+                if k != '*':
+                    if k.endswith('*'):
+                        data[k] = ['']
+                    else:
+                        data[k] = ''
             p = db.new_version(site, path, type, data)
 
         return render.edit(p)
     
-    def POST(self, site, path):
+    def dict_subset(self, d, keys):
+        return dict([(k, v) for k, v in d.iteritems() if k in keys])
+        
+    def input(self, site):
         i = web.input(_type="page", _method='post')
-        data = web.storage((k, v) for k, v in i.items() if not k.startswith('_'))
         
-        type = db.get_type(i._type) or db.new_type(i._type)
-        type.save()
+        if '_save' in i: 
+            action = 'save'
+        elif '_preview' in i: 
+            action = 'preview'
+        elif '_delete' in i: 
+            action = 'delete'
+        else:
+            action = None
         
+        type = db.get_type(i._type, create=True)
+        schema = db.get_schema(site, type)
+        plurals = dict([(k, []) for k,v in schema.items() if v.endswith('*')])
+        i = web.input(_method='post', **plurals)
+        if '*' in schema:
+            d = [(k, v) for k, v in i.iteritems() if not k.startswith('_')]
+            i = dict(d)
+        else:
+            d = [(k, i[k]) for k in schema]
+            i = dict(d)
+        return action, type, i
+    
+    def POST(self, site, path):
+        action, type, data = self.input(site)
         p = db.new_version(site, path,type, data)
         
-        if '_preview' in i:
+        if action == 'preview':
             return render.edit(p, preview=True)
-        elif '_save' in i:
+        elif action == 'save':
             author = auth.get_user()
             try:
                 p.save(author=author, ip=web.ctx.ip)
@@ -68,12 +98,11 @@ class edit (delegate.mode):
             except db.ValidationException, e:
                 utils.view.set_error(str(e))
                 return render.edit(p)
-        elif '_delete' in i:
+        elif action == 'delete':
             p.type = db.get_type('delete', create=True)
             p.save()
             return web.seeother(web.changequery(m=None))
             
-
 class history (delegate.mode):
     def GET(self, site, path):
         p = db.get_version(site, path)

@@ -15,6 +15,7 @@ class Thing:
             id and int(id), name, parent, type, d, v, latest_revision
         self.h = (self.id and History(self.id)) or None
         self._dirty = False
+        self.d = web.storage(self.d)
             
     def __repr__(self):
         dirty = (self._dirty and " dirty") or ""

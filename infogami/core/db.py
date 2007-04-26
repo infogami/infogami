@@ -105,3 +105,14 @@ def list_pages(site, path):
     return web.query("SELECT id, name FROM thing \
             WHERE parent_id=$site.id AND name LIKE $pattern \
             ORDER BY name", vars=locals())
+       
+from infogami.utils.view import public
+        
+#@@ this should be moved to wikitemplates plugin    
+@public
+def get_schema(site, type):
+    try:
+        p = get_version(site, 'templates/%s/schema' % type.name)
+        return p.d
+    except tdb.NotFound:
+        return web.storage(body="", title="")

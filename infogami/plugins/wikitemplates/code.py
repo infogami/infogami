@@ -80,9 +80,11 @@ def dummypage(title, body):
 def _load_template(site, page):
     """load template from a wiki page."""
     try:
-        t = web.template.Template(page.body, filter=web.websafe)
+        t = web.template.Template(page.body, filter=web.websafe, filename=page.name)
     except web.template.ParseError:
         print >> web.debug, 'load template', page.name, 'failed'
+        import traceback
+        traceback.print_exc()
         pass
     else:
         if site.id not in cache:
@@ -119,8 +121,12 @@ def saferender(templates, *a, **kw):
             return result
         except Exception, e:
             print >> web.debug, str(e)
+            import traceback
+            traceback.print_exc()
             set_error(str(e))
-                
+    
+    return "Unable to render this page."            
+    
 def get_user_template(path):
     from infogami.core import db
     if context.user is None:
@@ -157,8 +163,8 @@ def sitetemplate(name, default_template):
             return saferender(templates, *a, **kw)
     return render
         
-render.core.view = pagetemplate("view", render.core.view)
-render.core.edit = pagetemplate("edit", render.core.edit)
+render.core.view = pagetemplate("view", render.core.default_view)
+render.core.edit = pagetemplate("edit", render.core.default_edit)
 
 render.core.site = sitetemplate('site', render.core.site)
 render.core.history = sitetemplate("history", render.core.history)

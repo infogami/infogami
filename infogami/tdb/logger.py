@@ -163,7 +163,7 @@ def parse(filename):
         returns the result as a dictionary."""
         d = {}
         for line in lines:
-            name, value = line.split(":")
+            name, value = line.split(":", 1)
             name = _keydecode(name)
             d[name] = decode(value)
         return d
@@ -176,10 +176,12 @@ def parse(filename):
 def load(filename):
     """Loads a tdb log file into database."""
     def savedatum(vid, key, value, ordering=None):
-        if isinstance(value, list):
+        # since only one level lists are supported, 
+        # list type can not have ordering specified.
+        if isinstance(value, list) and ordering is None:
             for n, item in enumerate(v):
                 savedatum(vid, k, item, n)
-            
+            return
         elif isinstance(value, str):
             dt = 0
         elif isinstance(value, Thing):

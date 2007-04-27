@@ -71,7 +71,7 @@ def spacesafe(text):
     return text
     
 def set_error(msg):
-    web.ctx.infogami_ctx.error = msg
+    context.error = msg
 
 def load_templates(dir):
     cache = getattr(config, 'cache_templates', True)

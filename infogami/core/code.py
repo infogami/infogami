@@ -105,9 +105,12 @@ class edit (delegate.mode):
             
 class history (delegate.mode):
     def GET(self, site, path):
-        p = db.get_version(site, path)
-        return render.history(p)
-
+        try:
+            p = db.get_version(site, path)
+            return render.history(p)
+        except db.NotFound:
+            return web.seeother('/' + path)
+            
 @macro
 def PageList(path):
     from infogami.utils.context import context 
@@ -224,3 +227,75 @@ class login_preferences:
             return self.GET(site)
 
 register_preferences("login_preferences", login_preferences())
+
+class sitepreferences(delegate.page):
+    def GET(self, site):
+        perms = db.get_site_permissions(site)
+        print >> web.debug, perms
+        return render.sitepreferences(perms)
+        
+    def POST(self, site):
+        perms = self.input()
+        print >> web.debug, perms
+        db.set_site_permissions(site, perms)
+        return render.sitepreferences(perms)
+    
+    def input(self):
+        i = web.input()
+        re_who = web.re_compile("who(\d+)_path\d+")
+        re_what = web.re_compile("what(\d+)_path\d+")
+        paths = [(k, v) for k, v in i.iteritems() if k.startswith('path')]
+        values = []
+        for key, path in sorted(paths):
+            path = path.strip()
+            if path == "":
+                continue
+                
+            who_keys = [re_who.sub(r'\1', k) for k in i
+                            if k.endswith(key) and k.startswith('who')]            
+            what_keys = [re_what.sub(r'\1', k) for k in i
+                            if k.endswith(key) and k.startswith('what')]
+            x = sorted(who_keys)
+            y = sorted(what_keys)
+            assert x == y
+            whos = [i["who%s_%s" % (k, key)].strip() for k in x]
+            whats = [i["what%s_%s" % (k, key)].strip() for k in x]
+            
+            perms = [(a, b) for a, b in zip(whos, whats) if a != ""]
+            values.append((path, perms))
+            
+        return values
+        
+def has_permission(site, user, path, mode):
+    """Tests whether user has permision to do `mode` on site/path.
+    """
+    path = '/' + path
+    perms = db.get_site_permissions(site)
+    
+    print >> web.debug, 'has_permission', user and user.name, path, mode
+    
+    def get_items():
+        import re
+        for pattern, items in perms:
+            if re.match('^' + pattern + '$', path):
+                print >> web.debug, pattern, 'matched', items
+                return items
+            else:
+                print >> web.debug, pattern, 'did not match'
+                
+                
+    def has_perm(who, what):
+        if mode in what:
+            return (who == 'everyone') \
+                or (user is not None and who in (user.name, 'loggedin-users'))
+        else: 
+            return False
+    
+    def any(seq):
+        for x in seq:
+            if x: 
+                return True
+        return False
+        
+    items = get_items() or []        
+    return any(has_perm(who, what) for who, what in items)

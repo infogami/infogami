@@ -103,8 +103,8 @@ def delegate(path):
         if code.has_permission(context.site, context.user, path, what):
             out = getattr(modes[what](), method)(context.site, path)
         else:
-            context.error = 'You do not have permission to do that.'
-            out = code.login().GET(context.site)
+            #context.error = 'You do not have permission to do that.'
+            return web.seeother("/login")
 
     if out is not None:
         if hasattr(out, 'rawtext'):

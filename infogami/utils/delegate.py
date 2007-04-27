@@ -81,7 +81,7 @@ def delegate(path):
         return web.seeother('/' + path[:-1])
 
     if path in pages:
-        out = getattr(pages[path](), method)(config.site)
+        out = getattr(pages[path](), method)(context.site)
     elif path.startswith('files/'):
         # quickfix
         out = None

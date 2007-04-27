@@ -80,7 +80,7 @@ def dummypage(title, body):
 def _load_template(site, page):
     """load template from a wiki page."""
     try:
-        t = web.template.Template(page.body, filter=web.websafe, filename=page.name)
+        t = web.template.Template(page.body, filter=web.websafe)
     except web.template.ParseError:
         print >> web.debug, 'load template', page.name, 'failed'
         import traceback

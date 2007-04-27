@@ -3,6 +3,7 @@ import web
 from infogami import tdb
 import infogami
 from infogami.tdb import NotFound
+import pickle
 
 #@@ move to some better place
 @infogami.install_hook
@@ -116,3 +117,13 @@ def get_schema(site, type):
         return p.d
     except tdb.NotFound:
         return web.storage(body="", title="")
+        
+def get_site_permissions(site):
+    if hasattr(site, 'permissions'):
+        return pickle.loads(site.permissions)
+    else:
+        return {}
+    
+def set_site_permissions(site, permissions):
+    site.permissions = pickle.dumps(permissions)
+    site.save()

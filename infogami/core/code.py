@@ -231,12 +231,10 @@ register_preferences("login_preferences", login_preferences())
 class sitepreferences(delegate.page):
     def GET(self, site):
         perms = db.get_site_permissions(site)
-        print >> web.debug, perms
         return render.sitepreferences(perms)
         
     def POST(self, site):
         perms = self.input()
-        print >> web.debug, perms
         db.set_site_permissions(site, perms)
         return render.sitepreferences(perms)
     
@@ -271,19 +269,13 @@ def has_permission(site, user, path, mode):
     """
     path = '/' + path
     perms = db.get_site_permissions(site)
-    
-    print >> web.debug, 'has_permission', user and user.name, path, mode
-    
+        
     def get_items():
         import re
         for pattern, items in perms:
             if re.match('^' + pattern + '$', path):
-                print >> web.debug, pattern, 'matched', items
                 return items
-            else:
-                print >> web.debug, pattern, 'did not match'
-                
-                
+
     def has_perm(who, what):
         if mode in what:
             return (who == 'everyone') \

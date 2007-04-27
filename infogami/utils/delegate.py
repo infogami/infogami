@@ -95,7 +95,16 @@ def delegate(path):
                 return web.notfound()
 
         what = web.input().get('m', 'view')
-        out = getattr(modes[what](), method)(context.site, path)
+        
+        #@@ move this to some better place
+        from infogami.core import code
+        from infogami.utils.view import render
+        
+        if code.has_permission(context.site, context.user, path, what):
+            out = getattr(modes[what](), method)(context.site, path)
+        else:
+            context.error = 'You do not have permission to do that.'
+            out = code.login().GET(context.site)
 
     if out is not None:
         if hasattr(out, 'rawtext'):

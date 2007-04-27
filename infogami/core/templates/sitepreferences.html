@@ -78,10 +78,12 @@ function add_newperm(i, j, who, what) {
 
 function setup() {
     $ i = 0
-    $for path in permissions:
+    $for item in permissions:
+        $ path = item[0]
+        $ perms = item[1]
         add_newpath($i, "$path");
         $ j = 0
-        $for perm in permissions[path]:
+        $for perm in perms:
             $ who = perm[0]
             $ what = perm[1]
             add_newperm($i, $j, "$who", "$what")

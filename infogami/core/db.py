@@ -116,7 +116,7 @@ def get_schema(site, type):
         p = get_version(site, 'templates/%s/schema' % type.name)
         return p.d
     except tdb.NotFound:
-        return web.storage(body="", title="")
+        return web.storage({'*': 'string'})
         
 def get_site_permissions(site):
     if hasattr(site, 'permissions'):

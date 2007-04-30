@@ -103,9 +103,12 @@ def list_pages(site, path):
         pattern = '%'
     else:
         pattern = path + '/%'
-    return web.query("SELECT id, name FROM thing \
-            WHERE parent_id=$site.id AND name LIKE $pattern \
-            ORDER BY name", vars=locals())
+    return web.query("""SELECT t.id, t.name FROM thing t 
+            JOIN version ON version.revision = t.latest_revision AND version.thing_id = t.id
+            JOIN datum ON datum.version_id = version.id 
+            JOIN thing type ON type.id = datum.value  AND datum.key = '__type__'
+            WHERE t.parent_id=$site.id AND t.name LIKE $pattern AND type.name != 'delete' 
+            ORDER BY t.name""", vars=locals())
        
 from infogami.utils.view import public
         

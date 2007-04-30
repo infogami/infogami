@@ -146,6 +146,10 @@ def parse(filename):
             else:
                 lines.append(line)
 
+    class LazyThing(LazyThing):
+        def __repr__(self):
+            return 't' + str(self.id)
+
     class env(dict):
         def __getitem__(self, name):
             """Returns LazyThing(xx) for key txx"""

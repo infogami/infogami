@@ -43,16 +43,18 @@ class edit (delegate.mode):
             if i.t:
                 p.type = type
         except db.NotFound:
-            schema = db.get_schema(site, type)
-            schema.pop('*', None)
-            data = web.storage()
-            for k in schema:
-                if k != '*':
-                    if k.endswith('*'):
-                        data[k] = ['']
-                    else:
-                        data[k] = ''
-            p = db.new_version(site, path, type, data)
+            p = db.new_version(site, path, type, web.storage({}))
+            
+        schema = db.get_schema(site, type)
+        schema.pop('*', None)
+            
+        data = p.d
+        for k in schema:
+            if k != '*' and data.get(k) is None:
+                if k.endswith('*'):
+                    data[k] = ['']
+                else:
+                    data[k] = ''
 
         return render.edit(p)
     

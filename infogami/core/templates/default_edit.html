@@ -26,6 +26,7 @@ function changeTemplate() {
     </tr>            
 </tbody>
 $ schema = get_schema(ctx.site, page.type)
+$ foo = schema.pop('*', None)
 
 $for key in schema:
     <tbody>

@@ -24,8 +24,8 @@ $def with (page)
 $for s in ctx.stylesheets:
     <link rel="stylesheet" type="text/css" href="$s">
 
-$for url in ctx.javascripts:
-    <script type="text/javascript" src="$url"></script>
+$for jsurl in ctx.javascripts:
+    <script type="text/javascript" src="$jsurl"></script>
 
 </head>
 <body>

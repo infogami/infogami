@@ -133,12 +133,15 @@ class diff (delegate.mode):
             b = db.get_version(site, path, revision=i.b)
         except:
             return web.badrequest()
-
-        alines = a.body.splitlines()
-        blines = b.body.splitlines()
         
-        map = better_diff(alines, blines)
-        return render.diff(map, a, b)
+        if 'body' in a and 'body' in b:
+            alines = a.body.splitlines()
+            blines = b.body.splitlines()
+            bodydiff = better_diff(alines, blines)
+        else:
+            bodydiff = None
+        
+        return render.diff(a, b, bodydiff)
 
 class random(delegate.page):
     def GET(self, site):

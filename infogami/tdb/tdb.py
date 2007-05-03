@@ -60,7 +60,7 @@ class Thing:
         self.d = d
         self._dirty = True
 
-    @classmethod
+    @staticmethod
     def savedatum(vid, key, value, ordering=None):
         # since only one level lists are supported, 
         # list type can not have ordering specified.

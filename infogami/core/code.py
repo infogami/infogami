@@ -134,7 +134,7 @@ class diff (delegate.mode):
         except:
             return web.badrequest()
         
-        if 'body' in a and 'body' in b:
+        if 'body' in a.d and 'body' in b.d:
             alines = a.body.splitlines()
             blines = b.body.splitlines()
             bodydiff = better_diff(alines, blines)

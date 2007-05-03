@@ -25,6 +25,7 @@ web.template.Template.globals.update(dict(
   datestr = web.datestr,
   numify = web.numify,
   ctx = context,
+  set = set,
   _ = i18n(),
 ))
 

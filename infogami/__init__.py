@@ -72,6 +72,12 @@ def install():
     for a in _install_hooks:
         a()
 
+@action
+def shell():
+    """Interactive Shell"""
+    from code import InteractiveConsole
+    InteractiveConsole().interact()
+
 def run_action(name, args=[]):
     a = find_action(name)
     if a:

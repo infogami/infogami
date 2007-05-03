@@ -59,24 +59,30 @@ class Thing:
     def setdata(self, d):
         self.d = d
         self._dirty = True
+
+    @classmethod
+    def savedatum(vid, key, value, ordering=None):
+        # since only one level lists are supported, 
+        # list type can not have ordering specified.
+        if isinstance(value, list) and ordering is None:
+            for n, item in enumerate(v):
+                savedatum(vid, k, item, n)
+            return
+        elif isinstance(value, str):
+            dt = 0
+        elif isinstance(value, Thing):
+            dt = 1
+            value = value.id
+        elif isinstance(value, (int, long)):
+            dt = 2
+        elif isinstance(value, float):
+            dt = 3
+        else:
+            raise BadData, value
+        web.insert('datum', False, 
+          version_id=vid, key=key, value=value, data_type=dt, ordering=ordering)
             
     def save(self, comment='', author=None, ip=None):
-        def savedatum(vid, key, value, ordering=None):
-            if isinstance(value, str):
-                dt = 0
-            elif isinstance(value, Thing):
-                dt = 1
-                value = value.id
-            elif isinstance(value, (int, long)):
-                dt = 2
-            elif isinstance(value, float):
-                dt = 3
-            else:
-                raise BadData, value
-            web.insert('datum', False, 
-              version_id=vid, key=key, value=value, data_type=dt, ordering=ordering)
-        
-
         if self._dirty is not True:
             return
         
@@ -98,12 +104,8 @@ class Thing:
             author_id=author_id, ip=ip, revision=revision)
         
         for k, v in self.d.items():
-            if isinstance(v, list):
-                for n, item in enumerate(v):
-                    savedatum(vid, k, item, n)
-            else:
-                savedatum(vid, k, v)
-        savedatum(vid, '__type__', self.type)
+            Thing.savedatum(vid, k, v)
+        Thing.savedatum(vid, '__type__', self.type)
         
         logger.transact()
         try:

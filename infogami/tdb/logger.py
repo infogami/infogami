@@ -8,6 +8,7 @@ Log format:
     fields  = field*
     key     = "thing" 
             | "version"
+            | "data"
         
     field   = name ": " value "\n"
     name    = <string with tab, newline and : escaped>
@@ -179,43 +180,21 @@ def parse(filename):
 
 def load(filename):
     """Loads a tdb log file into database."""
-    def savedatum(vid, key, value, ordering=None):
-        # since only one level lists are supported, 
-        # list type can not have ordering specified.
-        if isinstance(value, list) and ordering is None:
-            for n, item in enumerate(v):
-                savedatum(vid, k, item, n)
-            return
-        elif isinstance(value, str):
-            dt = 0
-        elif isinstance(value, Thing):
-            dt = 1
-            value = value.id
-        elif isinstance(value, (int, long)):
-            dt = 2
-        elif isinstance(value, float):
-            dt = 3
-        else:
-            raise BadData, value
-        web.insert('datum', False, 
-          version_id=vid, key=key, value=value, data_type=dt, ordering=ordering)
 
     import web
     # assumes web.load is already called
     web.transact()
     for key, id, data in parse(filename):
         if key == 'thing':
-            web.insert('thing', id=id, **data)
+            web.insert('thing', seqname=False, id=id, **data)
         elif key == 'version':
-            web.insert('version', id=id, **data)
+            tid = data['thing_id']
+            web.insert('version', seqname=Fase, id=id, **data)
+            web.update('thing', where='id=$tid', latest_revision=data['revision'], vars=locals())
         elif key == 'data':
             vid = id
             for k, v in data.items():
-                if isinstance(v, list):
-                    for n, item in enumerate(v):
-                        savedatum(vid, k, item, n)
-                else:
-                    savedatum(vid, k, v)
+                tdb.Thing.savedatum(vid, k, v)
     web.commit()
 
 if __name__ == "__main__":

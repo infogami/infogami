@@ -100,11 +100,12 @@ def _validate_sitetemplate(data):
     except Exception, e: 
         raise ValidationException("Template parsing failed: " + str(e))
     else:
-        if title not in result:
-            raise ValidationException("Invalid template: missing page title")
+        if validation_enabled:
+            if title not in result:
+                raise ValidationException("Invalid template: missing page title")
 
-        if body not in result:
-            raise ValidationException("Invalid template: missing page")
+            if body not in result:
+                raise ValidationException("Invalid template: missing page")
     
 def dummypage(title, body):
     data = web.storage(title=title, body=body, template="page")
@@ -253,6 +254,18 @@ def movetemplates():
         print "*** %s\t%s -> %s" % (name, filepath, wikipath)
         _move_template(name, filepath, wikipath)
 
+def _move_schema(name, data):
+    from infogami.core import db
+    path = 'templates/%s/schema' % name
+    type = db.get_type("schema", create=True)
+    db.new_version(get_site(), path, type, data).save()
+
+@infogami.install_hook
+def moveschemas():
+    _move_schema('schema', web.storage({'*':'string'}))
+    _move_schema('page', web.storage({'title':'string', 'body': 'string'}))
+    _move_schema('template', web.storage({'title':'string', 'body': 'string'}))
+    
 # register site and page templates
 register_wiki_template("Site Template", "core/templates/site.html", "templates/site.tmpl")
 register_wiki_template("Page View Template", "core/templates/view.html", "templates/page/view.tmpl")
@@ -270,3 +283,11 @@ register_wiki_template("Template View Template",
 register_wiki_template("Template Edit Template", 
                        "plugins/wikitemplates/templates/edit.html", 
                        "templates/template/edit.tmpl")    
+
+register_wiki_template("Schema View Template", 
+                       "plugins/wikitemplates/templates/schema_view.html", 
+                       "templates/schema/view.tmpl")
+
+register_wiki_template("Schema Edit Template", 
+                       "plugins/wikitemplates/templates/schema_edit.html", 
+                       "templates/schema/edit.tmpl")

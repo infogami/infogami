@@ -268,7 +268,7 @@ class sitepreferences(delegate.page):
             values.append((path, perms))
             
         return values
-        
+
 def has_permission(site, user, path, mode):
     """Tests whether user has permision to do `mode` on site/path.
     """
@@ -294,5 +294,5 @@ def has_permission(site, user, path, mode):
                 return True
         return False
         
-    items = get_items() or []        
+    items = get_items() or []
     return any(has_perm(who, what) for who, what in items)

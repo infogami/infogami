@@ -70,6 +70,7 @@ def help(name=None):
 def install():
     """Setup everything."""
     for a in _install_hooks:
+        print >> web.debug, a.__name__
         a()
 
 @action

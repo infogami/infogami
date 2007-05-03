@@ -125,7 +125,7 @@ def get_site_permissions(site):
     if hasattr(site, 'permissions'):
         return pickle.loads(site.permissions)
     else:
-        return {}
+        return [('/.*', [('everyone', 'view,edit')])]
     
 def set_site_permissions(site, permissions):
     site.permissions = pickle.dumps(permissions)

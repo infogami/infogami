@@ -65,7 +65,7 @@ class Thing:
         # since only one level lists are supported, 
         # list type can not have ordering specified.
         if isinstance(value, list) and ordering is None:
-            for n, item in enumerate(v):
+            for n, item in enumerate(value):
                 savedatum(vid, k, item, n)
             return
         elif isinstance(value, str):

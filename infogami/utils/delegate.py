@@ -99,8 +99,14 @@ def delegate(path):
         #@@ move this to some better place
         from infogami.core import code
         from infogami.utils.view import render
+
+        # lets have only view and edit permissions
+        if what in ("view", "edit"):
+            perm = what
+        else:
+            perm = "view"
         
-        if code.has_permission(context.site, context.user, path, what):
+        if code.has_permission(context.site, context.user, path, perm):
             out = getattr(modes[what](), method)(context.site, path)
         else:
             #context.error = 'You do not have permission to do that.'

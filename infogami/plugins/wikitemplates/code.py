@@ -15,6 +15,7 @@ from infogami.core.db import ValidationException
 from infogami import core
 from infogami import tdb
 import db, forms
+import re
 
 cache = web.storage()
 
@@ -35,42 +36,75 @@ class hooks(tdb.hook):
             # ensure that templates are loaded
             get_templates(site)
 
-            if path.endswith('page/view.tmpl') or path.endswith('page/edit.tmpl'):
-                _validate_pagetemplate(page.body)
-            elif path.endswith('/site.tmpl'):
+            rx = re.compile('templates/([^/]+)/(?:view|edit).tmpl')
+            match = rx.match(path)
+
+            if match:
+                typename = match.group(1)
+                _validate_pagetemplate(site, typename, page.body)
+            elif path == 'templates/site.tmpl':
                 _validate_sitetemplate(page.body)
 
-def _validate_pagetemplate(data):
-    return
-    """
+def random_string(size=20):
+    import string
+    import random
+
+    # pick random letters 
+    return "".join(random.sample(string.letters, size))
+
+def _validate_pagetemplate(site, typename, data):
+    from infogami.core import db
+
+    type = db.get_type(typename, create=False)
+
+    if type is None:
+        raise ValidationException, "Unknown page type: %s.\nMake sure schema is defined for this pagetype." % typename
+    
+    schema = db.get_schema(site, type, default=False)
+    schema.pop('*', None)
+
+    magic = random_string()
+
+    d = web.storage()
+    for k in schema:
+        if k.endswith('*'):
+            d[k] = [k + magic]
+        else:
+            d[k] = k + magic
+
+    v = tdb.Version(0, 0, 0, '', '', '', datetime.datetime.utcnow())
+    p = tdb.Thing(0, 'dummy', site, type, d, v)
+
     try:
         t = web.template.Template(data, filter=web.websafe)
         if validation_enabled:
-            title = 'asdfmnb'
-            body = 'qwertzxc'
-            page = dummypage(title, body)
-            result = str(t(page))
-            if body not in result:
-                raise ValidationException("Invalid template")
+            result = str(t(p))
     except Exception, e: 
+        import traceback
+        traceback.print_exc()
         raise ValidationException("Template parsing failed: " + str(e))
-    """
+    else:
+        if validation_enabled:
+            for k in schema:
+                if (k + magic) not in result:
+                    raise ValidationException("Invalid template: missing %s" % k)
     
 def _validate_sitetemplate(data):
-    return
-    """
     try:
         t = web.template.Template(data, filter=web.websafe)
         if validation_enabled:
-            title = 'asdfmnb'
-            body = 'qwertzxc'
+            title = random_string()
+            body = random_string()
             page = web.template.Stowage(title=title, _str=body)
             result = str(t(page, None))
-            if title not in result or body not in result:
-                raise ValidationException("Invalid template")
     except Exception, e: 
         raise ValidationException("Template parsing failed: " + str(e))
-    """
+    else:
+        if title not in result:
+            raise ValidationException("Invalid template: missing page title")
+
+        if body not in result:
+            raise ValidationException("Invalid template: missing page")
     
 def dummypage(title, body):
     data = web.storage(title=title, body=body, template="page")

@@ -45,7 +45,7 @@ class edit (delegate.mode):
         except db.NotFound:
             p = db.new_version(site, path, type, web.storage({}))
             
-        schema = db.get_schema(site, type)
+        schema = db.get_schema(site, p.type)
         schema.pop('*', None)
             
         data = p.d
@@ -75,9 +75,12 @@ class edit (delegate.mode):
         
         type = db.get_type(i._type, create=True)
         schema = db.get_schema(site, type)
-        plurals = dict([(k, []) for k,v in schema.items() if v.endswith('*')])
-        i = web.input(_method='post', **plurals)
-        if '*' in schema:
+        allow_arbitrary = schema.pop('*', None) is not None
+
+        _default = {True: [], False: ""}
+        defaults = dict([(k, _default[v.endswith('*')]) for k, v in schema.items()])
+        i = web.input(_method='post', **defaults)
+        if allow_arbitrary:
             d = [(k, v) for k, v in i.iteritems() if not k.startswith('_')]
             i = dict(d)
         else:

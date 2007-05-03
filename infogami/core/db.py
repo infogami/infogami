@@ -114,7 +114,7 @@ from infogami.utils.view import public
         
 #@@ this should be moved to wikitemplates plugin    
 @public
-def get_schema(site, type):
+def get_schema(site, type, default=True):
     try:
         p = get_version(site, 'templates/%s/schema' % type.name)
         return p.d

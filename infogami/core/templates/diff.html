@@ -9,10 +9,10 @@ $var title: $_.DIFF
 <table>
     <tr><th>key</th><th>$_.REVISION $a.v.revision</th><th>$_.REVISION $b.v.revision</th></tr>
 $for k in a.d.keys():
-    <tr><th>$k</th><td>$a[k]</td><td>$b.d.get(k)</td></tr>
+    <tr><th>$k</th><td>$a.d.get(k)</td><td>$b.d.get(k)</td></tr>
 
 $for k in (set(b.d.keys()) - set(a.d.keys())):
-    <tr><th>$k</th><td>$a.d.get(k)</td><td>$b[k]</td></tr>
+    <tr><th>$k</th><td>$a.d.get(k)</td><td>$b.d.get(k)</td></tr>
 </table>
 
 $if bodydiff:

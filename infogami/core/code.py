@@ -1,5 +1,5 @@
 import web
-from infogami import utils
+from infogami import utils, tdb
 from infogami.utils import delegate
 from infogami.utils.macro import macro
 from diff import better_diff
@@ -80,6 +80,9 @@ class edit (delegate.mode):
         _default = {True: [], False: ""}
         defaults = dict([(k, _default[v.endswith('*')]) for k, v in schema.items()])
         i = web.input(_method='post', **defaults)
+        for k, v in schema.iteritems():
+            if v.startswith('thing '):
+                i[k] = tdb.withName(i[k], site)
         if allow_arbitrary:
             d = [(k, v) for k, v in i.iteritems() if not k.startswith('_')]
             i = dict(d)

@@ -24,19 +24,19 @@ $def with (page)
 $for s in ctx.stylesheets:
     <link rel="stylesheet" type="text/css" href="$s">
 
-$for _url in ctx.javascripts:
-    <script type="text/javascript" src="$_url"></script>
+$for jsurl in ctx.javascripts:
+    <script type="text/javascript" src="$jsurl"></script>
 
 </head>
 <body>
 $if ctx.user:
-    <form action="$homepath()/logout" method='POST'>
+    <form action="$url('/logout')" method='POST'>
     <p class="login"><strong>$ctx.user.name</strong>
     [<button class="linky" type="submit">logout</button>]
     </p>
     </form>
 $else:
-    <p class="login">[<a href="$homepath()/login">$_.LOGIN</a>]</p>
+    <p class="login">[$:link('/login', _.LOGIN)]</p>
 
 <h1>$page.title</h1>
 

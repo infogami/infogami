@@ -24,3 +24,5 @@ CREATE TABLE datum (
   data_type int default 0, -- {0: 'string', 1: 'reference', 2: 'int', 3: 'float', 4: 'date'}
   ordering int default null
 );
+
+CREATE INDEX datum_key_val_idx ON datum (key, substr(value, 0, 250));

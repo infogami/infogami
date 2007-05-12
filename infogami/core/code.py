@@ -82,7 +82,12 @@ class edit (delegate.mode):
         i = web.input(_method='post', **defaults)
         for k, v in schema.iteritems():
             if v.startswith('thing '):
-                i[k] = tdb.withName(i[k], site)
+                if isinstance(i[k], web.iters):
+                    i[k] = [tdb.withName(x, site) for x in i[k] if x]
+                else:
+                    i[k] = tdb.withName(i[k], site)
+            if v.endswith('*'):
+                i[k] = [x for x in i[k] if x]
         if allow_arbitrary:
             d = [(k, v) for k, v in i.iteritems() if not k.startswith('_')]
             i = dict(d)

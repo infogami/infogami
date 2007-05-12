@@ -158,7 +158,8 @@ def saferender(templates, *a, **kw):
             print >> web.debug, str(e)
             import traceback
             traceback.print_exc()
-            set_error(str(e))
+            set_error('error in processing template: ' + e.__class__.__name__ + ': ' + str(e) + ' (falling back to default template)')
+     
     
     return "Unable to render this page."            
     

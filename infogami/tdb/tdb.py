@@ -44,7 +44,10 @@ class Thing:
 
     def get(self, key, default=None):
         return getattr(self, key, default)
-    
+
+    def c(self, name):
+        return withName(name, self)
+
     def __setattr__(self, attr, value):
         if Thing._reserved(attr):
             self.__dict__[attr] = value
@@ -66,7 +69,7 @@ class Thing:
         # list type can not have ordering specified.
         if isinstance(value, list) and ordering is None:
             for n, item in enumerate(value):
-                savedatum(vid, k, item, n)
+                savedatum(vid, key, item, n)
             return
         elif isinstance(value, str):
             dt = 0
@@ -80,7 +83,7 @@ class Thing:
         else:
             raise BadData, value
         web.insert('datum', False, 
-          version_id=vid, key=key, value=value, data_type=dt, ordering=ordering)
+          version_id=vid, key=key, value=value, data_type=dt, ordering=ordering)        
             
     def save(self, comment='', author=None, ip=None):
         if self._dirty is not True:
@@ -220,8 +223,17 @@ def withName(name, parent, revision=None):
     except IndexError:
         raise NotFound, name
 
+def withNames(names, parent):
+    store = {}
+    for t in web.select('thing', where=web.reparam('parent_id = $parent.id AND ', locals()) + web.sqlors('name = ', names)):
+        store[t.name] = t.id
+    out = []
+    for name in names:
+        out.append(withID(store[name]))
+    return out
+
 class Things:
-    def __init__(self, **query):
+    def __init__(self, limit=None, **query):
         tables = ['thing', 'version']
         what = 'thing.id'
         n = 0
@@ -241,9 +253,9 @@ class Things:
                 v = v.id
             tables.append('datum AS d%s' % n)
             where += ' AND d%s.version_id = version.id AND ' % n + \
-              web.reparam('d%s.key = $k AND d%s.value = $v' % (n, n), locals())
+              web.reparam('d%s.key = $k AND substr(d%s.value, 0, 250) = $v' % (n, n), locals())
         
-        self.values = [r.id for r in web.select(tables, what=what, where=where)]
+        self.values = [r.id for r in web.select(tables, what=what, where=where, limit=limit)]
         
     def __iter__(self):
         for item in self.values:

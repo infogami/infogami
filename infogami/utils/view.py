@@ -2,7 +2,7 @@ from infogami.utils import markdown
 from context import context
 import web
 import os
-from infogami import config
+from infogami import config, tdb
 from infogami.utils.i18n import i18n
 
 
@@ -26,6 +26,8 @@ web.template.Template.globals.update(dict(
   numify = web.numify,
   ctx = context,
   set = set,
+  hasattr = hasattr,
+  query = tdb.Things, #@@not safe
   _ = i18n(),
 ))
 
@@ -72,7 +74,8 @@ def spacesafe(text):
     return text
     
 def set_error(msg):
-    context.error = msg
+    if not context.error: context.error = ''
+    context.error += ' ' + msg
 
 def load_templates(dir):
     cache = getattr(config, 'cache_templates', True)

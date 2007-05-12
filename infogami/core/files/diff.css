@@ -1,6 +1,6 @@
 
-.diff .sidebyside { clear: both; margin: 0; padding: 0 }
-.diff table.sidebyside colgroup.content { width: 50% }
+.diff .sidebyside { clear: both; margin: 0; padding: 0; margin-bottom: 20px;}
+.diff table.sidebyside colgroup.content { width: 50%; }
 .diff table.sidebyside tbody.mod td.l { background: #fe9 }
 .diff table.sidebyside tbody.mod td.r { background: #fd8 }
 .diff table.sidebyside tbody.add td.l { background: #dfd }
@@ -47,3 +47,16 @@
  margin-right: .5em;
 }
 
+
+/* ADDED BY WC */
+
+.diff-header-top  { font-weight: bold; border-bottom: 1px solid #cccccc; background-color: #eeeeee; padding: 4px 4px 4px 10px; border-top: 1px solid #cccccc; white-space: nowrap; }
+.diff-header-side  { font-weight: bold; background-color: #cccccc; padding: 10px 4px 4px 4px; border-left: 1px solid #cccccc; text-align: right; }
+.diff-body  { border-bottom: 1px solid #cccccc; padding: 12px; border-right: 1px solid #cccccc; width: 50% }
+
+.diff-border {margin: 30px;}
+
+.diff-number { border-bottom: 1px solid #cccccc; padding: 4px; text-align: center; font-weight: bold; background-color: #cccccc }
+
+td.l {border-bottom: 1px solid #cccccc; padding-left: 12px; }
+td.r {border-bottom: 1px solid #cccccc; padding-left: 12px; }

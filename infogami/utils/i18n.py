@@ -1,6 +1,7 @@
 """
 Support for Internationalization.
 """
+
 import web
 import os.path
 import glob
@@ -135,4 +136,4 @@ class i18n_string(object):
             value = self.key
 
         return value
-
+        

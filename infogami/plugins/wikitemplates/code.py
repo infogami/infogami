@@ -10,6 +10,7 @@ import infogami
 from infogami.utils import delegate
 from infogami.utils.context import context
 from infogami.utils.view import render, set_error
+from infogami.utils.storage import storage
 from infogami import config
 from infogami.core.db import ValidationException
 from infogami import core
@@ -224,12 +225,13 @@ class template_preferences:
         
 core.code.register_preferences("template_preferences", template_preferences())
 
-wikitemplates = []
+wikitemplates = storage.wikitemplates
+
 def register_wiki_template(name, filepath, wikipath):
     """Registers a wiki template. 
     All registered templates are moved to wiki on `movetemplates` action.
     """
-    wikitemplates.append((name, filepath, wikipath))
+    wikitemplates[name] = ((name, filepath, wikipath))
 
 def _move_template(title, path, dbpath):
     from infogami.core import db
@@ -251,7 +253,7 @@ def movetemplates():
     validation_enabled = False
 
     load_templates(get_site())
-    for name, filepath, wikipath in wikitemplates:
+    for name, filepath, wikipath in wikitemplates.values():
         print "*** %s\t%s -> %s" % (name, filepath, wikipath)
         _move_template(name, filepath, wikipath)
 

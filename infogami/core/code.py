@@ -2,6 +2,7 @@ import web
 from infogami import utils, tdb
 from infogami.utils import delegate
 from infogami.utils.macro import macro
+from infogami.utils.storage import storage
 from diff import better_diff
 import db
 import auth
@@ -207,7 +208,7 @@ class login_reminder(delegate.page):
     def GET(self, site):
         print "Not yet implemented."
 
-_preferences = {}
+_preferences = storage.core_preferences
 def register_preferences(name, handler):
     _preferences[name] = handler
 

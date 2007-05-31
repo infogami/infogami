@@ -69,7 +69,7 @@ class Thing:
         # list type can not have ordering specified.
         if isinstance(value, list) and ordering is None:
             for n, item in enumerate(value):
-                savedatum(vid, key, item, n)
+                Thing.savedatum(vid, key, item, n)
             return
         elif isinstance(value, str):
             dt = 0

@@ -200,15 +200,6 @@ def sitetemplate(name, default_template):
             return saferender(templates, *a, **kw)
     return render
         
-render.core.view = pagetemplate("view", render.core.default_view)
-render.core.edit = pagetemplate("edit", render.core.default_edit)
-
-render.core.site = sitetemplate('site', render.core.site)
-render.core.history = sitetemplate("history", render.core.history)
-render.core.login = sitetemplate("login", render.core.login)
-render.core.register = sitetemplate("register", render.core.register)
-render.core.diff = sitetemplate("diff", render.core.diff)
-
 class template_preferences:
     def GET(self, site):
         prefs = core.db.get_user_preferences(context.user)
@@ -268,6 +259,18 @@ def moveschemas():
     _move_schema('schema', web.storage({'*':'string'}))
     _move_schema('page', web.storage({'title':'string', 'body': 'string'}))
     _move_schema('template', web.storage({'title':'string', 'body': 'string'}))
+
+render.core.site = sitetemplate('site', render.core.site)
+render.core.history = sitetemplate("history", render.core.history)
+render.core.login = sitetemplate("login", render.core.login)
+render.core.register = sitetemplate("register", render.core.register)
+render.core.diff = sitetemplate("diff", render.core.diff)
+render.core.preferences = sitetemplate("preferences", render.core.preferences)
+render.core.default_view = sitetemplate("default_view", render.core.default_view)
+render.core.default_edit = sitetemplate("default_edit", render.core.default_edit)
+
+render.core.view = pagetemplate("view", render.core.default_view)
+render.core.edit = pagetemplate("edit", render.core.default_edit)
     
 # register site and page templates
 register_wiki_template("Site Template", "core/templates/site.html", "templates/site.tmpl")
@@ -277,6 +280,9 @@ register_wiki_template("History Template", "core/templates/history.html", "templ
 register_wiki_template("Login Template", "core/templates/login.html", "templates/login.tmpl")
 register_wiki_template("Register Template", "core/templates/register.html", "templates/register.tmpl")
 register_wiki_template("Diff Template", "core/templates/diff.html", "templates/diff.tmpl")
+register_wiki_template("Preferences Template", "core/templates/preferences.html", "templates/preferences.tmpl")
+register_wiki_template("Default View Template", "core/templates/default_view.html", "templates/default_view.tmpl")
+register_wiki_template("Default Edit Template", "core/templates/default_edit.html", "templates/default_edit.tmpl")
 
 # register template templates
 register_wiki_template("Template View Template",        

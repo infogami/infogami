@@ -18,6 +18,18 @@ def deleted():
     web.ctx.status = '404 Not Found'
     return render.special.deleted()
 
+def fill_missing_fields(site, page):
+    schema = db.get_schema(site, page.type)
+    schema.pop('*', None)
+    
+    data = page.d
+    for k in schema:
+        if k != '*' and data.get(k) is None:
+            if k.endswith('*'):
+                data[k] = ['']
+            else:
+                data[k] = ''
+    
 class view (delegate.mode):
     def GET(self, site, path):
         try:
@@ -28,6 +40,7 @@ class view (delegate.mode):
             if p.type.name == 'delete':
                 return deleted()
             else:
+                fill_missing_fields(site, p)
                 return render.view(p)
         
 class edit (delegate.mode):
@@ -45,18 +58,8 @@ class edit (delegate.mode):
                 p.type = type
         except db.NotFound:
             p = db.new_version(site, path, type, web.storage({}))
-            
-        schema = db.get_schema(site, p.type)
-        schema.pop('*', None)
-            
-        data = p.d
-        for k in schema:
-            if k != '*' and data.get(k) is None:
-                if k.endswith('*'):
-                    data[k] = ['']
-                else:
-                    data[k] = ''
-
+        
+        fill_missing_fields(site, p)
         return render.edit(p)
     
     def dict_subset(self, d, keys):
@@ -308,3 +311,16 @@ def has_permission(site, user, path, mode):
         
     items = get_items() or []
     return any(has_perm(who, what) for who, what in items)
+    
+def string_renderer(name, value, **attrs):
+    """Renderer for html text input."""
+    return web.form.Textbox(name, value=value, **attrs).render()
+    
+def text_renderer(name, value, **attrs):
+    """Renderer for html textarea input."""
+    return web.form.Textarea(name, value=value, rows=25, cols=80, **attrs).render()
+    
+utils.view.register_input_renderer('string', string_renderer)
+utils.view.register_input_renderer('text', text_renderer)
+# Thing is also displayed as textbox
+utils.view.register_input_renderer('thing', string_renderer)

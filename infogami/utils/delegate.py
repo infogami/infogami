@@ -56,7 +56,7 @@ def run_hooks(name, *args, **kwargs):
 
 def _keyencode(text): return text.replace(' ', '_')
 def _changepath(new_path):
-    return web.ctx.homepath + new_path + web.ctx.query
+    return new_path + web.ctx.query
 
 def initialize_context():
     from infogami.core import auth

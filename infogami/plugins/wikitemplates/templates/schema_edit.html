@@ -13,6 +13,7 @@ Append * to type to support plural values.
 Supported types:
     integer
     string
+	text
     thing type
 </pre>
 
@@ -21,7 +22,6 @@ function changeTemplate() {
     var t = document.edit._type.value;
     document.location.href += '&t=' + t;
 }
-
 
 function element(tag, attrs) {
     var e = document.createElement(tag);

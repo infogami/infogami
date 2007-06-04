@@ -4,11 +4,14 @@ import web
 import os
 from infogami import config, tdb
 from infogami.utils.i18n import i18n
-
+from storage import storage
 
 wiki_processors = []
 def register_wiki_processor(p):
     wiki_processors.append(p)
+    
+def register_markdown_extionsion(name, m):
+    markdown_extensions[name] = m
 
 def get_markdown(text):
     import macro
@@ -106,4 +109,15 @@ def get_static_resource(path):
         return web.notfound()
     else:
         return open(fullpath).read()
+
+_inputs = storage.utils_inputs
+
+@public
+def render_input(type, name, value, **attrs):
+    """Renders html input field of given type."""
+    #@@ quick fix for type='thing foo'
+    type = type.split()[0]
+    return _inputs[type](name, value, **attrs)
     
+def register_input_renderer(type, f):
+    _inputs[type] = f

@@ -1,6 +1,5 @@
 import glob, os.path
 import web
-
 from infogami import config
 
 import view
@@ -97,14 +96,14 @@ def delegate(path):
         what = web.input().get('m', 'view')
         
         #@@ move this to some better place
-        from infogami.core import code
+        from infogami.core import auth
         from infogami.utils.view import render
         
-        if what not in ("view", "edit") or code.has_permission(context.site, context.user, path, what):
+        if what not in ("view", "edit") or auth.has_permission(context.site, context.user, path, what):
             out = getattr(modes[what](), method)(context.site, path)
         else:
             #context.error = 'You do not have permission to do that.'
-            return web.seeother("/login")
+            return auth.login_redirect()
 
     if out is not None:
         if hasattr(out, 'rawtext'):
@@ -124,7 +123,7 @@ def get_plugins():
 def _load():
     """Imports the files from the plugins directory and loads templates."""
     global plugins
-
+    
     plugins = ["infogami/core"]
     
     if config.plugins is not None:

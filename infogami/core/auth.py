@@ -40,3 +40,32 @@ def login_redirect(path=None):
     query = urllib.urlencode({"redirect":path})
     web.seeother(web.ctx.homepath + "/login?" + query)
     raise StopIteration
+
+def has_permission(site, user, path, mode):
+    """Tests whether user has permision to do `mode` on site/path.
+    """
+    path = '/' + path
+    perms = db.get_site_permissions(site)
+
+    def get_items():
+        import re
+        for pattern, items in perms:
+            if re.match('^' + pattern + '$', path):
+                return items
+
+    def has_perm(who, what):
+        if mode in what:
+            return (who == 'everyone') \
+                or (user is not None and who in (user.name, 'loggedin-users'))
+        else: 
+            return False
+
+    def any(seq):
+        for x in seq:
+            if x: 
+                return True
+        return False
+
+    items = get_items() or []
+    return any(has_perm(who, what) for who, what in items)
+

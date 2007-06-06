@@ -173,7 +173,11 @@ class recentchanges(delegate.page):
     
 class login(delegate.page):
     def GET(self, site):
-        return render.login(forms.login())
+        referer = web.ctx.env.get('HTTP_REFERER', '/')
+        i = web.input(redirect=referer)
+        f = forms.login()
+        f['redirect'].value = i.redirect 
+        return render.login(f)
 
     def POST(self, site):
         i = web.input(remember=False, redirect='/')
@@ -205,7 +209,8 @@ class register(delegate.page):
 class logout(delegate.page):
     def POST(self, site):
         web.setcookie("infogami_session", "", expires=-1)
-        web.seeother(web.ctx.homepath + '/')
+        referer = web.ctx.env.get('HTTP_REFERER', '/')
+        web.seeother(referer)
 
 class login_reminder(delegate.page):
     def GET(self, site):
@@ -284,34 +289,6 @@ class sitepreferences(delegate.page):
             
         return values
 
-def has_permission(site, user, path, mode):
-    """Tests whether user has permision to do `mode` on site/path.
-    """
-    path = '/' + path
-    perms = db.get_site_permissions(site)
-        
-    def get_items():
-        import re
-        for pattern, items in perms:
-            if re.match('^' + pattern + '$', path):
-                return items
-
-    def has_perm(who, what):
-        if mode in what:
-            return (who == 'everyone') \
-                or (user is not None and who in (user.name, 'loggedin-users'))
-        else: 
-            return False
-    
-    def any(seq):
-        for x in seq:
-            if x: 
-                return True
-        return False
-        
-    items = get_items() or []
-    return any(has_perm(who, what) for who, what in items)
-    
 def string_renderer(name, value, **attrs):
     """Renderer for html text input."""
     return web.form.Textbox(name, value=value, **attrs).render()

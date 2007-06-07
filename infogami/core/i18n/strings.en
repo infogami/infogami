@@ -48,7 +48,7 @@ PASSWORDS_DID_NOT_MATCH = "Passwords didn't match."
 INCORRECT_PASSWORD = "Incorrect password."
 USERNAME_ALREADY_EXISTS = "Username already exists."
 
-LOGIN_STMT = "If you have an infogami account, log in:"
+LOGIN_STMT = "If you already have an account, log in:"
 FORGOT_PASSWORD = "Forgot your username or password?"
 CREATE_NEW_ACCOUNT = "Create A New Account"
 LINK_CREATE_ACCOUNT = 'Otherwise, <a href="%s">create a new account</a> -- it just takes a second.'

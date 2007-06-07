@@ -6,6 +6,7 @@ from infogami.utils.context import context
 _ = i18n.i18n()
 
 login = Form(
+    Hidden('redirect'),
     Textbox('username', description=_.USERNAME),
     Password('password', description=_.PASSWORD),
     Checkbox('remember', description=_.REMEMBER_ME)

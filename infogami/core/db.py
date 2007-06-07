@@ -4,6 +4,8 @@ from infogami import tdb
 import infogami
 from infogami.tdb import NotFound
 import pickle
+from infogami.utils.view import public
+        
 
 #@@ move to some better place
 @infogami.install_hook
@@ -96,6 +98,7 @@ def new_type(name):
 def get_site(name):
     return tdb.withName(name, get_type("site"))
 
+@public
 def list_pages(site, path):
     """Lists all pages with name path/*"""
     
@@ -110,8 +113,6 @@ def list_pages(site, path):
             WHERE t.parent_id=$site.id AND t.name LIKE $pattern AND type.name != 'delete' 
             ORDER BY t.name""", vars=locals())
        
-from infogami.utils.view import public
-        
 #@@ this should be moved to wikitemplates plugin    
 @public
 def get_schema(site, type, default=True):

@@ -4,6 +4,7 @@ Macro extension to markdown.
 Macros take argument string as input and returns result as markdown text.
 """
 import markdown
+import web
 
 _macros = {}
 
@@ -11,18 +12,28 @@ def macro(f):
     """Decorator to register a markdown macro.
     Macro is a function that takes argument string and returns result as markdown string.
     """
-    _macros[f.__name__] = f
+    register_macro(f.__name__, f)
     return f
+    
+def register_macro(name, f):
+    _macros[name] = f
+
+def eval_template(t, args):
+    return result.args
     
 def call_macro(name, args):
     if name in _macros:
-        result = _macros[name](args)            
-        # support for iterators
-        if result and hasattr(result, 'next'):
-            result = "\n".join(result)
+        try:
+            f = _macros[name]
+            #@@ crude way of calling macro after evaluating args.
+            x = web.template.Template("$def with (f)\n$var result: $f(%s)" % args)(f)
+            result = x.result
+        except Exception, e:
+            result = "%s failed with error: <pre>%s</pre>" % (name, web.websafe(str(e)))
+            
         return result
     else:
-        return "Unknown macro: **%s**(*%s*)" % (name, args)
+        return "Unknown macro: <pre>%s</pre>" % name
 
 class MacroPattern(markdown.BasePattern):
     """Inline pattern to replace macros."""
@@ -33,12 +44,11 @@ class MacroPattern(markdown.BasePattern):
 
     def handleMatch(self, m, doc):
         name, args = m.group(2), m.group(3)
-        text = call_macro(name, args)
-        md = markdown.Markdown(source=text, safe_mode=False)
+        html = call_macro(name, args)
 
         # markdown uses place-holders to replace html blocks. 
         # markdown.HtmlStash stores the html blocks to be replaced
-        placeholder = self.stash.store(str(md))
+        placeholder = self.stash.store(html)
         return doc.createTextNode(placeholder)
 
 def macromarkdown(md):
@@ -47,16 +57,18 @@ def macromarkdown(md):
     return md
 
 @macro
-def HelloWorld(args):
+def HelloWorld():
     """Hello world macro."""
-    return "**Hello**, *world*"
+    return "<b>Hello, world</b>."
 
 @macro
-def ListOfMacros(args):
+def ListOfMacros():
     """Lists all available macros."""
-    out = "\n"
+    out = ""
+    out += "<ul>"
     for k in sorted(_macros.keys()):
-        out += '* **%s** - %s\n' % (k, _macros[k].__doc__)
+        out += '  <li><b>%s</b>: %s</li>\n' % (k, _macros[k].__doc__ or "")
+    out += "</ul>"
     return out
     
 if __name__ == "__main__":
@@ -67,4 +79,3 @@ if __name__ == "__main__":
     
     print get_markdown("This is HelloWorld Macro. {{HelloWorld()}}\n\n" + 
             "And this is the list of available macros. {{ListOfMacros()}}")
-

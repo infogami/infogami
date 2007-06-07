@@ -7,47 +7,101 @@ Central storage provided by this module can be used to avoid that problem.
 """
 
 import web
-from UserDict import DictMixin
+import copy
 
-class OrderedDict(DictMixin):
-    """Dictionary that maintains the order in which the items are added.
-    
-    Source: http://aspn.activestate.com/ASPN/Cookbook/Python/Recipe/496761
-    
-        >>> a = OrderedDict()
-        >>> a[1] = 1
-        >>> a[100] = 100
-        >>> a[42] = 42
-        >>> a[4] = 4
-        >>> a.keys()
-        [1, 100, 42, 4]
+class OrderedDict(dict):
     """
-    def __init__(self):
-        self._keys = []
-        self._data = {}
+    A dictionary in which the insertion order of items is preserved.
+    """
+    _reserved = ['_keys']
 
-    def __setitem__(self, key, value):
-        if key not in self._data:
-            self._keys.append(key)
-        self._data[key] = value
-
-    def __getitem__(self, key):
-        return self._data[key]
+    def __init__(self, d={}, **kw):
+        self._keys = d.keys() + kw.keys()
+        dict.__init__(self, d, **kw)
 
     def __delitem__(self, key):
-        del self._data[key]
+        dict.__delitem__(self, key)
         self._keys.remove(key)
 
+    def __setitem__(self, key, item):
+        # a peculiar sharp edge from copy.deepcopy
+        # we'll have our set item called without __init__
+        if not hasattr(self, '_keys'):
+            self._keys = [key,]
+        if key not in self:
+            self._keys.append(key)
+        dict.__setitem__(self, key, item)
+
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError, key
+
+    def __setattr__(self, key, value):
+        # special care special methods
+        if key in self._reserved:
+            self.__dict__[key] = value
+        else:
+            self[key] = value
+    
+    def __delattr__(self, key):
+        try:
+            del self[key]
+        except KeyError:
+            raise AttributeError, key
+
+    def clear(self):
+        dict.clear(self)
+        self._keys = []
+
+    def popitem(self):
+        if len(self._keys) == 0:
+            raise KeyError('dictionary is empty')
+        else:
+            key = self._keys[-1]
+            val = self[key]
+            del self[key]
+            return key, val
+
+    def setdefault(self, key, failobj = None):
+        if key not in self:
+            self._keys.append(key)
+        dict.setdefault(self, key, failobj)
+
+    def update(self, d):
+        for key in d.keys():
+            if not self.has_key(key):
+                self._keys.append(key)
+        dict.update(self, d)
+
+    def iterkeys(self):
+        return iter(self._keys)
+
     def keys(self):
-        return list(self._keys)
+        return self._keys[:]
 
-    def copy(self):
-        copyDict = OrderedDict()
-        copyDict._data = self._data.copy()
-        copyDict._keys = self._keys[:]
-        return copyDict
+    def itervalues(self):
+        for k in self._keys:
+            yield self[k]
 
-import copy
+    def values(self):
+        return list(self.itervalues())
+
+    def iteritems(self):
+        for k in self._keys:
+            yield k, self[k]
+
+    def items(self):
+        return list(self.iteritems())
+
+    def __iter__(self):
+        return self.iterkeys()
+
+    def index(self, key):
+        if not self.has_key(key):
+            raise KeyError(key)
+        return self._keys.index(key)
 
 class DefaultDict(dict):
     """Dictionary with a default value for unknown keys.

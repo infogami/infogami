@@ -135,6 +135,7 @@ def _load():
         if os.path.isdir(plugin):
             view.load_templates(plugin)
             __import__(plugin.replace('/', '.')+'.code', globals(), locals(), ['plugins'])
+            view.load_macros(plugin)
 
 def pickdb(g):
     """Looks up the db type to use in config and exports its functions."""

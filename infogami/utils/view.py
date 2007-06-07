@@ -5,6 +5,7 @@ import os
 from infogami import config, tdb
 from infogami.utils.i18n import i18n
 from storage import storage
+import macro
 
 wiki_processors = []
 def register_wiki_processor(p):
@@ -29,6 +30,7 @@ web.template.Template.globals.update(dict(
   numify = web.numify,
   ctx = context,
   set = set,
+  range = range,
   hasattr = hasattr,
   query = tdb.Things, #@@not safe
   _ = i18n(),
@@ -88,6 +90,16 @@ def load_templates(dir):
         name = os.path.basename(dir)
         render[name] = web.template.render(path, cache=cache)
 
+def load_macros(dir):
+    cache = getattr(config, 'cache_templates', True)
+
+    path = dir + "/macros/"
+    if os.path.exists(path):
+        macros = web.template.render(path, cache=cache)
+        names = [name[:-5] for name in os.listdir(path) if name.endswith('.html')]
+        for name in names:
+            macro.register_macro(name, getattr(macros, name))
+        
 def render_site(url, page):
     return render.core.site(page)
 

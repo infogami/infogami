@@ -128,12 +128,11 @@ class history (delegate.mode):
         except db.NotFound:
             return web.seeother('/' + path)
             
-@macro
-def PageList(path):
-    from infogami.utils.context import context 
-    pages = db.list_pages(context.site, path)
-    for p in pages:
-        yield "* [%s](/%s)" % (p.name, p.name)
+#def PageList(path):
+#    from infogami.utils.context import context 
+#    pages = db.list_pages(context.site, path)
+#    for p in pages:
+#        yield "* [%s](/%s)" % (p.name, p.name)
     
 class diff (delegate.mode):
     def GET(self, site, path):  
@@ -159,12 +158,6 @@ class random(delegate.page):
     def GET(self, site):
         p = db.get_random_page(site)
         return web.seeother(p.path)
-
-#@@ pagelist can be a macro now.
-#class pagelist(delegate.page):
-#    def GET(self, site):
-#        d = db.get_all_pages(site)
-#        return render.pagelist(d)
 
 class recentchanges(delegate.page):
     def GET(self, site):

@@ -159,11 +159,6 @@ class random(delegate.page):
         p = db.get_random_page(site)
         return web.seeother(p.path)
 
-class recentchanges(delegate.page):
-    def GET(self, site):
-        d = db.get_recent_changes(site)
-        return render.recentchanges(web.ctx.homepath, d)
-    
 class login(delegate.page):
     def GET(self, site):
         referer = web.ctx.env.get('HTTP_REFERER', '/')

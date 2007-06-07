@@ -265,15 +265,23 @@ class Things:
         return list(self)
 
 class Versions:
-    def __init__(self, **query):
+    def __init__(self, limit=None, **query):
         self.query = query
         self.versions = None
+        self.limit = limit
     
     def init(self):
-        where = '1 = 1'
+        tables = ['thing', 'version']
+        what = 'version.*'
+        where = "thing.id = version.thing_id AND thing.latest_revision = version.revision"
+        
+        if 'parent' in self.query:
+            parent = self.query.pop('parent')
+            where += web.reparam(' AND thing.parent_id = $parent.id', locals())
+        
         for k, v in self.query.items():
             where += web.reparam(' AND %s = $v' % (k,), locals())
-        self.versions = [Version(**v) for v in web.select('version', where=where, order='id desc')]
+        self.versions = [Version(**v) for v in web.select(tables, what=what, where=where, order='id desc', limit=self.limit)]
         
     def __getitem__(self, index):
         if self.versions is None:

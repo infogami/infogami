@@ -75,12 +75,6 @@ def get_user_preferences(user):
     except NotFound:
         return tdb.new('preferences', user, type)
     
-def get_recent_changes(site):
-    raise Exception, "Not implemented"
-    
-def pagelist(site):
-    raise Exception, "Not implemented"
-
 def get_type(name, create=False):
     try:
         return tdb.withName(name, tdb.metatype)
@@ -97,6 +91,10 @@ def new_type(name):
 
 def get_site(name):
     return tdb.withName(name, get_type("site"))
+
+@public
+def get_recent_changes(site, limit=None):
+    return tdb.Versions(parent_id=site.id, limit=limit)
 
 @public
 def list_pages(site, path):

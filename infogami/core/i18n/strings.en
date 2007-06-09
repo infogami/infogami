@@ -1,4 +1,4 @@
-DIFF = "Diff"
+DIFF = "diff"
 LEGEND = "Legend"
 ADDED = "Added"
 REMOVED = "Removed"

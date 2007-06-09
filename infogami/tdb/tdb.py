@@ -273,7 +273,7 @@ class Versions:
     def init(self):
         tables = ['thing', 'version']
         what = 'version.*'
-        where = "thing.id = version.thing_id AND thing.latest_revision = version.revision"
+        where = "thing.id = version.thing_id"
         
         if 'parent' in self.query:
             parent = self.query.pop('parent')

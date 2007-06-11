@@ -54,10 +54,12 @@ class MacroPattern(markdown.BasePattern):
         placeholder = self.stash.store(html)
         return doc.createTextNode(placeholder)
 
-def macromarkdown(md):
-    """Adds macro extenstions to the specified markdown instance."""
-    md.inlinePatterns.append(MacroPattern(md.htmlStash))
-    return md
+class MacroExtension(markdown.Extension):
+    def extendMarkdown(self, md, md_globals):
+        md.inlinePatterns.append(MacroPattern(md.htmlStash))
+
+def makeExtension(configs={}): 
+    return MacroExtension(configs=configs)
 
 @macro
 def HelloWorld():

@@ -14,10 +14,16 @@ def register_wiki_processor(p):
 def register_markdown_extionsion(name, m):
     markdown_extensions[name] = m
 
+def _register_mdx_extensions(md):
+    """Register required markdown extensions."""
+    # markdown's interface to specifying extensions is really painful.
+    from mdx import mdx_footnotes
+    mdx_footnotes.makeExtension({}).extendMarkdown(md, markdown.__dict__)
+    macro.makeExtension({}).extendMarkdown(md, markdown.__dict__)
+    
 def get_markdown(text):
-    import macro
     md = markdown.Markdown(source=text, safe_mode=False)
-    md = macro.macromarkdown(md)
+    _register_mdx_extensions(md)
     md.postprocessors += wiki_processors
     return md
 
@@ -44,8 +50,8 @@ def public(f):
     return f
 
 @public
-def format(text): 
-    return str(get_markdown(text))
+def format(text):
+    return get_markdown(text).convert()
 
 @public
 def link(path, text=None):

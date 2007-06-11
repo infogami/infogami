@@ -18,19 +18,22 @@ def macro(f):
 def register_macro(name, f):
     _macros[name] = f
 
-def eval_template(t, args):
-    return result.args
+def safeeval_args(args):
+    """Evalues the args string safely using templator."""
+    result = [None]
+    def f(*args, **kwargs):
+        result[0] = args, kwargs
+    web.template.Template("$def with (f)\n$f(%s)" % args)(f)
+    return result[0]
     
 def call_macro(name, args):
     if name in _macros:
         try:
             f = _macros[name]
-            #@@ crude way of calling macro after evaluating args.
-            x = web.template.Template("$def with (f)\n$var result: $f(%s)" % args)(f)
-            result = x.result
+            args, kwargs = safeeval_args(args)
+            result = f(*args, **kwargs)
         except Exception, e:
             result = "%s failed with error: <pre>%s</pre>" % (name, web.websafe(str(e)))
-            
         return result
     else:
         return "Unknown macro: <pre>%s</pre>" % name

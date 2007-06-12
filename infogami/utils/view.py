@@ -104,7 +104,7 @@ def load_macros(dir):
         macros = web.template.render(path, cache=cache)
         names = [name[:-5] for name in os.listdir(path) if name.endswith('.html')]
         for name in names:
-            macro.register_macro(name, getattr(macros, name))
+            macro.register_macro(None, name, getattr(macros, name))
         
 def render_site(url, page):
     return render.core.site(page)

@@ -7,7 +7,7 @@ import datetime
 import os
 
 import infogami
-from infogami.utils import delegate
+from infogami.utils import delegate, macro
 from infogami.utils.context import context
 from infogami.utils.view import render, set_error
 from infogami.utils.storage import storage
@@ -16,19 +16,28 @@ from infogami.core.db import ValidationException
 from infogami import core
 from infogami import tdb
 import db, forms
-import re
 
 cache = web.storage()
 
 # validation will be disabled while executing movetemplates action
 validation_enabled = True
 
+RE_MACRO = web.re_compile(r'macros/([^/]*)$')
+
 class hooks(tdb.hook):
     def on_new_version(self, page):
         if page.type.name == 'template':
             site = page.parent
             _load_template(site, page)
-
+            
+        elif page.type.name == 'macro':
+            site = page.parent
+            _load_macro(site, page)
+        elif page.type.name == 'delete':
+            # if the type of previous version is template, then unload template
+            # if the type of previous version is macro, then unregister macro
+            pass
+            
     def before_new_version(self, page):
         if page.type.name == 'template':
             site = page.parent
@@ -37,7 +46,7 @@ class hooks(tdb.hook):
             # ensure that templates are loaded
             get_templates(site)
 
-            rx = re.compile('templates/([^/]+)/(?:view|edit).tmpl')
+            rx = web.re_compile(r'templates/([^/]+)/(?:view|edit).tmpl')
             match = rx.match(path)
 
             if match:
@@ -45,7 +54,40 @@ class hooks(tdb.hook):
                 _validate_pagetemplate(site, typename, page.body)
             elif path == 'templates/site.tmpl':
                 _validate_sitetemplate(page.body)
+        
+        if page.type.name == 'macro':
+            match = RE_MACRO.match(page.name)
+            if match:
+                name = match.group(1)
+                site = page.parent
+                try:
+                    parse_macro(page.macro)
+                except:
+                    raise ValidationException()
+                    
+def parse_macro(data):
+    return web.template.Template(data, filter=web.websafe)
 
+def _load_macro(site, page):
+    match = RE_MACRO.match(page.name)
+    if match:
+        name = match.group(1)
+        site = page.parent
+        t = parse_macro(page.macro)
+        t.__doc__ = page.description
+        macro.register_macro(site, name, t)
+        
+def _load_macros():
+    import db
+    web.load()
+    for site in db.get_all_sites():
+        macros = db.get_all_macros(site)
+        for m in macros:
+            _load_macro(site, m)
+
+#@@ this should be done lazily        
+_load_macros()
+    
 def random_string(size=20):
     import string
     import random
@@ -112,7 +154,17 @@ def dummypage(title, body):
     data = web.storage(title=title, body=body, template="page")
     page = web.storage(data=data, created=datetime.datetime.utcnow())
     return page
-
+    
+def _create_macro(site, page):
+    """create template from a wiki page."""
+    try:
+        return web.template.Template(page.body, filter=web.websafe)
+    except web.template.ParseError:
+        print >> web.debug, 'load template', page.name, 'failed'
+        import traceback
+        traceback.print_exc()
+        pass
+    
 def _load_template(site, page):
     """load template from a wiki page."""
     try:
@@ -130,8 +182,7 @@ def _load_template(site, page):
 def load_templates(site):
     """Load all templates from a site.
     """
-    pages = db.get_all_templates(site)
-    
+    pages = db.get_all_templates(site)    
     for p in pages:
         _load_template(site, p)
 
@@ -255,10 +306,15 @@ def _move_schema(name, data):
     db.new_version(get_site(), path, type, data).save()
 
 @infogami.install_hook
+@infogami.action
 def moveschemas():
+    web.load()
+    web.ctx.ip = ""
+    
     _move_schema('schema', web.storage({'*':'string'}))
     _move_schema('page', web.storage({'title':'string', 'body': 'string'}))
     _move_schema('template', web.storage({'title':'string', 'body': 'string'}))
+    _move_schema('macro', web.storage({'description': 'string', 'macro': 'text'}))
 
 render.core.site = sitetemplate('site', render.core.site)
 render.core.history = sitetemplate("history", render.core.history)

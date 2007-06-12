@@ -5,18 +5,30 @@ Macros take argument string as input and returns result as markdown text.
 """
 import markdown
 import web
+from storage import DefaultDict
 
-_macros = {}
+# 2D dict
+# site_id -> name -> macro
+_macros = DefaultDict({})
+
+def _get_macro(name):
+    from context import context
+    site = context.get("site")
+    return _macros[site and site.id].get(name, _macros[None].get(name))
 
 def macro(f):
     """Decorator to register a markdown macro.
     Macro is a function that takes argument string and returns result as markdown string.
     """
-    register_macro(f.__name__, f)
+    register_macro(None, f.__name__, f)
     return f
     
-def register_macro(name, f):
-    _macros[name] = f
+def register_macro(site, name, f):
+    _macros[site and site.id][name] = f
+    
+def unregister_macro(site, name):
+    if name in _macros[site and site.id]:
+        del _macros[site and site.id][name]
 
 def safeeval_args(args):
     """Evalues the args string safely using templator."""
@@ -27,11 +39,11 @@ def safeeval_args(args):
     return result[0]
     
 def call_macro(name, args):
-    if name in _macros:
+    macro = _get_macro(name)
+    if macro:
         try:
-            f = _macros[name]
             args, kwargs = safeeval_args(args)
-            result = f(*args, **kwargs)
+            result = macro(*args, **kwargs)
         except Exception, e:
             result = "%s failed with error: <pre>%s</pre>" % (name, web.websafe(str(e)))
         return result
@@ -69,10 +81,16 @@ def HelloWorld():
 @macro
 def ListOfMacros():
     """Lists all available macros."""
+    from context import context 
+    site = context.site
+    a = _macros[None].keys()
+    b = _macros[site and site.id].keys()
+    
     out = ""
     out += "<ul>"
-    for k in sorted(_macros.keys()):
-        out += '  <li><b>%s</b>: %s</li>\n' % (k, _macros[k].__doc__ or "")
+    for name in sorted(set(a+b)):
+        macro = _get_macro(name)
+        out += '  <li><b>%s</b>: %s</li>\n' % (name, macro.__doc__ or "")
     out += "</ul>"
     return out
     

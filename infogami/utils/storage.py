@@ -139,8 +139,38 @@ class DefaultDict(dict):
         copy.update(self)
         return copy
 
-storage = DefaultDict(OrderedDict())                            
-               
+storage = DefaultDict(OrderedDict())    
+
+class SiteLocalDict:
+    """
+    Takes a dictionary that maps sites to objects.
+    When somebody tries to get or set an attribute or item 
+    of the SiteLocalDict, it passes it on to the object 
+    for the active site in dictionary.
+    Active site is found from `context.site`.
+    see infogami.utils.context.context
+    """    
+    def __init__(self):
+        self.__dict__['_SiteLocalDict__d'] = {}
+        
+    def __getattr__(self, name):
+        return getattr(self._getd(), name)
+        
+    def __setattr__(self, name, value):
+        setattr(self._getd(), name, value)
+
+    def __delattr__(self, name):
+        delattr(self._getd(), name)
+        
+    def _getd(self):
+        from context import context
+        site = getattr(context, 'site', None)
+        site_id = site and site.id
+        if site_id not in self.__d:
+            self.__d[site_id] = web.storage(self.__d.get(None, {}))
+        return self.__d[site_id]
+            
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+    

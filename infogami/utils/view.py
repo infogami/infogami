@@ -35,11 +35,20 @@ web.template.Template.globals.update(dict(
   datestr = web.datestr,
   numify = web.numify,
   ctx = context,
-  set = set,
-  range = range,
-  hasattr = hasattr,
   query = tdb.Things, #@@not safe
   _ = i18n(),
+  
+  # common utilities
+  int = int,
+  str = str,
+  list = list,
+  set = set,
+  dict = dict,
+  range = range,
+  len = len,
+  enumerate=enumerate,
+  hasattr = hasattr,
+  Dropdown = web.form.Dropdown,
 ))
 
 render = web.storage()
@@ -104,7 +113,7 @@ def load_macros(dir):
         macros = web.template.render(path, cache=cache)
         names = [name[:-5] for name in os.listdir(path) if name.endswith('.html')]
         for name in names:
-            macro.register_macro(None, name, getattr(macros, name))
+            macro.register_macro(name, getattr(macros, name))
         
 def render_site(url, page):
     return render.core.site(page)

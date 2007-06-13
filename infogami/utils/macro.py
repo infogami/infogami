@@ -5,11 +5,9 @@ Macros take argument string as input and returns result as markdown text.
 """
 import markdown
 import web
-from storage import DefaultDict
+from storage import SiteLocalDict
 
-# 2D dict
-# site_id -> name -> macro
-_macros = DefaultDict({})
+_macros = SiteLocalDict()
 
 def _get_macro(name):
     from context import context
@@ -20,15 +18,15 @@ def macro(f):
     """Decorator to register a markdown macro.
     Macro is a function that takes argument string and returns result as markdown string.
     """
-    register_macro(None, f.__name__, f)
+    register_macro(f.__name__, f)
     return f
     
-def register_macro(site, name, f):
-    _macros[site and site.id][name] = f
+def register_macro(name, f):
+    _macros[name] = f
     
-def unregister_macro(site, name):
-    if name in _macros[site and site.id]:
-        del _macros[site and site.id][name]
+def unregister_macro(name):
+    if name in _macros:
+        del _macros[name]
 
 def safeeval_args(args):
     """Evalues the args string safely using templator."""
@@ -39,9 +37,9 @@ def safeeval_args(args):
     return result[0]
     
 def call_macro(name, args):
-    macro = _get_macro(name)
-    if macro:
+    if name in _macros:
         try:
+            macro = _macros[name]
             args, kwargs = safeeval_args(args)
             result = macro(*args, **kwargs)
         except Exception, e:
@@ -81,15 +79,9 @@ def HelloWorld():
 @macro
 def ListOfMacros():
     """Lists all available macros."""
-    from context import context 
-    site = context.site
-    a = _macros[None].keys()
-    b = _macros[site and site.id].keys()
-    
     out = ""
     out += "<ul>"
-    for name in sorted(set(a+b)):
-        macro = _get_macro(name)
+    for name, macro in _macros.items():
         out += '  <li><b>%s</b>: %s</li>\n' % (name, macro.__doc__ or "")
     out += "</ul>"
     return out
@@ -97,7 +89,7 @@ def ListOfMacros():
 if __name__ == "__main__":
     def get_markdown(text):
         md = markdown.Markdown(source=text, safe_mode=False)
-        md = macromarkdown(md)
+        makeExtension().extendMarkdown(md, markdown.__dict__)
         return md
     
     print get_markdown("This is HelloWorld Macro. {{HelloWorld()}}\n\n" + 

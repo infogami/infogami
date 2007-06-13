@@ -31,8 +31,7 @@ class hooks(tdb.hook):
             _load_template(site, page)
             
         elif page.type.name == 'macro':
-            site = page.parent
-            _load_macro(site, page)
+            _load_macro(page)
         elif page.type.name == 'delete':
             # if the type of previous version is template, then unload template
             # if the type of previous version is macro, then unregister macro
@@ -59,7 +58,6 @@ class hooks(tdb.hook):
             match = RE_MACRO.match(page.name)
             if match:
                 name = match.group(1)
-                site = page.parent
                 try:
                     parse_macro(page.macro)
                 except:
@@ -68,24 +66,26 @@ class hooks(tdb.hook):
 def parse_macro(data):
     return web.template.Template(data, filter=web.websafe)
 
-def _load_macro(site, page):
+def _load_macro(page):
     match = RE_MACRO.match(page.name)
     if match:
         name = match.group(1)
-        site = page.parent
         t = parse_macro(page.macro)
         t.__doc__ = page.description
-        macro.register_macro(site, name, t)
+        macro.register_macro(name, t)
         
 def _load_macros():
     import db
+    #@@ TODO: global macros must be available for every site
     web.load()
+    context.load()
     for site in db.get_all_sites():
         macros = db.get_all_macros(site)
+        context.site = site
         for m in macros:
-            _load_macro(site, m)
+            _load_macro(m)
 
-#@@ this should be done lazily        
+#@@ this should be done lazily
 _load_macros()
     
 def random_string(size=20):

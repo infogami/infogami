@@ -168,6 +168,11 @@ class SiteLocalDict:
         site_id = site and site.id
         if site_id not in self.__d:
             self.__d[site_id] = web.storage(self.__d.get(None, {}))
+            
+            #@@ Hack: using __d[None] as globals
+            if site_id is not None:
+                self.__d[site_id].update(self.__d[None])
+                                
         return self.__d[site_id]
             
 if __name__ == "__main__":

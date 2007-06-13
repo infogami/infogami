@@ -1,4 +1,4 @@
-from infogami.utils import markdown
+from infogami.utils.markdown import markdown, mdx_footnotes
 from context import context
 import web
 import os
@@ -17,7 +17,6 @@ def register_markdown_extionsion(name, m):
 def _register_mdx_extensions(md):
     """Register required markdown extensions."""
     # markdown's interface to specifying extensions is really painful.
-    from mdx import mdx_footnotes
     mdx_footnotes.makeExtension({}).extendMarkdown(md, markdown.__dict__)
     macro.makeExtension({}).extendMarkdown(md, markdown.__dict__)
     

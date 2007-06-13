@@ -3,7 +3,7 @@ Macro extension to markdown.
 
 Macros take argument string as input and returns result as markdown text.
 """
-import markdown
+from markdown import markdown
 import web
 from storage import SiteLocalDict
 

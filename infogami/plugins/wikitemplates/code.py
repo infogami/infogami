@@ -36,7 +36,7 @@ class hooks(tdb.hook):
             # if the type of previous version is template, then unload template
             # if the type of previous version is macro, then unregister macro
             pass
-            
+
     def before_new_version(self, page):
         if page.type.name == 'template':
             site = page.parent
@@ -273,7 +273,7 @@ def register_wiki_template(name, filepath, wikipath):
     """Registers a wiki template. 
     All registered templates are moved to wiki on `movetemplates` action.
     """
-    wikitemplates[name] = ((name, filepath, wikipath))
+    wikitemplates[wikipath] = ((name, filepath, wikipath))
 
 def _move_template(title, path, dbpath):
     from infogami.core import db

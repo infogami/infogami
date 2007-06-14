@@ -66,13 +66,12 @@ def movestrings():
     strings = {}
     
     for p in delegate.plugins:
-        name = os.path.basename(p)
-        data = i18n.load_plugin(p)
+        data = i18n.load_plugin(p.path)
         for lang, d in data.iteritems():
             if lang not in strings:
                 strings[lang] = {}
             for key, value in d.iteritems():
-                strings[lang][name + '.' + key] = value
+                strings[lang][p.name + '.' + key] = value
                 
     type = db.get_type('i18n', create=True)
     for lang, d in strings.iteritems():

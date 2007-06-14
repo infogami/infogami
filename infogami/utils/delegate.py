@@ -118,24 +118,54 @@ plugins = []
 
 @view.public
 def get_plugins():
-    return [os.path.basename(p) for p in plugins]
+    """Return names of all the plugins."""
+    return [p.name for p in plugins]
 
+def _make_plugin(name):
+    # plugin can be present in infogami/plugins directory or <pwd>/plugins directory.    
+    if name == 'core':
+        path = infogami_root() + '/core'
+        module = 'infogami.core'
+    else:
+        for p in config.plugin_path:
+            m = __import__(p, globals(), locals(), ['plugins'])
+            path = os.path.dirname(m.__file__) + '/' + name
+            module = p + '.' + name
+            if os.path.isdir(path):
+                break
+        else:
+            raise Exception, 'Plugin not found: ' + name
+            
+    return web.storage(name=name, path=path, module=module)
+
+def _list_plugins(dir):
+    if os.path.isdir(dir):
+        return [_make_plugin(name) for name in os.listdir(dir) if os.path.isdir(dir + '/' + name)]
+    else:
+        return []
+    
+def infogami_root():
+    import infogami
+    return os.path.dirname(infogami.__file__)
+        
 def _load():
-    """Imports the files from the plugins directory and loads templates."""
+    """Imports the files from the plugins directories and loads templates."""
     global plugins
     
-    plugins = ["infogami/core"]
+    plugins = [_make_plugin('core')]
     
     if config.plugins is not None:
-        plugins += ["infogami/plugins/" + p for p in config.plugins]
-    else:
-        plugins += [f for f in glob.glob('infogami/plugins/*') if os.path.isdir(f)]
-
+        plugins += [_make_plugin(p) for p in config.plugins]
+    else:        
+        for p in config.plugin_path:
+            m = __import__(p)
+            root = os.path.dirname(m)
+            plugins += _list_plugins(root)
+            
     for plugin in plugins:
-        if os.path.isdir(plugin):
-            view.load_templates(plugin)
-            __import__(plugin.replace('/', '.')+'.code', globals(), locals(), ['plugins'])
-            view.load_macros(plugin)
+        view.load_templates(plugin.path)
+        __import__(plugin.module + '.code', globals(), locals(), ['plugins'])
+        view.load_macros(plugin.path)
 
 def pickdb(g):
     """Looks up the db type to use in config and exports its functions."""

@@ -42,17 +42,16 @@ def load_strings():
     keys = {}
 
     for plugin in delegate.plugins:
-        name = os.path.basename(plugin)
-        data = load_plugin(plugin)
+        data = load_plugin(plugin.path)
         for lang, xstrings in data.iteritems():
             strings.setdefault(lang, {}).update(xstrings)
-            keys.setdefault(name, set()).update(xstrings.keys())
+            keys.setdefault(plugin.name, set()).update(xstrings.keys())
     
     return keys, strings
 
-def load_plugin(plugin):
+def load_plugin(plugin_path):
     """Load string.xx files from plugin/i18n/string.* files."""
-    path = os.path.join(plugin, "i18n", "strings.*")
+    path = os.path.join(plugin_path, "i18n", "strings.*")
 
     strings = {}
     

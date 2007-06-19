@@ -1,3 +1,4 @@
+
 import web
 import logger
 
@@ -92,8 +93,13 @@ class Thing:
         _run_hooks("before_new_version", self)
         web.transact()
         if self.id is None:
-            tid = web.insert('thing', name=self.name, parent_id=self.parent.id, latest_revision=1)
+            self.id = web.insert('thing', name=self.name, parent_id=self.parent.id, latest_revision=1)
             revision = 1
+            tid = self.id
+
+            #@@ this should be generalized
+            if self.name == 'type/type':
+                self.type = self
         else:
             tid = self.id
             result = web.query("SELECT revision FROM version \
@@ -319,16 +325,16 @@ def _run_hooks(name, thing):
         if m:
             m(thing)
     
-metatype = LazyThing(1)
+root = LazyThing(1)
 usertype = LazyThing(2)
 
 def setup():
     try:
         withID(1)
     except NotFound:
-        # create metatype and user type
-        new("metatype", metatype, metatype).save()
-        new("user", metatype, metatype).save()
+        # create root of all types
+        new("root", root, root).save()
+        new("type/user", usertype, usertype).save()
 
 if __name__ == "__main__":
     import sys

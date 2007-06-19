@@ -70,7 +70,22 @@ def initialize_context():
     
     i = web.input(_mode='GET', rescue="false")
     context.rescue_mode = (i.rescue.lower() == 'true')
-    
+
+def fakeload():
+    from infogami.core import db
+
+    web.load()
+    web.ctx.ip = ""
+    context.load()
+    context.error = None
+    context.stylesheets = []
+    context.javascripts = []
+    context.user = None
+    try:
+        context.site = db.get_site(config.site)
+    except:
+        pass
+        
 def delegate(path):
     method = web.ctx.method
     initialize_context()

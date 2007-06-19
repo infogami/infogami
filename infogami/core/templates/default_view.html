@@ -5,7 +5,7 @@ $var title: $page.name
 <table>
 <tbody>
 
-$ schema = get_schema(ctx.site, page.type)
+$ schema = get_schema(page.type)
 $for key in schema:
     $if schema[key].endswith('*'):
         $for x in page.d[key]:

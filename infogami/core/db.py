@@ -6,26 +6,34 @@ from infogami.tdb import NotFound
 import pickle
 from infogami.utils.view import public
         
-
-#@@ move to some better place
 @infogami.install_hook
-@infogami.action
 def tdbsetup():
     """setup tdb for infogami."""
     from infogami import config
-    web.load()
     # hack to disable tdb hooks
     tdb.tdb.hooks = []
     tdb.setup()
-    sitetype = get_type('site') or new_type('site')
-    sitetype.save()
-    pagetype = get_type('page') or new_type('page')
-    pagetype.save()
-
     try:
-        tdb.withName(config.site, sitetype)
+        site = tdb.withName(config.site, tdb.root)
     except:
-        tdb.new(config.site, sitetype, sitetype).save()
+        site = tdb.new(config.site, tdb.root, tdb.root)
+        site.save()
+
+    from infogami.utils.context import context
+    context.site = site
+    
+    try:
+        type = tdb.withName('type/type', site)
+    except tdb.NotFound:
+        type = tdb.new('type/type', site, None, {'*':'string'})
+        type.save()
+
+    new_type(site, 'type/page', {'title': 'string', 'body': 'text'})
+    new_type(site, 'type/user', {'email': 'string', 'password': 'string'})
+    new_type(site, 'type/delete', {})
+    
+    # for internal use
+    new_type(site, 'type/thing', {})
     
 class ValidationException(Exception): pass
 
@@ -48,15 +56,15 @@ def get_user(userid):
     except NotFound:
         return None
 
-def get_user_by_name(username):
+def get_user_by_name(site, username):
     try:
-        return tdb.withName(username, tdb.usertype)
+        return tdb.withName('user/' + username, site)
     except NotFound:
         return None
     
-def login(username, password):
+def login(site, username, password):
     try:
-        u = get_user_by_name(username)
+        u = get_user_by_name(site, username)
         if u and (u.password == password):
             return u
         else:
@@ -64,33 +72,31 @@ def login(username, password):
     except tdb.NotFound:
         return None
     
-def new_user(username, email, password):
+def new_user(site, username, email, password):
     d = dict(email=email, password=password)
-    return tdb.new(username, tdb.usertype, tdb.usertype, d)
+    return tdb.new('user/' + username, site, get_type(site, "type/user"), d)
 
 def get_user_preferences(user):
-    type = get_type('preferences', create=True)
     try:
         return tdb.withName('preferences', user)
     except NotFound:
+        site = user.parent_id
+        type = get_type(site, 'type/thing')
         return tdb.new('preferences', user, type)
     
-def get_type(name, create=False):
-    try:
-        return tdb.withName(name, tdb.metatype)
-    except tdb.NotFound:
-        if create:
-            type = new_type(name)
-            type.save()
-            return type
-        else:
-            return None
+def get_type(site, name):
+    return tdb.withName(name, site)
 
-def new_type(name):
-    return tdb.new(name, tdb.metatype, tdb.metatype)
+def new_type(site, name, data):
+    try:
+        return get_type(site, name)
+    except tdb.NotFound:
+        t = tdb.new(name, site, get_type(site, 'type/type'), data)
+        t.save()
+        return t
 
 def get_site(name):
-    return tdb.withName(name, get_type("site"))
+    return tdb.withName(name, tdb.root)
 
 @public
 def get_recent_changes(site, limit=None):
@@ -111,15 +117,10 @@ def list_pages(site, path):
             WHERE t.parent_id=$site.id AND t.name LIKE $pattern AND type.name != 'delete' 
             ORDER BY t.name""", vars=locals())
        
-#@@ this should be moved to wikitemplates plugin    
 @public
-def get_schema(site, type, default=True):
-    try:
-        p = get_version(site, 'templates/%s/schema' % type.name)
-        return p.d
-    except tdb.NotFound:
-        return web.storage({'*': 'string'})
-        
+def get_schema(type):
+    return type.d
+            
 def get_site_permissions(site):
     if hasattr(site, 'permissions'):
         return pickle.loads(site.permissions)

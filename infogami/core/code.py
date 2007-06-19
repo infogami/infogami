@@ -8,6 +8,7 @@ import db
 import auth
 import forms
 
+
 render = utils.view.render.core
 
 def notfound():
@@ -19,7 +20,7 @@ def deleted():
     return render.special.deleted()
 
 def fill_missing_fields(site, page):
-    schema = db.get_schema(site, page.type)
+    schema = db.get_schema(page.type)
     schema.pop('*', None)
     
     data = page.d
@@ -37,7 +38,7 @@ class view (delegate.mode):
         except db.NotFound:
             return notfound()
         else:
-            if p.type.name == 'delete':
+            if p.type == db.get_type(site, 'type/delete'):
                 return deleted()
             else:
                 fill_missing_fields(site, p)
@@ -47,17 +48,15 @@ class edit (delegate.mode):
     def GET(self, site, path):
         i = web.input(v=None, t=None)
         
-        if i.t:
-            type = db.get_type(i.t) or db.new_type(i.t)
-        else:
-            type = db.get_type('page')
-            
         try:
             p = db.get_version(site, path, i.v)
-            if i.t:
-                p.type = type
         except db.NotFound:
-            p = db.new_version(site, path, type, web.storage({}))
+            p = db.new_version(site, path, db.get_type(site, 'type/page'), web.storage({}))
+
+        if i.t:
+            #@@ try..except tdb.NotFound
+            type = db.get_type(site, i.t)
+            p.type = type
         
         fill_missing_fields(site, p)
         return render.edit(p)
@@ -76,9 +75,11 @@ class edit (delegate.mode):
             action = 'delete'
         else:
             action = None
+                                
+        #@@ try..except tdb.NotFound
+        type = db.get_type(site, i._type)
         
-        type = db.get_type(i._type, create=True)
-        schema = db.get_schema(site, type)
+        schema = type.d
         allow_arbitrary = schema.pop('*', None) is not None
 
         _default = {True: [], False: ""}
@@ -116,7 +117,7 @@ class edit (delegate.mode):
                 utils.view.set_error(str(e))
                 return render.edit(p)
         elif action == 'delete':
-            p.type = db.get_type('delete', create=True)
+            p.type = db.get_type(site, 'type/delete', create=True)
             p.save()
             return web.seeother(web.changequery(m=None))
             
@@ -127,13 +128,7 @@ class history (delegate.mode):
             return render.history(p)
         except db.NotFound:
             return web.seeother('/' + path)
-            
-#def PageList(path):
-#    from infogami.utils.context import context 
-#    pages = db.list_pages(context.site, path)
-#    for p in pages:
-#        yield "* [%s](/%s)" % (p.name, p.name)
-    
+                
 class diff (delegate.mode):
     def GET(self, site, path):  
         i = web.input("b", a=None)
@@ -169,7 +164,7 @@ class login(delegate.page):
 
     def POST(self, site):
         i = web.input(remember=False, redirect='/')
-        user = db.login(i.username, i.password)
+        user = db.login(site, i.username, i.password)
         if user is None:
             f = forms.login()
             f.fill(i)
@@ -189,7 +184,7 @@ class register(delegate.page):
         if not f.validates(i):
             return render.register(f)
         else:
-            user = db.new_user(i.username, i.email, i.password)
+            user = db.new_user(site, i.username, i.email, i.password)
             user.save()
             auth.setcookie(user, i.remember)
             web.seeother(web.ctx.homepath + i.redirect)
@@ -214,7 +209,7 @@ class preferences(delegate.page):
         d = dict((name, p.GET(site)) for name, p in _preferences.iteritems())
         return render.preferences(d.values())
 
-    @auth.require_login    
+    @auth.require_login
     def POST(self, site):
         i = web.input("_action")
         result = _preferences[i._action].POST(site)
@@ -229,7 +224,7 @@ class login_preferences:
         return render.login_preferences(f)
         
     def POST(self, site):
-        i = web.input("email", "password", "password2")
+        i = web.input("oldpassword", "password", "password2")
         f = forms.login_preferences()
         if not f.validates(i):
             return render.login_preferences(f)

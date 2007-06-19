@@ -4,6 +4,7 @@ i18n: allow keeping i18n strings in wiki
 
 import web
 from infogami.utils import delegate, i18n
+from infogami.utils.context import context
 from infogami.utils.view import public
 from infogami.plugins.wikitemplates.code import register_wiki_template
 from infogami import config
@@ -17,7 +18,7 @@ re_i18n = web.re_compile(r'^i18n/strings\.(.*)$')
 class hook(tdb.hook):
     def on_new_version(self, page):
         """Update i18n strings when a i18n wiki page is changed."""
-        if page.type.name == 'i18n':
+        if page.type.name == 'type/i18n':
             path = page.name
             result = re_i18n.match(path)
             if result:
@@ -49,19 +50,22 @@ def update_strings(lang, data):
 # register i18n templates
 register_wiki_template("i18n View Template", 
                        "plugins/i18n/templates/view.html",
-                       "templates/i18n/view.tmpl")
+                       "type/i18n/view.tmpl")
 
 register_wiki_template("i18n edit Template", 
                        "plugins/i18n/templates/edit.html",
-                       "templates/i18n/edit.tmpl")
+                       "type/i18n/edit.tmpl")
 
+@infogami.install_hook
+def createtype():
+    from infogami.core import db
+    db.new_type(context.site, 'type/i18n', {'*': 'string'})
+    
 @infogami.install_hook
 @infogami.action
 def movestrings():
     """Moves i18n strings to wiki."""
     from infogami.core import db
-    web.load()
-    web.ctx.ip=""
     
     strings = {}
     
@@ -73,13 +77,12 @@ def movestrings():
             for key, value in d.iteritems():
                 strings[lang][p.name + '.' + key] = value
                 
-    type = db.get_type('i18n', create=True)
+    type = db.get_type(context.site, 'type/i18n')
     for lang, d in strings.iteritems():
         wikipath = "i18n/strings." + lang
-        db.new_version(get_site(), wikipath, type, d).save()
+        db.new_version(context.site, wikipath, type, d).save()
 
 @public
 def get_i18n_keys(plugin):
     keys = i18n.get_keys()
     return keys.get(plugin, {})
-

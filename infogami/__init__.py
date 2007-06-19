@@ -42,6 +42,9 @@ def _setup():
 
     from infogami.utils import delegate
     delegate._load()
+    
+    # setup context etc. 
+    delegate.fakeload()
 
 @action
 def startserver(*args):

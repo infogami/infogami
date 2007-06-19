@@ -68,4 +68,3 @@ def has_permission(site, user, path, mode):
 
     items = get_items() or []
     return any(has_perm(who, what) for who, what in items)
-

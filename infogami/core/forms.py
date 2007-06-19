@@ -16,7 +16,7 @@ register = Form(
     Textbox('username', 
             Validator(
                 _.USERNAME_ALREADY_EXISTS,
-                lambda name: not db.get_user_by_name(name)),
+                lambda name: not db.get_user_by_name(context.site, name)),
             description=_.USERNAME),
     Textbox('email', notnull, description=_.EMAIL),
     Password('password', notnull, description=_.PASSWORD),

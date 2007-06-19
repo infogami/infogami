@@ -11,17 +11,18 @@ from infogami.utils import delegate
 
 import view
 from infogami import tdb
-import db
+from infogami.core import db
 import web
 
 render = utils.view.render.links
 
 class hook(tdb.hook):
-    def on_new_version(self, page):
-        if page.type.name == "page":
-            db.new_links(page, view.get_links(page.body))
+    def before_new_version(self, page):
+        if page.type.name == "type/page":
+            page.links = list(view.get_links(page.body))
 
 class backlinks (delegate.mode):
     def GET(self, site, path):
-        links = db.get_links(site, path)
+        links = tdb.Things(type=db.get_type(site, 'type/page'), parent=site, links=path)
         return render.backlinks(links)
+

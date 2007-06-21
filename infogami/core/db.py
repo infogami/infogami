@@ -80,10 +80,11 @@ def get_user_preferences(user):
     try:
         return tdb.withName('preferences', user)
     except NotFound:
-        site = user.parent_id
+        site = user.parent
         type = get_type(site, 'type/thing')
         return tdb.new('preferences', user, type)
     
+@public
 def get_type(site, name):
     return tdb.withName(name, site)
 

@@ -45,12 +45,12 @@ class hooks(tdb.hook):
             # ensure that templates are loaded
             get_templates(site)
 
-            rx = web.re_compile(r'type/([^/]+)/(?:view|edit).tmpl')
+            rx = web.re_compile(r'(type/[^/]+)/(?:view|edit).tmpl')
             match = rx.match(path)
 
             if match:
                 typename = match.group(1)
-                _validate_pagetemplate(site, typename, page.body)
+                #_validate_pagetemplate(site, typename, page.body)
             elif path == 'templates/site.tmpl':
                 _validate_sitetemplate(page.body)
         
@@ -277,12 +277,15 @@ def register_wiki_template(name, filepath, wikipath):
     wikitemplates[wikipath] = ((name, filepath, wikipath))
 
 @infogami.install_hook
+@infogami.action
 def movetypes():
     delegate.fakeload()
 
     from infogami.core import db
+    db.new_type(context.site, 'type/page', {'title':'string', 'body': 'text'})
     db.new_type(context.site, 'type/template', {'title':'string', 'body': 'text'})
     db.new_type(context.site, 'type/macro', {'description': 'string', 'macro': 'text'})
+    db.new_type(context.site, 'type/i18n', {'*': 'string'})
 
 @infogami.install_hook
 @infogami.action
@@ -317,10 +320,8 @@ render.core.default_edit = sitetemplate("default_edit", render.core.default_edit
 
 render.core.view = pagetemplate("view", render.core.default_view)
 render.core.edit = pagetemplate("edit", render.core.default_edit)
-
-do404 = render.core.special.do404
-render.core.special = web.storage()
-render.core.special.do404 = sitetemplate("notfound", do404)
+render.core.notfound = sitetemplate("notfound", render.core.notfound)
+render.core.deleted = sitetemplate("notfound", render.core.deleted)
     
 # register site and page templates
 register_wiki_template("Site Template", "core/templates/site.html", "templates/site.tmpl")
@@ -331,7 +332,8 @@ register_wiki_template("Diff Template", "core/templates/diff.html", "templates/d
 register_wiki_template("Preferences Template", "core/templates/preferences.html", "templates/preferences.tmpl")
 register_wiki_template("Default View Template", "core/templates/default_view.html", "templates/default_view.tmpl")
 register_wiki_template("Default Edit Template", "core/templates/default_edit.html", "templates/default_edit.tmpl")
-register_wiki_template("notfound", "core/templates/special/do404.html", "templates/notfound.tmpl")
+register_wiki_template("notfound", "core/templates/notfound.html", "templates/notfound.tmpl")
+register_wiki_template("deleted", "core/templates/deleted.html", "templates/notfound.tmpl")
 
 register_wiki_template("Page View Template", "core/templates/view.html", "type/page/view.tmpl")
 register_wiki_template("Page Edit Template", "core/templates/edit.html", "type/page/edit.tmpl")
@@ -345,10 +347,10 @@ register_wiki_template("Template Edit Template",
                        "plugins/wikitemplates/templates/edit.html", 
                        "type/template/edit.tmpl")    
 
-register_wiki_template("Schema View Template", 
+register_wiki_template("Type View Template", 
                        "plugins/wikitemplates/templates/schema_view.html", 
                        "type/type/view.tmpl")
 
-register_wiki_template("Schema Edit Template", 
+register_wiki_template("Type Edit Template", 
                        "plugins/wikitemplates/templates/schema_edit.html", 
                        "type/type/edit.tmpl")

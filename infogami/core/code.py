@@ -3,6 +3,8 @@ from infogami import utils, tdb
 from infogami.utils import delegate
 from infogami.utils.macro import macro
 from infogami.utils.storage import storage
+from infogami.utils.context import context
+
 from diff import better_diff
 import db
 import auth
@@ -13,11 +15,11 @@ render = utils.view.render.core
 
 def notfound():
     web.ctx.status = '404 Not Found'
-    return render.special.do404()
+    return render.notfound()
 
 def deleted():
     web.ctx.status = '404 Not Found'
-    return render.special.deleted()
+    return render.deleted()
 
 def fill_missing_fields(site, page):
     schema = db.get_schema(page.type)
@@ -108,17 +110,16 @@ class edit (delegate.mode):
         if action == 'preview':
             return render.edit(p, preview=True)
         elif action == 'save':
-            author = auth.get_user()
             try:
-                p.save(author=author, ip=web.ctx.ip)
+                p.save(author=context.user, ip=web.ctx.ip)
                 delegate.run_hooks('on_new_version', site, path, p)
                 return web.seeother(web.changequery(m=None))
             except db.ValidationException, e:
                 utils.view.set_error(str(e))
                 return render.edit(p)
         elif action == 'delete':
-            p.type = db.get_type(site, 'type/delete', create=True)
-            p.save()
+            p.type = db.get_type(site, 'type/delete')
+            p.save(author=context.user, ip=web.ctx.ip)
             return web.seeother(web.changequery(m=None))
             
 class history (delegate.mode):

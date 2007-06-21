@@ -326,7 +326,6 @@ def _run_hooks(name, thing):
             m(thing)
     
 root = LazyThing(1)
-usertype = LazyThing(2)
 
 def setup():
     try:
@@ -334,7 +333,6 @@ def setup():
     except NotFound:
         # create root of all types
         new("root", root, root).save()
-        new("type/user", usertype, usertype).save()
 
 if __name__ == "__main__":
     import sys

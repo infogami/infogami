@@ -2,5 +2,5 @@ $def with (path="")
 
 <ul>
 $for p in list_pages(ctx.site, path):
-    <li><a href="/$p.name">$p.name</a></li>
+    <li><a href="$homepath()/$p.name">$p.name</a></li>
 </ul>

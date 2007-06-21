@@ -44,7 +44,7 @@ def call_macro(name, args):
             result = macro(*args, **kwargs)
         except Exception, e:
             result = "%s failed with error: <pre>%s</pre>" % (name, web.websafe(str(e)))
-        return result
+        return str(result)
     else:
         return "Unknown macro: <pre>%s</pre>" % name
 

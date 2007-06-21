@@ -56,9 +56,12 @@ class edit (delegate.mode):
             p = db.new_version(site, path, db.get_type(site, 'type/page'), web.storage({}))
 
         if i.t:
-            #@@ try..except tdb.NotFound
-            type = db.get_type(site, i.t)
-            p.type = type
+            try:
+                type = db.get_type(site, i.t)
+            except tdb.NotFound:
+                utils.view.set_error('Unknown type: ' + i.t)
+            else:
+                p.type = type
         
         fill_missing_fields(site, p)
         return render.edit(p)
@@ -67,20 +70,20 @@ class edit (delegate.mode):
         return dict([(k, v) for k, v in d.iteritems() if k in keys])
         
     def input(self, site):
-        i = web.input(_type="page", _method='post')
         
-        if '_save' in i: 
-            action = 'save'
-        elif '_preview' in i: 
-            action = 'preview'
-        elif '_delete' in i: 
-            action = 'delete'
-        else:
-            action = None
                                 
         #@@ try..except tdb.NotFound
         type = db.get_type(site, i._type)
+        return action, type, i
         
+    def get_action(self, i):
+        """Finds the action from input."""
+        if '_save' in i: return 'save'
+        elif '_preview' in i: return 'preview'
+        elif '_delete' in i: return 'delete'
+        else: return None
+        
+    def parse_data(self, site, type, i):
         schema = type.d
         allow_arbitrary = schema.pop('*', None) is not None
 
@@ -101,18 +104,32 @@ class edit (delegate.mode):
         else:
             d = [(k, i[k]) for k in schema]
             i = dict(d)
-        return action, type, i
     
+        return i
+        
     def POST(self, site, path):
-        action, type, data = self.input(site)
-        p = db.new_version(site, path,type, data)
+        i = web.input(_type="page", _method='post')
+        action = self.get_action(i)
+        
+        try:
+            type = db.get_type(site, i._type)
+        except tdb.NotFound:
+            utils.view.set_error('Unknown type: ' + i._type)
+            #@@ using type/page here is not correct. 
+            #@@ It should use the previous type
+            type = db.get_type(site, 'type/page')
+            data = self.parse_data(site, type, i)
+            p = db.new_version(site, path, type, data)
+            return render.edit(p)
+        
+        data = self.parse_data(site, type, i)
+        p = db.new_version(site, path, type, data)
         
         if action == 'preview':
             return render.edit(p, preview=True)
         elif action == 'save':
             try:
                 p.save(author=context.user, ip=web.ctx.ip)
-                delegate.run_hooks('on_new_version', site, path, p)
                 return web.seeother(web.changequery(m=None))
             except db.ValidationException, e:
                 utils.view.set_error(str(e))

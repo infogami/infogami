@@ -11,7 +11,6 @@ urls = (
 )
 
 modes = {}
-hooks = {}
 pages = {}
 
 # I'm going to hell for this...
@@ -40,18 +39,6 @@ class page:
 # mode and page are just base classes.
 del modes['mode']
 del pages['page']
-
-class hook (object):
-    def __new__(klass, name, bases, attrs):
-        for thing in attrs:
-            if thing.startswith('on_') or thing.startswith('before_'):
-                hooks.setdefault(thing, []).append(attrs[thing])
-
-        return web.Storage(attrs)
-
-def run_hooks(name, *args, **kwargs):
-    for hook in hooks.get(name, []):
-        hook(*args, **kwargs)
 
 def _keyencode(text): return text.replace(' ', '_')
 def _changepath(new_path):

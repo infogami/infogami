@@ -65,16 +65,24 @@ def get_user_by_name(site, username):
 def login(site, username, password):
     try:
         u = get_user_by_name(site, username)
-        if u and (u.password == password):
+        if u and (get_user_preferences(u).get(password) == password):
             return u
         else:
             return None
     except tdb.NotFound:
         return None
     
-def new_user(site, username, email, password):
-    d = dict(email=email, password=password)
+def new_user(site, username, email):
+    d = dict(email=email)
     return tdb.new('user/' + username, site, get_type(site, "type/user"), d)
+
+def get_password(user):
+    return db.get_user_preferences(user).d.get('password')
+
+def set_password(user, password):
+    p = get_user_preferences(user)
+    p.password = password
+    p.save()
 
 def get_user_preferences(user):
     try:

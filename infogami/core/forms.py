@@ -31,6 +31,6 @@ login_preferences = Form(
     Password("password2", notnull, description=_.CONFIRM_PASSWORD),
     Button("Save"),
     validators = [
-        Validator(_.INCORRECT_PASSWORD, lambda i: i.oldpassword == context.user.password),
+        Validator(_.INCORRECT_PASSWORD, lambda i: db.get_password(context.user) == i.oldpassword),
         Validator(_.PASSWORDS_DID_NOT_MATCH, lambda i: i.password == i.password2)]
 )

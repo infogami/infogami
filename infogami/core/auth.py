@@ -47,11 +47,26 @@ def has_permission(site, user, path, mode):
     path = '/' + path
     perms = db.get_site_permissions(site)
 
+    def replace(who, args):
+        """Replace $1, $2.. in who with args."""
+        if not args:
+            return who
+            
+        import string, re
+        # replace $1 with $g1
+        who = re.sub("(\$\d)",  lambda x: '$g' + x.group(1)[1:], who)
+        mapping = dict([("g%d" % (i+1), x) for i, x in enumerate(args)])
+        return string.Template(who).safe_substitute(mapping)
+        
     def get_items():
         import re
         for pattern, items in perms:
-            if re.match('^' + pattern + '$', path):
-                return items
+            match = re.match('^' + pattern + '$', path)
+            if match:
+                # pattern can have groups rememred using (). 
+                # $1, $2 etc can be used in who to replace the remembered groups.
+                args = match.groups()
+                return [(replace(who, args), what) for who, what in items]
 
     def has_perm(who, what):
         if mode in what:

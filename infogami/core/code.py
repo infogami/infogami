@@ -195,8 +195,9 @@ class register(delegate.page):
         if not f.validates(i):
             return render.register(f)
         else:
-            user = db.new_user(site, i.username, i.email, i.password)
+            user = db.new_user(site, i.username, i.email)
             user.save()
+            db.set_password(user, i.password)
             auth.setcookie(user, i.remember)
             web.seeother(web.ctx.homepath + i.redirect)
 
@@ -241,8 +242,7 @@ class login_preferences:
             return render.login_preferences(f)
         else:
             user = auth.get_user()
-            user.password = i.password
-            user.save()
+            db.set_password(user, i.password)
             return self.GET(site)
 
 register_preferences("login_preferences", login_preferences())

@@ -5,7 +5,7 @@ Infogami configuration.
 import web
 
 internalerror = web.debugerror
-middleware = [web.reloader]
+middleware = []
 
 web.config._hasPooling = False
 

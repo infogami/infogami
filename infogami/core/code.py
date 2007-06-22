@@ -69,13 +69,6 @@ class edit (delegate.mode):
     def dict_subset(self, d, keys):
         return dict([(k, v) for k, v in d.iteritems() if k in keys])
         
-    def input(self, site):
-        
-                                
-        #@@ try..except tdb.NotFound
-        type = db.get_type(site, i._type)
-        return action, type, i
-        
     def get_action(self, i):
         """Finds the action from input."""
         if '_save' in i: return 'save'

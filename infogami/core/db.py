@@ -29,7 +29,7 @@ def tdbsetup():
         type.save()
 
     new_type(site, 'type/page', {'title': 'string', 'body': 'text'})
-    new_type(site, 'type/user', {'email': 'string', 'password': 'string'})
+    new_type(site, 'type/user', {'email': 'email'})
     new_type(site, 'type/delete', {})
     
     # for internal use
@@ -65,7 +65,7 @@ def get_user_by_name(site, username):
 def login(site, username, password):
     try:
         u = get_user_by_name(site, username)
-        if u and (get_user_preferences(u).get(password) == password):
+        if u and (get_user_preferences(u).get("password") == password):
             return u
         else:
             return None

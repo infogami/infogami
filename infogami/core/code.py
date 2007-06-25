@@ -249,10 +249,16 @@ register_preferences("login_preferences", login_preferences())
 
 class sitepreferences(delegate.page):
     def GET(self, site):
+        if not auth.has_permission(context.site, context.user, "sitepreferences", "view"):
+            return auth.login_redirect()
+            
         perms = db.get_site_permissions(site)
         return render.sitepreferences(perms)
         
     def POST(self, site):
+        if not auth.has_permission(context.site, context.user, "sitepreferences", "view"):
+            return auth.login_redirect()
+            
         perms = self.input()
         db.set_site_permissions(site, perms)
         return render.sitepreferences(perms)

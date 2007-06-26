@@ -34,7 +34,6 @@ web.template.Template.globals.update(dict(
   datestr = web.datestr,
   numify = web.numify,
   ctx = context,
-  query = tdb.Things, #@@not safe
   _ = i18n(),
   
   # common utilities
@@ -59,7 +58,7 @@ def public(f):
 
 @public
 def format(text):
-    return get_markdown(text).convert()
+    return str(get_markdown(text))
 
 @public
 def link(path, text=None):

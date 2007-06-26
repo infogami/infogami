@@ -123,12 +123,16 @@ def list_pages(site, path):
             JOIN version ON version.revision = t.latest_revision AND version.thing_id = t.id
             JOIN datum ON datum.version_id = version.id 
             JOIN thing type ON type.id = datum.value  AND datum.key = '__type__'
-            WHERE t.parent_id=$site.id AND t.name LIKE $pattern AND type.name != 'delete' 
+            WHERE t.parent_id=$site.id AND t.name LIKE $pattern AND type.name != 'type/delete' 
             ORDER BY t.name""", vars=locals())
        
 @public
-def get_schema(type):
-    return type.d
+def get_schema(type, keep_back_references=False):
+    schema = web.storage(type.d)
+    if keep_back_references:
+        schema = web.storage([(k, v) for k, v in schema.items() if not k.startswith('#')])
+    return schema
+    
             
 def get_site_permissions(site):
     if hasattr(site, 'permissions'):

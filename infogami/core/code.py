@@ -22,14 +22,18 @@ def deleted():
     return render.deleted()
 
 def fill_missing_fields(site, page):
-    schema = db.get_schema(page.type)
+    schema = db.get_schema(page.type, keep_back_references=True)
     schema.pop('*', None)
     
     data = page.d
-    for k in schema:
+    for k, v in schema.items():
         if k != '*' and data.get(k) is None:
-            if k.endswith('*'):
+            if v.endswith('*'):
                 data[k] = ['']
+            elif v.startswith('#'):
+                t, key = v[1:].split('.', 1)
+                q = {'type': db.get_type(site, t), key:page}
+                data[k] = tdb.Things(limit=20, **q).list()
             else:
                 data[k] = ''
     
@@ -77,9 +81,9 @@ class edit (delegate.mode):
         else: return None
         
     def parse_data(self, site, type, i):
-        schema = type.d
+        schema = db.get_schema(type)
         allow_arbitrary = schema.pop('*', None) is not None
-
+        
         _default = {True: [], False: ""}
         defaults = dict([(k, _default[v.endswith('*')]) for k, v in schema.items()])
         i = web.input(_method='post', **defaults)

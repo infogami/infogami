@@ -264,13 +264,14 @@ class sitepreferences(delegate.page):
         return render.sitepreferences(perms)
     
     def input(self):
-        i = web.input()
+        i = web.input(order=[])
         re_who = web.re_compile("who(\d+)_path\d+")
         re_what = web.re_compile("what(\d+)_path\d+")
-        paths = [(k, v) for k, v in i.iteritems() if k.startswith('path')]
+        
         values = []
-        for key, path in sorted(paths):
-            path = path.strip()
+        for o in i.order:
+            key = 'path' + o
+            path = i[key].strip()
             if path == "":
                 continue
                 

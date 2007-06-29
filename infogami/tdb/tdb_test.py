@@ -1,7 +1,10 @@
 import random
 import web
-import tdb
+import tdb as tdb2
 import unittest
+
+tdb = tdb2.BetterTDBImpl()
+tdb.NotFound = tdb2.NotFound
 
 testtype = None
 
@@ -18,13 +21,16 @@ def setup():
     tdb.setup()
     
     # clear the database
-    web.query('delete from datum where version_id > 2')
-    web.query('delete from version where thing_id > 2')
-    web.query('delete from thing where id > 2')
+    web.query('delete from datum where version_id > 1')
+    web.query('delete from version where thing_id > 1')
+    web.query('delete from thing where id > 1')
     
-    global testtype
-    testtype = tdb.new('test', tdb.metatype, tdb.metatype)
+    global testtype, usertype
+    testtype = tdb.new('test', tdb.root, tdb.root)
     testtype.save()
+
+    usertype = tdb.new('user', tdb.root, tdb.root)
+    usertype.save()
     
     simplething('test1')
     simplething('test2')
@@ -51,7 +57,7 @@ class tdbtest(unittest.TestCase):
 
         t.title = 'foofoo'
         assert t._dirty
-
+        
     def test_eq(self):
         t1 = simplething('eq1')
         t2 = tdb.withID(t1.id)
@@ -60,13 +66,19 @@ class tdbtest(unittest.TestCase):
         t1.name = 'eq2'
         assert t1 != t2
 
-    def test_with(self):
+    def test_withid(self):
         t = new('withid', d={'title' : 'foo', 'body':'bar'})
         t.save('')
         
         assert t == tdb.withID(t.id)
         assert t == tdb.withName(t.name, testtype)
         assert tdb.withID(t.id) == tdb.withName(t.name, testtype)
+        
+        t2 = tdb.withID(t.id)
+        t2.title = 'foo2'
+        t2.save()
+        assert t2 == tdb.withID(t.id)
+        assert t == tdb.withID(t.id, revision=1)
 
     def test_list(self):
         subjects = ['Foo', 'Stories']
@@ -103,7 +115,8 @@ class tdbtest(unittest.TestCase):
         z = new('test11', parent=y, d={'title' : 'test1', 'body' : 'a'})
         z.save('z')
 
-        tl = tdb.Things(title='test1').list()
+        tl = tdb.Things(title='test1').list()   
+        print tl
         assert tl == [x, y, z]
         
         tl = tdb.Things(title='test1', body='a').list()
@@ -112,20 +125,19 @@ class tdbtest(unittest.TestCase):
         tl = tdb.Things(title='notitle').list()
         assert tl == []        
         
-    def test_LazyThing(self):
-        a = tdb.LazyThing(1)
+    def _test_LazyThing(self):
+        a = tdb.withID(1, lazy=True)
         assert a
         assert a is a
-        assert a == tdb.metatype
+        assert a == tdb.root
 
-        a = tdb.LazyThing(1)
-        assert a.__class__ == tdb.LazyThing
+        a = tdb.withID(1, lazy=True)
         a.name # access name
         assert a.__class__ == tdb.Thing
 
-        a = tdb.LazyThing(1)
+        a = tdb.withID(1, lazy=True)
         a.id # access id
-        assert a.__class__ == tdb.LazyThing        
+        assert a.__class__ != tdb.Thing       
 
     def test_parent(self):
         a = new('parent', d={'title' : 'parent'})
@@ -167,9 +179,9 @@ class tdbtest(unittest.TestCase):
         self.assertException(Exception, new('test1').save)
     
     def testVersion(self):
-        aaron = new('aaron', parent=tdb.usertype, type=tdb.usertype, d={'email': 'aaron@tdb.org'})
+        aaron = new('aaron', parent=usertype, type=usertype, d={'email': 'aaron@tdb.org'})
         aaron.save()
-        anand = new('anand', parent=tdb.usertype, type=tdb.usertype, d={'email': 'anand@tdb.org'})
+        anand = new('anand', parent=usertype, type=usertype, d={'email': 'anand@tdb.org'})
         anand.save()
 
         t = new('tdb', d={'title' : 'tdb v1'})
@@ -179,6 +191,7 @@ class tdbtest(unittest.TestCase):
         assert t.v.ip == '1.2.3.4'
         assert t.v.revision == 1
         assert t.latest_revision == 1
+        print t.v.author.__class__
         assert t.v.author == aaron
         assert list(t.h) == [t.v]
         v1 = t.v
@@ -207,22 +220,23 @@ class tdbtest(unittest.TestCase):
         assert a.type == testtype
         
         # change type        
-        a.type = tdb.usertype
-        assert a.type == tdb.usertype
+        a.type = usertype
+        assert a.type == usertype
         assert a._dirty
         a.save()
         assert a.v.revision == 2
         
-        assert a.h[0].thing.type == tdb.usertype
+        print [a.h[0], a.h[1]]
+        assert a.h[0].thing.type == usertype
         assert a.h[1].thing.type == testtype
 
         # change type_id
-        a.type = tdb.metatype
-        assert a.type == tdb.metatype
+        a.type = tdb.root
+        assert a.type == tdb.root
         a.save()
         
-        assert a.h[0].thing.type == tdb.metatype
-        assert a.h[1].thing.type == tdb.usertype
+        assert a.h[0].thing.type == tdb.root
+        assert a.h[1].thing.type == usertype
         assert a.h[2].thing.type == testtype
                 
 if __name__ == "__main__":

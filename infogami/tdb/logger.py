@@ -117,7 +117,7 @@ def _keydecode(key):
 def xrepr(s): return "'" + repr('"' + s)[2:]
 
 def _encode(value):
-    from tdb import Thing
+    from tdb import Thing, LazyThing
 
     if isinstance(value, list):
         return '[%s]' % ", ".join([_encode(v) for v in value])
@@ -127,7 +127,7 @@ def _encode(value):
         return xrepr(value.encode('utf-8'))
     elif isinstance(value, (int, long)):
         return repr(int(value))
-    elif isinstance(value, Thing):
+    elif isinstance(value, (Thing, LazyThing)):
         return 't' + _encode(value.id)
     else:
         return repr(value)
@@ -135,7 +135,7 @@ def _encode(value):
 def parse(filename):
     """Parses a tdb log file and returns an iteratable over the contents.
     """
-    from tdb import LazyThing
+    import tdb
     def parse_items():
         """Parses the file and returns an iteratable over the items."""
         lines = []
@@ -147,7 +147,11 @@ def parse(filename):
             else:
                 lines.append(line)
 
-    class LazyThing(LazyThing):
+    tdbimpl = tdb.SimpleTDBImpl()
+    class LazyThing(tdb.LazyThing):
+        def __init__(self, id):
+            tdb.LazyThing.__init__(self, lambda: tdbimpl.withID(id), id=id)
+            
         def __repr__(self):
             return 't' + str(self.id)
 
@@ -181,7 +185,7 @@ def parse(filename):
 def load(filename):
     """Loads a tdb log file into database."""
 
-    import web
+    import web, tdb
     # assumes web.load is already called
     web.transact()
     for key, id, data in parse(filename):
@@ -194,7 +198,7 @@ def load(filename):
         elif key == 'data':
             vid = id
             for k, v in data.items():
-                tdb.Thing.savedatum(vid, k, v)
+                tdb.SimpleTDBImpl.savedatum(vid, k, v)
     web.commit()
 
 if __name__ == "__main__":

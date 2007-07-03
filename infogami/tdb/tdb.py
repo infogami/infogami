@@ -9,16 +9,20 @@ class Thing:
     @staticmethod
     def _reserved(attr):
         return attr.startswith('_') or attr in [
-          'id', 'parent', 'name', 'type', 'latest_revision', 'v', 'h', 'd', 'latest', 'versions', 'save', 'tdb']
+          'id', 'parent', 'name', 'type', 'latest_revision', 'v', 'h', 'd', 'latest', 'versions', 'save', '_tdb']
     
     def __init__(self, tdb, id, name, parent, latest_revision, v, type, d):
-        self.tdb = tdb
+        self._tdb = tdb
         self.id, self.name, self.parent, self.type, self.d, self.v, self.latest_revision = \
             id and int(id), name, parent, type, d, v, latest_revision
         self.h = (self.id and History(tdb, self.id)) or None
         self._dirty = False
         self.d = web.storage(self.d)
-            
+
+    def copy(self):
+        # there could be a problem in sharing lists values in self.d
+        return Thing(self._tdb, self.id, self.name, self.parent, self.latest_revision, self.v, self.type, self.d)
+                    
     def __repr__(self):
         dirty = (self._dirty and " dirty") or ""
         return '<Thing "%s" at %s%s>' % (self.name, self.id, dirty)
@@ -29,7 +33,7 @@ class Thing:
         return cmp(self.id, other.id)
 
     def __eq__(self, other):
-        return self.id == other.id and self.name == other.name and self.d == other.d
+        return self.id == other.id and self.name == other.name and dict(self.d) == dict(other.d)
 
     def __ne__(self, other):
         return not (self == other)
@@ -48,7 +52,7 @@ class Thing:
         return getattr(self, key, default)
 
     def c(self, name):
-        return self.tdb.withName(name, self)
+        return self._tdb.withName(name, self)
 
     def __setattr__(self, attr, value):
         if Thing._reserved(attr):
@@ -67,15 +71,16 @@ class Thing:
 
     def save(self, comment='', author=None, ip=None):
         if self._dirty:
-            self.tdb.save(self, author, comment, ip)
+            self._tdb.save(self, author, comment, ip)
             self._dirty = False
             _run_hooks("on_new_version", self)
+            
 
 class Version:
     def __init__(self, tdb, id, thing_id, revision, author_id, ip, comment, created):
         web.autoassign(self, locals())
         self.thing = tdb.withID(thing_id, revision, lazy=True)
-        self.author = tdb.withID(author_id, lazy=True)
+        self.author = (author_id and tdb.withID(author_id, lazy=True)) or None
         
     def __cmp__(self, other):
         return cmp(self.id, other.id)
@@ -153,11 +158,21 @@ class Versions:
 class History(Versions):
     def __init__(self, tdb, thing_id):
         Versions.__init__(self, tdb, thing_id=thing_id)
+
+class Proxy:
+    def __init__(self, _o):
+        self.__dict__['_o'] = _o        
         
-class LazyProxy:
+        def __getattr__(self, key):
+            return getattr(self._o, key)
+
+        def __setattr__(self, key, value):
+            return getattr(self._o, key, value)
+    
+class LazyThing(Thing):
     def __init__(self, constructor, **fields):
         self.__dict__['_constructor'] = constructor
-        self.__dict__['o'] = None
+        self.__dict__['_thing'] = None
         self.__dict__.update(fields)
     
     def __getattr__(self, key):
@@ -166,10 +181,13 @@ class LazyProxy:
     def __setattr__(self, key, value):
         return getattr(self._get(), key, value)
         
+    def __nonzero__(self):
+        return True
+    
     def _get(self):
-        if self.o is None:
-            self.__dict__['o'] = self._constructor()
-        return self.o
+        if self._thing is None:
+            self.__dict__['_thing'] = self._constructor()
+        return self._thing
         
 class SimpleTDBImpl:
     """Simple TDB implementation without any optimizations."""
@@ -197,28 +215,31 @@ class SimpleTDBImpl:
         If revision is not None, thing at that revision is returned.
         """
         if lazy:
-            return LazyProxy(lambda: self.withID(id, revision, lazy=False), id=id)
-        try:
-            t = web.select('thing', where="thing.id = $id", vars=locals())[0]
-            return self._load(t, revision)
-        except IndexError:
-            raise NotFound, id
+            return LazyThing(lambda: self.withID(id, revision, lazy=False), id=id)
         else:
-            self.stats.queries += 1
+            t = self._with(id=int(id))
+            return self._load(t, revision)
 
     def withName(self, name, parent, revision=None, lazy=False):
         if lazy:
-            return LazyProxy(lambda: withName(name, parent, lazy=False), name=name, parent=parent)
-            
-        try:
-            t = web.select('thing', where="name = $name AND parent_id=$parent.id", vars=locals())[0]
+            return LazyThing(lambda: self.withName(name, parent, revision, lazy=False), name=name, parent=parent)
+        else:
+            t = self._with(name=name, parent_id=int(parent.id))
             return self._load(t, revision)
+                
+    def _with(self, **kw):
+        try:
+            wheres = []
+            for k, v in kw.items():
+                w = web.reparam(k + " = $v", locals())
+                wheres.append(str(w))
+            where = " AND ".join(wheres)
+            return web.select('thing', where=where)[0]
         except IndexError:
-            raise NotFound, id
+            raise NotFound
         else:
             self.stats.queries += 1
-        pass
-        
+            
     def _load(self, t, revision=None):
         id, name, parent, latest_revision = t.id, t.name, self.withID(t.parent_id, lazy=True), t.latest_revision
         revision = revision or latest_revision
@@ -258,7 +279,6 @@ class SimpleTDBImpl:
 
         type = d.pop('__type__')
         return d, type
-
         
     def withIDs(self, ids, lazy=False):
         """Return things for the specified ids."""
@@ -277,7 +297,7 @@ class SimpleTDBImpl:
             return
         elif isinstance(value, str):
             dt = 0
-        elif isinstance(value, (Thing, LazyProxy)):
+        elif isinstance(value, Thing):
             dt = 1
             value = value.id
         elif isinstance(value, (int, long)):
@@ -372,7 +392,7 @@ class BetterTDBImpl(SimpleTDBImpl):
             
     def withID(self, id, revision=None, lazy=False):
         if lazy:
-            return SimpleTDBImpl.withID(self, id, revision, lazy=True)
+            return LazyThing(lambda: self.withID(id, revision, lazy=False), id=id)
         else:
             try:
                 return self._query(thing__id=id, revision=revision)[0]
@@ -381,7 +401,7 @@ class BetterTDBImpl(SimpleTDBImpl):
                 
     def withName(self, name, parent, revision=None, lazy=False):
         if lazy:
-            return SimpleTDBImpl.withName(self, name, parent, revision, lazy)
+            return LazyThing(lambda: self.withName(name, parent, revision, lazy=False), name=name, parent=parent)
         else:
             try:
                 return self._query(name=name, parent_id=parent.id, revision=revision)[0]
@@ -400,22 +420,26 @@ class BetterTDBImpl(SimpleTDBImpl):
         versions = {}
         datum = {}
 
+        
         tables = ['thing', 'version', 'datum']
+        
+        # what = thing.*, version.* and datum.*
         whats = [
             'thing.id', 'thing.parent_id', 'thing.name', 'thing.latest_revision',
             'version.id as version_id', 'version.revision', 'version.author_id', 
             'version.ip', 'version.comment', 'version.created',
             'datum.key', "datum.value", 'datum.data_type', 'datum.ordering']
-
         what = ", ".join(whats)
+        
+        # join thing, version and datum tables
         where = "thing.id = version.thing_id"
         if revision is None:
             where += " AND thing.latest_revision = version.revision"
         else:
             where += web.reparam(" AND version.revision = $revision", locals())
-            
         where += " AND version.id  = datum.version_id"
         
+        # add additional wheres specified
         for k, v in kw.items():
             k = k.replace('__', '.')
             if isinstance(v, web.iters):
@@ -425,6 +449,7 @@ class BetterTDBImpl(SimpleTDBImpl):
                 
         result = web.select(tables, what=what, where=where)
 
+        # process the result row by row
         for r in result:
             if r.id not in things:
                 vkeys = "version_id", "id", "revision", "author_id", "ip", "comment", "created"
@@ -434,6 +459,7 @@ class BetterTDBImpl(SimpleTDBImpl):
                 things[r.id] = r.name, r.parent_id, r.latest_revision
             datum.setdefault(r.id, []).append(r)
 
+        # create things
         ts = []
         for id in things.keys():
             name, parent_id, latest_revision = things[id]
@@ -444,12 +470,90 @@ class BetterTDBImpl(SimpleTDBImpl):
             ts.append(t)
         return ts
 
+class ThingCache:
+    """Cache for storing things. Key can be either id or (name, parent_id)."""
+    def __init__(self):
+        self.cache = {}
+        self.namecache = {}
+        
+    def __contains__(self, key):
+        if isinstance(key, tuple):
+            return key in self.namecache
+        else:
+            return key in self.cache  
+        
+    def __getitem__(self, key):
+        if isinstance(key, tuple):
+            value = self.namecache[key]
+        else:
+            value = self.cache[key]
+        return value.copy()
+    
+    def __setitem__(self, key, value):
+        value = value.copy()
+        if isinstance(key, tuple):
+            name_parent = key
+            id = value.id
+        else:
+            id = key
+            name_parent = value.name, value.parent.id
+        self.cache[id] = value
+        self.namecache[name_parent] = value
+
 class CachedTDBImpl:
     """TDB with cache"""
     def __init__(self, impl):
         self.impl = impl
-        self.cache = {}
+        self.cache = ThingCache()
         
+        #@@ save me. i can't think of any better way.
+        self.impl_save = self.impl.save
+        self.impl.save = self.save
+        
+    def __getattr__(self, key):
+        return getattr(self.impl, key)
+
+    def withID(self, id, revision=None, lazy=False):
+        if lazy:
+            return LazyThing(lambda: self.withID(id, revision, lazy=False), id=id)
+            
+        if revision is not None:
+            return self.impl.withID(id, revision)
+            
+        if id not in self.cache:
+            self.cache[id] = self.impl.withID(id, revision)
+            
+        return self.cache[id]
+    
+    def withName(self, name, parent, revision=None, lazy=False):
+        if lazy:
+            return LazyThing(lambda: self.withName(name, parent, revision, lazy=False), name=name, parent=parent)
+            
+        if revision is not None:
+            return self.impl.withName(name, parent, revision)
+            
+        if (name, parent.id) not in self.cache:
+            self.cache[name, parent.id] = self.impl.withName(name, parent, revision)
+        return self.cache[name, parent.id]
+            
+    def withIDs(self, ids, lazy=False):
+        notincache = [id for id in ids if id not in self.cache]
+        if notincache:
+            for t in self.impl.withIDs(ids):
+                self.cache[t.id] = t
+        return [self.cache[id] for id in ids]
+        
+    def withNames(self, names, parent, lazy=False):
+        notincache = [name for name in names if (name, parent.id) not in self.cache]
+        if notincache:
+            for t in self.impl.withNames(notincache, parent):
+                self.cache[t.id] = t
+        return [self.cache[name, parent.id] for name in names]
+
+    def save(self, thing, author=None, comment='', ip=None):
+        self.impl_save(thing, author=author, comment=comment, ip=ip)
+        self.cache[thing.id] = thing
+                
 class RestrictedTDBImpl:
     """TDB implementation to run in a restricted environment."""
     def __init__(self, impl):
@@ -473,4 +577,3 @@ def _run_hooks(name, thing):
         m = getattr(h, name, None)
         if m:
             m(thing)
-    

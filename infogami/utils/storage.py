@@ -1,9 +1,5 @@
 """
-Central Storage.
-
-Plugin system always interferes with module reloading. 
-Data collected through plugins will be lost once a module is reloaded. 
-Central storage provided by this module can be used to avoid that problem.
+Useful datastructures.
 """
 
 import web
@@ -174,7 +170,21 @@ class SiteLocalDict:
                 self.__d[site_id].update(self.__d[None])
                                 
         return self.__d[site_id]
-            
+
+class ReadOnlyDict:
+    """Dictionary wrapper to provide read-only access to a dictionary."""
+    def __init__(self, d):
+        self._d = d
+    
+    def __getitem__(self, key):
+        return self._d[key]
+    
+    def __getattr__(self, key):
+        try:
+            return self._d[key]
+        except KeyError:
+            raise AttributeError, key
+        
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

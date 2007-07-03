@@ -4,7 +4,7 @@ import web
 import os
 from infogami import config, tdb
 from infogami.utils.i18n import i18n
-from storage import storage
+import storage
 import macro
 
 wiki_processors = []
@@ -35,6 +35,7 @@ web.template.Template.globals.update(dict(
   numify = web.numify,
   ctx = context,
   _ = i18n(),
+  macros = storage.ReadOnlyDict(macro._macros), 
   
   # common utilities
   int = int,
@@ -58,7 +59,7 @@ def public(f):
 
 @public
 def format(text):
-    return str(get_markdown(text))
+    return get_markdown(text.decode('utf-8')).convert().encode('utf-8')
 
 @public
 def link(path, text=None):
@@ -135,7 +136,7 @@ def get_static_resource(path):
     else:
         return open(fullpath).read()
 
-_inputs = storage.utils_inputs
+_inputs = storage.storage.utils_inputs
 
 @public
 def render_input(type, name, value, **attrs):

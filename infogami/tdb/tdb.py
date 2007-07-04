@@ -140,6 +140,7 @@ class Versions:
         for k, v in self.query.items():
             where += web.reparam(' AND %s = $v' % (k,), locals())
                     
+        self.tdb.stats.version_queries += 1
         self.versions = [Version(self.tdb, **v) for v in web.select(tables, what=what, where=where, order='id desc', limit=self.limit)]
         
     def __getitem__(self, index):
@@ -158,6 +159,9 @@ class Versions:
 class History(Versions):
     def __init__(self, tdb, thing_id):
         Versions.__init__(self, tdb, thing_id=thing_id)
+        
+    def __nonzero__(self):
+        return False
 
 class Proxy:
     def __init__(self, _o):
@@ -193,7 +197,7 @@ class SimpleTDBImpl:
     """Simple TDB implementation without any optimizations."""
     
     def __init__(self):
-        self.stats = web.storage(queries=0, saves=0)
+        self.stats = web.storage(queries=0, version_queries=0, saves=0)
         self.root = self.withID(1, lazy=True)
 
     def setup(self):
@@ -228,6 +232,8 @@ class SimpleTDBImpl:
             return self._load(t, revision)
                 
     def _with(self, **kw):
+        self.stats.queries += 1
+        print >> web.debug, "with", kw, "queries=", self.stats.queries
         try:
             wheres = []
             for k, v in kw.items():
@@ -237,8 +243,7 @@ class SimpleTDBImpl:
             return web.select('thing', where=where)[0]
         except IndexError:
             raise NotFound
-        else:
-            self.stats.queries += 1
+        
             
     def _load(self, t, revision=None):
         id, name, parent, latest_revision = t.id, t.name, self.withID(t.parent_id, lazy=True), t.latest_revision
@@ -379,7 +384,7 @@ class BetterTDBImpl(SimpleTDBImpl):
         except KeyError, k:
             raise NotFound, k
         else:
-            self.queries += 1
+            self.stats.queries += 1
         
     def withNames(self, names, parent, lazy=False):
         try:
@@ -388,7 +393,7 @@ class BetterTDBImpl(SimpleTDBImpl):
         except KeyError, k:
             raise NotFound, k
         else:
-            self.queries += 1
+            self.stats.queries += 1
             
     def withID(self, id, revision=None, lazy=False):
         if lazy:

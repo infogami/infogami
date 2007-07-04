@@ -14,3 +14,4 @@ withNames = impl.withNames
 new = impl.new
 Things = impl.Things
 Versions = impl.Versions
+stats = impl.stats

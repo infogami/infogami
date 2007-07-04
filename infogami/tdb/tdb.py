@@ -74,8 +74,10 @@ class Thing:
             self._tdb.save(self, author, comment, ip)
             self._dirty = False
             _run_hooks("on_new_version", self)
-            
 
+    def __hash__(self):
+        return self.id
+            
 class Version:
     def __init__(self, tdb, id, thing_id, revision, author_id, ip, comment, created):
         web.autoassign(self, locals())
@@ -130,7 +132,7 @@ class Versions:
     
     def init(self):
         tables = ['thing', 'version']
-        what = 'version.*'
+        what = 'version.*, thing.name, thing.parent_id, thing.latest_revision'
         where = "thing.id = version.thing_id"
         
         if 'parent' in self.query:
@@ -141,7 +143,24 @@ class Versions:
             where += web.reparam(' AND %s = $v' % (k,), locals())
                     
         self.tdb.stats.version_queries += 1
-        self.versions = [Version(self.tdb, **v) for v in web.select(tables, what=what, where=where, order='id desc', limit=self.limit)]
+
+	def version(r):
+	    """Creates a version for result `r` and sets version.thing to 
+	    a partial thing with thing.* data from the result. 
+	    """
+            #print >> web.debug, "version", r
+	    name = r.pop('name')
+	    parent_id = r.pop('parent_id')
+	    latest_revision = r.pop('latest_revision')
+	    v = Version(self.tdb, **r)
+	    t = LazyThing(
+		    lambda: self.tdb.withID(id=r.thing_id, revision=r.revision), 
+		    id=r.thing_id, name=name, parent_id=parent_id, latest_revision=latest_revision, v=v)
+	    v.thing = t
+	    return v
+
+	result = web.select(tables, what=what, where=where, order='id desc', limit=self.limit)
+        self.versions = [version(r) for r in result]
         
     def __getitem__(self, index):
         if self.versions is None:
@@ -192,6 +211,9 @@ class LazyThing(Thing):
         if self._thing is None:
             self.__dict__['_thing'] = self._constructor()
         return self._thing
+
+    def __hash__(self):
+        return self.id
         
 class SimpleTDBImpl:
     """Simple TDB implementation without any optimizations."""
@@ -233,7 +255,6 @@ class SimpleTDBImpl:
                 
     def _with(self, **kw):
         self.stats.queries += 1
-        print >> web.debug, "with", kw, "queries=", self.stats.queries
         try:
             wheres = []
             for k, v in kw.items():
@@ -554,6 +575,12 @@ class CachedTDBImpl:
             for t in self.impl.withNames(notincache, parent):
                 self.cache[t.id] = t
         return [self.cache[name, parent.id] for name in names]
+
+    def Things(self, limit=None, **query):
+        return Things(self, limit=limit, **query)
+
+    def Versions(self, limit=None, **query):
+        return Versions(self, limit=limit, **query)
 
     def save(self, thing, author=None, comment='', ip=None):
         self.impl_save(thing, author=author, comment=comment, ip=ip)

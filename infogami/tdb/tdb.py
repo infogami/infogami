@@ -90,9 +90,46 @@ class Version:
     def __repr__(self): 
         return '<Version %s@%s at %s>' % (self.thing.id, self.revision, self.id)
 
+# define any and all for python2.4
+try:
+    any
+except:
+    def any(seq):
+        for x in seq:
+            if x:
+                return True
+        return False
+
+    def all(seq):
+        for x in seq:
+            if not x: 
+                return False
+        return True
+
+def match_query(query, data):
+    """Tests whether all key-value pairs in query are present in data.
+        >>> match_query(dict(a=1, b=2), dict(a=1, b=2, c=3))
+        True
+        >>> match_query(dict(a=1, b=2), dict(a=1, b=4, c=3))
+        False
+        >>> match_query(dict(a=1, b=2), dict(a=1, c=3))
+        False
+        >>> match_query(dict(a=1, b=2), dict(a=1, b=[2, 4], c=3))
+        True
+    """
+    def match(a, b):
+        if isinstance(b, list):
+            return any(a == bb for bb in b)
+        else:
+            return a == b
+    
+    nothing = object()        
+    return all(match(query[k], data.get(k, nothing)) for k in query)
+
 class Things:
     def __init__(self, tdb, limit=None, **query):
         self.tdb = tdb
+        self.query = query
         tables = ['thing', 'version']            
         what = "thing.id"
         where = "thing.id = version.thing_id AND thing.latest_revision = version.revision"
@@ -116,7 +153,11 @@ class Things:
         
         result = web.select(tables, what=what, where=where, limit=limit)
         self.values = tdb.withIDs([r.id for r in result])
-                
+
+    def matches(thing):
+        """Tests whether `thing` matches this query."""
+        return match_query(query, dict(thing.d, parent=thing.parent, type=thing.type))
+        
     def __iter__(self):
         return iter(self.values)
         
@@ -144,23 +185,26 @@ class Versions:
                     
         self.tdb.stats.version_queries += 1
 
-	def version(r):
-	    """Creates a version for result `r` and sets version.thing to 
-	    a partial thing with thing.* data from the result. 
-	    """
-            #print >> web.debug, "version", r
-	    name = r.pop('name')
-	    parent_id = r.pop('parent_id')
-	    latest_revision = r.pop('latest_revision')
-	    v = Version(self.tdb, **r)
-	    t = LazyThing(
-		    lambda: self.tdb.withID(id=r.thing_id, revision=r.revision), 
-		    id=r.thing_id, name=name, parent_id=parent_id, latest_revision=latest_revision, v=v)
-	    v.thing = t
-	    return v
+        def version(r):
+            """Creates a version for result `r` and sets version.thing to 
+            a partial thing with thing.* data from the result. 
+            """
+            name = r.pop('name')
+            parent_id = r.pop('parent_id')
+            latest_revision = r.pop('latest_revision')
+            v = Version(self.tdb, **r)
+            t = LazyThing(
+                    lambda: self.tdb.withID(id=r.thing_id, revision=r.revision), 
+                    id=r.thing_id, name=name, parent_id=parent_id, latest_revision=latest_revision, v=v)
+            v.thing = t
+            return v
 
-	result = web.select(tables, what=what, where=where, order='id desc', limit=self.limit)
+        result = web.select(tables, what=what, where=where, order='id desc', limit=self.limit)
         self.versions = [version(r) for r in result]
+        
+    def matches(thing):
+        """Tests whether thing.v matches this query."""
+        return match_query(query, dict(thing.v.__dict__, parent=thing.parent))
         
     def __getitem__(self, index):
         if self.versions is None:
@@ -445,7 +489,6 @@ class BetterTDBImpl(SimpleTDBImpl):
         things = {}
         versions = {}
         datum = {}
-
         
         tables = ['thing', 'version', 'datum']
         
@@ -531,6 +574,7 @@ class CachedTDBImpl:
     def __init__(self, impl):
         self.impl = impl
         self.cache = ThingCache()
+        self.querycache = {}
         
         #@@ save me. i can't think of any better way.
         self.impl_save = self.impl.save
@@ -577,15 +621,38 @@ class CachedTDBImpl:
         return [self.cache[name, parent.id] for name in names]
 
     def Things(self, limit=None, **query):
-        return Things(self, limit=limit, **query)
+        q = dict(query, limit=limit)
+        q = tuple(sorted(q.items()))
+        
+        if q not in self.querycache:
+            self.querycache[q] = Things(self, limit=limit, **query)
+        
+        return self.querycache[q]
 
     def Versions(self, limit=None, **query):
-        return Versions(self, limit=limit, **query)
+        q = dict(query, limit=limit)
+        q = tuple(sorted(q.items()))
+        
+        if q not in self.querycache:
+            self.querycache[q] = Versions(self, limit=limit, **query)
+        
+        return self.querycache[q]
 
     def save(self, thing, author=None, comment='', ip=None):
         self.impl_save(thing, author=author, comment=comment, ip=ip)
-        self.cache[thing.id] = thing
+        
+        # previous version of thing
+        #@@ what if previous version exists and not available in cache?
+        old_thing = self.cache.get(thing.id)
+         
+        # expire queries effected by this save
+        for k, q in self.querycache.items():
+            if (old_thing is None and q.matches(thing)) or \
+               (q.matches(thing) != q.matches(old_thing)):
+               del self.querycache[k]
                 
+        self.cache[thing.id] = thing
+                                
 class RestrictedTDBImpl:
     """TDB implementation to run in a restricted environment."""
     def __init__(self, impl):

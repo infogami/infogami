@@ -1,6 +1,7 @@
 
 import web
 import logger
+import datetime
 
 class NotFound(Exception): pass
 class BadData(Exception): pass
@@ -15,7 +16,11 @@ class Thing:
         self._tdb = tdb
         self.id, self.name, self.parent, self.type, self.d, self.v, self.latest_revision = \
             id and int(id), name, parent, type, d, v, latest_revision
-        self.h = (self.id and History(tdb, self.id)) or None
+            
+        if self.id:
+            self.h = History(tdb, self.id)
+        else:
+            self.h = None
         self._dirty = False
         self.d = web.storage(self.d)
 
@@ -73,7 +78,6 @@ class Thing:
         if self._dirty:
             self._tdb.save(self, author, comment, ip)
             self._dirty = False
-            _run_hooks("on_new_version", self)
 
     def __hash__(self):
         return self.id
@@ -148,15 +152,17 @@ class Things:
             if isinstance(v, Thing):
                 v = v.id
             tables.append('datum AS d%s' % n)
-            where += ' AND d%s.version_id = version.id AND ' % n + \
-              web.reparam('d%s.key = $k AND substr(d%s.value, 0, 250) = $v' % (n, n), locals())
+            where += ' AND d%s.version_id = version.id AND ' % n 
+            # using substr to use index. 
+            #@@ when len(value) > 250, this won't work.
+            where += web.reparam('d%s.key = $k AND substr(d%s.value, 0, 250) = $v' % (n, n), locals())
         
         result = web.select(tables, what=what, where=where, limit=limit)
         self.values = tdb.withIDs([r.id for r in result])
 
-    def matches(thing):
+    def matches(self, thing):
         """Tests whether `thing` matches this query."""
-        return match_query(query, dict(thing.d, parent=thing.parent, type=thing.type))
+        return match_query(self.query, dict(thing.d, parent=thing.parent, type=thing.type))
         
     def __iter__(self):
         return iter(self.values)
@@ -172,6 +178,9 @@ class Versions:
         self.tdb = tdb
     
     def init(self):
+        if self.versions is not None: 
+            return
+            
         tables = ['thing', 'version']
         what = 'version.*, thing.name, thing.parent_id, thing.latest_revision'
         where = "thing.id = version.thing_id"
@@ -201,15 +210,20 @@ class Versions:
 
         result = web.select(tables, what=what, where=where, order='id desc', limit=self.limit)
         self.versions = [version(r) for r in result]
-        
-    def matches(thing):
+    
+    def matches(self, thing):
         """Tests whether thing.v matches this query."""
-        return match_query(query, dict(thing.v.__dict__, parent=thing.parent))
+        return match_query(self.query, dict(thing.v.__dict__, parent=thing.parent, parent_id=thing.parent.id, thing_id=thing.id))
         
     def __getitem__(self, index):
         if self.versions is None:
             self.init()
         return self.versions[index]
+        
+    def __eq__(self, other):
+        self.init()
+        other.init()
+        return self.versions == other.versions
     
     def __len__(self):
         if self.versions is None:
@@ -217,24 +231,37 @@ class Versions:
         return len(self.versions)
         
     def __str__(self):
+        self.init()
         return str(self.versions)
-
-class History(Versions):
-    def __init__(self, tdb, thing_id):
-        Versions.__init__(self, tdb, thing_id=thing_id)
         
-    def __nonzero__(self):
-        return False
-
+def History(tdb, thing_id):
+    return tdb.Versions(thing_id=thing_id)
+        
 class Proxy:
     def __init__(self, _o):
         self.__dict__['_o'] = _o        
         
-        def __getattr__(self, key):
-            return getattr(self._o, key)
+    def __getattr__(self, key):
+        return getattr(self._get(), key)
 
-        def __setattr__(self, key, value):
-            return getattr(self._o, key, value)
+    def __setattr__(self, key, value):
+        return getattr(self._get(), key, value)
+    
+    def _get(self):
+        return self._o
+            
+class LazyProxy(Proxy):
+    def __init__(self, constructor):
+        self.__dict__['_constructor'] = constructor
+        Proxy.__dict__(self, None)
+        
+    def _get(self):
+        if self._o is None:
+            self.__dict__['_o'] = constructor()
+        return self._o
+        
+    def __hash__(self):
+        raise TypeError, "Not hashable."
     
 class LazyThing(Thing):
     def __init__(self, constructor, **fields):
@@ -265,7 +292,12 @@ class SimpleTDBImpl:
     def __init__(self):
         self.stats = web.storage(queries=0, version_queries=0, saves=0)
         self.root = self.withID(1, lazy=True)
-
+        self.parent = self
+        
+    #@@ Hack    
+    def set_parent(self, parent):
+        self.parent = parent
+        
     def setup(self):
         try:
             self.withID(1)
@@ -276,7 +308,7 @@ class SimpleTDBImpl:
     def new(self, name, parent, type, d=None):
         """Creates a new thing."""
         if d == None: d = {}
-        t = Thing(self, None, name, parent, latest_revision=None, v=None, type=type, d=d)
+        t = Thing(self.parent, None, name, parent, latest_revision=None, v=None, type=type, d=d)
         t._dirty = True
         return t
         
@@ -317,7 +349,7 @@ class SimpleTDBImpl:
         v = web.select('version',
             where='version.thing_id = $id AND version.revision = $revision',
             vars=locals())[0]
-        v = Version(self, **v)
+        v = Version(self.parent, **v)
         data = web.select('datum',
                 where="version_id = $v.id",
                 order="key ASC, ordering ASC",
@@ -325,7 +357,7 @@ class SimpleTDBImpl:
 
         d, type = self._parse_data(data)
         parent = self.withID(t.parent_id, lazy=True)
-        t = Thing(self, t.id, t.name, parent, latest_revision, v, type, d)
+        t = Thing(self.parent, t.id, t.name, parent, latest_revision, v, type, d)
         v.thing = t
         return t
 
@@ -423,15 +455,16 @@ class SimpleTDBImpl:
         else:
             logger.commit()
         thing.id = tid
-        thing.v = Version(self, vid, thing.id, revision, author_id, ip, comment, created=None)
-        thing.h = History(self, thing.id)
+        #@@ created should really be the datetime from database, but this saves a query.
+        thing.v = Version(self.parent, vid, thing.id, revision, author_id, ip, comment, created=datetime.datetime.now())
+        thing.h = History(self.parent, thing.id)
         thing.latest_revision = revision
         thing._dirty = False
         _run_hooks("on_new_version", thing)
     
     def Things(self, limit=None, **query):
         return Things(self, limit=limit, **query)
-        
+
     def Versions(self, limit=None, **query):
         return Versions(self, limit=limit, **query)
     
@@ -557,6 +590,12 @@ class ThingCache:
         else:
             value = self.cache[key]
         return value.copy()
+        
+    def get(self, key, default=None):
+        if key in self:
+            return self[key]
+        else:
+            return None
     
     def __setitem__(self, key, value):
         value = value.copy()
@@ -576,9 +615,8 @@ class CachedTDBImpl:
         self.cache = ThingCache()
         self.querycache = {}
         
-        #@@ save me. i can't think of any better way.
-        self.impl_save = self.impl.save
-        self.impl.save = self.save
+        #@@ hack
+        impl.set_parent(self)
         
     def __getattr__(self, key):
         return getattr(self.impl, key)
@@ -632,25 +670,25 @@ class CachedTDBImpl:
     def Versions(self, limit=None, **query):
         q = dict(query, limit=limit)
         q = tuple(sorted(q.items()))
-        
+
         if q not in self.querycache:
             self.querycache[q] = Versions(self, limit=limit, **query)
-        
         return self.querycache[q]
 
     def save(self, thing, author=None, comment='', ip=None):
-        self.impl_save(thing, author=author, comment=comment, ip=ip)
-        
         # previous version of thing
         #@@ what if previous version exists and not available in cache?
+        self.impl.save(thing, author=author, comment=comment, ip=ip)
+        
         old_thing = self.cache.get(thing.id)
-         
+        
         # expire queries effected by this save
         for k, q in self.querycache.items():
-            if (old_thing is None and q.matches(thing)) or \
-               (q.matches(thing) != q.matches(old_thing)):
-               del self.querycache[k]
-                
+            if q.matches(thing) or (old_thing and q.matches(old_thing)):
+                del self.querycache[k]
+        
+        # History query is made before the cache is cleared. That must be reassigned.
+        thing.h = History(self, thing.id)
         self.cache[thing.id] = thing
                                 
 class RestrictedTDBImpl:

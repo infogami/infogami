@@ -35,7 +35,6 @@ def setup(impl):
     
     global testtype, usertype
     
-    
     testtype = tdb.new('test', tdb.root, tdb.root, dict(a=42))
     testtype.save()
 
@@ -54,26 +53,7 @@ def setup(impl):
 def new(name, _parent=None, _type=None, d=None):
     if d is None: d = {}    
     return tdb.new(name, _parent or parent, _type or type, d)
-    
-class ThingTest(unittest.TestCase):
-    initialized = False
-    impl = tdb2.SimpleTDBImpl()
-    count = 0
-    
-    def setUp(self):
-        if not self.initialized:
-            self.initialized = True
-            setup(self.impl)
-            
-    def xtestThing(self):
-        self.assertEquals(thing, thing)
-        self.assertEquals(thing._dirty, False)
-
-        t = self.new('newthing')
-        self.assertEquals(t.name, 'newthing')
-        self.assertEquals(t.latest_revision, 1)
-    
-    
+        
 class SimpleTDBImplTest(unittest.TestCase):
     initialized = False
     impl = tdb2.SimpleTDBImpl()
@@ -128,6 +108,8 @@ class SimpleTDBImplTest(unittest.TestCase):
         self.assertEquals(t.type, type)
         self.assertEquals(dict(t.d), d)
         self.assertEquals(t._dirty, False)
+        assert t.v is not None
+        assert t.v.created is not None
         
         self.assertEquals(t.latest_revision, 1)
         t.x = 1
@@ -161,6 +143,27 @@ class SimpleTDBImplTest(unittest.TestCase):
         self.assertEquals(t, tdb.withName(t.name, t.parent, revision=1))
         self.assertEquals(t, tdb.withName(t.name, t.parent, revision=1, lazy=True))
         
+    def testHistory(self):
+        def test_revision(h, n):
+            for i in range(n):
+                assert h[i].revision == n-i
+                
+        t = self.new()
+        test_revision(t.h, 1)
+        test_revision(tdb.withID(t.id).h, 1)
+
+        t.title = 'v2'
+        t.save()
+        test_revision(t.h, 2)
+        test_revision(tdb.withID(t.id).h, 2)
+
+        t.title = 'v3'
+        t.save()
+        test_revision(t.h, 3)
+        test_revision(tdb.withID(t.id).h, 3)
+        
+        assert t.h == tdb.withID(t.id).h
+
     def testWithIDs(self):
         things = [self.new() for i in range(10)]
         ids = [t.id for t in things]
@@ -216,11 +219,39 @@ class CachedSimpleTDBImplTest(SimpleTDBImplTest):
 class CachedBetterTDBImplTest(SimpleTDBImplTest):
     impl = tdb2.CachedTDBImpl(tdb2.BetterTDBImpl())
 
+#del SimpleTDBImplTest
+#del BetterTDBImplTest
+#del CachedSimpleTDBImplTest
+#del CachedBetterTDBImplTest
+
 class ThingCacheTest(unittest.TestCase):
     def testInsert(self):
         c = tdb2.ThingCache()
         c[thing.id] = thing
         self.assertEquals(c[thing.name, thing.parent.id], thing)
-    
+
+class SaveTest(unittest.TestCase):
+    def testSave(self):
+        impl = tdb2.CachedTDBImpl(tdb2.SimpleTDBImpl())
+        setup(impl)
+        impl.querycache.clear()
+
+        def test_revision(h, n):
+            assert len(h) == n
+            for i in range(n):
+                assert h[i].revision == n-i
+                
+        t = new('hello')
+        t.save()
+        test_revision(t.h, 1)
+        
+        t.title = 'v2'
+        t.save()
+        test_revision(t.h, 2)
+
+        t.title = 'v3'
+        t.save()
+        test_revision(t.h, 3)
+        
 if __name__ == "__main__":
     unittest.main()

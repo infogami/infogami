@@ -3,7 +3,7 @@ from tdb import NotFound, hook, Thing
 
 impl = SimpleTDBImpl()
 #impl = BetterTDBImpl()
-#impl = CachedTDBImpl(impl)
+impl = CachedTDBImpl(impl)
 
 root = impl.root
 setup = impl.setup

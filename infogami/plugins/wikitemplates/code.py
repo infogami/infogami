@@ -198,7 +198,20 @@ def get_templates(site):
 def get_site():
     from infogami.core import db
     return db.get_site(config.site)
+    
+def usermode(f):
+    from infogami import tdb
+    def g(*a, **kw):
+        try:
+            tdb.impl.hints.mode = 'user'
+            return f(*a, **kw)
+        finally:
+            tdb.impl.hints.mode = 'system'
+    
+    g.__name__ = f.__name__
+    return g
 
+@usermode
 def saferender(templates, *a, **kw):
     """Renders using the first successful template from the list of templates."""
     for t in templates:

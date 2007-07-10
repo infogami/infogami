@@ -3,8 +3,11 @@ import web
 import logger
 import datetime
 
-class NotFound(Exception): pass
-class BadData(Exception): pass
+class TDBException(Exception): pass
+
+class NotFound(TDBException): pass
+class BadData(TDBException): pass
+class SecurityError(TDBException): pass
 
 class Thing:
     @staticmethod
@@ -293,7 +296,8 @@ class SimpleTDBImpl:
         self.stats = web.storage(queries=0, version_queries=0, saves=0)
         self.root = self.withID(1, lazy=True)
         self.parent = self
-        
+        self.hints = web.storage()
+            
     #@@ Hack    
     def set_parent(self, parent):
         self.parent = parent
@@ -607,20 +611,30 @@ class ThingCache:
             name_parent = value.name, value.parent.id
         self.cache[id] = value
         self.namecache[name_parent] = value
-
-class CachedTDBImpl:
-    """TDB with cache"""
+        
+class ProxyTDBImpl:
+    """A TDB impl, which contains another TDB impl."""
+    
     def __init__(self, impl):
         self.impl = impl
-        self.cache = ThingCache()
-        self.querycache = {}
+        self.set_parent(self)
+        self.hints = web.storage()
         
-        #@@ hack
-        impl.set_parent(self)
-        
+    def set_parent(self, impl):
+        self.parent = impl
+        self.impl.set_parent(impl)
+
     def __getattr__(self, key):
         return getattr(self.impl, key)
 
+class CachedTDBImpl(ProxyTDBImpl):
+    """TDB with cache"""
+    def __init__(self, impl):
+        ProxyTDBImpl.__init__(self, impl)
+
+        self.cache = ThingCache()
+        self.querycache = {}
+                
     def withID(self, id, revision=None, lazy=False):
         if lazy:
             return LazyThing(lambda: self.withID(id, revision, lazy=False), id=id)
@@ -662,17 +676,28 @@ class CachedTDBImpl:
         q = dict(query, limit=limit)
         q = tuple(sorted(q.items()))
         
-        if q not in self.querycache:
-            self.querycache[q] = Things(self, limit=limit, **query)
-        
+        try:
+            if q not in self.querycache:
+                self.querycache[q] = Things(self.parent, limit=limit, **query)
+        except TypeError:
+            # newly created Things will not have any id, so __hash__ will fail.
+            # This is a work-around for that.
+            return Things(self.parent, limit=limit, **query)
+            
         return self.querycache[q]
 
     def Versions(self, limit=None, **query):
         q = dict(query, limit=limit)
         q = tuple(sorted(q.items()))
 
-        if q not in self.querycache:
-            self.querycache[q] = Versions(self, limit=limit, **query)
+        try:
+            if q not in self.querycache:
+                self.querycache[q] = Versions(self.parent, limit=limit, **query)
+        except TypeError:
+            # newly created Things will not have any id, so __hash__ will fail.
+            # This is a work-around for that.
+            return Versions(self, limit=limit, **query)
+            
         return self.querycache[q]
 
     def save(self, thing, author=None, comment='', ip=None):
@@ -691,11 +716,22 @@ class CachedTDBImpl:
         thing.h = History(self, thing.id)
         self.cache[thing.id] = thing
                                 
-class RestrictedTDBImpl:
-    """TDB implementation to run in a restricted environment."""
+class RestrictedTDBImpl(ProxyTDBImpl):
+    """TDB implementation to run in a restricted environment.
+    As of now, it supports system and user modes of execution.
+    In system mode all operations are permitted. 
+    In user mode all but save operation is permitted.
+    """
     def __init__(self, impl):
-        self.impl = {}
-                        
+        ProxyTDBImpl.__init__(self, impl)
+            
+    def save(self, *a, **kw):
+        mode = getattr(self.hints, 'mode', 'system')
+        if mode == 'user':
+            raise SecurityError, 'Permission Denied.'
+        else:
+            self.impl.save(*a, **kw)    
+        
 # hooks can be registered by extending the hook class
 hooks = []
 class metahook(type):

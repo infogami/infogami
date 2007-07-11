@@ -1,0 +1,169 @@
+"""
+LRU Dictionary.
+"""
+
+class Node:
+    """Queue Node."""
+    __slots__ = ["key", "value", "next", "prev"]
+    def __init__(self, key):
+        self.key = key
+        self.value = None
+        self.next = None
+        self.prev = None
+        
+    def __str__(self):
+        return str(self.key)
+        
+    __repr__ = __str__
+    
+class Queue:
+    """Classic Queue Datastructure with O(1) inserts and deletes.
+    
+        >>> q = Queue()
+        >>> q
+        []
+        >>> a, b, c = Node(1), Node(2), Node(3)
+        >>> q.insert(a), q.insert(b), q.insert(c)
+        >>> q
+        [1, 2, 3]
+        >>> q.peek()
+        1
+        >>> q.remove(b)
+        2
+        >>> q
+        [1, 3]
+        >>> q.remove()
+        1
+        >>> q.remove()
+        3
+        >>> q.remove()
+        Traceback (most recent call last):
+            ... 
+        Exception: Queue is empty
+    """
+    def __init__(self):
+        # circular linked-list implementation with 
+        # sentinel node to eliminate boundary checks
+        head = self.head = Node("head")
+        head.next = head.prev = head
+
+    def insert(self, node):
+        """Inserts a node at the end of the queue."""
+        node.next = self.head
+        node.prev = self.head.prev        
+        node.next.prev = node
+        node.prev.next = node
+        
+    def peek(self):
+        """Returns the element at the begining of the queue."""
+        if self.head.next is self.head:
+            raise Exception, "Queue is empty"
+        return self.head.next
+        
+    def remove(self, node=None):
+        """Removes a node from the linked list. If node is None, head of the queue is removed."""
+        if node is None:
+            node = self.peek()
+              
+        node.prev.next = node.next
+        node.next.prev = node.prev
+        return node
+        
+    def __str__(self):
+        return str(list(self._list()))
+        
+    __repr__ = __str__
+        
+    def _list(self):
+        node = self.head.next
+        while node != self.head:
+            yield node
+            node = node.next
+
+def synchronized(f):
+    """Decorator to synchronize a method.
+    Behavior of this is same as Java synchronized keyword.
+    """
+    def g(self, *a, **kw):
+        # allocate the lock when the function is called for the first time.
+        lock = getattr(self, '__lock__', None)
+        if lock is None:
+            import threading
+            lock = threading.Lock()
+            setattr(self, '__lock__', lock)
+            
+        try:
+            lock.acquire()
+            return f(self, *a, **kw)
+        finally:
+            lock.release()
+    return g
+
+class LRU:
+    """Dictionary which discards least recently used items when size 
+    exceeds the specified capacity.
+    
+        >>> d = LRU(3)
+        >>> d[1], d[2], d[3] = 1, 2, 3
+        >>> d[1], d[2], d[3]
+        (1, 2, 3)
+        >>> d[2] and d
+        [1, 3, 2]
+        >>> d[1] and d
+        [3, 2, 1]
+        >>> d[4] = 4
+        >>> d
+        [2, 1, 4]
+        >>> del d[4]
+        >>> d
+        [2, 1]
+        >>> d[2] = 2
+        >>> d
+        [1, 2]
+    """
+    def __init__(self, capacity):
+        self.capacity = capacity
+        self.d = {}
+        self.queue = Queue()
+
+    def getnode(self, key, touch=True):
+        if key not in self.d:
+            self.d[key] = Node(key)
+        node = self.d[key]
+        if touch:
+            self.touch(node)
+        return node
+
+    def touch(self, node):
+        # don't call remove for newly created nodes 
+        node.next and self.queue.remove(node)
+        self.queue.insert(node)
+    
+    def prune(self):
+        """Remove least recently used items if required."""
+        while len(self.d) > self.capacity:
+            node = self.queue.remove()
+            del self.d[node.key]
+
+    @synchronized
+    def __getitem__(self, key):
+        return self.getnode(key).value
+
+    @synchronized
+    def __setitem__(self, key, value):
+        self.getnode(key).value = value
+        self.prune()
+    
+    @synchronized
+    def __delitem__(self, key):
+        node = self.getnode(key, touch=False)
+        del self.d[key]
+        self.queue.remove(node)
+        
+    def __str__(self):
+        return str(self.queue)
+    __repr__ = __str__
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

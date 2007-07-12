@@ -7,6 +7,7 @@ import web
 internalerror = web.debugerror
 middleware = []
 
+cache_templates = True
 db_printing = False
 db_kind = 'SQL'
 

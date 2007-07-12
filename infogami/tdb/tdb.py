@@ -2,6 +2,7 @@
 import web
 import logger
 import datetime
+from lru import LRU
 
 class TDBException(Exception): pass
 
@@ -179,11 +180,9 @@ class Versions:
         self.versions = None
         self.limit = limit
         self.tdb = tdb
+        self.init()
     
     def init(self):
-        if self.versions is not None: 
-            return
-            
         tables = ['thing', 'version']
         what = 'version.*, thing.name, thing.parent_id, thing.latest_revision'
         where = "thing.id = version.thing_id"
@@ -219,22 +218,15 @@ class Versions:
         return match_query(self.query, dict(thing.v.__dict__, parent=thing.parent, parent_id=thing.parent.id, thing_id=thing.id))
         
     def __getitem__(self, index):
-        if self.versions is None:
-            self.init()
         return self.versions[index]
         
     def __eq__(self, other):
-        self.init()
-        other.init()
         return self.versions == other.versions
     
     def __len__(self):
-        if self.versions is None:
-            self.init()
         return len(self.versions)
         
     def __str__(self):
-        self.init()
         return str(self.versions)
         
 def History(tdb, thing_id):
@@ -242,7 +234,7 @@ def History(tdb, thing_id):
         
 class Proxy:
     def __init__(self, _o):
-        self.__dict__['_o'] = _o        
+        self.__dict__['_o'] = _o
         
     def __getattr__(self, key):
         return getattr(self._get(), key)
@@ -256,11 +248,11 @@ class Proxy:
 class LazyProxy(Proxy):
     def __init__(self, constructor):
         self.__dict__['_constructor'] = constructor
-        Proxy.__dict__(self, None)
+        Proxy.__init__(self, None)
         
     def _get(self):
         if self._o is None:
-            self.__dict__['_o'] = constructor()
+            self.__dict__['_o'] = self._constructor()
         return self._o
         
     def __hash__(self):
@@ -469,8 +461,11 @@ class SimpleTDBImpl:
     def Things(self, limit=None, **query):
         return Things(self, limit=limit, **query)
 
-    def Versions(self, limit=None, **query):
-        return Versions(self, limit=limit, **query)
+    def Versions(self, limit=None, lazy=True, **query):
+        if lazy:
+            return LazyProxy(lambda: self.Versions(limit=limit, lazy=False, **query))
+        else:
+            return Versions(self, limit=limit, **query)
     
     def stats(self):
         """Returns statistics about performance as a dictionary.
@@ -576,23 +571,22 @@ class BetterTDBImpl(SimpleTDBImpl):
             ts.append(t)
         return ts
 
-class ThingCache:
-    """Cache for storing things. Key can be either id or (name, parent_id)."""
-    def __init__(self):
-        self.cache = {}
-        self.namecache = {}
+class ThingCache(LRU):
+    """LRU Cache for storing things. Key can be either id or (name, parent_id)."""
+    def __init__(self, capacity):
+        LRU.__init__(self, capacity)
+        self.name2id = {}
         
     def __contains__(self, key):
         if isinstance(key, tuple):
-            return key in self.namecache
+            return key in self.name2id
         else:
-            return key in self.cache  
+            return LRU.__contains__(self, key)
         
     def __getitem__(self, key):
         if isinstance(key, tuple):
-            value = self.namecache[key]
-        else:
-            value = self.cache[key]
+            key = self.name2id[key]
+        value = LRU.__getitem__(self, key)
         return value.copy()
         
     def get(self, key, default=None):
@@ -600,18 +594,21 @@ class ThingCache:
             return self[key]
         else:
             return None
-    
+            
     def __setitem__(self, key, value):
-        value = value.copy()
-        if isinstance(key, tuple):
-            name_parent = key
-            id = value.id
-        else:
-            id = key
-            name_parent = value.name, value.parent.id
-        self.cache[id] = value
-        self.namecache[name_parent] = value
-        
+        key = value.id
+        LRU.__setitem__(self, key, value)
+        # name2id mapping must be updated whenever a thing is added to the cache
+        self.name2id[value.name, value.parent.id] = value.id
+    
+    def remove_node(self, node=None):
+        node = LRU.remove_node(self.node)
+        thing = node.value
+        # when a node is removed, its corresponding entry 
+        # from the name2id map must also be removed 
+        del self.name2id[thing.name, thing.parent.id]
+        return node
+                    
 class ProxyTDBImpl:
     """A TDB impl, which contains another TDB impl."""
     
@@ -632,8 +629,9 @@ class CachedTDBImpl(ProxyTDBImpl):
     def __init__(self, impl):
         ProxyTDBImpl.__init__(self, impl)
 
-        self.cache = ThingCache()
-        self.querycache = {}
+        #@@ make this configurable
+        self.cache = ThingCache(10000)
+        self.querycache = LRU(1000)
                 
     def withID(self, id, revision=None, lazy=False):
         if lazy:
@@ -686,19 +684,22 @@ class CachedTDBImpl(ProxyTDBImpl):
             
         return self.querycache[q]
 
-    def Versions(self, limit=None, **query):
-        q = dict(query, limit=limit)
-        q = tuple(sorted(q.items()))
+    def Versions(self, limit=None, lazy=True, **query):
+        if lazy:
+            return LazyProxy(lambda: self.Versions(limit=limit, lazy=False, **query))
+        else:    
+            q = dict(query, limit=limit)
+            q = tuple(sorted(q.items()))
 
-        try:
-            if q not in self.querycache:
-                self.querycache[q] = Versions(self.parent, limit=limit, **query)
-        except TypeError:
-            # newly created Things will not have any id, so __hash__ will fail.
-            # This is a work-around for that.
-            return Versions(self, limit=limit, **query)
+            try:
+                if q not in self.querycache:
+                    self.querycache[q] = Versions(self.parent, limit=limit, **query)
+            except TypeError:
+                # newly created Things will not have any id, so __hash__ will fail.
+                # This is a work-around for that.
+                return Versions(self, limit=limit, **query)
             
-        return self.querycache[q]
+            return self.querycache[q]
 
     def save(self, thing, author=None, comment='', ip=None):
         # previous version of thing

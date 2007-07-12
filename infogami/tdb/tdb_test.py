@@ -23,7 +23,7 @@ def setup(impl):
     tdb = impl
     
     web.config.db_parameters = dict(dbn='postgres', db='tdbtest', user='postgres', pw='')
-    web.db._hasPooling = False
+    web.config._hasPooling = False
     web.config.db_printing = False
     web.load()
     tdb.setup()
@@ -226,7 +226,7 @@ class CachedBetterTDBImplTest(SimpleTDBImplTest):
 
 class ThingCacheTest(unittest.TestCase):
     def testInsert(self):
-        c = tdb2.ThingCache()
+        c = tdb2.ThingCache(2)
         c[thing.id] = thing
         self.assertEquals(c[thing.name, thing.parent.id], thing)
 

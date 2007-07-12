@@ -2,7 +2,7 @@
 LRU Dictionary.
 """
 
-class Node:
+class Node(object):
     """Queue Node."""
     __slots__ = ["key", "value", "next", "prev"]
     def __init__(self, key):
@@ -23,7 +23,9 @@ class Queue:
         >>> q
         []
         >>> a, b, c = Node(1), Node(2), Node(3)
-        >>> q.insert(a), q.insert(b), q.insert(c)
+        >>> q.insert(a)
+        >>> q.insert(b)
+        >>> q.insert(c)
         >>> q
         [1, 2, 3]
         >>> q.peek()
@@ -46,6 +48,9 @@ class Queue:
         # sentinel node to eliminate boundary checks
         head = self.head = Node("head")
         head.next = head.prev = head
+        
+    def clear(self):
+        self.head.next = self.head.prev = self.head
 
     def insert(self, node):
         """Inserts a node at the end of the queue."""
@@ -121,9 +126,10 @@ class LRU:
         >>> d
         [1, 2]
     """
-    def __init__(self, capacity):
+    def __init__(self, capacity, d=None):
         self.capacity = capacity
-        self.d = {}
+        if d is None: d = {}
+        self.d = d
         self.queue = Queue()
 
     def getnode(self, key, touch=True):
@@ -142,9 +148,12 @@ class LRU:
     def prune(self):
         """Remove least recently used items if required."""
         while len(self.d) > self.capacity:
-            node = self.queue.remove()
-            del self.d[node.key]
-
+            self.remove_node()
+            
+    @synchronized
+    def __contains__(self, key):
+        return key in self.d
+        
     @synchronized
     def __getitem__(self, key):
         return self.getnode(key).value
@@ -157,9 +166,20 @@ class LRU:
     @synchronized
     def __delitem__(self, key):
         node = self.getnode(key, touch=False)
-        del self.d[key]
-        self.queue.remove(node)
+        self.remove_node(node)
         
+    def items(self):
+        return [(k, node.value) for k, node in self.d.items()]
+        
+    def clear(self):
+        self.d.clear()
+        self.queue.clear()
+        
+    def remove_node(self, node=None):
+        node = self.queue.remove(node)
+        del self.d[node.key]
+        return node
+                
     def __str__(self):
         return str(self.queue)
     __repr__ = __str__

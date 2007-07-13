@@ -94,7 +94,7 @@ def spacesafe(text):
     
 def set_error(msg):
     if not context.error: context.error = ''
-    context.error += ' ' + msg
+    context.error += '\n' + msg
 
 def load_templates(dir):
     cache = getattr(config, 'cache_templates', True)

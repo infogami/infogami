@@ -209,6 +209,10 @@ class SimpleTDBImplTest(unittest.TestCase):
 
         tl = tdb.Things(title='notitle').list()
         assert tl == []        
+        
+    def testVersions(self):
+        versions = tdb.Versions()
+        for v in versions: pass
                 
 class BetterTDBImplTest(SimpleTDBImplTest):
     impl = tdb2.BetterTDBImpl()

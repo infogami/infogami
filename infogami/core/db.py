@@ -108,8 +108,11 @@ def get_site(name):
     return tdb.withName(name, tdb.root)
 
 @public
-def get_recent_changes(site, limit=None):
-    return tdb.Versions(parent_id=site.id, limit=limit)
+def get_recent_changes(site, author=None, limit=None):
+    if author:
+        return tdb.Versions(parent=site, author=author, limit=limit)
+    else:
+        return tdb.Versions(parent=site, limit=limit)
 
 @public
 def list_pages(site, path):

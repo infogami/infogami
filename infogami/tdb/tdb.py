@@ -1,4 +1,3 @@
-
 import web
 import logger
 import datetime
@@ -189,8 +188,12 @@ class Versions:
         
         if 'parent' in self.query:
             parent = self.query.pop('parent')
-            where += web.reparam(' AND thing.parent_id = $parent.id', locals())
-        
+            self.query['parent_id'] = parent.id
+            
+        if 'author' in self.query:
+            author = self.query.pop('author')
+            self.query['author_id'] = author.id
+            
         for k, v in self.query.items():
             where += web.reparam(' AND %s = $v' % (k,), locals())
                     

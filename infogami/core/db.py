@@ -132,8 +132,8 @@ def list_pages(site, path):
 @public
 def get_schema(type, keep_back_references=False):
     schema = web.storage(type.d)
-    if keep_back_references:
-        schema = web.storage([(k, v) for k, v in schema.items() if not k.startswith('#')])
+    if not keep_back_references:
+        schema = web.storage([(k, v) for k, v in schema.items() if not v.startswith('#')])
     return schema
     
             

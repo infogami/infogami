@@ -27,13 +27,13 @@ def fill_missing_fields(site, page):
     
     data = page.d
     for k, v in schema.items():
-        if k != '*' and data.get(k) is None:
+        if v.startswith('#'):
+            t, key = v[1:].split('.', 1)
+            q = {'type': db.get_type(site, t), key:page}
+            data[k] = tdb.Things(limit=20, **q).list()
+        elif k != '*' and data.get(k) is None:
             if v.endswith('*'):
                 data[k] = ['']
-            elif v.startswith('#'):
-                t, key = v[1:].split('.', 1)
-                q = {'type': db.get_type(site, t), key:page}
-                data[k] = tdb.Things(limit=20, **q).list()
             else:
                 data[k] = ''
     
@@ -101,7 +101,7 @@ class edit (delegate.mode):
         else:
             d = [(k, i[k]) for k in schema]
             i = dict(d)
-    
+
         return i
         
     def POST(self, site, path):

@@ -200,6 +200,7 @@ class register(delegate.page):
             return render.register(f)
         else:
             user = db.new_user(site, i.username, i.email)
+            user.displayname = i.displayname
             user.save()
             db.set_password(user, i.password)
             auth.setcookie(user, i.remember)

@@ -36,6 +36,7 @@ LOGOUT = "logout"
 LAST_MODIFIED = "last modified"
 
 USERNAME = "Username"
+DISPLAYNAME = "Display Name"
 PASSWORD = "Password"
 CONFIRM_PASSWORD = "Confirm Password"
 EMAIL = "E-Mail"

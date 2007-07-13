@@ -18,6 +18,7 @@ register = Form(
                 _.USERNAME_ALREADY_EXISTS,
                 lambda name: not db.get_user_by_name(context.site, name)),
             description=_.USERNAME),
+    Textbox('displayname', notnull, description=_.DISPLAYNAME),
     Textbox('email', notnull, description=_.EMAIL),
     Password('password', notnull, description=_.PASSWORD),
     Password('password2', notnull, description=_.CONFIRM_PASSWORD),

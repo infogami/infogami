@@ -7,6 +7,9 @@ from infogami.utils.i18n import i18n
 import storage
 import macro
 
+#@@ This must be moved to some better place
+from infogami.tdb.lru import lrumemoize
+
 wiki_processors = []
 def register_wiki_processor(p):
     wiki_processors.append(p)
@@ -59,7 +62,14 @@ def public(f):
 
 @public
 def format(text):
-    return get_markdown(text.decode('utf-8')).convert().encode('utf-8')
+    html, macros = _format(text)
+    return macro.replace_macros(html, macros)
+    
+@lrumemoize(1000)
+def _format(text):
+    md = get_markdown(text.decode('utf-8'))
+    html = md.convert().encode('utf-8')
+    return html, md.macros
 
 @public
 def link(path, text=None):

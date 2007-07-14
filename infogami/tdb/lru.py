@@ -183,6 +183,17 @@ class LRU:
     def __str__(self):
         return str(self.queue)
     __repr__ = __str__
+    
+def lrumemoize(n):
+    def decorator(f):
+        cache = LRU(n)
+        def g(*a, **kw):
+            key = a, tuple(kw.items())
+            if key not in cache:
+                cache[key] = f(*a, **kw)
+            return cache[key]
+        return g
+    return decorator
 
 if __name__ == "__main__":
     import doctest

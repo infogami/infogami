@@ -150,7 +150,8 @@ class diff (delegate.mode):
         i.a = i.a or int(i.b)-1
 
         try:
-            a = db.get_version(site, path, revision=i.a)
+            if i.a == 0: a = web.storage(d={},v=web.storage(revision=0))
+            else: a = db.get_version(site, path, revision=i.a)
             b = db.get_version(site, path, revision=i.b)
         except:
             return web.badrequest()

@@ -107,7 +107,7 @@ class edit (delegate.mode):
     def POST(self, site, path):
         i = web.input(_type="page", _method='post')
         action = self.get_action(i)
-        
+        comment = i.pop('_comment', None)
         try:
             type = db.get_type(site, i._type)
         except tdb.NotFound:
@@ -126,7 +126,7 @@ class edit (delegate.mode):
             return render.edit(p, preview=True)
         elif action == 'save':
             try:
-                p.save(author=context.user, ip=web.ctx.ip)
+                p.save(author=context.user, ip=web.ctx.ip, comment=comment)
                 return web.seeother(web.changequery(m=None))
             except db.ValidationException, e:
                 utils.view.set_error(str(e))

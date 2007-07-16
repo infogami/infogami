@@ -27,8 +27,8 @@ def better_diff(a, b):
 def simple_diff(a, b):
     if a is None: a = ''
     if b is None: b = ''
-    a = a.split(' ')
-    b = b.split(' ')
+    a = str(a).split(' ')
+    b = str(b).split(' ')
     out = []
     for (tag, i1, i2, j1, j2) in SequenceMatcher(a=a, b=b).get_opcodes():
         out.append(web.storage(tag=tag, left=' '.join(a[i1:i2]), right=' '.join(b[j1:j2])))

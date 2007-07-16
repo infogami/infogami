@@ -5,6 +5,7 @@ import os
 from infogami.core.diff import simple_diff
 from infogami import config, tdb
 from infogami.utils.i18n import i18n
+from infogami.core.diff import simple_diff
 import storage
 import macro
 
@@ -49,6 +50,7 @@ web.template.Template.globals.update(dict(
   set = set,
   dict = dict,
   range = range,
+  diff = simple_diff,
   len = len,
   enumerate=enumerate,
   hasattr = hasattr,

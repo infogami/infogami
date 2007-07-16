@@ -48,7 +48,7 @@
 }
 
 
-/* ADDED BY WC */
+/* ADDED BY WC (webchick?) */
 
 .diff-header-top  { font-weight: bold; border-bottom: 1px solid #cccccc; background-color: #eeeeee; padding: 4px 4px 4px 10px; border-top: 1px solid #cccccc; white-space: nowrap; }
 .diff-header-side  { font-weight: bold; background-color: #cccccc; padding: 10px 4px 4px 4px; border-left: 1px solid #cccccc; text-align: right; }
@@ -56,7 +56,7 @@
 
 .diff-border {margin: 30px;}
 
-.diff-number { border-bottom: 1px solid #cccccc; padding: 4px; text-align: center; font-weight: bold; background-color: #cccccc }
+.diff-number { border-bottom: 1px solid #cccccc; padding: 4px; text-align: center; font-weight: bold; background-color: #cccccc; vertical-align: top; }
 
 td.l {border-bottom: 1px solid #cccccc; padding-left: 12px; }
 td.r {border-bottom: 1px solid #cccccc; padding-left: 12px; }

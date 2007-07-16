@@ -2,6 +2,7 @@ from infogami.utils.markdown import markdown, mdx_footnotes
 from context import context
 import web
 import os
+from infogami.core.diff import simple_diff
 from infogami import config, tdb
 from infogami.utils.i18n import i18n
 import storage
@@ -38,7 +39,8 @@ web.template.Template.globals.update(dict(
   numify = web.numify,
   ctx = context,
   _ = i18n(),
-  macros = storage.ReadOnlyDict(macro._macros), 
+  macros = storage.ReadOnlyDict(macro._macros),
+  diff = simple_diff,
   
   # common utilities
   int = int,
@@ -51,7 +53,7 @@ web.template.Template.globals.update(dict(
   enumerate=enumerate,
   hasattr = hasattr,
   Dropdown = web.form.Dropdown,
-  slice=slice,
+  slice = slice,
 ))
 
 render = web.storage()

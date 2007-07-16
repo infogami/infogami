@@ -50,7 +50,6 @@ web.template.Template.globals.update(dict(
   set = set,
   dict = dict,
   range = range,
-  diff = simple_diff,
   len = len,
   enumerate=enumerate,
   hasattr = hasattr,

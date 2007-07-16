@@ -605,7 +605,7 @@ class ThingCache(LRU):
         self.name2id[value.name, value.parent.id] = value.id
     
     def remove_node(self, node=None):
-        node = LRU.remove_node(node)
+        node = LRU.remove_node(self, node)
         thing = node.value
         # when a node is removed, its corresponding entry 
         # from the name2id map must also be removed 

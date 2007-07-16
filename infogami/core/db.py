@@ -128,7 +128,7 @@ def list_pages(site, path):
             JOIN version ON version.revision = t.latest_revision AND version.thing_id = t.id
             JOIN datum ON datum.version_id = version.id 
             WHERE t.parent_id=$site.id AND t.name LIKE $pattern 
-            AND datum.key == '__type__' AND datum.value != delete.id
+            AND datum.key = '__type__' AND datum.value != $delete.id
             ORDER BY t.name""", vars=locals())
        
 @public

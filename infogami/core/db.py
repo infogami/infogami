@@ -117,7 +117,7 @@ def get_recent_changes(site, author=None, limit=None):
 @public
 def list_pages(site, path):
     """Lists all pages with name path/*"""
-    delete = get_type('type/delete')
+    delete = get_type(site, 'type/delete')
     
     if path == "":
         pattern = '%'

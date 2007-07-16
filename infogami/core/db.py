@@ -117,16 +117,18 @@ def get_recent_changes(site, author=None, limit=None):
 @public
 def list_pages(site, path):
     """Lists all pages with name path/*"""
+    delete = get_type('type/delete')
     
     if path == "":
         pattern = '%'
     else:
         pattern = path + '/%'
+        
     return web.query("""SELECT t.id, t.name FROM thing t 
             JOIN version ON version.revision = t.latest_revision AND version.thing_id = t.id
             JOIN datum ON datum.version_id = version.id 
-            JOIN thing type ON type.id = datum.value  AND datum.key = '__type__'
-            WHERE t.parent_id=$site.id AND t.name LIKE $pattern AND type.name != 'type/delete' 
+            WHERE t.parent_id=$site.id AND t.name LIKE $pattern 
+            AND datum.key == '__type__' AND datum.value != delete.id
             ORDER BY t.name""", vars=locals())
        
 @public

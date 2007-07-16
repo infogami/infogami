@@ -51,6 +51,7 @@ web.template.Template.globals.update(dict(
   enumerate=enumerate,
   hasattr = hasattr,
   Dropdown = web.form.Dropdown,
+  slice=slice,
 ))
 
 render = web.storage()

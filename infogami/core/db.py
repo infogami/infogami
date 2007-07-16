@@ -129,7 +129,7 @@ def list_pages(site, path):
             JOIN datum ON datum.version_id = version.id 
             WHERE t.parent_id=$site.id AND t.name LIKE $pattern 
             AND datum.key = '__type__' AND datum.value != $delete.id
-            ORDER BY t.name""", vars=locals())
+            ORDER BY t.name LIMIT 100""", vars=locals())
        
 @public
 def get_schema(type, keep_back_references=False):

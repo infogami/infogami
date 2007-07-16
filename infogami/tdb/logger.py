@@ -32,6 +32,7 @@ import threading
 import os
 import re
 import tdb
+import time
 
 def tdbimpl():
     return tdb.SimpleTDBImpl()

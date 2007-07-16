@@ -56,7 +56,7 @@
 
 .diff-border {margin: 30px;}
 
-.diff-number { border-bottom: 1px solid #cccccc; padding: 4px; text-align: center; font-weight: bold; background-color: #cccccc }
+.diff-number { border-bottom: 1px solid #cccccc; padding: 4px; text-align: center; font-weight: bold; background-color: #cccccc; vertical-align: top; }
 
 td.l {border-bottom: 1px solid #cccccc; padding-left: 12px; }
 td.r {border-bottom: 1px solid #cccccc; padding-left: 12px; }

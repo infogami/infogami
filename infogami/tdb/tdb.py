@@ -59,7 +59,7 @@ class Thing:
     def get(self, key, default=None):
         return getattr(self, key, default)
 
-    def c(self, name):
+    def _c(self, name):
         return self._tdb.withName(name, self)
 
     def __setattr__(self, attr, value):

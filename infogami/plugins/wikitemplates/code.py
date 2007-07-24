@@ -348,7 +348,7 @@ register_wiki_template("Site Preferences Template", "core/templates/sitepreferen
 register_wiki_template("Default View Template", "core/templates/default_view.html", "templates/default_view.tmpl")
 register_wiki_template("Default Edit Template", "core/templates/default_edit.html", "templates/default_edit.tmpl")
 register_wiki_template("notfound", "core/templates/notfound.html", "templates/notfound.tmpl")
-register_wiki_template("deleted", "core/templates/deleted.html", "templates/notfound.tmpl")
+register_wiki_template("deleted", "core/templates/deleted.html", "templates/deleted.tmpl")
 
 register_wiki_template("Page View Template", "core/templates/view.html", "type/page/view.tmpl")
 register_wiki_template("Page Edit Template", "core/templates/edit.html", "type/page/edit.tmpl")

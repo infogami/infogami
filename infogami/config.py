@@ -17,3 +17,10 @@ site = None
 plugins = ['links', 'wikitemplates', 'i18n']
 
 plugin_path = ['infogami.plugins']
+
+# key for encrypting password
+encryption_key = "ofu889e4i5kfem" 
+
+# salt added to password before encrypting
+password_salt = "zxps#2s4g@z"
+

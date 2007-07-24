@@ -3,8 +3,10 @@ import time, datetime
 import hmac
 import web
 import urllib
+from infogami import config
 
-SECRET = "ofu889e4i5kfem" #@@ make configurable
+SECRET = config.encryption_key
+SALT = config.password_salt
 
 def setcookie(user, remember=False):
     t = datetime.datetime(*time.gmtime()[:6]).isoformat()
@@ -14,16 +16,41 @@ def setcookie(user, remember=False):
     expires = (remember and 3600*24*7) or ""
     web.setcookie("infogami_session", text, expires=expires)
     
-def get_user():
+def get_user(site):
     """Returns the current user from the session."""
     session = web.cookies(infogami_session=None).infogami_session
     if session:
         user_id, login_time, digest = session.split(',')
         if _digest(user_id + "," + login_time) == digest:
-            return db.get_user(int(user_id))
+            return db.get_user(site, int(user_id))
+            
+def login(site, username, password, remember=False):
+    """Returns the user if login is successful, None otherwise."""
+    u = db.get_user_by_name(site, username)
+    prefs = u and db.get_user_preferences(u)
+    if prefs and prefs.get("password") == _hash(password):
+        setcookie(u, remember)
+        return u
+    else:
+        return None
 
 def _digest(text):
     return hmac.HMAC(SECRET, text).hexdigest()
+
+def _hash(password):
+    return _digest(SALT + password)
+
+def set_password(user, password):
+    p = db.get_user_preferences(user)
+    p.password = _hash(password)
+    p.save()
+    
+def random_password():
+    import random
+    n = random.randint(8, 16)
+    chars = string.letters + string.digits
+    password = "".join([random.choice(chars) for i in range(n)])
+    return password
 
 def require_login(f):
     def g(*a, **kw):

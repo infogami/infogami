@@ -52,8 +52,8 @@ def initialize_context():
     context.error = None
     context.stylesheets = []
     context.javascripts = []
-    context.user = auth.get_user()
     context.site = db.get_site(config.site)
+    context.user = auth.get_user(context.site)
     
     i = web.input(_mode='GET', rescue="false")
     context.rescue_mode = (i.rescue.lower() == 'true')

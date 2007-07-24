@@ -180,14 +180,13 @@ class login(delegate.page):
 
     def POST(self, site):
         i = web.input(remember=False, redirect='/')
-        user = db.login(site, i.username, i.password)
+        user = auth.login(site, i.username, i.password, i.remember)
         if user is None:
             f = forms.login()
             f.fill(i)
             f.note = 'Invalid username or password.'
             return render.login(f)
 
-        auth.setcookie(user, i.remember)
         web.seeother(web.ctx.homepath + i.redirect)
         
 class register(delegate.page):
@@ -203,7 +202,7 @@ class register(delegate.page):
             user = db.new_user(site, i.username, i.email)
             user.displayname = i.displayname
             user.save()
-            db.set_password(user, i.password)
+            auth.set_password(user, i.password)
             auth.setcookie(user, i.remember)
             web.seeother(web.ctx.homepath + i.redirect)
 
@@ -247,8 +246,8 @@ class login_preferences:
         if not f.validates(i):
             return render.login_preferences(f)
         else:
-            user = auth.get_user()
-            db.set_password(user, i.password)
+            user = auth.get_user(site)
+            auth.set_password(user, i.password)
             return self.GET(site)
 
 register_preferences("login_preferences", login_preferences())

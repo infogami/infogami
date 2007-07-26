@@ -34,8 +34,12 @@ import re
 import tdb
 import time
 
+_impl = None
+
 def tdbimpl():
-    return tdb.SimpleTDBImpl()
+    if _impl is None:
+        _impl = tdb.CachedTDBImpl(tdb.BetterTDBImpl())
+    return _impl
 
 logfile = None
 

@@ -5,7 +5,33 @@ import infogami
 from infogami.tdb import NotFound
 import pickle
 from infogami.utils.view import public
-        
+
+def _create_type(site, name, properties=[], description="", is_primitive=False):
+    """Quick hack to create a type."""
+    def _property(name, type, unique=True, description=""):
+        return _get_thing(t, name, tproperty, dict(type=type, unique=unique, description=description))
+
+    ttype = get_type(site, 'type/type')
+    tproperty = get_type(site, 'type/property')
+
+    t = _get_thing(site, name, ttype)
+
+    d = {}
+    d['is_primitive'] = is_primitive
+    d['description'] = description
+    d['properties'] = [_property(**p) for p in properties]
+    t = new_version(site, name, ttype, d)
+    t.save()
+    return t
+
+def _get_thing(parent, name, type, d={}):
+    try:
+        thing = tdb.withName(name, parent)
+    except:
+        thing = tdb.new(name, parent, type, d)
+        thing.save()
+    return thing
+
 @infogami.install_hook
 def tdbsetup():
     """setup tdb for infogami."""
@@ -13,28 +39,52 @@ def tdbsetup():
     # hack to disable tdb hooks
     tdb.tdb.hooks = []
     tdb.setup()
-    try:
-        site = tdb.withName(config.site, tdb.root)
-    except:
-        site = tdb.new(config.site, tdb.root, tdb.root)
-        site.save()
 
+
+    site = _get_thing(tdb.root, config.site, tdb.root)
     from infogami.utils.context import context
-    context.site = site
+    context.site = site 
     
-    try:
-        type = tdb.withName('type/type', site)
-    except tdb.NotFound:
-        type = tdb.new('type/type', site, None, {'*':'string'})
-        type.save()
+    # type is created with tdb.root as type first and later its type is changed to itself.
+    ttype = _get_thing(site, "type/type", tdb.root)
+    tproperty = _get_thing(site, "type/property", ttype)
 
-    new_type(site, 'type/page', {'title': 'string', 'body': 'text'})
-    new_type(site, 'type/user', {'email': 'email'})
-    new_type(site, 'type/delete', {})
+    tint = _create_type(site, "type/int", is_primitive=True)
+    tboolean = _create_type(site, "type/boolean", is_primitive=True)
+    tstring = _create_type(site, "type/string", is_primitive=True)
+    ttext = _create_type(site, "type/text", is_primitive=True)
     
+    tproperty = _create_type(site, "type/property", [
+       dict(name='type', type=ttype),
+       dict(name='unique', type=tboolean),
+       dict(name='description', type=ttext),
+    ])
+    
+    tbackreference = _create_type(site, 'type/backreference', [
+        dict(name='type', type=ttype),
+        dict(name='property_name', type=tstring),
+    ])
+
+    ttype = _create_type(site, "type/type", [
+       dict(name='description', type=ttext, unique=True),
+       dict(name='is_primitive', type=tboolean, unique=True),
+       dict(name='properties', type=tproperty, unique=False),
+       dict(name='backreferences', type=tbackreference, unique=False),
+    ])
+
+    _create_type(site, 'type/page', [
+        dict(name='title', type=tstring), 
+        dict(name='body', type=ttext)])
+        
+    _create_type(site, 'type/user', [
+        dict(name='emaiil', type=tstring), 
+        dict(name='displayname', type=tstring)])
+        
+    _create_type(site, 'type/delete', [])
+
     # for internal use
-    new_type(site, 'type/thing', {})
-    
+    _create_type(site, 'type/thing', [])
+
 class ValidationException(Exception): pass
 
 def get_version(site, path, revision=None):
@@ -117,15 +167,7 @@ def list_pages(site, path):
             WHERE t.parent_id=$site.id AND t.name LIKE $pattern 
             AND datum.key = '__type__' AND datum.value != $delete.id
             ORDER BY t.name LIMIT 100""", vars=locals())
-       
-@public
-def get_schema(type, keep_back_references=False):
-    schema = web.storage(type.d)
-    if not keep_back_references:
-        schema = web.storage([(k, v) for k, v in schema.items() if not v.startswith('#')])
-    return schema
-    
-            
+                   
 def get_site_permissions(site):
     if hasattr(site, 'permissions'):
         return pickle.loads(site.permissions)

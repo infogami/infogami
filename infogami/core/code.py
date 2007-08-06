@@ -9,7 +9,8 @@ from diff import better_diff
 import db
 import auth
 import forms
-
+import thingutil
+import helpers
 
 render = utils.view.render.core
 
@@ -21,22 +22,6 @@ def deleted():
     web.ctx.status = '404 Not Found'
     return render.deleted()
 
-def fill_missing_fields(site, page):
-    schema = db.get_schema(page.type, keep_back_references=True)
-    schema.pop('*', None)
-    
-    data = page.d
-    for k, v in schema.items():
-        if v.startswith('#'):
-            t, key = v[1:].split('.', 1)
-            q = {'type': db.get_type(site, t), key:page}
-            data[k] = tdb.Things(limit=20, **q).list()
-        elif k != '*' and data.get(k) is None:
-            if v.endswith('*'):
-                data[k] = ['']
-            else:
-                data[k] = ''
-    
 class view (delegate.mode):
     def GET(self, site, path):
         try:
@@ -47,7 +32,7 @@ class view (delegate.mode):
             if p.type == db.get_type(site, 'type/delete'):
                 return deleted()
             else:
-                fill_missing_fields(site, p)
+                thingutil.thingtidy(p)
                 return render.view(p)
         
 class edit (delegate.mode):
@@ -67,7 +52,7 @@ class edit (delegate.mode):
             else:
                 p.type = type
         
-        fill_missing_fields(site, p)
+        thingutil.thingtidy(p)
         return render.edit(p)
     
     def dict_subset(self, d, keys):
@@ -80,34 +65,11 @@ class edit (delegate.mode):
         elif '_delete' in i: return 'delete'
         else: return None
         
-    def parse_data(self, site, type, i):
-        schema = db.get_schema(type)
-        allow_arbitrary = schema.pop('*', None) is not None
-        
-        _default = {True: [], False: ""}
-        defaults = dict([(k, _default[v.endswith('*')]) for k, v in schema.items()])
-        i = web.input(_method='post', **defaults)
-        for k, v in schema.iteritems():
-            if v.startswith('thing '):
-                if isinstance(i[k], web.iters):
-                    i[k] = [tdb.withName(x, site) for x in i[k] if x]
-                else:
-                    i[k] = tdb.withName(i[k], site)
-            if v.endswith('*'):
-                i[k] = [x for x in i[k] if x]
-        if allow_arbitrary:
-            d = [(k, v) for k, v in i.iteritems() if not k.startswith('_')]
-            i = dict(d)
-        else:
-            d = [(k, i[k]) for k in schema]
-            i = dict(d)
-
-        return i
-        
     def POST(self, site, path):
         i = web.input(_type="page", _method='post')
         action = self.get_action(i)
         comment = i.pop('_comment', None)
+        
         try:
             type = db.get_type(site, i._type)
         except tdb.NotFound:
@@ -118,24 +80,29 @@ class edit (delegate.mode):
             data = self.parse_data(site, type, i)
             p = db.new_version(site, path, type, data)
             return render.edit(p)
-        
-        data = self.parse_data(site, type, i)
-        p = db.new_version(site, path, type, data)
+
         
         if action == 'preview':
             return render.edit(p, preview=True)
         elif action == 'save':
             try:
+                web.transact()
+                d = helpers.trim(helpers.unflatten(i))
+                d = helpers.subdict(d, [k for k in d.keys() if not k.startswith('_')])
+                p = thingutil.thingify(site, path, type, d)
                 p.save(author=context.user, ip=web.ctx.ip, comment=comment)
+                web.commit()
                 return web.seeother(web.changequery(m=None))
             except db.ValidationException, e:
+                web.rollback()
                 utils.view.set_error(str(e))
                 return render.edit(p)
         elif action == 'delete':
+            p = db.get_version(site, path)
             p.type = db.get_type(site, 'type/delete')
             p.save(author=context.user, ip=web.ctx.ip)
             return web.seeother(web.changequery(m=None))
-            
+
 class history (delegate.mode):
     def GET(self, site, path):
         try:
@@ -301,9 +268,29 @@ def string_renderer(name, value, **attrs):
     
 def text_renderer(name, value, **attrs):
     """Renderer for html textarea input."""
-    return web.form.Textarea(name, value=value, rows=25, cols=80, **attrs).render()
-    
-utils.view.register_input_renderer('string', string_renderer)
-utils.view.register_input_renderer('text', text_renderer)
+    return web.form.Textarea(name, value=value, rows=10, cols=80, **attrs).render()
+
+def boolean_renderer(name, value, **attrs):
+    """Renderer for html textarea input."""
+    return web.form.Checkbox(name, value=value, **attrs).render()
+
+def property_renderer(name, value, **attrs):
+    if not isinstance(value, (tdb.Thing, dict)):
+        value = thingutil.DefaultThing(db.get_type(context.site, 'type/property'))
+    return render.property_ref(name, value)
+
+def backreference_renderer(name, value, **attrs):
+    if not isinstance(value, (tdb.Thing, dict)):
+        value = thingutil.DefaultThing(db.get_type(context.site, 'type/backreference'))
+    return render.backreference_ref(name, value)
+        
+utils.view.register_input_renderer('type/string', string_renderer)
+utils.view.register_input_renderer('type/text', text_renderer)
+utils.view.register_input_renderer('type/boolean', boolean_renderer)
+utils.view.register_input_renderer('type/property', property_renderer)
+utils.view.register_input_renderer('type/backreference', backreference_renderer)
+
 # Thing is also displayed as textbox
 utils.view.register_input_renderer('thing', string_renderer)
+
+    

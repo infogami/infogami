@@ -1,0 +1,24 @@
+$def with (name, p)
+
+<table>
+<tr>
+    <td>Name</td>
+    <td><input type="text" name="${name}.name" value="$p.get('name')"/></td>
+</tr>
+<tr>
+    <td>Type</td>
+    <td><input type="text" name="${name}.type" value="$p.d.get('type')"/></td>
+</tr>
+<tr>
+    <td>Unique</td>
+    $if p.d.get('unique'):
+        <td><input type="checkbox" name="${name}.unique" checked/></td>
+    $else:
+        <td><input type="checkbox" name="${name}.unique"/></td>
+</tr>
+<tr>
+    <td>Description</td>
+    <td><input type="text" name="${name}.description" value="$p.d.get('description')"/></td>
+</tr>
+</table>
+<br/>

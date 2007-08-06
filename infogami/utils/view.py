@@ -46,11 +46,14 @@ web.template.Template.globals.update(dict(
   # common utilities
   int = int,
   str = str,
+  bool=bool,
   list = list,
   set = set,
   dict = dict,
   range = range,
   len = len,
+  repr=repr,
+  isinstance=isinstance,
   enumerate=enumerate,
   hasattr = hasattr,
   Dropdown = web.form.Dropdown,
@@ -106,6 +109,15 @@ def spacesafe(text):
     text = text.replace(' ', '&nbsp;');
     return text
     
+@public
+def thingrepr(value):
+    if isinstance(value, list):
+        return ','.join(thingrepr(t) for t in value)
+    if isinstance(value, tdb.Thing):
+        return render.core.repr(value)
+    else:
+        return str(value)
+    
 def set_error(msg):
     if not context.error: context.error = ''
     context.error += '\n' + msg
@@ -155,9 +167,7 @@ _inputs = storage.storage.utils_inputs
 @public
 def render_input(type, name, value, **attrs):
     """Renders html input field of given type."""
-    #@@ quick fix for type='thing foo'
-    type = type.split()[0]
-    return _inputs[type](name, value, **attrs)
+    return _inputs.get(type.name, _inputs['type/string'])(name, value, **attrs)
     
-def register_input_renderer(type, f):
-    _inputs[type] = f
+def register_input_renderer(typename, f):
+    _inputs[typename] = f

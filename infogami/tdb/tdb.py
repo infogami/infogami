@@ -74,7 +74,7 @@ class Thing:
     __setitem__ = __setattr__
     
     def setdata(self, d):
-        self.d = d
+        self.d = web.storage(d)
         self._dirty = True
 
     def save(self, comment='', author=None, ip=None):
@@ -372,6 +372,8 @@ class SimpleTDBImpl:
                 value = int(value)
             elif r.data_type == 3:
                 value = float(value)
+            elif r.data_type == 4:
+                value = (str(value).lower() != "false")
 
             if r.ordering is not None:
                 d.setdefault(r.key, []).append(value)
@@ -401,6 +403,8 @@ class SimpleTDBImpl:
         elif isinstance(value, Thing):
             dt = 1
             value = value.id
+        elif isinstance(value, bool):
+            dt = 4
         elif isinstance(value, (int, long)):
             dt = 2
         elif isinstance(value, float):
@@ -408,7 +412,7 @@ class SimpleTDBImpl:
         else:
             raise BadData, value
         web.insert('datum', False, 
-          version_id=vid, key=key, value=value, data_type=dt, ordering=ordering)        
+          version_id=vid, key=key, value=str(value), data_type=dt, ordering=ordering)        
 
     def save(self, thing, author=None, comment='', ip=None):
         """Saves thing. author, comment and ip are stored in the version info."""
@@ -420,10 +424,6 @@ class SimpleTDBImpl:
             thing.id = web.insert('thing', name=thing.name, parent_id=thing.parent.id, latest_revision=1)
             revision = 1
             tid = thing.id
-
-            #@@ this should be generalized
-            if thing.name == 'type/type':
-                thing.type = thing
         else:
             tid = thing.id
             result = web.query("SELECT revision FROM version \

@@ -1,0 +1,17 @@
+$def with (name, p)
+
+<table>
+<tr>
+    <td>Name</td>
+    <td><input type="text" name="${name}.name" value="$p.name"/></td>
+</tr>
+<tr>
+    <td>Type</td>
+    <td><input type="text" name="${name}.type" value="$p.d.get('type')"/></td>
+</tr>
+<tr>
+    <td>Property Name</td>
+    <td><input type="text" name="${name}.property_name" value="$p.d.get('property_name')"/></td>
+</tr>
+</table>
+<br/>

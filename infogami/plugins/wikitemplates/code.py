@@ -19,9 +19,6 @@ import db, forms
 
 cache = web.storage()
 
-# validation will be disabled while executing movetemplates action
-validation_enabled = True
-
 RE_MACRO = web.re_compile(r'macros/([^/]*)$')
 
 class hooks(tdb.hook):
@@ -39,38 +36,15 @@ class hooks(tdb.hook):
 
     def before_new_version(self, page):
         if page.type.name == 'type/template':
-            site = page.parent
-            path = page.name
-            
-            # ensure that templates are loaded
-            get_templates(site)
-
-            rx = web.re_compile(r'(type/[^/]+)/(?:view|edit).tmpl')
-            match = rx.match(path)
-
-            if match:
-                typename = match.group(1)
-                #_validate_pagetemplate(site, typename, page.body)
-            elif path == 'templates/site.tmpl':
-                _validate_sitetemplate(page.body)
-        
-        if page.type.name == 'type/macro':
-            match = RE_MACRO.match(page.name)
-            if match:
-                name = match.group(1)
-                try:
-                    parse_macro(page.macro)
-                except:
-                    raise ValidationException()
+            _compile_template(page.name, page.body)
+        elif page.type.name == 'type/template':
+            _compile_template(page.name, page.macro)
                     
-def parse_macro(data):
-    return web.template.Template(data, filter=web.websafe)
-
 def _load_macro(page):
     match = RE_MACRO.match(page.name)
     if match:
         name = match.group(1)
-        t = parse_macro(page.macro)
+        t = _compile_template(page.name, page.macro)
         t.__doc__ = page.description
         macro.register_macro(name, t)
         
@@ -98,89 +72,20 @@ def random_string(size=20):
     # pick random letters 
     return "".join(random.sample(string.letters, size))
 
-def _validate_pagetemplate(site, typename, data):
-    from infogami.core import db
-
-    type = db.get_type(site, typename)
-
-    if type is None:
-        raise ValidationException, "Unknown page type: %s.\nMake sure schema is defined for this pagetype." % typename
-    
-    schema = db.get_schema(type)
-    schema.pop('*', None)
-
-    magic = random_string()
-
-    d = web.storage()
-    for k in schema:
-        if k.endswith('*'):
-            d[k] = [k + magic]
-        else:
-            d[k] = k + magic
-
-    v = tdb.Version(0, 0, 0, '', '', '', datetime.datetime.utcnow())
-    p = tdb.Thing(0, 'dummy', site, type, d, v)
-
+def _compile_template(name, text):
     try:
-        t = web.template.Template(data, filter=web.websafe)
-        if validation_enabled:
-            result = str(t(p))
-    except Exception, e: 
-        import traceback
-        traceback.print_exc()
-        raise ValidationException("Template parsing failed: " + str(e))
-    else:
-        if validation_enabled:
-            for k in schema:
-                if (k + magic) not in result:
-                    raise ValidationException("Invalid template: missing %s" % k)
-    
-def _validate_sitetemplate(data):
-    try:
-        t = web.template.Template(data, filter=web.websafe)
-        if validation_enabled:
-            title = random_string()
-            body = random_string()
-            page = web.template.Stowage(title=title, _str=body)
-            result = str(t(page, None))
-    except Exception, e: 
-        raise ValidationException("Template parsing failed: " + str(e))
-    else:
-        if validation_enabled:
-            if title not in result:
-                raise ValidationException("Invalid template: missing page title")
-
-            if body not in result:
-                raise ValidationException("Invalid template: missing page")
-    
-def dummypage(title, body):
-    data = web.storage(title=title, body=body, template="page")
-    page = web.storage(data=data, created=datetime.datetime.utcnow())
-    return page
-    
-def _create_macro(site, page):
-    """create template from a wiki page."""
-    try:
-        return web.template.Template(page.body, filter=web.websafe)
+        return web.template.Template(text, filter=web.websafe, filename=name)
     except web.template.ParseError:
-        print >> web.debug, 'load template', page.name, 'failed'
+        print >> web.debug, 'Template parsing failed for ', name
         import traceback
         traceback.print_exc()
-        pass
+        raise ValidationException("Template parsing failed: " + str(e))
     
 def _load_template(site, page):
     """load template from a wiki page."""
-    try:
-        t = web.template.Template(page.body, filter=web.websafe, filename=page.name)
-    except web.template.ParseError:
-        print >> web.debug, 'load template', page.name, 'failed'
-        import traceback
-        traceback.print_exc()
-        pass
-    else:
-        if site.id not in cache:
-            cache[site.id] = web.storage()
-        cache[site.id][page.name] = t
+    if site.id not in cache:
+        cache[site.id] = web.storage()
+    cache[site.id][page.name] = _compile_template(page.name, page.body)
 
 def load_templates(site):
     """Load all templates from a site.
@@ -254,7 +159,7 @@ def pagetemplate(name, default_template):
             templates = [get_user_template(path), get_wiki_template(path), default_template]
             return saferender(templates, page, *a, **kw)
     return render
-
+    
 def sitetemplate(name, default_template):
     def render(*a, **kw):
         if context.rescue_mode:
@@ -293,22 +198,25 @@ def register_wiki_template(name, filepath, wikipath):
 @infogami.action
 def movetypes():
     delegate.fakeload()
-
     from infogami.core import db
-    db.new_type(context.site, 'type/page', {'title':'string', 'body': 'text'})
-    db.new_type(context.site, 'type/template', {'title':'string', 'body': 'text'})
-    db.new_type(context.site, 'type/macro', {'description': 'string', 'macro': 'text'})
-    db.new_type(context.site, 'type/i18n', {'*': 'string'})
+    
+    site = context.site
+    tstring = db.get_type(site, 'type/string')
+    ttext = db.get_type(site, 'type/text')
 
+    db._create_type(site, 'type/template', [
+        dict(name='title', type=tstring), 
+        dict(name='body', type=ttext)])
+
+    db._create_type(site, 'type/template', [
+        dict(name='description', type=tstring), 
+        dict(name='macro', type=ttext)])
+    
 @infogami.install_hook
 @infogami.action
 def movetemplates():
     """Move templates to wiki."""
-    global validation_enabled
-
     delegate.fakeload()
-    validation_enabled = False
-
     load_templates(context.site)
     for name, filepath, wikipath in wikitemplates.values():
         print "*** %s\t%s -> %s" % (name, filepath, wikipath)
@@ -331,11 +239,16 @@ render.core.preferences = sitetemplate("preferences", render.core.preferences)
 render.core.sitepreferences = sitetemplate("sitepreferences", render.core.sitepreferences)
 render.core.default_view = sitetemplate("default_view", render.core.default_view)
 render.core.default_edit = sitetemplate("default_edit", render.core.default_edit)
+render.core.default_repr = sitetemplate("default_repr", render.core.default_repr)
+render.core.default_ref = sitetemplate("default_ref", render.core.default_ref)
 
 render.core.view = pagetemplate("view", render.core.default_view)
 render.core.edit = pagetemplate("edit", render.core.default_edit)
+render.core.repr = pagetemplate("repr", render.core.default_repr)
+render.core.ref = pagetemplate("ref", render.core.default_ref)
+
 render.core.notfound = sitetemplate("notfound", render.core.notfound)
-render.core.deleted = sitetemplate("notfound", render.core.deleted)
+render.core.deleted = sitetemplate("deleted", render.core.deleted)
     
 # register site and page templates
 register_wiki_template("Site Template", "core/templates/site.html", "templates/site.tmpl")
@@ -362,6 +275,7 @@ register_wiki_template("Template Edit Template",
                        "plugins/wikitemplates/templates/edit.html", 
                        "type/template/edit.tmpl")    
 
+"""
 register_wiki_template("Type View Template", 
                        "plugins/wikitemplates/templates/schema_view.html", 
                        "type/type/view.tmpl")
@@ -369,3 +283,4 @@ register_wiki_template("Type View Template",
 register_wiki_template("Type Edit Template", 
                        "plugins/wikitemplates/templates/schema_edit.html", 
                        "type/type/edit.tmpl")
+"""

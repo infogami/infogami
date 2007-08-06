@@ -62,7 +62,7 @@ def require_login(f):
 
 def login_redirect(path=None):
     if path is None:
-        path = web.ctx.path
+        path = web.ctx.fullpath
     
     query = urllib.urlencode({"redirect":path})
     web.seeother(web.ctx.homepath + "/login?" + query)

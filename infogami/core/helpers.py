@@ -21,7 +21,7 @@ def flatten(d):
     
     >>> d = {'a': 1, 'b': [2, 3], 'c': {'x': 4, 'y': 5}}
     >>> xdict(flatten(d))
-    {'a': 1, 'b[0]': 2, 'b[1]': 3, 'c.x': 4, 'c.y': 5}
+    {'a': 1, 'b#0': 2, 'b#1': 3, 'c.x': 4, 'c.y': 5}
     """
     def traverse(d, prefix, delim, visit):
         for k, v in d.iteritems():
@@ -34,7 +34,6 @@ def flatten(d):
                 visit(prefix + delim + k, v)
 
     def visit(k, v):
-        #k = re.sub(r'#(\d+)', r'[\1]', k)
         d2[k] = v
 
     d2 = {}
@@ -44,9 +43,9 @@ def flatten(d):
 def unflatten(d):
     """Inverse of flatten.
     
-    >>> xdict(unflatten({'a': 1, 'b[0]': 2, 'b[1]': 3, 'c.x': 4, 'c.y': 5}))
+    >>> xdict(unflatten({'a': 1, 'b#0': 2, 'b#1': 3, 'c.x': 4, 'c.y': 5}))
     {'a': 1, 'b': [2, 3], 'c': {'x': 4, 'y': 5}}
-    >>> unflatten({'a[1][2].b': 1})
+    >>> unflatten({'a#1#2.b': 1})
     {'a': [None, [None, None, {'b': 1}]]}
     """
     def setdefault(d, k, v):
@@ -61,7 +60,6 @@ def unflatten(d):
 
     d2 = {}
     for k, v in d.iteritems():
-        #k = re.sub(r'\[(\d+)\]', r'#\1', k)
         setdefault(d2, k, v)
     return d2
 
@@ -93,10 +91,10 @@ def trim(x):
     [{'x': 1}, {'x': 3}]
     >>> trim({'x': 1, 'y': '', 'z': ['a', '', 'b']})
     {'x': 1, 'z': ['a', 'b']}
-    >>> trim(unflatten({'a[1][2].b': 1}))
+    >>> trim(unflatten({'a#1#2.b': 1}))
     {'a': [[{'b': 1}]]}
-    >>> trim(flatten(unflatten({'a[1][2].b': 1})))
-    {'a[1][2].b': 1}    
+    >>> trim(flatten(unflatten({'a#1#2.b': 1})))
+    {'a#1#2.b': 1}    
     """
     def trimlist(x):
         y = []
@@ -122,9 +120,9 @@ def subdict(d, keys):
     """Subset like operation on dictionary.
     
     >>> subdict({'a': 1, 'b': 2, 'c': 3}, ['a', 'c'])
-    {'a':1, 'c': 3}
+    {'a': 1, 'c': 3}
     >>> subdict({'a': 1, 'b': 2, 'c': 3}, ['a', 'c', 'd'])
-    {'a':1, 'c': 3}
+    {'a': 1, 'c': 3}
     """
     return dict((k, d[k]) for k in keys if k in d)
 

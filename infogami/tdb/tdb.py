@@ -402,8 +402,12 @@ class SimpleTDBImpl:
             dt = 0
         elif isinstance(value, Thing):
             dt = 1
+            #@@ Explain this
+            if not isinstance(value, LazyThing):
+                value.save()
             value = value.id
         elif isinstance(value, bool):
+            # bool is also int, so bool check should be done before int.
             dt = 4
         elif isinstance(value, (int, long)):
             dt = 2
@@ -453,7 +457,6 @@ class SimpleTDBImpl:
             raise
         else:
             logger.commit()
-        thing.id = tid
         #@@ created should really be the datetime from database, but this saves a query.
         thing.v = Version(self.parent, vid, thing.id, revision, author_id, ip, comment, created=datetime.datetime.now())
         thing.h = History(self.parent, thing.id)

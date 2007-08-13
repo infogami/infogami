@@ -55,9 +55,6 @@ class edit (delegate.mode):
         thingutil.thingtidy(p)
         return render.edit(p)
     
-    def dict_subset(self, d, keys):
-        return dict([(k, v) for k, v in d.iteritems() if k in keys])
-        
     def get_action(self, i):
         """Finds the action from input."""
         if '_save' in i: return 'save'
@@ -67,6 +64,8 @@ class edit (delegate.mode):
         
     def POST(self, site, path):
         i = web.input(_type="page", _method='post')
+        i = web.storage(helpers.trim(helpers.unflatten(i)))
+        
         action = self.get_action(i)
         comment = i.pop('_comment', None)
         
@@ -80,25 +79,21 @@ class edit (delegate.mode):
             data = self.parse_data(site, type, i)
             p = db.new_version(site, path, type, data)
             return render.edit(p)
-
+            
+        p = db.new_version(site, path, type, i)
         
         if action == 'preview':
+            thingutil.thingtidy(p, fill_missing=True)
             return render.edit(p, preview=True)
         elif action == 'save':
             try:
-                web.transact()
-                d = helpers.trim(helpers.unflatten(i))
-                d = helpers.subdict(d, [k for k in d.keys() if not k.startswith('_')])
-                p = thingutil.thingify(site, path, type, d)
+                thingutil.thingtidy(p, fill_missing=False)
                 p.save(author=context.user, ip=web.ctx.ip, comment=comment)
-                web.commit()
                 return web.seeother(web.changequery(m=None))
             except db.ValidationException, e:
-                web.rollback()
                 utils.view.set_error(str(e))
                 return render.edit(p)
         elif action == 'delete':
-            p = db.get_version(site, path)
             p.type = db.get_type(site, 'type/delete')
             p.save(author=context.user, ip=web.ctx.ip)
             return web.seeother(web.changequery(m=None))
@@ -292,5 +287,3 @@ utils.view.register_input_renderer('type/backreference', backreference_renderer)
 
 # Thing is also displayed as textbox
 utils.view.register_input_renderer('thing', string_renderer)
-
-    

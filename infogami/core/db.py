@@ -91,14 +91,17 @@ def get_version(site, path, revision=None):
     return tdb.withName(path, site, revision=revision and int(revision))
 
 def new_version(site, path, type, data):
-    try:
-        p = tdb.withName(path, site)
-        p.type = type
-        p.setdata(data)
-    except tdb.NotFound:
-        p = tdb.new(path, site, type, data)
-    
-    return p
+    if site.id:
+        try:
+            #@@ Explain this later
+            p = tdb.withName(path, site)
+            p.type = type
+            p.setdata(data)
+            return p
+        except tdb.NotFound:
+            pass
+                
+    return tdb.new(path, site, type, data)
     
 def get_user(site, userid):
     try:

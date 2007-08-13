@@ -2,66 +2,78 @@ from infogami import tdb
 import db
 import web
 
-def thingify(parent, name, type, d):
-    def get_thing():
-        try:
-            return db.get_version(parent, name)
-        except:
-            t = db.new_version(parent, name, type, {})
-            t.save()
-            return t
-        
-    def process(value, type):
+def get_site(thing):
+    """Returns the site in which the given thing is part of."""
+    # parent of site is tdb.root
+    if thing.parent == tdb.root:
+        return thing
+    else:
+        return get_site(thing.parent)
+
+def thingtidy(thing, fill_missing=True):
+    """Tidy a thing by filling missing properties, filling backreferences etc."""
+    def strip_underscore(d):
+        for k in d.keys():
+            if k.startswith('_'):
+                del d[k]
+                    
+    def new_child(d, type):
+        """Create a child thing using d as data."""
+        name = d.pop('name')
+        child = db.new_version(thing, name, type, d)
+        thingtidy(child, fill_missing=fill_missing)
+        return child
+
+    def process_property(value, type):
         if isinstance(value, list):
-            return [process(v, type) for v in value]
-        
-        if type.is_primitive:
+            return [process_property(v, type) for v in value]
+        elif type.is_primitive:
             return primitive_value(type, value)
         elif isinstance(value, dict):
-            #@@ value should not be multi-level dict
-            name = value.pop('name')
-            process_all(value, type)
-            t = db.new_version(get_thing(), name, type, value)
-            t.save()
-            return t
-        elif isinstance(value, tdb.Thing):
+            return new_child(value, type)
+        elif isinstance(value, (tdb.Thing, DefaultThing)):
             return value
+        elif isinstance(value, str):
+            # Name is found when a thing is expected. 
+            # Replacing that with a thing of that name.
+            return db.get_version(get_site(thing), value)
         else:
-            return db.get_version(parent, value)
-            
-    def process_all(d, type):
+            raise Exception, "huh?"
+
+    def process_all_properties(d, type):
         for p in type.properties:
             if p.name in d:
-                _check_unique(p.unique, d[p.name])
-                d[p.name] = process(d[p.name], p.d.type)
-            else:
-                if p.unique:
-                    d[p.name] = default_value(p)
+                d[p.name] = process_property(d[p.name], p.d.type)
+
+    def fill_missing_properties():
+        for p in thing.type.properties:
+            unique = p.d.get('unique', False)
+            if p.name not in thing.d:
+                if unique:
+                    thing.d[p.name] = default_value(p)
                 else:
-                    d[p.name] = []
-                    
-    process_all(d, type)
-    return db.new_version(parent, name, type, d)
-
-def thingtidy(thing):
-    for p in thing.type.properties:
-        if p.name not in thing.d:
-            if p.unique:
-                thing.d[p.name] = default_value(p)
+                    thing.d[p.name] = []
             else:
-                thing.d[p.name] = []
-        else:
-            # correct the case: expecting atom, found list
-            if p.unique and isinstance(thing.d[p.name], list):
-                thing.d[p.name] = web.listget(thing.d[p.name], default_value(p.type))
+                # correct the case where atom is extected and list is found.
+                if unique and isinstance(thing.d[p.name], list):
+                    thing.d[p.name] = web.listget(thing.d[p.name], 0, default_value(p.type))
 
-            # correct the case: expecting list, found atom
-            if not p.unique and not isinstance(thing.d[p.name], list):
-                thing.d[p.name] = [thing.d[p.name]]
-                
-    for r in thing.type.get('backreferences', []):
-        q = {'type': r.d.type, r.d.property_name: thing}
-        thing.d[r.name] = tdb.Things(limit=20, **q).list()
+                # correct the case where list is extected and atom is found.
+                if not unique and not isinstance(thing.d[p.name], list):
+                    thing.d[p.name] = [thing.d[p.name]]
+                    
+    def fill_backreferences():
+        for r in thing.type.get('backreferences', []):
+            q = {'type': r.d.type, r.d.property_name: thing}
+            thing.d[r.name] = tdb.Things(limit=20, **q).list()
+
+    strip_underscore(thing.d)
+    if fill_missing:
+        fill_missing_properties()
+    process_all_properties(thing.d, thing.type)
+    
+    if fill_missing:
+        fill_backreferences()
         
 def _check_unique(unique, value):
     pass

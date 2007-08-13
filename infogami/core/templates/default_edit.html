@@ -2,13 +2,51 @@ $def with (page)
 
 $var title: Edit $page.name
 
-$add_javascript("/files/core/repetition/repetition-model.js")
+$add_javascript("/static/js/repetition/repetition-model.js")
+$add_javascript("/static/js/jquery.js")
 
 <script>
 function changeTemplate() {
     var t = document.edit._type.value;
     document.location.href += '&t=' + t;
 }
+
+function moveup(e) {
+    if (!e) e = window.event;
+    if (e.preventDefault)
+        e.preventDefault();
+    
+    var parents = $ (this).parents().filter("tr[@repeat]");
+    var a = parents[0];
+    var b = parents.prev()[0]
+    swapvalues(a, b);
+    return this.returnValue = false;
+}
+
+function movedown(e) {
+    if (!e) e = window.event;
+    if (e.preventDefault)
+        e.preventDefault();
+    
+    var parents = $ (this).parents().filter("tr[@repeat]");
+    var a = parents[0];
+    var b = parents.next()[0]
+    swapvalues(a, b);
+    return this.returnValue = false;
+}
+
+function swapvalues(a, b) {
+    var ia = $ ('input', a);
+    var ib = $ ('input', b);
+    
+    for (var i=0; i<ia.length; i++) {
+        // swap
+        var t = ia[i].value; 
+        ia[i].value = ib[i].value; 
+        ib[i].value = t; 
+    }
+}
+
 </script>
 
 <form name="edit" method="POST">
@@ -39,12 +77,22 @@ $for p in page.type.properties:
         $for x in page.d[key]:
             <tr repeat="$i">
                 <td colspan="2" style="padding-left:1.0em"> $:render_input(p.d.type, key + "#" + str(i), value=x)</td>
-                <td><button type="remove" template="row_$key">Delete</button></td>
+                <td>
+                    <button type="remove" template="row_$key">Delete</button>
+                    <button type="move-up" template="row_$key" onclick="return moveup.apply(this, [event]);">Move Up</button>
+                    <button type="move-down" template="row_$key" onclick="return movedown.apply(this, [event]);">Move Down</button>
+                </td>
             </tr>
             $ i = i + 1
         <tr id="row_$key" repeat="template">
-            <td colspan="2" style="padding-left:1.0em">$:render_input(p.d.type, key + '#[row_' + key + ']', value="")</td>
-            <td><button type="remove" template="row_$key">Delete</button></td>
+            <td colspan="2" style="padding-left:1.0em">
+                $:render_input(p.d.type, key + '#[row_' + key + ']', value="")
+            </td>
+            <td>
+                <button type="remove" template="row_$key">Delete</button>
+            	<button type="move-up" template="row_$key" onclick="return moveup.apply(this, [event]);">Move Up</button>
+            	<button type="move-down" template="row_$key" onclick="return movedown.apply(this, [event]);">Move Down</button>
+            </td>
         </tr>
         <tr>
             <td></td>

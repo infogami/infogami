@@ -75,7 +75,7 @@ def random_string(size=20):
 def _compile_template(name, text):
     try:
         return web.template.Template(text, filter=web.websafe, filename=name)
-    except web.template.ParseError:
+    except web.template.ParseError, e:
         print >> web.debug, 'Template parsing failed for ', name
         import traceback
         traceback.print_exc()
@@ -208,7 +208,7 @@ def movetypes():
         dict(name='title', type=tstring), 
         dict(name='body', type=ttext)])
 
-    db._create_type(site, 'type/template', [
+    db._create_type(site, 'type/macro', [
         dict(name='description', type=tstring), 
         dict(name='macro', type=ttext)])
     
@@ -265,6 +265,9 @@ register_wiki_template("deleted", "core/templates/deleted.html", "templates/dele
 
 register_wiki_template("Page View Template", "core/templates/view.html", "type/page/view.tmpl")
 register_wiki_template("Page Edit Template", "core/templates/edit.html", "type/page/edit.tmpl")
+
+register_wiki_template("Property Repr Template", "core/templates/property_repr.html", "type/property/repr.tmpl")
+register_wiki_template("Backreference Repr Template", "core/templates/backreference_repr.html", "type/backreference/repr.tmpl")
 
 # register template templates
 register_wiki_template("Template View Template",        

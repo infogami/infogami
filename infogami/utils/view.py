@@ -1,13 +1,15 @@
-from infogami.utils.markdown import markdown, mdx_footnotes
-from context import context
 import web
 import os
-from infogami.core.diff import simple_diff
+
+import infogami
 from infogami import config, tdb
-from infogami.utils.i18n import i18n
 from infogami.core.diff import simple_diff
-import storage
+from infogami.utils.i18n import i18n
+from infogami.utils.markdown import markdown, mdx_footnotes
+
+from context import context
 import macro
+import storage
 
 #@@ This must be moved to some better place
 from infogami.tdb.lru import lrumemoize
@@ -171,3 +173,29 @@ def render_input(type, name, value, **attrs):
     
 def register_input_renderer(typename, f):
     _inputs[typename] = f
+
+@infogami.install_hook
+@infogami.action
+def movefiles():
+    """Move files from every plugin into static directory."""    
+    import delegate
+    import shutil
+    def cp_r(src, dest):
+        if not os.path.exists(src):
+            return
+            
+        if os.path.isdir(src):
+            if not os.path.exists(dest):
+                os.mkdir(dest)
+            for f in os.listdir(src):
+                frm = os.path.join(src, f)
+                to = os.path.join(dest, f)
+                cp_r(frm, to)
+        else:
+            print 'copying %s to %s' % (src, dest)
+            shutil.copy(src, dest)
+    
+    static_dir = os.path.join(os.getcwd(), "static")
+    for plugin in delegate.plugins:
+        src = os.path.join(plugin.path, "files")
+        cp_r(src, static_dir)

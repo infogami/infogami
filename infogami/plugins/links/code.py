@@ -19,7 +19,7 @@ render = utils.view.render.links
 class hook(tdb.hook):
     def before_new_version(self, page):
         if page.type.name == "type/page":
-            page.links = list(view.get_links(page.body))
+            page.links = list(view.get_links(page.get('body', '')))
 
 class backlinks (delegate.mode):
     def GET(self, site, path):

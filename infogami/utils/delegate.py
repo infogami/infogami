@@ -75,6 +75,9 @@ def fakeload():
         
 def delegate(path):
     method = web.ctx.method
+    if method == 'HEAD': 
+        method = 'GET'
+    
     initialize_context()
 
     # redirect foo/ to foo
@@ -105,8 +108,15 @@ def delegate(path):
         from infogami.core import auth
         from infogami.utils.view import render
         
+        if what not in modes:
+            web.seeother(web.changequery(m=None))
+            return
+        
         if what not in ("view", "edit") or auth.has_permission(context.site, context.user, path, what):
-            out = getattr(modes[what](), method)(context.site, path)
+            cls = modes[what]            
+            if not hasattr(cls, method):
+                return web.nomethod(cls)
+            out = getattr(cls(), method)(context.site, path)
         else:
             #context.error = 'You do not have permission to do that.'
             return auth.login_redirect()
@@ -178,4 +188,3 @@ def pickdb(g):
     instance = g[config.db_kind]()
     for k in dir(instance):
         g[k] = getattr(instance, k)
-        

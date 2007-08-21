@@ -27,7 +27,7 @@ def thingtidy(thing, fill_missing=True):
     def process_property(value, type):
         if isinstance(value, list):
             return [process_property(v, type) for v in value]
-        elif type.is_primitive:
+        elif type.d.get('is_primitive'):
             return primitive_value(type, value)
         elif isinstance(value, dict):
             return new_child(value, type)
@@ -79,14 +79,11 @@ def _check_unique(unique, value):
     pass
         
 def primitive_value(type, value):
-    def xbool(v):
-        return str(v).lower() != 'false'
-
     d = {
         'type/int': int,
         'type/string': str,
         'type/text': str,
-        'type/boolean': xbool,
+        'type/boolean': bool,
     }
                
     if type.name in d:
@@ -129,7 +126,7 @@ class DefaultThingData:
             else:
                 return DefaultThing(p.type)
         else:
-            return []            
+            return []     
         
     def __getitem__(self, key):
         try:

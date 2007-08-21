@@ -67,7 +67,7 @@ function swapvalues(a, b) {
 $for p in page.type.properties:
     $ key = p.name
     <tbody>
-    $if not p.unique:
+    $if not p.get('unique'):
         $ i = 0
         <tr>
             <td>$key</td>

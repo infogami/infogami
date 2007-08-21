@@ -97,12 +97,14 @@ def homepath():
 
 @public
 def add_stylesheet(path):
-    context.stylesheets.append(url(path))
+    if url(path) not in context.stylesheets:
+        context.stylesheets.append(url(path))
     return ""
     
 @public
 def add_javascript(path):
-    context.javascripts.append(url(path))
+    if url(path) not in context.javascripts:
+        context.javascripts.append(url(path))
     return ""
 
 @public

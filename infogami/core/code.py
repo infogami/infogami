@@ -214,6 +214,14 @@ class login_preferences:
 
 register_preferences("login_preferences", login_preferences())
 
+class getthings(delegate.page):
+    """Lists all pages with name path/*"""
+    def GET(self, site):
+        i = web.input("q", "type", "limit")
+        print >> web.debug, i
+        things = db.get_things(site, i.type, i.q, i.limit)
+        print "\n".join([thing.name for thing in things])
+    
 class sitepreferences(delegate.page):
     def GET(self, site):
         if not auth.has_permission(context.site, context.user, "sitepreferences", "view"):

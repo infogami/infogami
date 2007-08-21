@@ -171,6 +171,19 @@ def list_pages(site, path):
             AND datum.key = '__type__' AND datum.value != $delete.id
             ORDER BY t.name LIMIT 100""", vars=locals())
                    
+def get_things(site, typename, prefix, limit):
+    """Lists all things whose names start with typename"""
+	
+    pattern =  prefix+'%'
+    type = get_type(site, typename)
+    return web.query("""SELECT t.name FROM thing t 
+            JOIN version ON version.revision = t.latest_revision 
+						AND version.thing_id = t.id
+            JOIN datum ON datum.version_id = version.id 
+            WHERE t.parent_id=$site.id AND t.name LIKE $pattern
+            AND datum.key = '__type__' AND datum.value = $type.id
+            ORDER BY t.name LIMIT $limit""", vars=locals())
+
 def get_site_permissions(site):
     if hasattr(site, 'permissions'):
         return pickle.loads(site.permissions)

@@ -1,10 +1,10 @@
 $def with (type, name, value="", limit=100)
 
-$add_javascript('static/js/jquery/jquery.js')
-$add_javascript('static/js/jquery/jquery.bgiframe.min.js')
-$add_javascript('static/js/jquery/jquery.dimensions.pack.js')
-$add_javascript('static/js/jquery/jquery.autocomplete.js')
-$add_javascript('static/js/autocomplete.js')
-$add_stylesheet('static/jquery.autocomplete.css')
+$add_javascript('/static/js/jquery/jquery.js')
+$add_javascript('/static/js/jquery/jquery.bgiframe.min.js')
+$add_javascript('/static/js/jquery/jquery.dimensions.pack.js')
+$add_javascript('/static/js/jquery/jquery.autocomplete.js')
+$add_javascript('/static/js/autocomplete.js')
+$add_stylesheet('/static/jquery.autocomplete.css')
 
 <input type="text" name="$name" value="$value" autocomplete="true" thingtype="$type" limit="$limit"/>

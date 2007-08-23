@@ -54,7 +54,7 @@ function swapvalues(a, b) {
 <tbody>
     <tr>
         <td>$_.PAGETYPE</td>
-        <td><input type="text" name="_type" value="$page.type.name"></td>
+        <td>$:macros.ThingReference("type/type", "_type", page.type.name)</td>
         <td><input type="button" onclick="changeTemplate()" value="$_.CHANGE"/></td>
     </tr>
     <tr>

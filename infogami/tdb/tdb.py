@@ -439,6 +439,9 @@ class SimpleTDBImpl:
         author_id = author and author.id
         vid = web.insert('version', thing_id=tid, comment=comment, 
             author_id=author_id, ip=ip, revision=revision)
+        
+        #@@ created should really be the datetime from database, but this saves a query.
+        created = datetime.datetime.now()
 
         for k, v in thing.d.items():
             SimpleTDBImpl.savedatum(vid, k, v)
@@ -449,7 +452,7 @@ class SimpleTDBImpl:
             if revision == 1:
                 logger.log('thing', tid, name=thing.name, parent_id=thing.parent.id)
             logger.log('version', vid, thing_id=tid, author_id=author_id, ip=ip, 
-                comment=comment, revision=revision)           
+                comment=comment, revision=revision, created=created)           
             logger.log('data', vid, __type__=thing.type, **thing.d)
             web.commit()
         except:
@@ -457,8 +460,7 @@ class SimpleTDBImpl:
             raise
         else:
             logger.commit()
-        #@@ created should really be the datetime from database, but this saves a query.
-        thing.v = Version(self.parent, vid, thing.id, revision, author_id, ip, comment, created=datetime.datetime.now())
+        thing.v = Version(self.parent, vid, thing.id, revision, author_id, ip, comment, created=created)
         thing.h = History(self.parent, thing.id)
         thing.latest_revision = revision
         thing._dirty = False

@@ -6,13 +6,17 @@ from infogami.tdb import NotFound
 import pickle
 from infogami.utils.view import public
 
-def _create_type(site, name, properties=[], description="", is_primitive=False):
+def _create_type(site, name, properties=[], backreferences=[], description="", is_primitive=False):
     """Quick hack to create a type."""
     def _property(name, type, unique=True, description=""):
         return _get_thing(t, name, tproperty, dict(type=type, unique=unique, description=description))
+        
+    def _backreference(name, type, property_name):
+        return _get_thing(t, name, tbackreference, dict(type=type, property_name=property_name))
 
     ttype = get_type(site, 'type/type')
     tproperty = get_type(site, 'type/property')
+    tbackreference = get_type(site, 'type/backreference')
 
     t = _get_thing(site, name, ttype)
 
@@ -20,6 +24,10 @@ def _create_type(site, name, properties=[], description="", is_primitive=False):
     d['is_primitive'] = is_primitive
     d['description'] = description
     d['properties'] = [_property(**p) for p in properties]
+
+    if backreferences:
+        d['backreferences'] = [_backreference(**b) for b in backreferences]
+        
     t = new_version(site, name, ttype, d)
     t.save()
     return t
@@ -33,13 +41,13 @@ def _get_thing(parent, name, type, d={}):
     return thing
 
 @infogami.install_hook
+@infogami.action
 def tdbsetup():
     """setup tdb for infogami."""
     from infogami import config
     # hack to disable tdb hooks
     tdb.tdb.hooks = []
     tdb.setup()
-
 
     site = _get_thing(tdb.root, config.site, tdb.root)
     from infogami.utils.context import context
@@ -48,6 +56,7 @@ def tdbsetup():
     # type is created with tdb.root as type first and later its type is changed to itself.
     ttype = _get_thing(site, "type/type", tdb.root)
     tproperty = _get_thing(site, "type/property", ttype)
+    tbackreference = _get_thing(site, "type/backreference", ttype)
 
     tint = _create_type(site, "type/int", is_primitive=True)
     tboolean = _create_type(site, "type/boolean", is_primitive=True)
@@ -84,16 +93,16 @@ def tdbsetup():
 
     # for internal use
     _create_type(site, 'type/thing', [])
-
+    
 class ValidationException(Exception): pass
 
 def get_version(site, path, revision=None):
     return tdb.withName(path, site, revision=revision and int(revision))
 
 def new_version(site, path, type, data):
+    # There are cases where site.id is None. 
     if site.id:
         try:
-            #@@ Explain this later
             p = tdb.withName(path, site)
             p.type = type
             p.setdata(data)
@@ -120,9 +129,6 @@ def get_user_by_name(site, username):
 def new_user(site, username, email):
     d = dict(email=email)
     return tdb.new('user/' + username, site, get_type(site, "type/user"), d)
-
-def get_password(user):
-    return db.get_user_preferences(user).d.get('password')
 
 def get_user_preferences(user):
     try:

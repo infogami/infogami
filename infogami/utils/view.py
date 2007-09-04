@@ -38,6 +38,7 @@ def get_doc(text):
 
 web.template.Template.globals.update(dict(
   changequery = web.changequery,
+  url = web.url,
   datestr = web.datestr,
   numify = web.numify,
   ctx = context,
@@ -83,13 +84,6 @@ def _format(text):
 @public
 def link(path, text=None):
     return '<a href="%s">%s</a>' % (web.ctx.homepath + path, text or path)
-
-@public
-def url(path):
-    if path.startswith('/'):
-        return web.ctx.homepath + path
-    else:
-        return path
 
 @public
 def homepath():
@@ -171,6 +165,8 @@ _inputs = storage.storage.utils_inputs
 @public
 def render_input(type, name, value, **attrs):
     """Renders html input field of given type."""
+    if not type.d.get("is_primitive"):
+        return macro._macros.ThingReference(type, name, value)
     return _inputs.get(type.name, _inputs['type/string'])(name, value, **attrs)
     
 def register_input_renderer(typename, f):

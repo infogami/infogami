@@ -2,7 +2,7 @@ $def with (page)
 
 $var title: $_.HISTORY
 
-<p>[<a href="$changequery(m=None)">$_.VIEW</a>][<a href="$changequery(m='edit')">$_.EDIT</a>]</p>
+<p>[<a href="$url()">$_.VIEW</a>][<a href="$url(m='edit')">$_.EDIT</a>]</p>
 
 <form>
 <table>
@@ -19,9 +19,9 @@ $for v in page.h:
       <td>$v.revision</td>
       <td><input type="radio" id="a$v.revision" name="a" value="$v.revision"></td>
       <td><input type="radio" id="b$v.revision" name="b" value="$v.revision"></td>
-      <td><a href="$changequery(m='edit', v=v.revision)">$_.EDIT</a></td>
+      <td><a href="$url(m='edit', v=v.revision)">$_.EDIT</a></td>
       <td>$(v.author or v.ip)</td>
-      <td><a href="$changequery(m=None, v=v.revision)">$datestr(v.created)</a></td>
+      <td><a href="$url(v=v.revision)">$datestr(v.created)</a></td>
       <td>
     </tr>
 </table>

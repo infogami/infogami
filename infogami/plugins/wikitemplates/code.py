@@ -58,19 +58,6 @@ def _load_macros():
         context.site = site
         for m in macros:
             _load_macro(m)
-try:
-    #@@ this should be done lazily
-    _load_macros()
-except:
-    # this fails when doing install. Temporary fix.
-    pass
-    
-def random_string(size=20):
-    import string
-    import random
-
-    # pick random letters 
-    return "".join(random.sample(string.letters, size))
 
 def _compile_template(name, text):
     try:
@@ -80,6 +67,15 @@ def _compile_template(name, text):
         import traceback
         traceback.print_exc()
         raise ValidationException("Template parsing failed: " + str(e))
+
+try:
+    #@@ this should be done lazily
+    _load_macros()
+except:
+    # this fails when doing install. Temporary fix.
+    import traceback
+    traceback.print_exc()
+    pass
     
 def _load_template(site, page):
     """load template from a wiki page."""

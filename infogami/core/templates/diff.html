@@ -4,7 +4,7 @@ $add_stylesheet('/files/core/diff.css')
 
 $var title: $_.DIFF
 
-<p>[<a href="$changequery(m=None, a=None, b=None)">$_.VIEW</a>][<a href="$changequery(m='edit', a=None, b=None)">$_.EDIT</a>]</p>
+<p>[<a href="$url()">$_.VIEW</a>][<a href="$url(m='edit')">$_.EDIT</a>]</p>
 
 <table>
     <tr><th>key</th><th>$_.REVISION $a.v.revision</th><th>$_.REVISION $b.v.revision</th></tr>

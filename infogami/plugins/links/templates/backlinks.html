@@ -2,7 +2,7 @@ $def with (pages)
 
 $var title: $_.BACKLINKS
 
-<p>[<a href="$changequery(m=None)">$_.VIEW</a>][<a href="$changequery(m='edit')">$_.EDIT</a>]</p>
+<p>[<a href="$url()">$_.VIEW</a>][<a href="$url(m='edit')">$_.EDIT</a>]</p>
 
 <ul>
 $for p in pages:

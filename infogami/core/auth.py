@@ -27,12 +27,15 @@ def get_user(site):
 def login(site, username, password, remember=False):
     """Returns the user if login is successful, None otherwise."""
     u = db.get_user_by_name(site, username)
-    prefs = u and db.get_user_preferences(u)
-    if prefs and prefs.get("password") == _hash(password):
+    if check_password(u, password):
         setcookie(u, remember)
         return u
     else:
         return None
+
+def check_password(user, password):
+    prefs = user and db.get_user_preferences(user)
+    return prefs and prefs.get("password") == _hash(password)
 
 def _digest(text):
     return hmac.HMAC(SECRET, text).hexdigest()

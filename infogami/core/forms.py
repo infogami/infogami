@@ -32,10 +32,10 @@ register = Form(
 
 login_preferences = Form(
     Password("oldpassword", notnull, description=_.CURRENT_PASSWORD),
-    Password("password", notnull, description=_.NEW_PASSWORD),
+    Password("password", notnull, vpass, description=_.NEW_PASSWORD),
     Password("password2", notnull, description=_.CONFIRM_PASSWORD),
     Button("Save"),
     validators = [
-        Validator(_.INCORRECT_PASSWORD, lambda i: db.get_password(context.user) == i.oldpassword),
+        Validator(_.INCORRECT_PASSWORD, lambda i: auth.check_password(context.user, i.oldpassword)),
         Validator(_.PASSWORDS_DID_NOT_MATCH, lambda i: i.password == i.password2)]
 )

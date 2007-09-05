@@ -24,3 +24,5 @@ encryption_key = "ofu889e4i5kfem"
 # salt added to password before encrypting
 password_salt = "zxps#2s4g@z"
 
+from_address = "noreply@infogami.org"
+smtp_server = "localhost"

@@ -90,4 +90,3 @@ def upgrade_types():
             p.type = db.get_type(ctx.site, typename)
             properties.append(p)
         _create_type(ctx.site, t.name, properties, backreferences)
-    

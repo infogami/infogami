@@ -86,7 +86,7 @@ def tdbsetup():
         dict(name='body', type=ttext)])
         
     _create_type(site, 'type/user', [
-        dict(name='emaiil', type=tstring), 
+        dict(name='email', type=tstring), 
         dict(name='displayname', type=tstring)])
         
     _create_type(site, 'type/delete', [])
@@ -128,6 +128,11 @@ def get_user_by_name(site, username):
         return tdb.withName('user/' + username, site)
     except NotFound:
         return None
+
+def get_user_by_email(site, email):
+    result = tdb.Things(parent=site, type=get_type(site, 'type/user'), email=email).list()
+    if result:
+        return result[0]
     
 def new_user(site, username, email):
     d = dict(email=email)

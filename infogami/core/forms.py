@@ -14,6 +14,7 @@ login = Form(
 
 vlogin = regexp(r"^[A-Za-z0-9-_]{3,20}$", 'must be between 3 and 20 letters and numbers') 
 vpass = regexp(r".{3,20}", 'must be between 3 and 20 characters')
+vemail = regexp(r".*@.*", "must be a valid email address")
 
 register = Form(
     Textbox('username', 
@@ -23,7 +24,7 @@ register = Form(
             vlogin,
             description=_.USERNAME),
     Textbox('displayname', notnull, description=_.DISPLAYNAME),
-    Textbox('email', notnull, description=_.EMAIL),
+    Textbox('email', notnull, vemail, description=_.EMAIL),
     Password('password', notnull, vpass, description=_.PASSWORD),
     Password('password2', notnull, description=_.CONFIRM_PASSWORD),
     validators = [
@@ -38,4 +39,10 @@ login_preferences = Form(
     validators = [
         Validator(_.INCORRECT_PASSWORD, lambda i: auth.check_password(context.user, i.oldpassword)),
         Validator(_.PASSWORDS_DID_NOT_MATCH, lambda i: i.password == i.password2)]
+)
+
+validemail = Validator("This email address is not registered.", 
+                        lambda email: db.get_user_by_email(context.site, email))
+forgot_password = Form(
+    Textbox('email', notnull, vemail, validemail, description=_.EMAIL),
 )

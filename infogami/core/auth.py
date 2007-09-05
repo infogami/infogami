@@ -50,7 +50,7 @@ def set_password(user, password):
     p.save()
     
 def random_password():
-    import random
+    import random, string
     n = random.randint(8, 16)
     chars = string.letters + string.digits
     password = "".join([random.choice(chars) for i in range(n)])

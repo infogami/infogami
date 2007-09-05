@@ -1,5 +1,5 @@
 import web
-from infogami import utils, tdb
+from infogami import utils, tdb, config
 from infogami.utils import delegate
 from infogami.utils.macro import macro
 from infogami.utils.storage import storage
@@ -174,9 +174,24 @@ class logout(delegate.page):
         referer = web.ctx.env.get('HTTP_REFERER', '/')
         web.seeother(referer)
 
-class login_reminder(delegate.page):
+class forgot_password(delegate.page):
     def GET(self, site):
-        print "Not yet implemented."
+        f = forms.forgot_password()
+        return render.forgot_password(f)
+        
+    def POST(self, site):
+        i = web.input()
+        f = forms.forgot_password()
+        if not f.validates(i):
+            return render.forgot_password(f)
+        else:    
+            user = db.get_user_by_email(site, i.email)
+            username = web.lstrips(user.name, 'user/')
+            web.config.smtp_server = config.smtp_server
+            password = auth.random_password()
+            auth.set_password(user, password)
+            web.sendmail(config.from_address, i.email, render.password_mailer(username, password))
+            return render.passwordsent(i.email)
 
 _preferences = storage.core_preferences
 def register_preferences(name, handler):

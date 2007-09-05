@@ -91,14 +91,14 @@ def homepath():
 
 @public
 def add_stylesheet(path):
-    if url(path) not in context.stylesheets:
-        context.stylesheets.append(url(path))
+    if web.url(path) not in context.stylesheets:
+        context.stylesheets.append(web.url(path))
     return ""
     
 @public
 def add_javascript(path):
-    if url(path) not in context.javascripts:
-        context.javascripts.append(url(path))
+    if web.url(path) not in context.javascripts:
+        context.javascripts.append(web.url(path))
     return ""
 
 @public
@@ -165,7 +165,7 @@ _inputs = storage.storage.utils_inputs
 @public
 def render_input(type, name, value, **attrs):
     """Renders html input field of given type."""
-    if not type.d.get("is_primitive"):
+    if type.name not in _inputs and not type.d.get("is_primitive"):
         return macro._macros.ThingReference(type, name, value)
     return _inputs.get(type.name, _inputs['type/string'])(name, value, **attrs)
     

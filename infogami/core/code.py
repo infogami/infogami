@@ -11,6 +11,7 @@ import auth
 import forms
 import thingutil
 import helpers
+import dbupgrade
 
 render = utils.view.render.core
 
@@ -68,7 +69,6 @@ class edit (delegate.mode):
         
         action = self.get_action(i)
         comment = i.pop('_comment', None)
-        
         try:
             type = db.get_type(site, i._type)
         except tdb.NotFound:
@@ -218,7 +218,6 @@ class getthings(delegate.page):
     """Lists all pages with name path/*"""
     def GET(self, site):
         i = web.input("q", "type", "limit")
-        print >> web.debug, i
         things = db.get_things(site, i.type, i.q, i.limit)
         print "\n".join([thing.name for thing in things])
     

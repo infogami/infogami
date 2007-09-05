@@ -93,6 +93,9 @@ def tdbsetup():
 
     # for internal use
     _create_type(site, 'type/thing', [])
+
+    import dbupgrade
+    dbupgrade.mark_upgrades()
     
 class ValidationException(Exception): pass
 

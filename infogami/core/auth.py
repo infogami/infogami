@@ -4,6 +4,7 @@ import hmac
 import web
 import urllib
 from infogami import config
+from infogami.utils.context import context as ctx
 
 SECRET = config.encryption_key
 SALT = config.password_salt
@@ -57,7 +58,7 @@ def random_password():
 
 def require_login(f):
     def g(*a, **kw):
-        if not get_user():
+        if not get_user(ctx.site):
             return login_redirect()
         return f(*a, **kw)
         

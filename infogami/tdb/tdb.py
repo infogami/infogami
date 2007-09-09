@@ -330,15 +330,20 @@ class SimpleTDBImpl:
                 
     def _with(self, **kw):
         self.stats.queries += 1
+        def join(sep, items):
+            if not items: 
+                return ""
+            else:
+                result = items[0]
+                for i in items[1:]:
+                    result = result + sep + i
+                return result
         try:
-            wheres = []
-            for k, v in kw.items():
-                w = web.reparam(k + " = $v", locals())
-                wheres.append(str(w))
-            where = " AND ".join(wheres)
+            wheres = [web.reparam(k + " = $v", locals()) for k, v in kw.items()]
+            where = join(" AND ", wheres)
             return web.select('thing', where=where)[0]
         except IndexError:
-            raise NotFound
+            raise NotFound, str(kw)
         
             
     def _load(self, t, revision=None):

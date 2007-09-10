@@ -88,14 +88,14 @@ class edit (delegate.mode):
             try:
                 thingutil.thingtidy(p, fill_missing=False)
                 p.save(author=context.user, ip=web.ctx.ip, comment=comment)
-                return web.seeother(web.changequery(m=None))
+                return web.seeother(web.changequery(query={}))
             except db.ValidationException, e:
                 utils.view.set_error(str(e))
                 return render.edit(p)
         elif action == 'delete':
             p.type = db.get_type(site, 'type/delete')
             p.save(author=context.user, ip=web.ctx.ip)
-            return web.seeother(web.changequery(m=None))
+            return web.seeother(web.changequery(query={}))
 
 class history (delegate.mode):
     def GET(self, site, path):
@@ -148,7 +148,7 @@ class login(delegate.page):
             f.note = 'Invalid username or password.'
             return render.login(f)
 
-        web.seeother(web.ctx.homepath + i.redirect)
+        web.seeother(i.redirect)
         
 class register(delegate.page):
     def GET(self, site):
@@ -165,7 +165,7 @@ class register(delegate.page):
             user.save()
             auth.set_password(user, i.password)
             auth.setcookie(user, i.remember)
-            web.seeother(web.ctx.homepath + i.redirect)
+            web.seeother(i.redirect)
 
 class logout(delegate.page):
     def POST(self, site):

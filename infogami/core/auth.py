@@ -69,7 +69,7 @@ def login_redirect(path=None):
         path = web.ctx.fullpath
     
     query = urllib.urlencode({"redirect":path})
-    web.seeother(web.ctx.homepath + "/login?" + query)
+    web.seeother("/login?" + query)
     raise StopIteration
 
 def has_permission(site, user, path, mode):

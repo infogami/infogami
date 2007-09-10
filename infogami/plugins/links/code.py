@@ -6,15 +6,14 @@ Creates a new set of database tables to keep track of them.
 Creates a new `m=backlinks` to display the results.
 """
 
-from infogami import utils
-from infogami.utils import delegate
-
-import view
-from infogami import tdb
-from infogami.core import db
 import web
 
-render = utils.view.render.links
+from infogami import tdb
+from infogami.core import db
+from infogami.utils import delegate
+from infogami.utils.template import render
+
+import view
 
 class hook(tdb.hook):
     def before_new_version(self, page):

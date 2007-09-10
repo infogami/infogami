@@ -4,6 +4,7 @@ from infogami.utils import delegate
 from infogami.utils.macro import macro
 from infogami.utils.storage import storage
 from infogami.utils.context import context
+from infogami.utils.template import render
 
 from diff import better_diff
 import db
@@ -12,8 +13,6 @@ import forms
 import thingutil
 import helpers
 import dbupgrade
-
-render = utils.view.render.core
 
 def notfound():
     web.ctx.status = '404 Not Found'

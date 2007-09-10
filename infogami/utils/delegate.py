@@ -1,10 +1,11 @@
-import glob, os.path
+import os.path
 import web
 from infogami import config
 
+import template
+import macro
 import view
 from context import context
-import i18n
 
 urls = (
   '/(.*)', 'item'
@@ -106,7 +107,6 @@ def delegate(path):
         
         #@@ move this to some better place
         from infogami.core import auth
-        from infogami.utils.view import render
         
         if what not in modes:
             web.seeother(web.changequery(m=None))
@@ -179,9 +179,9 @@ def _load():
             plugins += _list_plugins(root)
             
     for plugin in plugins:
-        view.load_templates(plugin.path)
+        template.load_templates(plugin.path)
+        macro.load_macros(plugin.path)
         __import__(plugin.module + '.code', globals(), locals(), ['plugins'])
-        view.load_macros(plugin.path)
 
 def pickdb(g):
     """Looks up the db type to use in config and exports its functions."""

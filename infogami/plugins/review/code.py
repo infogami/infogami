@@ -6,7 +6,7 @@ Creates '/changes' page for displaying modifications since last review.
 """
 
 from infogami.utils import delegate, view
-from infogami.utils.view import render
+from infogami.utils.template import render
 from infogami import core
 from infogami.core.auth import require_login
 
@@ -18,7 +18,7 @@ class changes (delegate.page):
     def GET(self, site):
         user = core.auth.get_user()
         d = db.get_modified_pages(site, user.id)
-        return render.review.changes(web.ctx.homepath, d)
+        return render.changes(web.ctx.homepath, d)
 
 def input():
 	i = web.input("a", "b", "c")
@@ -45,9 +45,9 @@ class review (delegate.mode):
         map = core.diff.better_diff(alines, blines)
 
         view.add_stylesheet('core', 'diff.css')
-        diff = render.core.diff(map, xa, xb)
+        diff = render.diff(map, xa, xb)
         
-        return render.review.review(path, diff, i.a, i.b, i.c)
+        return render.review(path, diff, i.a, i.b, i.c)
         
 class approve (delegate.mode):
     @require_login
@@ -55,7 +55,7 @@ class approve (delegate.mode):
         i = input()
 
         if i.c != core.db.get_version(site, path).revision:
-            return render.review.parallel_modification()
+            return render.parallel_modification()
 
         user = core.auth.get_user()
 
@@ -74,7 +74,7 @@ class revert (delegate.mode):
         i = input()
 
         if i.c != core.db.get_version(site, path).revision:
-            return render.review.parallel_modification()
+            return render.parallel_modification()
    
         if i.a == i.b:
 	        return approve().POST(site, path)

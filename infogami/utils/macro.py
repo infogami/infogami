@@ -5,28 +5,34 @@ Macros take argument string as input and returns result as markdown text.
 """
 from markdown import markdown
 import web
-from storage import SiteLocalDict
+import os
 
-_macros = SiteLocalDict()
+import template
+import storage
 
-def _get_macro(name):
-    from context import context
-    site = context.get("site")
-    return _macros[site and site.id].get(name, _macros[None].get(name))
+# macros loaded from disk
+diskmacros = template.DiskTemplateSource()
+# macros specified in the code
+codemacros = web.storage()  
+      
+macrostore = storage.DictPile()
+macrostore.add_dict(diskmacros)
+macrostore.add_dict(codemacros)
 
 def macro(f):
     """Decorator to register a markdown macro.
     Macro is a function that takes argument string and returns result as markdown string.
     """
-    register_macro(f.__name__, f)
+    codemacros[f.__name__] = f
     return f
-    
-def register_macro(name, f):
-    _macros[name] = f
-    
-def unregister_macro(name):
-    if name in _macros:
-        del _macros[name]
+
+def load_macros(plugin_root):
+    """Adds $plugin_root/macros to macro search path."""
+    path = os.path.join(plugin_root, 'macros')
+    if os.path.isdir(path):
+        diskmacros.load_templates(path)
+
+#-- macro execution 
 
 def safeeval_args(args):
     """Evalues the args string safely using templator."""
@@ -37,13 +43,15 @@ def safeeval_args(args):
     return result[0]
     
 def call_macro(name, args):
-    if name in _macros:
+    if name in macrostore:
         try:
-            macro = _macros[name]
+            macro = macrostore[name]
             args, kwargs = safeeval_args(args)
             result = macro(*args, **kwargs)
         except Exception, e:
             result = "%s failed with error: <pre>%s</pre>" % (name, web.websafe(str(e)))
+            import traceback
+            traceback.print_exc()
         return str(result).decode('utf-8')
     else:
         return "Unknown macro: <pre>%s</pre>" % name
@@ -88,6 +96,8 @@ class MacroExtension(markdown.Extension):
 def makeExtension(configs={}): 
     return MacroExtension(configs=configs)
 
+#-- sample macros 
+
 @macro
 def HelloWorld():
     """Hello world macro."""
@@ -98,16 +108,7 @@ def ListOfMacros():
     """Lists all available macros."""
     out = ""
     out += "<ul>"
-    for name, macro in _macros.items():
+    for name, macro in macrostore.items():
         out += '  <li><b>%s</b>: %s</li>\n' % (name, macro.__doc__ or "")
     out += "</ul>"
     return out
-    
-if __name__ == "__main__":
-    def get_markdown(text):
-        md = markdown.Markdown(source=text, safe_mode=False)
-        makeExtension().extendMarkdown(md, markdown.__dict__)
-        return md
-    
-    print get_markdown("This is HelloWorld Macro. {{HelloWorld()}}\n\n" + 
-            "And this is the list of available macros. {{ListOfMacros()}}")

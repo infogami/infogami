@@ -2,12 +2,13 @@ import web
 import os
 
 import infogami
-from infogami import config, tdb
+from infogami import tdb
 from infogami.core.diff import simple_diff
 from infogami.utils.i18n import i18n
 from infogami.utils.markdown import markdown, mdx_footnotes
 
 from context import context
+import template
 import macro
 import storage
 
@@ -18,9 +19,6 @@ wiki_processors = []
 def register_wiki_processor(p):
     wiki_processors.append(p)
     
-def register_markdown_extionsion(name, m):
-    markdown_extensions[name] = m
-
 def _register_mdx_extensions(md):
     """Register required markdown extensions."""
     # markdown's interface to specifying extensions is really painful.
@@ -43,7 +41,7 @@ web.template.Template.globals.update(dict(
   numify = web.numify,
   ctx = context,
   _ = i18n(),
-  macros = storage.ReadOnlyDict(macro._macros),
+  macros = storage.ReadOnlyDict(macro.macrostore),
   diff = simple_diff,
   
   # common utilities
@@ -63,7 +61,7 @@ web.template.Template.globals.update(dict(
   slice = slice,
 ))
 
-render = web.storage()
+render = template.render
 
 def public(f):
     """Exposes a funtion in templates."""
@@ -112,7 +110,7 @@ def thingrepr(value):
     if isinstance(value, list):
         return ','.join(thingrepr(t) for t in value)
     if isinstance(value, tdb.Thing):
-        return render.core.repr(value)
+        return render.repr(value)
     else:
         return str(value)
     
@@ -120,26 +118,8 @@ def set_error(msg):
     if not context.error: context.error = ''
     context.error += '\n' + msg
 
-def load_templates(dir):
-    cache = getattr(config, 'cache_templates', True)
-
-    path = dir + "/templates/"
-    if os.path.exists(path):
-        name = os.path.basename(dir)
-        render[name] = web.template.render(path, cache=cache)
-
-def load_macros(dir):
-    cache = getattr(config, 'cache_templates', True)
-
-    path = dir + "/macros/"
-    if os.path.exists(path):
-        macros = web.template.render(path, cache=cache)
-        names = [name[:-5] for name in os.listdir(path) if name.endswith('.html')]
-        for name in names:
-            macro.register_macro(name, getattr(macros, name))
-        
 def render_site(url, page):
-    return render.core.site(page)
+    return render.site(page)
 
 def get_static_resource(path):
     rx = web.re_compile(r'^files/([^/]*)/(.*)$')
@@ -197,3 +177,4 @@ def movefiles():
     for plugin in delegate.plugins:
         src = os.path.join(plugin.path, "files")
         cp_r(src, static_dir)
+

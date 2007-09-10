@@ -1,63 +1,98 @@
 """
-wikitemplates: allow keeping templates in wiki
+wikitemplates: allow keeping templates and macros in wiki
 """
 
 import web
-import datetime
 import os
+from UserDict import DictMixin
 
 import infogami
-from infogami.utils import delegate, macro
-from infogami.utils.context import context
-from infogami.utils.view import render, set_error
-from infogami.utils.storage import storage
-from infogami import config
+from infogami import core, tdb
 from infogami.core.db import ValidationException
-from infogami import core
-from infogami import tdb
-import db, forms
+from infogami.utils import delegate, macro, template, storage
+from infogami.utils.context import context
+from infogami.utils.template import render
 
-cache = web.storage()
+import db
 
-RE_MACRO = web.re_compile(r'macros/([^/]*)$')
+class WikiSource(DictMixin):
+    """Template source for templates in the wiki"""
+    def __init__(self, templates):
+        self.templates = templates
+        
+    def getroot(self):
+        return ""
+        
+    def __getitem__(self, key):
+        key = self.process_key(key)
+        root = self.getroot()
+        if root is None:
+            raise KeyError, key
+        return self.templates[root+key]
+        
+    def keys(self):
+        return [self.unprocess_key(k) for k in self.templates.keys()]
+        
+    def process_key(self, key):
+        # There are two types of templates; regular templates and type templates.
+        # regular template with name xxx will be available at templates/xxx.tmpl in the wiki.
+        # type template with name type/xxx/yyy will be available at type/xxx/yyy.tmpl in the wiki.
+        # So name of regular templates need to be prefixed with 'templates/' to get the wiki path.
+        if not key.startswith('type/'):
+            return 'templates/' + key + ".tmpl"
+        else:
+            return key + ".tmpl"
+            
+    def unprocess_key(self, key):
+        key = web.lstrips(key, 'templates/')
+        key = web.rstrips(key, '.tmpl')
+        return key
+    
+class MacroSource(WikiSource):
+    def process_key(self, key):
+        # macro foo is availble at path macros/foo
+        return 'macros/' + key
+        
+    def unprocess_key(self, key):
+        return web.lstrips(key, 'macros/')
+    
+class UserSource(WikiSource):
+    """Template source for user templates."""
+    def getroot(self):
+        from infogami.core import db
+        if context.user:
+            preferences = db.get_user_preferences(context.user)
+            root = getattr(preferences, 'wikitemplates.template_root', None)
+            if root is not None and root.strip() != "":
+                return root
+        return None
+
+wikitemplates = storage.SiteLocalDict()
+template.render.add_source(WikiSource(wikitemplates))
+template.render.add_source(UserSource(wikitemplates))
+
+wikimacros = storage.SiteLocalDict()
+macro.macrostore.add_dict(MacroSource(wikimacros))
 
 class hooks(tdb.hook):
     def on_new_version(self, page):
+        """Updates the template/macro cache, when a new version is saved or deleted."""
         if page.type.name == 'type/template':
-            site = page.parent
-            _load_template(site, page)
-            
+            _load_template(page)            
         elif page.type.name == 'type/macro':
             _load_macro(page)
         elif page.type.name == 'type/delete':
-            # if the type of previous version is template, then unload template
-            # if the type of previous version is macro, then unregister macro
-            pass
-
+            if page.name in wikitemplates:
+                del wikitemplates[page.name]
+            if page.name in wikimacros:
+                del wikimacros[page.name]
+                
     def before_new_version(self, page):
+        """Validates template/macro, before it is saved, by compiling it."""
         if page.type.name == 'type/template':
             _compile_template(page.name, page.body)
-        elif page.type.name == 'type/template':
+        elif page.type.name == 'type/macro':
             _compile_template(page.name, page.macro)
-                    
-def _load_macro(page):
-    match = RE_MACRO.match(page.name)
-    if match:
-        name = match.group(1)
-        t = _compile_template(page.name, page.macro)
-        t.__doc__ = page.description
-        macro.register_macro(name, t)
-        
-def _load_macros():
-    import db
-    #@@ TODO: global macros must be available for every site
-    web.load()
-    context.load()
-    for site in db.get_all_sites():
-        macros = db.get_all_macros(site)
-        context.site = site
-        for m in macros:
-            _load_macro(m)
 
 def _compile_template(name, text):
     try:
@@ -68,131 +103,33 @@ def _compile_template(name, text):
         traceback.print_exc()
         raise ValidationException("Template parsing failed: " + str(e))
 
-try:
-    #@@ this should be done lazily
-    _load_macros()
-except:
-    # this fails when doing install. Temporary fix.
-    import traceback
-    traceback.print_exc()
-    pass
-    
-def _load_template(site, page):
+def _load_template(page):
     """load template from a wiki page."""
-    if site.id not in cache:
-        cache[site.id] = web.storage()
-    cache[site.id][page.name] = _compile_template(page.name, page.body)
-
-def load_templates(site):
-    """Load all templates from a site.
-    """
-    pages = db.get_all_templates(site)    
-    for p in pages:
-        _load_template(site, p)
-
-def get_templates(site):
-    if site.id not in cache:
-        cache[site.id] = web.storage()
+    wikitemplates[page.name] = _compile_template(page.name, page.body)
+                    
+def _load_macro(page):
+    t = _compile_template(page.name, page.macro)
+    t.__doc__ = page.d.get('description')
+    wikimacros[page.name] = t
+    
+def setup():
+    delegate.fakeload()
+    def load_macros(site): 
+        for m in db.get_all_macros(site):
+            _load_macro(m)
+    
+    def load_templates(site):
+        for t in db.get_all_templates(site):
+            _load_template(t)
+    
+    for site in db.get_all_sites():
+        context.site = site
+        load_macros(site)
         load_templates(site)
-    return cache[site.id]
-
-def get_site():
-    from infogami.core import db
-    return db.get_site(config.site)
     
-def usermode(f):
-    from infogami import tdb
-    def g(*a, **kw):
-        try:
-            tdb.impl.hints.mode = 'user'
-            return f(*a, **kw)
-        finally:
-            tdb.impl.hints.mode = 'system'
-    
-    g.__name__ = f.__name__
-    return g
-
-@usermode
-def saferender(templates, *a, **kw):
-    """Renders using the first successful template from the list of templates."""
-    for t in templates:
-        if t is None:
-            continue
-        try:
-            result = t(*a, **kw)
-            content_type = getattr(result, 'ContentType', 'text/html; charset=utf-8').strip()
-            web.header('Content-Type', content_type, unique=True)
-            return result
-        except Exception, e:
-            print >> web.debug, str(e)
-            import traceback
-            traceback.print_exc()
-            set_error(str(t.filename) + ': error in processing template: ' + e.__class__.__name__ + ': ' + str(e) + ' (falling back to default template)')
-     
-    return "Unable to render this page."            
-    
-def get_user_template(path):
-    from infogami.core import db
-    if context.user is None:
-        return None
-    else:
-        preferences = db.get_user_preferences(context.user)
-        root = getattr(preferences, 'wikitemplates.template_root', None)
-        if root is None or root.strip() == "":
-            return None
-        path = "%s/%s" % (root, path)
-        return get_templates(get_site()).get(path, None)
-    
-def get_wiki_template(path):
-    return get_templates(get_site()).get(path, None)
-    
-def pagetemplate(name, default_template):
-    def render(page, *a, **kw):
-        if context.rescue_mode:
-            return default_template(page, *a, **kw)
-        else:
-            path = "%s/%s.tmpl" % (page.type.name, name)
-            templates = [get_user_template(path), get_wiki_template(path), default_template]
-            return saferender(templates, page, *a, **kw)
-    return render
-    
-def sitetemplate(name, default_template):
-    def render(*a, **kw):
-        if context.rescue_mode:
-            return default_template(*a, **kw)
-        else:
-            path = 'templates/%s.tmpl' % (name)
-            templates = [get_user_template(path), get_wiki_template(path), default_template]
-            return saferender(templates, *a, **kw)
-    return render
-        
-class template_preferences:
-    def GET(self, site):
-        prefs = core.db.get_user_preferences(context.user)
-        path = prefs.get('wikitemplates.template_root', "")
-        f = forms.template_preferences()
-        f.fill(dict(path=path))
-        return render.wikitemplates.template_preferences(f)
-        
-    def POST(self, site):
-        i = web.input()
-        prefs = core.db.get_user_preferences(context.user)
-        prefs['wikitemplates.template_root'] = i.path
-        prefs.save()
-        
-core.code.register_preferences("template_preferences", template_preferences())
-
-wikitemplates = storage.wikitemplates
-
-def register_wiki_template(name, filepath, wikipath):
-    """Registers a wiki template. 
-    All registered templates are moved to wiki on `movetemplates` action.
-    """
-    wikitemplates[wikipath] = ((name, filepath, wikipath))
-
 @infogami.install_hook
-@infogami.action
-def movetypes():
+def createtypes():
+    """Create type/template and type/macro on install."""
     delegate.fakeload()
     from infogami.core import db
     
@@ -212,74 +149,66 @@ def movetypes():
 @infogami.action
 def movetemplates():
     """Move templates to wiki."""
+    def get_title(name):
+        if name.startswith('type/'):
+            type, name = name.rsplit('/', 1)
+            title = '%s template for %s' % (name, type)
+        else:
+            title = '%s template' % (name)
+        return title
+
     delegate.fakeload()
-    load_templates(context.site)
-    for name, filepath, wikipath in wikitemplates.values():
-        print "*** %s\t%s -> %s" % (name, filepath, wikipath)
-        _move_template(context.site, name, filepath, wikipath)
+    for name, t in template.disktemplates.items():
+        if name.startswith('type'): 
+            prefix = ''
+        else: 
+            prefix = 'templates/'
+        wikipath = _wikiname(name, prefix, '.tmpl')
+        title = get_title(name)
+        body = open(t.filepath).read()
+        d = web.storage(title=title, body=body)
+        print 'movetemplates: %s -> %s' % (t.filename, wikipath)
+        _new_version(wikipath, 'type/template', d)
+        
+@infogami.install_hook
+@infogami.action
+def movemacros():
+    """Move macros to wiki."""
+    delegate.fakeload()
+    for name, m in macro.diskmacros.items():
+        wikipath = _wikiname(name, 'macros/', '')
+        body = open(m.filepath).read()
+        d = web.storage(description='', macro=body)
+        print 'movemacros: %s -> %s' % (m.filename, wikipath)
+        _new_version(wikipath, 'type/macro', d)
 
-def _move_template(site, title, path, dbpath):
+def _wikiname(name, prefix, suffix):
+    base, extn = os.path.splitext(name)
+    return prefix + base + suffix
+        
+def _new_version(name, typename, d):
     from infogami.core import db
-    root = os.path.dirname(infogami.__file__)
-    body = open(root + "/" + path).read()
-    d = web.storage(title=title, body=body)
-    type = db.get_type(site, "type/template")
-    db.new_version(site, dbpath, type, d).save()
+    type = db.get_type(context.site, typename)
+    db.new_version(context.site, name, type, d).save()
 
-render.core.site = sitetemplate('site', render.core.site)
-render.core.history = sitetemplate("history", render.core.history)
-render.core.login = sitetemplate("login", render.core.login)
-render.core.register = sitetemplate("register", render.core.register)
-render.core.diff = sitetemplate("diff", render.core.diff)
-render.core.preferences = sitetemplate("preferences", render.core.preferences)
-render.core.sitepreferences = sitetemplate("sitepreferences", render.core.sitepreferences)
-render.core.default_view = sitetemplate("default_view", render.core.default_view)
-render.core.default_edit = sitetemplate("default_edit", render.core.default_edit)
-render.core.default_repr = sitetemplate("default_repr", render.core.default_repr)
-render.core.default_ref = sitetemplate("default_ref", render.core.default_ref)
+class template_preferences:
+    """Preferences to choose template root."""
+    def GET(self, site):
+        import forms
+        prefs = core.db.get_user_preferences(context.user)
+        path = prefs.get('wikitemplates.template_root', "")
+        f = forms.template_preferences()
+        f.fill(dict(path=path))
+        return render.template_preferences(f)
 
-render.core.view = pagetemplate("view", render.core.default_view)
-render.core.edit = pagetemplate("edit", render.core.default_edit)
-render.core.repr = pagetemplate("repr", render.core.default_repr)
-render.core.ref = pagetemplate("ref", render.core.default_ref)
+    def POST(self, site):
+        i = web.input()
+        prefs = core.db.get_user_preferences(context.user)
+        prefs['wikitemplates.template_root'] = i.path
+        prefs.save()
 
-render.core.notfound = sitetemplate("notfound", render.core.notfound)
-render.core.deleted = sitetemplate("deleted", render.core.deleted)
-    
-# register site and page templates
-register_wiki_template("Site Template", "core/templates/site.html", "templates/site.tmpl")
-register_wiki_template("History Template", "core/templates/history.html", "templates/history.tmpl")
-register_wiki_template("Login Template", "core/templates/login.html", "templates/login.tmpl")
-register_wiki_template("Register Template", "core/templates/register.html", "templates/register.tmpl")
-register_wiki_template("Diff Template", "core/templates/diff.html", "templates/diff.tmpl")
-register_wiki_template("Preferences Template", "core/templates/preferences.html", "templates/preferences.tmpl")
-register_wiki_template("Site Preferences Template", "core/templates/sitepreferences.html", "templates/sitepreferences.tmpl")
-register_wiki_template("Default View Template", "core/templates/default_view.html", "templates/default_view.tmpl")
-register_wiki_template("Default Edit Template", "core/templates/default_edit.html", "templates/default_edit.tmpl")
-register_wiki_template("notfound", "core/templates/notfound.html", "templates/notfound.tmpl")
-register_wiki_template("deleted", "core/templates/deleted.html", "templates/deleted.tmpl")
+from infogami.core.code import register_preferences
+register_preferences("template_preferences", template_preferences())
 
-register_wiki_template("Page View Template", "core/templates/view.html", "type/page/view.tmpl")
-register_wiki_template("Page Edit Template", "core/templates/edit.html", "type/page/edit.tmpl")
-
-register_wiki_template("Property Repr Template", "core/templates/property_repr.html", "type/property/repr.tmpl")
-register_wiki_template("Backreference Repr Template", "core/templates/backreference_repr.html", "type/backreference/repr.tmpl")
-
-# register template templates
-register_wiki_template("Template View Template",        
-                       "plugins/wikitemplates/templates/view.html", 
-                       "type/template/view.tmpl")    
-
-register_wiki_template("Template Edit Template", 
-                       "plugins/wikitemplates/templates/edit.html", 
-                       "type/template/edit.tmpl")    
-
-"""
-register_wiki_template("Type View Template", 
-                       "plugins/wikitemplates/templates/schema_view.html", 
-                       "type/type/view.tmpl")
-
-register_wiki_template("Type Edit Template", 
-                       "plugins/wikitemplates/templates/schema_edit.html", 
-                       "type/type/edit.tmpl")
-"""
+# load templates and macros from all sites.
+setup()

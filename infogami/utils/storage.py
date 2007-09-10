@@ -4,6 +4,7 @@ Useful datastructures.
 
 import web
 import copy
+from UserDict import DictMixin
 
 class OrderedDict(dict):
     """
@@ -163,12 +164,7 @@ class SiteLocalDict:
         site = getattr(context, 'site', None)
         site_id = site and site.id
         if site_id not in self.__d:
-            self.__d[site_id] = web.storage(self.__d.get(None, {}))
-            
-            #@@ Hack: using __d[None] as globals
-            if site_id is not None:
-                self.__d[site_id].update(self.__d[None])
-                                
+            self.__d[site_id] = web.storage()
         return self.__d[site_id]
 
 class ReadOnlyDict:
@@ -184,8 +180,45 @@ class ReadOnlyDict:
             return self._d[key]
         except KeyError:
             raise AttributeError, key
+
+class DictPile(DictMixin):
+    """Pile of ditionaries. 
+    A key in top dictionary covers the key with the same name in the bottom dictionary.
+    
+        >>> a = {'x': 1, 'y': 2}
+        >>> b = {'y': 5, 'z': 6}
+        >>> d = DictPile([a, b])
+        >>> d['x'], d['y'], d['z'] 
+        (1, 5, 6)
+        >>> b['x'] = 4
+        >>> d['x'], d['y'], d['z'] 
+        (4, 5, 6)
+        >>> c = {'x':0, 'y':1}
+        >>> d.add_dict(c)
+        >>> d['x'], d['y'], d['z']
+        (0, 1, 6)
+    """
+    def __init__(self, dicts=[]):
+        self.dicts = dicts[:]
         
+    def add_dict(self, d):
+        """Adds d to the pile of dicts at the top.
+        """
+        self.dicts.append(d)
+        
+    def __getitem__(self, key):
+        for d in self.dicts[::-1]:
+            if key in d:
+                return d[key]
+        else:
+            raise KeyError, key
+    
+    def keys(self):
+        keys = set()
+        for d in self.dicts:
+            keys.update(d.keys())
+        return list(keys)
+            
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-    

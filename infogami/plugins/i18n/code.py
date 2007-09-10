@@ -3,15 +3,14 @@ i18n: allow keeping i18n strings in wiki
 """
 
 import web
+
+import infogami
+from infogami import config, tdb
 from infogami.utils import delegate, i18n
 from infogami.utils.context import context
 from infogami.utils.view import public
-from infogami.plugins.wikitemplates.code import register_wiki_template
-from infogami import config
-from infogami import tdb
-import infogami
+
 import db
-import os.path
 
 re_i18n = web.re_compile(r'^i18n/strings\.(.*)$')
 
@@ -46,15 +45,6 @@ def update_strings(lang, data):
     strings = i18n.get_strings()
     items = [(key.split('.', 1)[1], value) for key, value in data.iteritems() if '.' in key and value.strip() != '']
     strings[lang] = dict(items)
-
-# register i18n templates
-register_wiki_template("i18n View Template", 
-                       "plugins/i18n/templates/view.html",
-                       "type/i18n/view.tmpl")
-
-register_wiki_template("i18n edit Template", 
-                       "plugins/i18n/templates/edit.html",
-                       "type/i18n/edit.tmpl")
 
 @infogami.install_hook
 def createtype():

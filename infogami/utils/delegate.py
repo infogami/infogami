@@ -122,6 +122,9 @@ def delegate(path):
             return auth.login_redirect()
 
     if out is not None:
+        if isinstance(out, str):
+            out = web.template.Stowage(_str=out, title=path)
+            
         if hasattr(out, 'rawtext'):
             print out.rawtext
         else:

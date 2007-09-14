@@ -36,14 +36,24 @@ function movedown(e) {
 }
 
 function swapvalues(a, b) {
-    var ia = $ ('input', a);
-    var ib = $ ('input', b);
+    var ia = $ (':input', a);
+    var ib = $ (':input', b);
     
-    for (var i=0; i<ia.length; i++) {
-        // swap
-        var t = ia[i].value; 
-        ia[i].value = ib[i].value; 
-        ib[i].value = t; 
+    for (var i=0; i<ia.length; i++)
+        swap(ia[i], ib[i]);
+}
+
+function swap(a, b) {
+    // probably this check must also be there for type radio
+    if (a.nodeName().toLowerCase() == 'input' && a.type.toLowerCase() == 'checkbox') {
+        var t = a.checked; 
+        a.checked = b.checked; 
+        b.checked = t; 
+    }
+    else {
+        var t = a.value; 
+        a.value = b.value; 
+        b.value = t;         
     }
 }
 

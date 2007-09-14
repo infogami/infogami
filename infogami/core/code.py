@@ -293,12 +293,12 @@ def boolean_renderer(name, value, **attrs):
 def property_renderer(name, value, **attrs):
     if not isinstance(value, (tdb.Thing, dict)):
         value = thingutil.DefaultThing(db.get_type(context.site, 'type/property'))
-    return render.property_ref(name, value)
+    return render.ref(value, name)
 
 def backreference_renderer(name, value, **attrs):
     if not isinstance(value, (tdb.Thing, dict)):
         value = thingutil.DefaultThing(db.get_type(context.site, 'type/backreference'))
-    return render.backreference_ref(name, value)
+    return render.ref(value, name)
         
 utils.view.register_input_renderer('type/string', string_renderer)
 utils.view.register_input_renderer('type/text', text_renderer)

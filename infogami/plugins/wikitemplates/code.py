@@ -147,7 +147,7 @@ def createtypes():
     
 @infogami.install_hook
 @infogami.action
-def movetemplates():
+def movetemplates(prefix_pattern=None):
     """Move templates to wiki."""
     def get_title(name):
         if name.startswith('type/'):
@@ -164,11 +164,12 @@ def movetemplates():
         else: 
             prefix = 'templates/'
         wikipath = _wikiname(name, prefix, '.tmpl')
-        title = get_title(name)
-        body = open(t.filepath).read()
-        d = web.storage(title=title, body=body)
-        print 'movetemplates: %s -> %s' % (t.filename, wikipath)
-        _new_version(wikipath, 'type/template', d)
+        if prefix_pattern is None or wikipath.startswith(prefix_pattern):
+            title = get_title(name)
+            body = open(t.filepath).read()
+            d = web.storage(title=title, body=body)
+            print 'movetemplates: %s -> %s' % (t.filename, wikipath)
+            _new_version(wikipath, 'type/template', d)
         
 @infogami.install_hook
 @infogami.action

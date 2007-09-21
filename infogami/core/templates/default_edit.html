@@ -3,7 +3,7 @@ $def with (page)
 $var title: Edit $page.name
 
 $add_javascript("/static/js/repetition/repetition-model.js")
-$add_javascript("/static/js/jquery.js")
+$add_javascript("/static/js/jquery/jquery.js")
 
 <script>
 function changeTemplate() {
@@ -45,7 +45,7 @@ function swapvalues(a, b) {
 
 function swap(a, b) {
     // probably this check must also be there for type radio
-    if (a.nodeName().toLowerCase() == 'input' && a.type.toLowerCase() == 'checkbox') {
+    if (a.nodeName.toLowerCase() == 'input' && a.type.toLowerCase() == 'checkbox') {
         var t = a.checked; 
         a.checked = b.checked; 
         b.checked = t; 

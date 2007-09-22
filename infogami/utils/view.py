@@ -146,7 +146,7 @@ _inputs = storage.storage.utils_inputs
 def render_input(type, name, value, **attrs):
     """Renders html input field of given type."""
     if type.name not in _inputs and not type.d.get("is_primitive"):
-        return macro._macros.ThingReference(type, name, value)
+        return macro.macrostore['ThingReference'](type, name, value)
     return _inputs.get(type.name, _inputs['type/string'])(name, value, **attrs)
     
 def register_input_renderer(typename, f):

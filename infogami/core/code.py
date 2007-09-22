@@ -280,15 +280,15 @@ class sitepreferences(delegate.page):
 
 def string_renderer(name, value, **attrs):
     """Renderer for html text input."""
-    return web.form.Textbox(name, value=value, **attrs).render()
+    return web.form.Textbox(name, id='input_' + name, value=value, **attrs).render()
     
 def text_renderer(name, value, **attrs):
     """Renderer for html textarea input."""
-    return web.form.Textarea(name, value=value, rows=10, cols=80, **attrs).render()
+    return web.form.Textarea(name, id='input_' + name, value=value, rows=10, cols=80, **attrs).render()
 
 def boolean_renderer(name, value, **attrs):
     """Renderer for html textarea input."""
-    return web.form.Checkbox(name, value=value, **attrs).render()
+    return web.form.Checkbox(name, id='input_' + name, value=value, **attrs).render()
 
 def property_renderer(name, value, **attrs):
     if not isinstance(value, (tdb.Thing, dict)):

@@ -112,18 +112,6 @@ def value_to_thing(value, type):
     thing.update(d)
     return thing
     
-@public
-def thingrepr(value, type=None):
-    if isinstance(value, list):
-        return ','.join(thingrepr(t, type) for t in value)
-    
-    # and some more? DefaultThing etc?
-    if isinstance(value, tdb.Thing):
-        return render.repr(value)
-    else:
-        value = value_to_thing(value, type)
-        return render.repr(value)
-
 def set_error(msg):
     if not context.error: context.error = ''
     context.error += '\n' + msg
@@ -132,7 +120,19 @@ def render_site(url, page):
     return render.site(page)
 
 @public
-def render_input(type, name, value, **attrs):
+def thingrepr(value, type=None):
+    if isinstance(value, list):
+        return ','.join(thingrepr(t, type) for t in value)
+
+    # and some more? DefaultThing etc?
+    if isinstance(value, tdb.Thing):
+        return render.repr(value)
+    else:
+        value = value_to_thing(value, type)
+        return render.repr(value)
+        
+@public
+def thinginput(type, name, value, **attrs):
     """Renders html input field of given type."""
     if isinstance(type, basestring):
         from infogami.core import db
@@ -144,7 +144,7 @@ def render_input(type, name, value, **attrs):
         from infogami.core import thingutil
         value = thingutil.DefaultThing(type)
     
-    return render.ref(value, name)
+    return render.input(value, name)
     
 @infogami.install_hook
 @infogami.action

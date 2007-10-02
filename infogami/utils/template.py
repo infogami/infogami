@@ -125,5 +125,5 @@ render.add_source(disktemplates)
 render.view = typetemplate('view')
 render.edit = typetemplate('edit')
 render.repr = typetemplate('repr')
-render.ref = typetemplate('ref')
+render.input = typetemplate('input')
 

@@ -16,7 +16,7 @@ function changeTemplate() {
 
 <form name="edit" method="post" action="">
 
-<strong>$_.PAGETYPE</strong> <input type="text" name="_type" value="$page.type.name" />
+<strong>$_.PAGETYPE</strong> $:thinginput("type/type", "_type", page.type)
 <input type="button" onclick="changeTemplate()" value="Change"/>
 <br /><br/>
 

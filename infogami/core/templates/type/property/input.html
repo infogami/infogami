@@ -1,0 +1,21 @@
+$def with (p, name)
+
+<table>
+    <tr>
+        <td>Name</td>
+        <td>$:thinginput("type/string", name + ".name", p.name)</td>        
+    </tr>
+    <tr>
+        <td>Type</td>
+        <td>$:thinginput("type/type", name + ".type", p.d.get('type'))</td>
+    </tr>
+    <tr>
+        <td>Unique</td>
+        <td>$:thinginput("type/boolean", name + ".unique", p.d.get('unique'))</td>
+    </tr>
+    <tr>
+        <td>Description</td>
+        <td>$:thinginput("type/string", name + ".description", p.d.get('description'))</td>
+    </tr>
+</table>
+<br/>

@@ -9,13 +9,13 @@ $for p in page.type.properties:
     $if p.d.get('unique'):
         <tr>
             <td>$p.name</td>
-            <td>$:thingrepr(page.d.get(p.name))</td>
+            <td>$:thingrepr(page.d.get(p.name), p.d.type)</td>
         </tr>
     $else:
         $for x in page.d.get(p.name):
             <tr>
                 <td>$p.name</td>
-                <td>$:thingrepr(x)</td>
+                <td>$:thingrepr(x, p.d.type)</td>
             </tr>
 </tbody>
 </table>
@@ -24,7 +24,7 @@ $for p in page.type.properties:
 $for p in page.type.d.get('backreferences', []):
     <div>$p.name<br/>
     $for x in page.d.get(p.name):
-        $:thingrepr(x)<br/>
+        $:thingrepr(x, p.d.type)<br/>
     </div>
 </div>
 

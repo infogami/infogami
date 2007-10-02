@@ -192,7 +192,7 @@ class forgot_password(delegate.page):
             web.sendmail(config.from_address, i.email, render.password_mailer(username, password))
             return render.passwordsent(i.email)
 
-_preferences = storage.core_preferences
+_preferences = web.storage()
 def register_preferences(name, handler):
     _preferences[name] = handler
 
@@ -277,34 +277,3 @@ class sitepreferences(delegate.page):
             values.append((path, perms))
             
         return values
-
-def string_renderer(name, value, **attrs):
-    """Renderer for html text input."""
-    return web.form.Textbox(name, id='input_' + name, value=value, **attrs).render()
-    
-def text_renderer(name, value, **attrs):
-    """Renderer for html textarea input."""
-    return web.form.Textarea(name, id='input_' + name, value=value, rows=10, cols=80, **attrs).render()
-
-def boolean_renderer(name, value, **attrs):
-    """Renderer for html textarea input."""
-    return web.form.Checkbox(name, id='input_' + name, value=value, **attrs).render()
-
-def property_renderer(name, value, **attrs):
-    if not isinstance(value, (tdb.Thing, dict)):
-        value = thingutil.DefaultThing(db.get_type(context.site, 'type/property'))
-    return render.ref(value, name)
-
-def backreference_renderer(name, value, **attrs):
-    if not isinstance(value, (tdb.Thing, dict)):
-        value = thingutil.DefaultThing(db.get_type(context.site, 'type/backreference'))
-    return render.ref(value, name)
-        
-utils.view.register_input_renderer('type/string', string_renderer)
-utils.view.register_input_renderer('type/text', text_renderer)
-utils.view.register_input_renderer('type/boolean', boolean_renderer)
-utils.view.register_input_renderer('type/property', property_renderer)
-utils.view.register_input_renderer('type/backreference', backreference_renderer)
-
-# Thing is also displayed as textbox
-utils.view.register_input_renderer('thing', string_renderer)

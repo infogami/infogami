@@ -1,0 +1,6 @@
+$def with (p, name)
+
+$if p.value:
+    <input type="checkbox" name="$name" checked="checked"/>
+$else:
+    <input type="checkbox" name="$name"/>

@@ -59,6 +59,7 @@ web.template.Template.globals.update(dict(
   hasattr = hasattr,
   Dropdown = web.form.Dropdown,
   slice = slice,
+  debug = web.debug,
 ))
 
 render = template.render
@@ -104,16 +105,25 @@ def spacesafe(text):
     text = web.websafe(text)
     text = text.replace(' ', '&nbsp;');
     return text
+
+def value_to_thing(value, type):
+    d = web.storage(value=value)
+    thing = web.storage(d=web.storage(value=value), name="", type=type)
+    thing.update(d)
+    return thing
     
 @public
-def thingrepr(value):
+def thingrepr(value, type=None):
     if isinstance(value, list):
-        return ','.join(thingrepr(t) for t in value)
+        return ','.join(thingrepr(t, type) for t in value)
+    
+    # and some more? DefaultThing etc?
     if isinstance(value, tdb.Thing):
         return render.repr(value)
     else:
-        return str(value)
-    
+        value = value_to_thing(value, type)
+        return render.repr(value)
+
 def set_error(msg):
     if not context.error: context.error = ''
     context.error += '\n' + msg
@@ -121,37 +131,21 @@ def set_error(msg):
 def render_site(url, page):
     return render.site(page)
 
-def get_static_resource(path):
-    rx = web.re_compile(r'^files/([^/]*)/(.*)$')
-    result = rx.match(path)
-    if not result:
-        return web.notfound()
-
-    plugin, path = result.groups()
-
-    # this distinction will go away when core is also treated like a plugin.
-    if plugin == 'core':
-        fullpath = "infogami/core/files/%s" % (path)
-    else:
-        fullpath = "infogami/plugins/%s/files/%s" % (plugin, path)
-
-    if not os.path.exists(fullpath):
-        return web.notfound()
-    else:
-        return open(fullpath).read()
-
-_inputs = storage.storage.utils_inputs
-
 @public
 def render_input(type, name, value, **attrs):
     """Renders html input field of given type."""
-    if type.name not in _inputs and not type.d.get("is_primitive"):
-        return macro.macrostore['ThingReference'](type, name, value)
-    return _inputs.get(type.name, _inputs['type/string'])(name, value, **attrs)
+    if isinstance(type, basestring):
+        from infogami.core import db
+        type = db.get_type(context.site, type)
+        
+    if type.d.get("is_primitive"):
+        value = value_to_thing(value, type)
+    elif not isinstance(value, (tdb.Thing, dict)):
+        from infogami.core import thingutil
+        value = thingutil.DefaultThing(type)
     
-def register_input_renderer(typename, f):
-    _inputs[typename] = f
-
+    return render.ref(value, name)
+    
 @infogami.install_hook
 @infogami.action
 def movefiles():

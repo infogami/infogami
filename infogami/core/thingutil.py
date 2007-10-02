@@ -85,11 +85,14 @@ def primitive_value(type, value):
         'type/text': str,
         'type/boolean': bool,
     }
-               
-    if type.name in d:
-        return d[type.name](value)
-    else:
-        return value
+     
+    #@@ primitive_value is breaking infogami in some places. Disabling temporarly.           
+    return value
+    
+    #if type.name in d:
+    #    return d[type.name](value)
+    #else:
+    #    return value
 
 def default_value(type):
     d = {
@@ -139,3 +142,6 @@ class DefaultThingData:
             return self[key]
         except KeyError:
             return default
+            
+    def __str__(self):
+        return ""

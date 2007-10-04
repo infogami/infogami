@@ -83,7 +83,8 @@ def replace_macros(html, macros):
     """Replaces the macro place holders with real macro output."""    
     for placeholder, macro_info in macros.items():
         name, args = macro_info
-        html = html.replace(placeholder, call_macro(name, args))
+        
+        html = html.replace("<p>%s\n</p>" % placeholder, call_macro(name, args))
         
     return html
 
@@ -112,3 +113,10 @@ def ListOfMacros():
         out += '  <li><b>%s</b>: %s</li>\n' % (name, macro.__doc__ or "")
     out += "</ul>"
     return out
+
+if __name__ == "__main__":
+    text = "{{HelloWorld()}}"
+    md = markdown.Markdown(source=text, safe_mode=False)
+    MacroExtension().extendMarkdown(md, {})
+    html = md.convert()
+    print replace_macros(html, md.macros)

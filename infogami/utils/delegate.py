@@ -32,14 +32,15 @@ class mode:
 class metapage(type):
     def __init__(self, *a, **kw):
         type.__init__(self, *a, **kw)
-        pages[self.__name__] = self
+        path = getattr(self, 'path', '/' + self.__name__)
+        pages[path] = self
 
 class page:
     __metaclass__ = metapage
 
 # mode and page are just base classes.
 del modes['mode']
-del pages['page']
+del pages['/page']
 
 def _keyencode(text): return text.replace(' ', '_')
 def _changepath(new_path):
@@ -80,17 +81,19 @@ def delegate(path):
         method = 'GET'
     
     initialize_context()
+    
+    pathx = '/' + path
 
-    # redirect foo/ to foo
-    if path.endswith('/'):
-        return web.seeother('/' + path[:-1])
+    # redirect /foo/ to /foo
+    if pathx != '/' and pathx.endswith('/'):
+        return web.seeother(pathx[:-1])
         
-    npath = os.path.normpath('/' + path)
-    if npath != '/' + path:
+    npath = os.path.normpath(pathx)
+    if npath != pathx:
         web.seeother(npath)
 
-    if path in pages:
-        out = getattr(pages[path](), method)(context.site)
+    if pathx in pages:
+        out = getattr(pages[pathx](), method)(context.site)
     else: # mode
         normalized = _keyencode(path)
         if path != normalized:

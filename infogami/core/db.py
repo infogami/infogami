@@ -86,8 +86,10 @@ def tdbsetup():
         dict(name='body', type=ttext)])
         
     _create_type(site, 'type/user', [
+        dict(name='displayname', type=tstring),
         dict(name='email', type=tstring), 
-        dict(name='displayname', type=tstring)])
+        dict(name='description', type=ttext)
+    ])
         
     _create_type(site, 'type/delete', [])
 

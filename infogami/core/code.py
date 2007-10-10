@@ -132,6 +132,8 @@ class random(delegate.page):
         return web.seeother(p.path)
 
 class login(delegate.page):
+    path = "/account/login"
+    
     def GET(self, site):
         referer = web.ctx.env.get('HTTP_REFERER', '/')
         i = web.input(redirect=referer)
@@ -151,6 +153,8 @@ class login(delegate.page):
         web.seeother(i.redirect)
         
 class register(delegate.page):
+    path = "/account/register"
+    
     def GET(self, site):
         return render.register(forms.register())
         
@@ -168,12 +172,16 @@ class register(delegate.page):
             web.seeother(i.redirect)
 
 class logout(delegate.page):
+    path = "/account/logout"
+    
     def POST(self, site):
         web.setcookie("infogami_session", "", expires=-1)
         referer = web.ctx.env.get('HTTP_REFERER', '/')
         web.seeother(referer)
 
 class forgot_password(delegate.page):
+    path = "/account/forgot_password"
+
     def GET(self, site):
         f = forms.forgot_password()
         return render.forgot_password(f)
@@ -197,6 +205,8 @@ def register_preferences(name, handler):
     _preferences[name] = handler
 
 class preferences(delegate.page):
+    path = "/account/preferences"
+    
     @auth.require_login    
     def GET(self, site):
         d = dict((name, p.GET(site)) for name, p in _preferences.iteritems())
@@ -236,6 +246,8 @@ class getthings(delegate.page):
         print "\n".join([thing.name for thing in things])
     
 class sitepreferences(delegate.page):
+    path = "/admin/sitepreferences"
+    
     def GET(self, site):
         if not auth.has_permission(context.site, context.user, "sitepreferences", "view"):
             return auth.login_redirect()

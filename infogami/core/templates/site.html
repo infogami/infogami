@@ -5,17 +5,18 @@ $def with (page)
     <title>$page.title (Infogami)</title>
     <style type="text/css">
     .login { text-align: right; }
-    .login, .status { color: lightgray }
+    .login, .status { color: gray; }
     .login :link, .login :visited, .status :link, .status :visited { color: gray; text-decoration: underline;}
 
     .error { color: red; font-weight: bold; }
 
     .linky {
-        color: blue; background-color: transparent;
+        color: gray; background-color: transparent;
         border: none; cursor: pointer;
-        font-size: 1em; margin: 0px; padding: 0px; vertical-align: bottom;
+        margin: 0px; padding: 0px; vertical-align: bottom;
         display: inline;
         text-align: right;
+        text-decoration: underline;
     }
     form th { text-align: right; color: gray; font-weight: normal; text-transform: lowercase; }
     form .wrong { color: red; font-weight: bold; }
@@ -30,13 +31,15 @@ $for jsurl in ctx.javascripts:
 </head>
 <body>
 $if ctx.user:
-    <form action="$url('/logout')" method='POST'>
-    <p class="login"><strong>$ctx.user.name</strong>
-    [<button class="linky" type="submit">logout</button>]
+    <form action="$homepath()/account/logout" method='POST'>
+    <p class="login">
+    Welcome, <a href="$homepath()/$ctx.user.name">$ctx.user.displayname</a>
+    | <a href="$homepath()/account/preferences">Preferences</a>
+    | <button class="linky" type="submit">Log Out</button>
     </p>
     </form>
 $else:
-    <p class="login">[$:link('/login', _.LOGIN)]</p>
+    <p class="login">[<a href="$homepath()/account/login">Log In</a>]</p>
 
 <h1>$page.title</h1>
 

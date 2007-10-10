@@ -19,9 +19,10 @@ DELETE = "Delete"
 HISTORY = "history"
 WHO = "who"
 WHEN = "when"
+WHAT = "what"
 COMPARE = "Compare"
 
-LOGIN = "log in"
+LOGIN = "Log In"
 REGISTER = "Register"
 
 PAGELIST = "Pagelist"
@@ -31,7 +32,7 @@ PATH = "path"
 ACTIONS = "actions"
 VIEW = "view"
 
-LOGOUT = "logout"
+LOGOUT = "Log Out"
 
 LAST_MODIFIED = "last modified"
 

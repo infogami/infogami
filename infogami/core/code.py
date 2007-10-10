@@ -1,8 +1,6 @@
 import web
 from infogami import utils, tdb, config
 from infogami.utils import delegate
-from infogami.utils.macro import macro
-from infogami.utils.storage import storage
 from infogami.utils.context import context
 from infogami.utils.template import render
 
@@ -12,7 +10,6 @@ import auth
 import forms
 import thingutil
 import helpers
-import dbupgrade
 
 def notfound():
     web.ctx.status = '404 Not Found'
@@ -164,10 +161,7 @@ class register(delegate.page):
         if not f.validates(i):
             return render.register(f)
         else:
-            user = db.new_user(site, i.username, i.email)
-            user.displayname = i.displayname
-            user.save()
-            auth.set_password(user, i.password)
+            user = db.new_user(site, i.username, i.displayname, i.email, i.password)
             auth.setcookie(user, i.remember)
             web.seeother(i.redirect)
 

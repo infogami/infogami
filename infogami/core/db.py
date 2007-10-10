@@ -1,9 +1,8 @@
-from infogami.utils import delegate
 import web
-from infogami import tdb
-import infogami
-from infogami.tdb import NotFound
 import pickle
+
+import infogami
+from infogami import tdb
 from infogami.utils.view import public
 
 def _create_type(site, name, properties=[], backreferences=[], description="", is_primitive=False):
@@ -95,7 +94,7 @@ def tdbsetup():
 
     # for internal use
     _create_type(site, 'type/thing', [])
-
+    
     import dbupgrade
     dbupgrade.mark_upgrades()
     
@@ -122,13 +121,13 @@ def get_user(site, userid):
         u = tdb.withID(userid)
         if u.type == get_type(site, 'type/user'):
             return u
-    except NotFound:
+    except tdb.NotFound:
         return None
-
+        
 def get_user_by_name(site, username):
     try:
         return tdb.withName('user/' + username, site)
-    except NotFound:
+    except tdb.NotFound:
         return None
 
 def get_user_by_email(site, email):
@@ -136,14 +135,19 @@ def get_user_by_email(site, email):
     if result:
         return result[0]
     
-def new_user(site, username, email):
-    d = dict(email=email)
-    return tdb.new('user/' + username, site, get_type(site, "type/user"), d)
+def new_user(site, username, displayname, email, password):
+    d = dict(displayname=displayname, email=email)
+    user = tdb.new('user/' + username, site, get_type(site, "type/user"), d)
+    user.save()
+    
+    import auth
+    auth.set_password(user, password)
+    return user
 
 def get_user_preferences(user):
     try:
         return tdb.withName('preferences', user)
-    except NotFound:
+    except tdb.NotFound:
         site = user.parent
         type = get_type(site, 'type/thing')
         return tdb.new('preferences', user, type)
@@ -204,7 +208,9 @@ def get_site_permissions(site):
     if hasattr(site, 'permissions'):
         return pickle.loads(site.permissions)
     else:
-        return [('/.*', [('everyone', 'view,edit')])]
+        return [
+            ('/(user/[^/]*)(/.*)?', [('$1', 'view,edit'), ('everyone', 'view')]),
+            ('/.*', [('everyone', 'view,edit')])]
     
 def set_site_permissions(site, permissions):
     site.permissions = pickle.dumps(permissions)

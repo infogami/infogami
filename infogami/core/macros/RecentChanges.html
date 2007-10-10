@@ -1,6 +1,6 @@
-$def with (limit=50)
+$def with (author=None, limit=50)
 
-$ changes = get_recent_changes(ctx.site, limit=limit)
+$ changes = get_recent_changes(ctx.site, author=author, limit=limit)
 
 $var title: $_.RECENT_CHANGES
 
@@ -9,14 +9,19 @@ $var title: $_.RECENT_CHANGES
   <th>$_.WHEN</th>
   <th>$_.PATH</th>
   <th>$_.WHO</th>
+  <th>$_.WHAT</th>
   <th>$_.ACTIONS</th>
 </tr>
 
 $for v in changes:
     <tr>
     <td>$datestr(v.created)</td>
-    <td>$v.thing.name</td>
-    <td>$(v.author or v.ip)</td>
+    <td><a href="$homepath()/$v.thing.name">$v.thing.name</a></td>
+    $if v.author:
+        <td><a href="$homepath()/$v.author.name" title="$v.author.displayname">$v.author.displayname</a></div></td>
+    $else:
+        <td>$v.ip</td>    
+    <td>$v.comment</td>
     <td>
     <a href="$homepath()/$v.thing.name?m=view&v=$v.revision">$_.VIEW</a>&nbsp;
     <a href="$homepath()/$v.thing.name?m=edit&v=$v.revision">$_.EDIT</a>&nbsp;

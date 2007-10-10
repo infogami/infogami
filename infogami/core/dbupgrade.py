@@ -51,7 +51,13 @@ def hash_passwords():
     users = tdb.Things(parent=ctx.site, type=tuser).list()
     
     for u in users:
-        preferences = u._c('preferences')
+        try:
+            preferences = u._c('preferences')
+        except:
+            # setup preferences for broken accounts, so that they can use forgot password.
+            preferences = db.new_version(u, 'preferences', db.get_type(ctx.site,'type/thing'), dict(password=''))
+            preferences.save()
+        
         if preferences.password:
             auth.set_password(u, preferences.password)
     

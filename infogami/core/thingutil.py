@@ -96,7 +96,6 @@ def primitive_value(type, value):
 
 def default_value(type):
     d = {
-        'type/int': 0,
         'type/boolean': False
     }
     return d.get(type.name, '')

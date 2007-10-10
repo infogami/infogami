@@ -91,10 +91,6 @@ def delegate(path):
 
     if path in pages:
         out = getattr(pages[path](), method)(context.site)
-    elif path.startswith('files/'):
-        # quickfix
-        out = None
-        print view.get_static_resource(path)
     else: # mode
         normalized = _keyencode(path)
         if path != normalized:
@@ -185,9 +181,3 @@ def _load():
         template.load_templates(plugin.path)
         macro.load_macros(plugin.path)
         __import__(plugin.module + '.code', globals(), locals(), ['plugins'])
-
-def pickdb(g):
-    """Looks up the db type to use in config and exports its functions."""
-    instance = g[config.db_kind]()
-    for k in dir(instance):
-        g[k] = getattr(instance, k)

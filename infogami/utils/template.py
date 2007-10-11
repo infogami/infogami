@@ -126,4 +126,4 @@ render.view = typetemplate('view')
 render.edit = typetemplate('edit')
 render.repr = typetemplate('repr')
 render.input = typetemplate('input')
-
+render.xdiff = typetemplate('diff')

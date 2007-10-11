@@ -1,9 +1,10 @@
+
 import web
 import os
 
 import infogami
 from infogami import tdb
-from infogami.core.diff import simple_diff
+from infogami.core.diff import simple_diff, better_diff
 from infogami.utils.i18n import i18n
 from infogami.utils.markdown import markdown, mdx_footnotes
 
@@ -43,7 +44,8 @@ web.template.Template.globals.update(dict(
   _ = i18n(),
   macros = storage.ReadOnlyDict(macro.macrostore),
   diff = simple_diff,
-  
+  better_diff = better_diff,
+    
   # common utilities
   int = int,
   str = str,
@@ -125,7 +127,7 @@ def thingrepr(value, type=None):
         return ','.join(thingrepr(t, type) for t in value)
 
     # and some more? DefaultThing etc?
-    if isinstance(value, tdb.Thing):
+    if isinstance(value, (tdb.Thing, dict)):
         return render.repr(value)
     else:
         value = value_to_thing(value, type)
@@ -145,6 +147,15 @@ def thinginput(type, name, value, **attrs):
         value = thingutil.DefaultThing(type)
     
     return render.input(value, name)
+
+@public
+def thingdiff(type, name, v1, v2):
+    if v1 == v2:
+        return ""
+    else:
+        if not isinstance(v1, tdb.Thing): v1 = value_to_thing(v1, type)
+        if not isinstance(v2, tdb.Thing): v2 = value_to_thing(v2, type)
+        return render.xdiff(v1, v2, name)
     
 @infogami.install_hook
 @infogami.action

@@ -1,50 +1,42 @@
 $def with (a, b, bodydiff)
 
-$add_stylesheet('/files/core/diff.css')
+$add_stylesheet('/static/diff.css')
 
 $var title: $_.DIFF
 
-<p>[<a href="$url()">$_.VIEW</a>][<a href="$url(m='edit')">$_.EDIT</a>]</p>
+<div id="header">
+    <div style="float:left;padding-left:10px;padding-right:15px;"></div>
+    <span class="pretitle">Currently viewing the differences for $a.name<br /></span>
+</div>
 
-<table>
-    <tr><th>key</th><th>$_.REVISION $a.v.revision</th><th>$_.REVISION $b.v.revision</th></tr>
-$for k in a.d.keys():
-    <tr><th>$k</th><td>$a.d.get(k)</td><td>$b.d.get(k)</td></tr>
+<div class="diff-border">
+<div class="diff">
 
-$for k in (set(b.d.keys()) - set(a.d.keys())):
-    <tr><th>$k</th><td>$a.d.get(k)</td><td>$b.d.get(k)</td></tr>
-</table>
+    <table class="sidebyside" cellpadding="0" cellspacing="0" border="0" summary="$_.DIFFERENCES">
+       <colgroup class="l"><col class="lineno" /><col class="content" /></colgroup>
+       <colgroup class="r"><col class="lineno" /><col class="content" /></colgroup>
+       <thead>
+           <tr> 
+              <td colspan="2" class="diff-header-top">$_.REVISION $a.v.revision</td> 
+              <td colspan="2" class="diff-header-top">$_.REVISION $b.v.revision</td>
+           </tr>
+       </thead>
+       <tbody>
+$for p in a.type.properties:
+    $:thingdiff(p.d.type, p.name, a.d.get(p.name), b.d.get(p.name))
 
-$if bodydiff:
-    <div class="diff">
-
-    <table class="sidebyside" summary="$_.DIFFERENCES">
-        <colgroup class="l"><col class="lineno" /><col class="content" /></colgroup>
-        <colgroup class="r"><col class="lineno" /><col class="content" /></colgroup>
-        <thead>
-              <tr> 
-                  <th colspan="2">$_.REVISION $a.v.revision</th> 
-                  <th colspan="2">$_.REVISION $b.v.revision</th>
-              </tr>
-        </thead>
-    $for row in bodydiff:
-        $ key = row[0]
-        $ ai = row[1]
-        $ a = row[2]
-        $ bi = row[3]
-        $ b = row[4]
-        <tbody class="$key">
-        <tr><th>$ai</th><td class='l'>$:spacesafe(a or ' ')</td><th>$bi</th><td class='r'>$:spacesafe(b or ' ')</td></tr>
-        </tbody>
+    </tbody>
     </table>
-
-       <div id="legend">
-        <h3>$_.LEGEND:</h3>
-        <dl>
-         <dt class="unmod"></dt><dd>$_.UNMODIFIED</dd>
-         <dt class="add"></dt><dd>$_.ADDED</dd>
-         <dt class="rem"></dt><dd>$_.REMOVED</dd>
-         <dt class="mod"></dt><dd>$_.MODIFIED</dd>
-        </dl>
-       </div>
+       
+   <div id="legend">
+       <h3>$_.LEGEND:</h3>
+       <dl>
+           <dt class="unmod"></dt><dd>$_.UNMODIFIED</dd>
+           <dt class="add"></dt><dd>$_.ADDED</dd>
+           <dt class="rem"></dt><dd>$_.REMOVED</dd>
+           <dt class="mod"></dt><dd>$_.MODIFIED</dd>
+       </dl>
     </div>
+    
+</div>
+</div>

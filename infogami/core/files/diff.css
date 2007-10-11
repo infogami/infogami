@@ -30,7 +30,7 @@
 }
 
 
-.diff #legend h3 { display: none; }
+/* .diff #legend h3 { display: none; } */
 .diff #legend dt {
  background: #fff;
  border: 1px solid #999;
@@ -40,13 +40,11 @@
  width: .8em; height: .8em;
 }
 .diff #legend dl, .diff #legend dd {
- display: inline; 
  float: left;
  padding: 0;
  margin: 0;
  margin-right: .5em;
 }
-
 
 /* ADDED BY WC (webchick?) */
 
@@ -60,3 +58,6 @@
 
 td.l {border-bottom: 1px solid #cccccc; padding-left: 12px; }
 td.r {border-bottom: 1px solid #cccccc; padding-left: 12px; }
+
+ins { font-weight: bold; color: green;}
+del { font-weight: bold; color: red; }

@@ -23,7 +23,7 @@ class view (delegate.mode):
     def GET(self, site, path):
         try:
             p = db.get_version(site, path, web.input(v=None).v)
-        except db.NotFound:
+        except tdb.NotFound:
             return notfound()
         else:
             if p.type == db.get_type(site, 'type/delete'):
@@ -38,7 +38,7 @@ class edit (delegate.mode):
         
         try:
             p = db.get_version(site, path, i.v)
-        except db.NotFound:
+        except tdb.NotFound:
             p = db.new_version(site, path, db.get_type(site, 'type/page'), web.storage({}))
 
         if i.t:
@@ -99,7 +99,7 @@ class history (delegate.mode):
         try:
             p = db.get_version(site, path)
             return render.history(p)
-        except db.NotFound:
+        except tdb.NotFound:
             return web.seeother('/' + path)
                 
 class diff (delegate.mode):
@@ -113,15 +113,8 @@ class diff (delegate.mode):
             b = db.get_version(site, path, revision=i.b)
         except:
             return web.badrequest()
-        
-        if 'body' in a.d and 'body' in b.d:
-            alines = a.body.splitlines()
-            blines = b.body.splitlines()
-            bodydiff = better_diff(alines, blines)
-        else:
-            bodydiff = None
-        
-        return render.diff(a, b, bodydiff)
+            
+        return render.diff(a, b)
 
 class random(delegate.page):
     def GET(self, site):

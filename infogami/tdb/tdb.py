@@ -41,7 +41,7 @@ class Thing:
         return cmp(self.id, other.id)
 
     def __eq__(self, other):
-        return self.id == other.id and self.name == other.name and dict(self.d) == dict(other.d)
+        return self.id == other.id and self.name == other.name
 
     def __ne__(self, other):
         return not (self == other)

@@ -648,9 +648,17 @@ So, we apply the expressions in the following order:
 """
 
 NOBRACKET = r'[^\]\[]*'
+
+#@@ Yuri Takhteyev suggested to change BRK like this to break the infinite recursion.
+
+#BRK = ( r'\[('
+#        + (NOBRACKET + r'(\['+NOBRACKET)*6
+#        + (NOBRACKET+ r'\])*'+NOBRACKET)*6
+#        + NOBRACKET + r')\]' )
+
 BRK = ( r'\[('
-        + (NOBRACKET + r'(\['+NOBRACKET)*6
-        + (NOBRACKET+ r'\])*'+NOBRACKET)*6
+        + (NOBRACKET + r'(\[')*6
+        + (NOBRACKET+ r'\])*')*6
         + NOBRACKET + r')\]' )
 
 BACKTICK_RE = r'\`([^\`]*)\`'                    # `e= m*c^2`

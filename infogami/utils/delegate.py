@@ -57,7 +57,7 @@ def initialize_context():
     context.site = db.get_site(config.site)
     context.user = auth.get_user(context.site)
     
-    i = web.input(_mode='GET', rescue="false")
+    i = web.input(_method='GET', rescue="false")
     context.rescue_mode = (i.rescue.lower() == 'true')
 
 def fakeload():
@@ -102,7 +102,7 @@ def delegate(path):
             elif method == 'POST':
                 return web.notfound()
 
-        what = web.input().get('m', 'view')
+        what = web.input(_method='GET').get('m', 'view')
         
         #@@ move this to some better place
         from infogami.core import auth

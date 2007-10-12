@@ -184,7 +184,8 @@ class forgot_password(delegate.page):
             web.config.smtp_server = config.smtp_server
             password = auth.random_password()
             auth.set_password(user, password)
-            web.sendmail(config.from_address, i.email, render.password_mailer(username, password))
+            msg = render.password_mailer(username, password)
+            web.sendmail(config.from_address, i.email, msg.subject.strip(), str(msg))
             return render.passwordsent(i.email)
 
 _preferences = web.storage()

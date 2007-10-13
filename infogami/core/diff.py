@@ -22,7 +22,7 @@ def better_diff(a, b):
         elif tag == 'equal':
             if i2-i1 > 5:
                 x = y = [a[i1], '', a[i2-1]]
-                xn = yn = [i1, '...', i2]
+                xn = yn = [i1, '...', i2-1]
         
         map += zip([labels[tag]] * len(x), xn, x, yn, y)
 

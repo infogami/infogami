@@ -40,7 +40,11 @@ def _generate_salted_hash(key, text):
     return '%s$%s' % (salt, hash)
     
 def _check_salted_hash(key, text, salted_hash):
-    salt, hash = salted_hash.split('$', 1)
+    if '$' not in salted_hash:
+        # backward compatability
+        salt, hash = config.password_salt, salted_hash
+    else:
+        salt, hash = salted_hash.split('$', 1)
     return hmac.HMAC(key, salt + utf8(text)).hexdigest() == hash
     
 def check_password(user, raw_password):

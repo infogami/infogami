@@ -136,13 +136,20 @@ def get_user_by_email(site, email):
         return result[0]
     
 def new_user(site, username, displayname, email, password):
-    d = dict(displayname=displayname, email=email)
-    user = tdb.new('user/' + username, site, get_type(site, "type/user"), d)
-    user.save()
+    web.transact()
+    try:
+        d = dict(displayname=displayname, email=email)
+        user = tdb.new('user/' + username, site, get_type(site, "type/user"), d)
+        user.save()
     
-    import auth
-    auth.set_password(user, password)
-    return user
+        import auth
+        auth.set_password(user, password)
+    except:
+        web.rollback()
+        raise
+    else:
+        web.commit()
+        return user
 
 def get_user_preferences(user):
     try:

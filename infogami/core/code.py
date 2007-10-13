@@ -108,9 +108,12 @@ class diff (delegate.mode):
         i.a = i.a or int(i.b)-1
 
         try:
-            if i.a == 0: a = web.storage(d={},v=web.storage(revision=0))
-            else: a = db.get_version(site, path, revision=i.a)
             b = db.get_version(site, path, revision=i.b)
+            #@@ what to do diff is called when there is only one version
+            # Probably diff should be displayed with empty thing and current thing.  
+            # Displaying diff with itself, since it is easy to implement.
+            if i.a == 0: a = b
+            else: a = db.get_version(site, path, revision=i.a)
         except:
             return web.badrequest()
             

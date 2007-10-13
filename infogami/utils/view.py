@@ -105,7 +105,8 @@ def add_javascript(path):
 @public
 def spacesafe(text):
     text = web.websafe(text)
-    text = text.replace(' ', '&nbsp;');
+    #@@ TODO: should take care of space at the begining of line also
+    text = text.replace('  ', ' &nbsp;');
     return text
 
 def value_to_thing(value, type):

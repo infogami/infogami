@@ -2,7 +2,7 @@ import web
 from difflib import SequenceMatcher
 
 def better_diff(a, b):
-    tracnames = dict(equal="", insert='add', replace='mod', delete='rem')
+    labels = dict(equal="", insert='add', replace='mod', delete='rem')
 
     map = []
     for tag, i1, i2, j1, j2 in SequenceMatcher(a=a, b=b).get_opcodes():
@@ -19,8 +19,12 @@ def better_diff(a, b):
         elif tag == 'delete':
             y += [''] * -n
             yn += [''] * -n
+        elif tag == 'equal':
+            if i2-i1 > 5:
+                x = y = [a[i1], '', a[i2-1]]
+                xn = yn = [i1, '...', i2]
         
-        map += zip([tracnames[tag]] * len(x), xn, x, yn, y)
+        map += zip([labels[tag]] * len(x), xn, x, yn, y)
 
     return map
 

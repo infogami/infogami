@@ -125,6 +125,10 @@ def match_query(query, data):
         True
     """
     def match(a, b):
+        #@@ quick fix: clean this later
+        if isinstance(a, Thing): a = a.id
+        if isinstance(b, Thing): b = b.id
+        
         if isinstance(b, list):
             return any(a == bb for bb in b)
         else:
@@ -136,11 +140,13 @@ def match_query(query, data):
 class Things:
     def __init__(self, tdb, limit=None, **query):
         self.tdb = tdb
-        self.query = query
+        self.query = Things.process(query)
         tables = ['thing', 'version']            
         what = "thing.id"
         where = "thing.id = version.thing_id AND thing.latest_revision = version.revision"
         
+        query = self.query.copy()
+
         if 'parent' in query:
             parent = query.pop('parent')
             where += web.reparam(' AND thing.parent_id = $parent.id', locals())
@@ -148,20 +154,27 @@ class Things:
         if 'type' in query:
             type = query.pop('type')
             query['__type__'] = type.id
-        
+            
         n = 0
         for k, v in query.items():
             n += 1
-            if isinstance(v, Thing):
-                v = v.id
             tables.append('datum AS d%s' % n)
-            where += ' AND d%s.version_id = version.id AND ' % n 
-            # using substr to use index. 
+            where += ' AND d%s.version_id = version.id AND ' % n
+            # using substr to use index.
             #@@ when len(value) > 250, this won't work.
             where += web.reparam('d%s.key = $k AND substr(d%s.value, 0, 250) = $v' % (n, n), locals())
         
         result = web.select(tables, what=what, where=where, limit=limit)
         self.values = tdb.withIDs([r.id for r in result])
+        
+    @staticmethod
+    def process(query):
+        query = query.copy()
+        for k, v in query.items():
+            if isinstance(v, Thing) and k not in ('parent', 'type'):
+                #@@ This will also match an integer, should also check for datatype
+                query[k] = v.id
+        return query    
 
     def matches(self, thing):
         """Tests whether `thing` matches this query."""
@@ -175,7 +188,7 @@ class Things:
 
 class Versions:
     def __init__(self, tdb, limit=None, **query):
-        self.query = query
+        self.query = Versions.process(query)
         self.versions = None
         self.limit = limit
         self.tdb = tdb
@@ -186,14 +199,6 @@ class Versions:
         what = 'version.*, thing.name, thing.parent_id, thing.latest_revision'
         where = "thing.id = version.thing_id"
         
-        if 'parent' in self.query:
-            parent = self.query.pop('parent')
-            self.query['parent_id'] = parent.id
-            
-        if 'author' in self.query:
-            author = self.query.pop('author')
-            self.query['author_id'] = author.id
-            
         for k, v in self.query.items():
             where += web.reparam(' AND %s = $v' % (k,), locals())
                     
@@ -215,10 +220,22 @@ class Versions:
 
         result = web.select(tables, what=what, where=where, order='id desc', limit=self.limit)
         self.versions = [version(r) for r in result]
+        
+    @staticmethod
+    def process(query):
+        query = query.copy()
+        if 'parent' in query:
+            parent = query.pop('parent')
+            query['parent_id'] = parent.id
+            
+        if 'author' in query:
+            author = query.pop('author')
+            query['author_id'] = author.id
+        return query        
     
     def matches(self, thing):
         """Tests whether thing.v matches this query."""
-        return match_query(self.query, dict(thing.v.__dict__, parent=thing.parent, parent_id=thing.parent.id, thing_id=thing.id))
+        return match_query(self.query, dict(thing.v.__dict__, parent_id=thing.parent.id, thing_id=thing.id))
         
     def __getitem__(self, index):
         return self.versions[index]
@@ -684,7 +701,7 @@ class CachedTDBImpl(ProxyTDBImpl):
         return [self.cache[name, parent.id] for name in names]
 
     def Things(self, limit=None, **query):
-        q = dict(query, limit=limit)
+        q = dict(Things.process(query), limit=limit)
         q = tuple(sorted(q.items()))
         
         try:

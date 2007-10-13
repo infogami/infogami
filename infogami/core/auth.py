@@ -1,18 +1,18 @@
 import db
 import time, datetime
-import hmac
+import hmac, random
 import web
 import urllib
 from infogami import config
 from infogami.utils.context import context as ctx
+from web.utils import utf8
 
 SECRET = config.encryption_key
-SALT = config.password_salt
 
 def setcookie(user, remember=False):
     t = datetime.datetime(*time.gmtime()[:6]).isoformat()
     text = "%d,%s" % (user.id, t)
-    text += "," + _digest(text)
+    text += "," + _generate_salted_hash(SECRET, text)
 
     expires = (remember and 3600*24*7) or ""
     web.setcookie("infogami_session", text, expires=expires)
@@ -22,9 +22,9 @@ def get_user(site):
     session = web.cookies(infogami_session=None).infogami_session
     if session:
         user_id, login_time, digest = session.split(',')
-        if _digest(user_id + "," + login_time) == digest:
+        if _check_salted_hash(SECRET, user_id + "," + login_time, digest):
             return db.get_user(site, int(user_id))
-            
+
 def login(site, username, password, remember=False):
     """Returns the user if login is successful, None otherwise."""
     u = db.get_user_by_name(site, username)
@@ -33,24 +33,27 @@ def login(site, username, password, remember=False):
         return u
     else:
         return None
-
-def check_password(user, password):
+        
+def _generate_salted_hash(key, text):
+    salt = hmac.HMAC(key, str(random.random())).hexdigest()[:5]
+    hash = hmac.HMAC(key, salt + utf8(text)).hexdigest()
+    return '%s$%s' % (salt, hash)
+    
+def _check_salted_hash(key, text, salted_hash):
+    salt, hash = salted_hash.split('$', 1)
+    return hmac.HMAC(key, salt + utf8(text)).hexdigest() == hash
+    
+def check_password(user, raw_password):
     prefs = user and db.get_user_preferences(user)
-    return prefs and prefs.get("password") == _hash(password)
+    return _check_salted_hash(SECRET, raw_password, prefs.password)
 
-def _digest(text):
-    return hmac.HMAC(SECRET, text).hexdigest()
-
-def _hash(password):
-    return _digest(SALT + password)
-
-def set_password(user, password):
+def set_password(user, raw_password):
     p = db.get_user_preferences(user)
-    p.password = _hash(password)
+    p.password = _generate_salted_hash(SECRET, raw_password)
     p.save()
     
 def random_password():
-    import random, string
+    import string
     n = random.randint(8, 16)
     chars = string.letters + string.digits
     password = "".join([random.choice(chars) for i in range(n)])

@@ -26,7 +26,7 @@ class WikiSource(DictMixin):
     def __getitem__(self, key):
         key = self.process_key(key)
         root = self.getroot()
-        if root is None:
+        if root is None or context.get('rescue_mode'):
             raise KeyError, key
         return self.templates[root+key]
         

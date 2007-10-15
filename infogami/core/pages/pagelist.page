@@ -1,2 +1,9 @@
-{'name': 'pagelist', 'type': 'type/page', 'd': {'title': 'Page List', 'body': '{{PageList()}}'}}
+{
+    'name': 'pagelist', 
+    'type': {'name': 'type/page'},
+    'd': {
+        'title': 'Page List', 
+        'body': '{{PageList()}}'
+    }
+}
 

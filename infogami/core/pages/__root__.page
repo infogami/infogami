@@ -1,6 +1,6 @@
 {
     'name': '', 
-    'type': 'type/page', 
+    'type': {'name': 'type/page'},
     'd': {
         'title': 'Welcome', 
         'body': 'Infogami is a free, easy-to-use, structured wiki.\n'

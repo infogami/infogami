@@ -1,2 +1,9 @@
-{'name': 'recentchanges', 'type': 'type/page', 'd': {'title': 'Recent Changes', 'body': '{{RecentChanges()}}'}}
+{
+    'name': 'recentchanges', 
+    'type': {'name': 'type/page'}, 
+    'd': {
+        'title': 'Recent Changes', 
+        'body': '{{RecentChanges()}}'
+    }
+}
 

@@ -190,12 +190,14 @@ class Things:
         return self.values
 
 class Versions:
-    def __init__(self, tdb, limit=None, offset=None, orderby=None, **query):
+    def __init__(self, tdb, limit=None, offset=None, orderby=None, created_after=None, created_before=None, **query):
         self.query = Versions.process(query)
         self.versions = None
         self.limit = limit
         self.offset = offset
         self.orderby = orderby
+        self.created_after = created_after
+        self.created_before = created_before
         self.tdb = tdb
         self.init()
     
@@ -206,7 +208,14 @@ class Versions:
         
         for k, v in self.query.items():
             where += web.reparam(' AND %s = $v' % (k,), locals())
-                    
+            
+        if self.created_after:
+            #@@ the name created_after is misleading. It actually includes that time also.
+            where += web.reparam(' AND version.created >= $self.created_after', locals())
+            
+        if self.created_before:
+            where += web.reparam(' AND version.created < $self.created_before', locals())
+            
         self.tdb.stats.version_queries += 1
 
         def version(r):
@@ -250,6 +259,9 @@ class Versions:
     
     def __len__(self):
         return len(self.versions)
+        
+    def list(self):
+        return list(self.versions)
         
     def __str__(self):
         return str(self.versions)
@@ -468,7 +480,7 @@ class SimpleTDBImpl:
             author_id=author_id, ip=ip, revision=revision)
         
         #@@ created should really be the datetime from database, but this saves a query.
-        created = datetime.datetime.now()
+        created = datetime.datetime.now().isoformat()
 
         for k, v in thing.d.items():
             SimpleTDBImpl.savedatum(vid, k, v)
@@ -479,7 +491,7 @@ class SimpleTDBImpl:
             if revision == 1:
                 logger.log('thing', tid, name=thing.name, parent_id=thing.parent.id)
             logger.log('version', vid, thing_id=tid, author_id=author_id, ip=ip, 
-                comment=comment, revision=revision, created=created)           
+                comment=comment, revision=revision, created=created)  
             logger.log('data', vid, __type__=thing.type, **thing.d)
             web.commit()
         except:

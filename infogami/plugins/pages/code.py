@@ -180,18 +180,18 @@ def moveallpages():
     _pushpages(pages)
     
 @infogami.action
-def tdbdump(filename):
+def tdbdump(filename, created_after=None, created_before=None):
     """Creates tdb log of entire database."""
     from infogami.tdb import logger
     f = open(filename, 'w')
     logger.set_logfile(f)
     
-    things = {}
     # get in chunks of 10000 to limit the load on db.
     N = 10000
     offset = 0
     while True:
-        versions = tdb.Versions(offset=offset, limit=N, orderby='created').list()
+        versions = tdb.Versions(offset=offset, limit=N, orderby='version.id', 
+                        created_after=created_after, created_before=created_before).list()
         offset += N
         if not versions:
             break
@@ -202,12 +202,11 @@ def tdbdump(filename):
         for v in versions:
             t = v.thing
             logger.transact()
-            if t.name not in things:
-                things[t.name] = 1                
+            if v.revision == 1:
                 logger.log('thing', t.id, name=t.name, parent_id=t.parent.id)
                 
             logger.log('version', v.id, thing_id=t.id, author_id=v.author_id, ip=v.ip, 
-                    comment=v.comment, revision=v.revision, created=v.created)           
+                    comment=v.comment, revision=v.revision, created=v.created.isoformat())           
             logger.log('data', v.id, __type__=t.type, **t.d)
             logger.commit()
     f.close()

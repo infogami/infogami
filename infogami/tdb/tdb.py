@@ -138,7 +138,7 @@ def match_query(query, data):
     return all(match(query[k], data.get(k, nothing)) for k in query)
 
 class Things:
-    def __init__(self, tdb, limit=None, **query):
+    def __init__(self, tdb, limit=None, offset=None, orderby=None, **query):
         self.tdb = tdb
         self.query = Things.process(query)
         tables = ['thing', 'version']            
@@ -164,7 +164,7 @@ class Things:
             #@@ when len(value) > 250, this won't work.
             where += web.reparam('d%s.key = $k AND substr(d%s.value, 0, 250) = $v' % (n, n), locals())
         
-        result = web.select(tables, what=what, where=where, limit=limit)
+        result = web.select(tables, what=what, where=where, limit=limit, offset=offset, order=orderby)
         self.values = tdb.withIDs([r.id for r in result])
         
     @staticmethod
@@ -183,14 +183,19 @@ class Things:
     def __iter__(self):
         return iter(self.values)
         
+    def __len__(self):
+        return len(self.values)
+
     def list(self):
         return self.values
 
 class Versions:
-    def __init__(self, tdb, limit=None, **query):
+    def __init__(self, tdb, limit=None, offset=None, orderby=None, **query):
         self.query = Versions.process(query)
         self.versions = None
         self.limit = limit
+        self.offset = offset
+        self.orderby = orderby
         self.tdb = tdb
         self.init()
     
@@ -218,7 +223,7 @@ class Versions:
             v.thing = t
             return v
 
-        result = web.select(tables, what=what, where=where, order='id desc', limit=self.limit)
+        result = web.select(tables, what=what, where=where, order=self.orderby or 'id desc', limit=self.limit, offset=self.offset)
         self.versions = [version(r) for r in result]
         
     @staticmethod

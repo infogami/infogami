@@ -26,3 +26,4 @@ CREATE TABLE datum (
 );
 
 CREATE INDEX datum_key_val_idx ON datum (key, substr(value, 0, 250));
+CREATE INDEX version_created_idx ON version (created);

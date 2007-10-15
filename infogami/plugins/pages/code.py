@@ -19,8 +19,8 @@ from infogami.utils.context import context
 
 def listfiles(root, filter=None):
     """Returns an iterator over all the files in a directory recursively.
-    If filter is specified only those, which match the filter are returned.
-    The returned paths will be relative to root.
+    If filter is specified only those files matching the filter are returned.
+    Returned paths will be relative to root.
     """
     if not root.endswith(os.sep):
         root += os.sep
@@ -32,26 +32,30 @@ def listfiles(root, filter=None):
             if filter is None or filter(path):
                 yield path
 
-@infogami.action        
-def push(root):
-    """Move pages from disk to wiki."""
-    pages = _readpages(root)
-    _pushpages(pages)
+def storify(d):
+    """Recursively converts dict to web.storage object.
     
-def _readpages(root):
-    def storify(d):
-        """Recursively converts dict to web.storage object."""
-        if isinstance(d, dict):
-            return web.storage([(k, storify(v)) for k, v in d.items()])
-        else:
-            return d
+        >>> d = storify({'x: 1, y={'z': 2}})
+        >>> d.x
+        1
+        >>> d.y.z
+        2
+    """
+    if isinstance(d, dict):
+        return web.storage([(k, storify(v)) for k, v in d.items()])
+    elif isinstance(d, list):
+        return [storify(x) for x in d]
+    else:
+        return d
             
+def _readpages(root):
+    """Reads and parses all root/*.page files and returns results as a dict."""
     def read(root, path):
         path = path or "__root__"    
         text = open(os.path.join(root, path + ".page")).read()
         d = eval(text)
         return storify(d)
-        
+
     pages = {}
     for path in listfiles(root, filter=lambda path: path.endswith('.page')):
         path = path[:-len(".page")]
@@ -62,151 +66,76 @@ def _readpages(root):
         pages[name] = read(root, path)
     return pages
 
-def _pushpages(pages):
-    """Push pages in the proper order."""
-    def getthing(thing, create=False):
-        if isinstance(thing, tdb.Thing):
-            return thing
-        else:
-            name = thing
-            try:
-                return db.get_version(context.site, name)
-            except:
-                if create:
-                    thing = db.new_version(context.site, name, getthing("type/thing"), {})
-                    thing.save()
-                    return thing
-                else:
-                    raise
-            
-    def postorder_traversal(nodes, getchildren, visitor, breakcycle):
-        """Performs post-order traversal over graph rooted at `node`. 
-        `getchildren(node)` returns children of node in the graph.
-        `visitor(node)` is called when a node is visited. 
-        Incase there is a cycle in the graph, `breakcycle(node)` is called 
-        to take the necessary action.
-        """
-        print >> web.debug, 'postorder_traversal'
-        visited = {}
-        visiting = {}
-        
-        def visit(node):
-            print >> web.debug, 'visit:', node
-            if node in visited:
-                return
-            elif node in visiting:
-                return breakcycle(node)
+def _savepage(page):
+    """Saves a page from dict."""
+    def getthing(name, create=False):
+        if isinstance(name, tdb.Thing):
+            return name
+        try:
+            return db.get_version(context.site, name)
+        except:
+            if create:
+                thing = db.new_version(context.site, name, getthing("type/thing"), {})
+                thing.save()
+                return thing
             else:
-                print >> web.debug, 'visit: visiting node', node
-                visiting[node] = 1
-                visit_all(getchildren(node))
-                visitor(node)
-                visited[node] = 1
-                del visiting[node]
-        
-        def visit_all(nodes):
-            for n in nodes: 
-                visit(n)
-                
-        visit_all(nodes)
-                
-    def save_all_pages(pages):
-        def get_compound_properties(type):
-            """Returns names of all non-primitive properties of a type."""
-            return [p.name for p in type.d.properties if not getthing(p.d.type).d.get('is_primitive')]
+                raise
 
-        def getchildren(name):
-            if name in pages:
-                page = pages[name]
-                yield page.type
-
-                type = pages.get(page.type) or getthing(page.type)
-                for k in get_compound_properties(type):
-                    v = page.d.get(k)
-                    if v is not None and isinstance(v, str): 
-                        yield v
-                    else:
-                        assert isinstance(v, dict)
-                        
-        def breakcycle(name):
-            """When there is a cycle in the graph, a thing with that name 
-            must be created to break the cycle."""
-            print >> web.debug, 'breakcycle: ', name
-            getthing(name, create=True)
-            
-        postorder_traversal(pages.keys(), getchildren, savepage, breakcycle)
-        
-    def thingify(data, type, getparent):
-        """If type is primitive, return the same.
+    def thingify(data, getparent):
+        """Converts data into thing or primitive value.
         """
-        type = getthing(type)
-        if type.d.get('is_primitive'):
-            return data
-        elif isinstance(data, str):
-            return getthing(data)
+        if isinstance(data, list):
+            return [thingify(x, getparent) for x in data]
         elif isinstance(data, dict):
             name = data.name
-            #@@ Why data.type is not used? need any assertion?
-            thing = db.new_version(getparent(), name, type, data.d)
-            thing.save()
-            return thing
+            if data.get('child'):
+                d = dict([(k, thingify(v, getparent)) for k, v in data.d.items()])
+                type = thingify(data.type, getparent)
+                thing = db.new_version(getparent(), name, type, d)
+                thing.save()
+                return thing
+            else:
+                return getthing(name, create=True)
         else:
-            raise ValueError, data, type
-        
-    def savepage(name):
-        if name not in pages:
-            print >> web.debug, 'savepage: ignoring', name
-            # when name is not in pages, just make sure that page is present in the wiki.
-            return getthing(name)
-            
-        print >> web.debug, 'savepage: saving page', name
-            
-        page = pages[name]
-        name = page.name
-        type = getthing(page.type)
-        d = {}
-        
-        getself = lambda: getthing(name, create=True)
-        
-        for p in type.d.properties:
-            if p.name in page.d:
-                d[p.name] = thingify(page.d[p.name], p.d.type, getself)
-        
-        _page = db.new_version(context.site, name, type, d)
-        _page.save()
-        
-    print >> web.debug, '_pushpages'
-    save_all_pages(pages)
-        
-@infogami.action
-def pull(root, paths_files):
-    """Move specified pages from wiki to disk."""
-    pages = {}
-    paths = [line.strip() for line in open(paths_files).readlines()]
-    for path in paths:
-        print >> web.debug, "pulling page", path
-        _pullone(root, path)
+            return data
 
-def _pullone(root, path):
+    name = page.name
+    type = getthing(page.type.name, create=True)
+    d = {}
+    
+    getself = lambda: getthing(name, create=True)
+    for k, v in page.d.items():
+        d[k] = thingify(v, getself)
+            
+    _page = db.new_version(context.site, name, type, d)
+    _page.save()
+
+def _thing2dict(page):
+    """Converts thing to dict.    
+    """
     def simplify(x, page):
         if isinstance(x, tdb.Thing):
             # for type/property-like values
             if x.parent.id == page.id:
-                return thing2dict(x)
+                t = _thing2dict(x)
+                t['child'] = True
+                return t
             else:
-                return x.name
+                return dict(name=x.name)
         elif isinstance(x, list):
             return [simplify(a, page) for a in x]
         else:
             return x
             
-    def thing2dict(page):
-        data = dict(name=page.name, type=page.type.name)
-        d = data['d'] = {}
-        for k, v in page.d.iteritems():
-            d[k] = simplify(v, page)
-        return data
-            
+    data = dict(name=page.name, type={'name': page.type.name})
+    d = data['d'] = {}
+    for k, v in page.d.iteritems():
+        d[k] = simplify(v, page)
+    return data
+
+@infogami.action
+def pull(root, paths_files):
+    """Move specified pages from wiki to disk."""
     def write(path, data):
         dir = os.path.dirname(filepath)
         if not os.path.exists(dir):
@@ -214,13 +143,32 @@ def _pullone(root, path):
         f = open(filepath, 'w')
         f.write(repr(data))
         f.close()
-        
-    page = db.get_version(context.site, path)
-    data = thing2dict(page)
-    name = page.name or "__root__"
-    filepath = os.path.join(root, name + ".page") 
-    write(filepath, data)
+
+    pages = {}
+    paths = [line.strip() for line in open(paths_files).readlines()]
+    for path in paths:
+        print >> web.debug, "pulling page", path
+        page = db.get_version(context.site, path)
+        name = page.name or '__root__'
+        data = _thing2dict(page)
+        filepath = os.path.join(root, name + ".page") 
+        write(filepath, data)
+
+@infogami.action        
+def push(root):
+    """Move pages from disk to wiki."""
+    pages = _readpages(root)
+    _pushpages(pages)
     
+def _pushpages(pages):
+    web.transact()
+    try:
+        for p in pages.values(): _savepage(p)    
+    except:
+        web.rollback()
+    else:
+        web.commit()
+
 @infogami.install_hook
 @infogami.action
 def moveallpages():
@@ -230,3 +178,79 @@ def moveallpages():
         path = os.path.join(plugin.path, 'pages')
         pages.update(_readpages(path))
     _pushpages(pages)
+    
+@infogami.action
+def tdbdump(filename):
+    """Creates tdb log of entire database."""
+    from infogami.tdb import logger
+    f = open(filename, 'w')
+    logger.set_logfile(f)
+    
+    things = {}
+    # get in chunks of 10000 to limit the load on db.
+    N = 10000
+    offset = 0
+    while True:
+        versions = tdb.Versions(offset=offset, limit=N, orderby='created').list()
+        offset += N
+        if not versions:
+            break
+            
+        # fill the cache with things corresponding to the versions. 
+        # otherwise, every thing must be queried separately.
+        tdb.withIDs([v.thing_id for v in versions])            
+        for v in versions:
+            t = v.thing
+            logger.transact()
+            if t.name not in things:
+                things[t.name] = 1                
+                logger.log('thing', t.id, name=t.name, parent_id=t.parent.id)
+                
+            logger.log('version', v.id, thing_id=t.id, author_id=v.author_id, ip=v.ip, 
+                    comment=v.comment, revision=v.revision, created=v.created)           
+            logger.log('data', v.id, __type__=t.type, **t.d)
+            logger.commit()
+    f.close()
+
+@infogami.action
+def datadump(filename):
+    """Writes dump of latest versions of all pages in the system.
+    User info is excluded.
+    """
+    def dump(predicate=None):
+        things = {}
+        # get in chunks of 10000 to limit the load on db.
+        N = 10000
+        offset = 0
+
+        while True:
+            things = tdb.Things(parent=context.site, offset=offset, limit=N, orderby='thing.id')
+            offset += N
+            if not things:
+                break
+            for t in things:
+                if predicate and not predicate(t):
+                    continue
+                data = _thing2dict(t)
+                f.write(str(data))
+                f.write('\n')
+    
+    f = open(filename, 'w')    
+    # dump the everything except users
+    dump(lambda t: t.type.name != 'type/user'))
+    f.close()
+    
+@infogami.action
+def dataload(filename):
+    """"Loads data dumped using datadump action into the database."""
+    lines = open(filename).xreadlines()
+    web.transact()
+    try:
+        for line in lines:
+            data = storify(eval(line))
+            _savepage(data)
+    except:
+        web.rollback()
+        raise
+    else:
+        web.commit()

@@ -237,7 +237,7 @@ def datadump(filename):
     
     f = open(filename, 'w')    
     # dump the everything except users
-    dump(lambda t: t.type.name != 'type/user'))
+    dump(lambda t: t.type.name != 'type/user')
     f.close()
     
 @infogami.action

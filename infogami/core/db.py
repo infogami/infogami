@@ -184,6 +184,9 @@ def get_recent_changes(site, author=None, limit=None):
 @public
 def list_pages(site, path):
     """Lists all pages with name path/*"""
+    return _list_pages(site, path, limit=100)
+    
+def _list_pages(site, path, limit=None):
     delete = get_type(site, 'type/delete')
     
     if path == "":
@@ -191,12 +194,15 @@ def list_pages(site, path):
     else:
         pattern = path + '/%'
         
-    return web.query("""SELECT t.id, t.name FROM thing t 
+    q = """SELECT t.id, t.name FROM thing t 
             JOIN version ON version.revision = t.latest_revision AND version.thing_id = t.id
             JOIN datum ON datum.version_id = version.id 
             WHERE t.parent_id=$site.id AND t.name LIKE $pattern 
             AND datum.key = '__type__' AND datum.value != $delete.id
-            ORDER BY t.name LIMIT 100""", vars=locals())
+            ORDER BY t.name"""
+    if limit:
+        q += ' LIMIT $limit'
+    return web.query(q, vars=locals())
                    
 def get_things(site, typename, prefix, limit):
     """Lists all things whose names start with typename"""

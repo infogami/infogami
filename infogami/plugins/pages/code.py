@@ -146,7 +146,16 @@ def pull(root, paths_files):
 
     pages = {}
     paths = [line.strip() for line in open(paths_files).readlines()]
+    paths2 = []
+
     for path in paths:
+        if path.endswith('/*'):
+            path = path[:-2] # strip trailing /*
+            paths2 += [p.name for p in db._list_pages(context.site, path)]
+        else:
+            paths2.append(path)
+
+    for path in paths2:
         print >> web.debug, "pulling page", path
         page = db.get_version(context.site, path)
         name = page.name or '__root__'

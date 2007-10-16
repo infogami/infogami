@@ -130,7 +130,7 @@ def match_query(query, data):
         if isinstance(b, Thing): b = b.id
         
         if isinstance(b, list):
-            return any(a == bb for bb in b)
+            return any(match(a, bb) for bb in b)
         else:
             return a == b
     
@@ -480,7 +480,7 @@ class SimpleTDBImpl:
             author_id=author_id, ip=ip, revision=revision)
         
         #@@ created should really be the datetime from database, but this saves a query.
-        created = datetime.datetime.now().isoformat()
+        created = datetime.datetime.now()
 
         for k, v in thing.d.items():
             SimpleTDBImpl.savedatum(vid, k, v)
@@ -491,7 +491,7 @@ class SimpleTDBImpl:
             if revision == 1:
                 logger.log('thing', tid, name=thing.name, parent_id=thing.parent.id)
             logger.log('version', vid, thing_id=tid, author_id=author_id, ip=ip, 
-                comment=comment, revision=revision, created=created)  
+                comment=comment, revision=revision, created=created.isoformat())  
             logger.log('data', vid, __type__=thing.type, **thing.d)
             web.commit()
         except:

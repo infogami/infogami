@@ -72,8 +72,8 @@ class edit (delegate.mode):
             #@@ using type/page here is not correct. 
             #@@ It should use the previous type
             type = db.get_type(site, 'type/page')
-            data = self.parse_data(site, type, i)
             p = db.new_version(site, path, type, data)
+            thingutil.thingtidy(p)
             return render.edit(p)
             
         p = db.new_version(site, path, type, i)

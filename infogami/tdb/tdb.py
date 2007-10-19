@@ -383,10 +383,14 @@ class SimpleTDBImpl:
     def _load(self, t, revision=None):
         id, name, parent, latest_revision = t.id, t.name, self.withID(t.parent_id, lazy=True), t.latest_revision
         revision = revision or latest_revision
-        
-        v = web.select('version',
-            where='version.thing_id = $id AND version.revision = $revision',
-            vars=locals())[0]
+        try:
+            v = web.select('version',
+                where='version.thing_id = $id AND version.revision = $revision',
+                vars=locals())[0]
+        except IndexError:
+            #@@ This is not really NotFound. Should throw a better exception.
+            raise NotFound, name
+            
         v = Version(self.parent, **v)
         data = web.select('datum',
                 where="version_id = $v.id",
@@ -437,7 +441,7 @@ class SimpleTDBImpl:
             for n, item in enumerate(value):
                 SimpleTDBImpl.savedatum(vid, key, item, n)
             return
-        elif isinstance(value, str):
+        elif isinstance(value, (str, unicode)):
             dt = 0
         elif isinstance(value, Thing):
             dt = 1

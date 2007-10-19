@@ -66,7 +66,7 @@ def _readpages(root):
         pages[name] = read(root, path)
     return pages
 
-def _savepage(page, create_dependents=True):
+def _savepage(page, create_dependents=True, comment=None):
     """Saves a page from dict."""
     def getthing(name, create=False):
         if isinstance(name, tdb.Thing):
@@ -108,7 +108,7 @@ def _savepage(page, create_dependents=True):
         d[k] = thingify(v, getself)
             
     _page = db.new_version(context.site, name, type, d)
-    _page.save()
+    _page.save(author=context.user, comment=comment, ip=web.ctx.ip)
     return _page
 
 def thing2dict(page):

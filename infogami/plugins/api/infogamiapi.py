@@ -7,7 +7,14 @@ import httplib
 import urllib
 
 class _Storage(dict):
-    __getattr__ = dict.__getitem__
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError, key
+
+    def __setattr__(self, key, value):
+        self[key] = value
     
 def _storify(d):
     """Recursively converts dict to web.storage object.
@@ -88,7 +95,6 @@ class Infogami:
                             {'Content-type': 'application/x-www-form-urlencoded'})
         
         body = simplejson.loads(response.read())
-
         if not body['code'].startswith('/api/status/ok'):
             raise InfogamiException("Login failed")
 

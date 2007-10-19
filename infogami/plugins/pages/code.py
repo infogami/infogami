@@ -66,7 +66,7 @@ def _readpages(root):
         pages[name] = read(root, path)
     return pages
 
-def _savepage(page):
+def _savepage(page, create_dependents=True):
     """Saves a page from dict."""
     def getthing(name, create=False):
         if isinstance(name, tdb.Thing):
@@ -74,7 +74,7 @@ def _savepage(page):
         try:
             return db.get_version(context.site, name)
         except:
-            if create:
+            if create and create_dependents:
                 thing = db.new_version(context.site, name, getthing("type/thing"), {})
                 thing.save()
                 return thing
@@ -109,15 +109,16 @@ def _savepage(page):
             
     _page = db.new_version(context.site, name, type, d)
     _page.save()
+    return _page
 
-def _thing2dict(page):
+def thing2dict(page):
     """Converts thing to dict.    
     """
     def simplify(x, page):
         if isinstance(x, tdb.Thing):
             # for type/property-like values
             if x.parent.id == page.id:
-                t = _thing2dict(x)
+                t = thing2dict(x)
                 t['child'] = True
                 return t
             else:
@@ -175,6 +176,7 @@ def _pushpages(pages):
         for p in pages.values(): _savepage(p)    
     except:
         web.rollback()
+        raise
     else:
         web.commit()
 

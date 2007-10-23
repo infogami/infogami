@@ -28,7 +28,7 @@ def get_user(site):
 def login(site, username, password, remember=False):
     """Returns the user if login is successful, None otherwise."""
     u = db.get_user_by_name(site, username)
-    if check_password(u, password):
+    if u and check_password(u, password):
         setcookie(u, remember)
         return u
     else:

@@ -48,7 +48,7 @@ class edit (delegate.mode):
                 utils.view.set_error('Unknown type: ' + i.t)
             else:
                 p.type = type
-        
+                
         thingutil.thingtidy(p)
         return render.edit(p)
     
@@ -72,7 +72,7 @@ class edit (delegate.mode):
             #@@ using type/page here is not correct. 
             #@@ It should use the previous type
             type = db.get_type(site, 'type/page')
-            p = db.new_version(site, path, type, data)
+            p = db.new_version(site, path, type, i)
             thingutil.thingtidy(p)
             return render.edit(p)
             
@@ -135,7 +135,7 @@ class login(delegate.page):
         return render.login(f)
 
     def POST(self, site):
-        i = web.input(remember=False, redirect='/')
+        i = web.input(remember=False, redirect='/')        
         user = auth.login(site, i.username, i.password, i.remember)
         if user is None:
             f = forms.login()

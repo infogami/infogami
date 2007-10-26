@@ -2,6 +2,7 @@ import web
 import logger
 import datetime
 from lru import LRU
+from extend import Extend
 
 class TDBException(Exception): pass
 
@@ -318,19 +319,15 @@ class LazyThing(Thing):
     def __hash__(self):
         return self.id
         
-class SimpleTDBImpl:
+class SimpleTDBImpl(Extend):
     """Simple TDB implementation without any optimizations."""
     
     def __init__(self):
+        Extend.__init__(self)
         self.stats = web.storage(queries=0, version_queries=0, saves=0)
         self.root = self.withID(1, lazy=True)
-        self.parent = self
         self.hints = web.storage()
             
-    #@@ Hack    
-    def set_parent(self, parent):
-        self.parent = parent
-        
     def setup(self):
         try:
             self.withID(1)
@@ -341,7 +338,7 @@ class SimpleTDBImpl:
     def new(self, name, parent, type, d=None):
         """Creates a new thing."""
         if d == None: d = {}
-        t = Thing(self.parent, None, name, parent, latest_revision=None, v=None, type=type, d=d)
+        t = Thing(self, None, name, parent, latest_revision=None, v=None, type=type, d=d)
         t._dirty = True
         return t
         
@@ -391,7 +388,7 @@ class SimpleTDBImpl:
             #@@ This is not really NotFound. Should throw a better exception.
             raise NotFound, name
             
-        v = Version(self.parent, **v)
+        v = Version(self, **v)
         data = web.select('datum',
                 where="version_id = $v.id",
                 order="key ASC, ordering ASC",
@@ -399,7 +396,7 @@ class SimpleTDBImpl:
 
         d, type = self._parse_data(data)
         parent = self.withID(t.parent_id, lazy=True)
-        t = Thing(self.parent, t.id, t.name, parent, latest_revision, v, type, d)
+        t = Thing(self, t.id, t.name, parent, latest_revision, v, type, d)
         v.thing = t
         return t
 
@@ -503,8 +500,8 @@ class SimpleTDBImpl:
             raise
         else:
             logger.commit()
-        thing.v = Version(self.parent, vid, thing.id, revision, author_id, ip, comment, created=created)
-        thing.h = History(self.parent, thing.id)
+        thing.v = Version(self, vid, thing.id, revision, author_id, ip, comment, created=created)
+        thing.h = History(self, thing.id)
         thing.latest_revision = revision
         thing._dirty = False
         _run_hooks("on_new_version", thing)
@@ -659,65 +656,52 @@ class ThingCache(LRU):
         # from the name2id map must also be removed 
         del self.name2id[thing.name, thing.parent.id]
         return node
-                    
-class ProxyTDBImpl:
-    """A TDB impl, which contains another TDB impl."""
-    
-    def __init__(self, impl):
-        self.impl = impl
-        self.set_parent(self)
-        self.hints = web.storage()
         
-    def set_parent(self, impl):
-        self.parent = impl
-        self.impl.set_parent(impl)
+def safe_in(k, d):
+    # newly created Things will not have any id, so __hash__ will fail.
+    # This is a work-around for that.
+    try:
+        return k in d
+    except TypeError:
+        return False
 
-    def __getattr__(self, key):
-        return getattr(self.impl, key)
-
-class CachedTDBImpl(ProxyTDBImpl):
+class CachedTDBImpl(Extend):
     """TDB with cache"""
     def __init__(self, impl):
-        ProxyTDBImpl.__init__(self, impl)
+        Extend.__init__(self, impl)
 
         #@@ make this configurable
         self.cache = ThingCache(10000)
         self.querycache = LRU(1000)
                 
     def withID(self, id, revision=None, lazy=False):
-        if lazy:
-            return LazyThing(lambda: self.withID(id, revision, lazy=False), id=id)
-            
-        if revision is not None:
-            return self.impl.withID(id, revision)
+        if lazy or revision is not None:
+            return self.super_withID(id, revision, lazy=lazy)
             
         if id not in self.cache:
-            self.cache[id] = self.impl.withID(id, revision)
-            
+            self.cache[id] = self.super_withID(id, revision)
+
         return self.cache[id]
     
     def withName(self, name, parent, revision=None, lazy=False):
-        if lazy:
-            return LazyThing(lambda: self.withName(name, parent, revision, lazy=False), name=name, parent=parent)
-            
-        if revision is not None:
-            return self.impl.withName(name, parent, revision)
+        if lazy or revision is not None:
+            return self.super_withName(name, parent, revision, lazy=lazy)
             
         if (name, parent.id) not in self.cache:
-            self.cache[name, parent.id] = self.impl.withName(name, parent, revision)
+            self.cache[name, parent.id] = self.super_withName(name, parent, revision)
         return self.cache[name, parent.id]
             
     def withIDs(self, ids, lazy=False):
         notincache = [id for id in ids if id not in self.cache]
         if notincache:
-            for t in self.impl.withIDs(ids):
+            for t in self.super_withIDs(notincache):
                 self.cache[t.id] = t
         return [self.cache[id] for id in ids]
         
     def withNames(self, names, parent, lazy=False):
         notincache = [name for name in names if (name, parent.id) not in self.cache]
         if notincache:
-            for t in self.impl.withNames(notincache, parent):
+            for t in self.super_withNames(notincache, parent):
                 self.cache[t.id] = t
         return [self.cache[name, parent.id] for name in names]
 
@@ -725,37 +709,24 @@ class CachedTDBImpl(ProxyTDBImpl):
         q = dict(Things.process(query), limit=limit)
         q = tuple(sorted(q.items()))
         
-        try:
-            if q not in self.querycache:
-                self.querycache[q] = Things(self.parent, limit=limit, **query)
-        except TypeError:
-            # newly created Things will not have any id, so __hash__ will fail.
-            # This is a work-around for that.
-            return Things(self.parent, limit=limit, **query)
-            
-        return self.querycache[q]
-
+        if not safe_in(q, self.querycache):
+            return self.super_Things(limit=limit, **query)
+        else:
+            return self.querycache[q]
+        
     def Versions(self, limit=None, lazy=True, **query):
-        if lazy:
-            return LazyProxy(lambda: self.Versions(limit=limit, lazy=False, **query))
-        else:    
-            q = dict(query, limit=limit)
-            q = tuple(sorted(q.items()))
-
-            try:
-                if q not in self.querycache:
-                    self.querycache[q] = Versions(self.parent, limit=limit, **query)
-            except TypeError:
-                # newly created Things will not have any id, so __hash__ will fail.
-                # This is a work-around for that.
-                return Versions(self, limit=limit, **query)
-            
+        q = dict(query, limit=limit)
+        q = tuple(sorted(q.items()))
+        
+        if lazy or not safe_in(q, self.querycache):
+            return self.super_Versions(limit=limit, **query)
+        else:
             return self.querycache[q]
 
     def save(self, thing, author=None, comment='', ip=None):
         # previous version of thing
         #@@ what if previous version exists and not available in cache?
-        self.impl.save(thing, author=author, comment=comment, ip=ip)
+        self.super_save(thing, author=author, comment=comment, ip=ip)
         
         old_thing = self.cache.get(thing.id)
         
@@ -768,22 +739,23 @@ class CachedTDBImpl(ProxyTDBImpl):
         thing.h = History(self, thing.id)
         self.cache[thing.id] = thing
                                 
-class RestrictedTDBImpl(ProxyTDBImpl):
+class RestrictedTDBImpl(Extend):
     """TDB implementation to run in a restricted environment.
     As of now, it supports system and user modes of execution.
     In system mode all operations are permitted. 
     In user mode all but save operation is permitted.
     """
     def __init__(self, impl):
-        ProxyTDBImpl.__init__(self, impl)
+        Extend.__init__(self, impl)
             
     def save(self, *a, **kw):
-        mode = web.ctx.get('tdb_mode', 'system')
+        # To switch to user mode, web.ctx.tdb_mode must be set to 'user'
+        mode = getattr(web.ctx, 'tdb_mode', 'system')
         if mode == 'user':
             raise SecurityError, 'Permission Denied.'
         else:
-            self.impl.save(*a, **kw)    
-        
+            self.super_save(*a, **kw)
+
 # hooks can be registered by extending the hook class
 hooks = []
 class metahook(type):

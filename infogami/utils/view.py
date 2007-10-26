@@ -53,6 +53,8 @@ web.template.Template.globals.update(dict(
   list = list,
   set = set,
   dict = dict,
+  min = min,
+  max = max,
   range = range,
   len = len,
   repr=repr,

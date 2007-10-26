@@ -778,7 +778,7 @@ class RestrictedTDBImpl(ProxyTDBImpl):
         ProxyTDBImpl.__init__(self, impl)
             
     def save(self, *a, **kw):
-        mode = getattr(self.hints, 'mode', 'system')
+        mode = web.ctx.get('tdb_mode', 'system')
         if mode == 'user':
             raise SecurityError, 'Permission Denied.'
         else:

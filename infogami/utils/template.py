@@ -76,10 +76,10 @@ def usermode(f):
     from infogami import tdb
     def g(*a, **kw):
         try:
-            tdb.impl.hints.mode = 'user'
+            web.ctx.tdb_mode = 'user'
             return f(*a, **kw)
         finally:
-            tdb.impl.hints.mode = 'system'
+            web.ctx.tdb_mode = 'system'
 
     g.__name__ = f.__name__
     return g

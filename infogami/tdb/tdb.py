@@ -318,6 +318,34 @@ class LazyThing(Thing):
 
     def __hash__(self):
         return self.id
+
+def savedatum(vid, key, value, ordering=None):
+    # since only one level lists are supported, 
+    # list type can not have ordering specified.
+    if isinstance(value, list) and ordering is None:
+        for n, item in enumerate(value):
+            savedatum(vid, key, item, n)
+        return
+    elif isinstance(value, (str, unicode)):
+        dt = 0
+    elif isinstance(value, Thing):
+        dt = 1
+        #@@ Explain this
+        if not isinstance(value, LazyThing):
+            value.save()
+        value = value.id
+    elif isinstance(value, bool):
+        # bool is also int, so bool check should be done before int.
+        dt = 4
+    elif isinstance(value, (int, long)):
+        dt = 2
+    elif isinstance(value, float):
+        dt = 3
+    else:
+        raise BadData, value
+    web.insert('datum', False, 
+      version_id=vid, key=key, value=str(value), data_type=dt, ordering=ordering)        
+
         
 class SimpleTDBImpl(Extend):
     """Simple TDB implementation without any optimizations."""
@@ -430,34 +458,6 @@ class SimpleTDBImpl(Extend):
     def withNames(self, names, parent, lazy=False):
         return [self.withName(name, parent) for name in names]
             
-    @staticmethod
-    def savedatum(vid, key, value, ordering=None):
-        # since only one level lists are supported, 
-        # list type can not have ordering specified.
-        if isinstance(value, list) and ordering is None:
-            for n, item in enumerate(value):
-                SimpleTDBImpl.savedatum(vid, key, item, n)
-            return
-        elif isinstance(value, (str, unicode)):
-            dt = 0
-        elif isinstance(value, Thing):
-            dt = 1
-            #@@ Explain this
-            if not isinstance(value, LazyThing):
-                value.save()
-            value = value.id
-        elif isinstance(value, bool):
-            # bool is also int, so bool check should be done before int.
-            dt = 4
-        elif isinstance(value, (int, long)):
-            dt = 2
-        elif isinstance(value, float):
-            dt = 3
-        else:
-            raise BadData, value
-        web.insert('datum', False, 
-          version_id=vid, key=key, value=str(value), data_type=dt, ordering=ordering)        
-
     def save(self, thing, author=None, comment='', ip=None):
         """Saves thing. author, comment and ip are stored in the version info."""
         self.stats.saves += 1
@@ -484,8 +484,8 @@ class SimpleTDBImpl(Extend):
         created = datetime.datetime.now()
 
         for k, v in thing.d.items():
-            SimpleTDBImpl.savedatum(vid, k, v)
-        SimpleTDBImpl.savedatum(vid, '__type__', thing.type)
+            savedatum(vid, k, v)
+        savedatum(vid, '__type__', thing.type)
 
         logger.transact()
         try:

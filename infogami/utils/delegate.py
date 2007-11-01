@@ -64,7 +64,7 @@ def fakeload():
     from infogami.core import db
 
     web.load()
-    web.ctx.ip = ""
+    web.ctx.ip = None
     context.load()
     context.error = None
     context.stylesheets = []

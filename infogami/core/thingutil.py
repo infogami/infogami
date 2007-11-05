@@ -41,12 +41,12 @@ def thingtidy(thing, fill_missing=True):
             raise Exception, "huh?"
 
     def process_all_properties(d, type):
-        for p in type.properties:
+        for p in get_properties(type):
             if p.name in d:
                 d[p.name] = process_property(d[p.name], p.d.type)
 
     def fill_missing_properties():
-        for p in thing.type.properties:
+        for p in get_properties(thing.type):
             unique = p.d.get('unique', False)
             if p.name not in thing.d:
                 if unique:
@@ -74,6 +74,9 @@ def thingtidy(thing, fill_missing=True):
     
     if fill_missing:
         fill_backreferences()
+        
+def get_properties(type):
+    return type.d.get('properties', [])
         
 def _check_unique(unique, value):
     pass
@@ -115,7 +118,7 @@ class DefaultThing:
 class DefaultThingData:
     def __init__(self, type):
         self.type = type
-        self.properties = dict([(p.name, p) for p in type.properties])
+        self.properties = dict([(p.name, p) for p in get_properties(type)])
         
     def __getattr__(self, key):
         p = self.properties.get(key)

@@ -1,8 +1,6 @@
 """
 Generic Utilities.
 """
-import re
-
 class xdict:
     """Dictionary wrapper to give sorted repr.
     Used for doctest.
@@ -48,7 +46,6 @@ def unflatten(d):
     >>> unflatten({'a#1#2.b': 1})
     {'a': [None, [None, None, {'b': 1}]]}
     """
-    import web
     def setdefault(d, k, v):
         # error check: This can happen when d has both foo.x and foo as keys
         if not isinstance(d, (dict, betterlist)):

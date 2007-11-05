@@ -281,7 +281,7 @@ def load(filename):
             web.insert('thing', seqname=False, id=id, **data)
         elif key == 'version':
             tid = data['thing_id']
-            web.insert('version', seqname=Fase, id=id, **data)
+            web.insert('version', seqname=False, id=id, **data)
             web.update('thing', where='id=$tid', latest_revision=data['revision'], vars=locals())
         elif key == 'data':
             vid = id

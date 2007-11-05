@@ -73,7 +73,6 @@ def usermode(f):
     In user mode, saving of things will be disabled to protect user written 
     templates from modifying things.
     """
-    from infogami import tdb
     def g(*a, **kw):
         try:
             web.ctx.tdb_mode = 'user'

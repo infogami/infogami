@@ -63,7 +63,7 @@ def hash_passwords():
     
 @upgrade
 def upgrade_types():
-    from infogami.core.db import _get_thing, _create_type, tdbsetup
+    from infogami.core.db import _create_type, tdbsetup
     
     tdbsetup()
     type = db.get_type(ctx.site, "type/type")

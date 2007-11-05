@@ -160,7 +160,7 @@ def pull(root, paths_files):
         print >> web.debug, "pulling page", path
         page = db.get_version(context.site, path)
         name = page.name or '__root__'
-        data = _thing2dict(page)
+        data = thing2dict(page)
         filepath = os.path.join(root, name + ".page") 
         write(filepath, data)
 
@@ -241,11 +241,11 @@ def datadump(filename):
             for t in things:
                 if predicate and not predicate(t):
                     continue
-                data = _thing2dict(t)
+                data = thing2dict(t)
                 f.write(str(data))
                 f.write('\n')
     
-    f = open(filename, 'w')    
+    f = open(filename, 'w')
     # dump the everything except users
     dump(lambda t: t.type.name != 'type/user')
     f.close()

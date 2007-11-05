@@ -4,7 +4,6 @@ from infogami.utils import delegate
 from infogami.utils.context import context
 from infogami.utils.template import render
 
-from diff import better_diff
 import db
 import auth
 import forms

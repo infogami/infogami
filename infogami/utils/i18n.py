@@ -135,4 +135,3 @@ class i18n_string(object):
             value = self.key
 
         return value
-        

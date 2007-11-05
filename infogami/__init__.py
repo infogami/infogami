@@ -83,6 +83,7 @@ def shell():
     console = InteractiveConsole()
     console.push("import infogami")
     console.push("from infogami.utils import delegate")
+    console.push("from infogami.core import db")
     console.push("from infogami.utils.context import context as ctx")
     console.push("delegate.fakeload()")
     console.interact()
@@ -92,7 +93,7 @@ def run_action(name, args=[]):
     if a:
         a(*args)
     else:
-        print >> sys.stderr, 'unknown command', sys.argv[1]
+        print >> sys.stderr, 'unknown command', name
         help()
 
 def run():

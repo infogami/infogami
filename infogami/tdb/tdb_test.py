@@ -84,6 +84,10 @@ class SimpleTDBImplTest(unittest.TestCase):
         t = self.new('newthing')
         self.assertEquals(t.name, 'newthing')
         self.assertEquals(t.latest_revision, 1)
+
+    def testUnicode(self):
+        t = self.new('unicode', d=dict(title=u'\u1234'))
+        self.assertEquals(t.title, u'\u1234')
         
     def testCopy(self):
         t = thing.copy()
@@ -91,7 +95,7 @@ class SimpleTDBImplTest(unittest.TestCase):
         t.title = 'new title'
         self.assertEquals(t._dirty, True)
         self.assertEquals(thing._dirty, False)
-        
+
     def testNew(self):
         name = self.uniqueName()
         d = dict(i=1, s="hello", l=range(10), ss=["foo"]*10)
@@ -217,16 +221,12 @@ class SimpleTDBImplTest(unittest.TestCase):
 class BetterTDBImplTest(SimpleTDBImplTest):
     impl = tdb2.BetterTDBImpl()
 
-class CachedSimpleTDBImplTest(SimpleTDBImplTest):
-    impl = tdb2.CachedTDBImpl(tdb2.SimpleTDBImpl())
-
-class CachedBetterTDBImplTest(SimpleTDBImplTest):
-    impl = tdb2.CachedTDBImpl(tdb2.BetterTDBImpl())
+class CachedTDBImplTest(SimpleTDBImplTest):
+    impl = tdb2.CachedTDBImpl()
 
 #del SimpleTDBImplTest
 #del BetterTDBImplTest
-#del CachedSimpleTDBImplTest
-#del CachedBetterTDBImplTest
+#del CachedTDBImplTest
 
 class ThingCacheTest(unittest.TestCase):
     def testInsert(self):
@@ -236,7 +236,7 @@ class ThingCacheTest(unittest.TestCase):
 
 class SaveTest(unittest.TestCase):
     def testSave(self):
-        impl = tdb2.CachedTDBImpl(tdb2.SimpleTDBImpl())
+        impl = tdb2.CachedTDBImpl()
         setup(impl)
         impl.querycache.clear()
 

@@ -1,10 +1,7 @@
-from tdb import SimpleTDBImpl, BetterTDBImpl, CachedTDBImpl, RestrictedTDBImpl
+from tdb import SimpleTDBImpl, CachedTDBImpl
 from tdb import NotFound, hook, Thing
 
 impl = SimpleTDBImpl()
-#impl = BetterTDBImpl()
-impl = CachedTDBImpl(impl)
-impl = RestrictedTDBImpl(impl)
 
 root = impl.root
 setup = impl.setup
@@ -16,3 +13,4 @@ new = impl.new
 Things = impl.Things
 Versions = impl.Versions
 stats = impl.stats
+

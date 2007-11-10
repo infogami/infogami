@@ -28,7 +28,6 @@ class view (delegate.mode):
             if p.type == db.get_type(site, 'type/delete'):
                 return deleted()
             else:
-                thingutil.thingtidy(p)
                 return render.view(p)
         
 class edit (delegate.mode):
@@ -48,7 +47,6 @@ class edit (delegate.mode):
             else:
                 p.type = type
                 
-        thingutil.thingtidy(p)
         return render.edit(p)
     
     def get_action(self, i):
@@ -72,7 +70,6 @@ class edit (delegate.mode):
             #@@ It should use the previous type
             type = db.get_type(site, 'type/page')
             p = db.new_version(site, path, type, i)
-            thingutil.thingtidy(p)
             return render.edit(p)
             
         p = db.new_version(site, path, type, i)

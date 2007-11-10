@@ -9,6 +9,68 @@ class NotFound(TDBException): pass
 class BadData(TDBException): pass
 class SecurityError(TDBException): pass
 
+class ThingData(dict):
+    """Dictionary to store thing data. 
+    Takes care of missing properties and backreferences.
+    """
+    def __init__(self, thing, data):
+        self.__dict__['_thing'] = thing
+        dict.__init__(self, data)
+        
+    def _is_property(self, name):
+        for p in self._thing.type.properties:
+            if p.name == name:
+                return True
+        return False
+    
+    def _is_backreference(self, name):
+        return self._get_backreference(name) is not None
+        
+    def _get_backreference(self, name):
+        for p in self._thing.type.backreferences:
+            if p.name == name:
+                return p
+        
+    def __getitem__(self, name):
+        try:
+            return dict.__getitem__(self, name)
+        except KeyError:
+            # don't touch special methods
+            if name.startswith('__'):
+                raise
+            # special care of type/type and type/property to avoid infinite recursion
+            elif self._thing.type.name in ['type/type', 'type/property'] or self._thing.id == 1:
+                return nothing
+            elif self._is_property(name):
+                return nothing
+            elif self._is_backreference(name):
+                p = self._get_backreference(name)
+                q = {'type': p.d.type, p.d.property_name: self._thing}
+                return self._thing._tdb.Things(limit=20, **q).list()
+            else:
+                raise
+        
+    def __getattr__(self, name):
+        try:
+            return self[name]
+        except KeyError, k:
+            raise AttributeError, k
+            
+    def __setattr(self, name, value):
+        try:
+            self[name] = value
+        except KeyError, k:
+            raise AttributeError, k
+    
+    def __delattr__(self, key):
+        try:
+            del self[key]
+        except KeyError, k:
+            raise AttributeError, k
+
+    def __repr__(self):     
+        return '<ThingData ' + dict.__repr__(self) + '>'
+        
 class Thing:
     @staticmethod
     def _reserved(attr):
@@ -25,7 +87,7 @@ class Thing:
         else:
             self.h = None
         self._dirty = False
-        self.d = web.storage(self.d)
+        self.d = ThingData(self, self.d)
 
     def copy(self):
         # there could be a problem in sharing lists values in self.d
@@ -47,14 +109,10 @@ class Thing:
         return not (self == other)
     
     def __getattr__(self, attr):
-        if not Thing._reserved(attr) and self.d.has_key(attr):
-            return self.d[attr]
-        raise AttributeError, attr
+        return getattr(self.d, attr)
         
     def __getitem__(self, attr):
-        if not Thing._reserved(attr) and self.d.has_key(attr):
-            return self.d[attr]
-        raise KeyError, attr
+        return self.d[key]
 
     def get(self, key, default=None):
         return getattr(self, key, default)
@@ -74,7 +132,7 @@ class Thing:
     __setitem__ = __setattr__
     
     def setdata(self, d):
-        self.d = web.storage(d)
+        self.d = ThingData(self, d)
         self._dirty = True
 
     def save(self, comment='', author=None, ip=None):
@@ -458,8 +516,12 @@ class SimpleTDBImpl:
             dt = 3
         else:
             raise BadData, value
+            
+        if not isinstance(value, (str, unicode)):
+            value = str(value)
+            
         web.insert('datum', False, 
-          version_id=vid, key=key, value=str(value), data_type=dt, ordering=ordering)        
+          version_id=vid, key=key, value=value, data_type=dt, ordering=ordering)
 
     def save(self, thing, author=None, comment='', ip=None):
         """Saves thing. author, comment and ip are stored in the version info."""
@@ -524,7 +586,10 @@ class SimpleTDBImpl:
         return self.stats
 
 class BetterTDBImpl(SimpleTDBImpl):
-    """A faster tdb implementation."""
+    """A faster tdb implementation.
+    Not well tested. 
+    **Not ready for use**.
+    """
     def withIDs(self, ids, lazy=False):
         try:
             things = self._query(thing__id=ids)
@@ -767,6 +832,43 @@ class CachedTDBImpl(ProxyTDBImpl):
         # History query is made before the cache is cleared. That must be reassigned.
         thing.h = History(self, thing.id)
         self.cache[thing.id] = thing
+        
+class Nothing:
+    """For representing missing values."""
+    def __getattr__(self, name):
+        if name.startswith('__'):
+            raise AttributeError, name
+        else:
+            return self
+            
+    def __getitem__(self, name):
+        try:
+            return getattr(self, name)
+        except AttributeError:
+            raise KeyError, name
+
+    def __call__(self, *a, **kw):
+        return self
+        
+    def __add__(self, a):
+        return a 
+    
+    __radd__ = __add__
+    __mul__ = __rmul__ = __add__
+
+    def __iter__(self):
+        return iter([])
+
+    def __hash__(self):
+        return id(self)
+
+    def __len__(self):
+        return 0
+        
+    def __str__(self): return ""
+    def __repr__(self): return ""
+
+nothing = Nothing()
                                 
 class RestrictedTDBImpl(ProxyTDBImpl):
     """TDB implementation to run in a restricted environment.

@@ -70,7 +70,7 @@ class ThingData(dict):
 
     def __repr__(self):     
         return '<ThingData ' + dict.__repr__(self) + '>'
-        
+                
 class Thing:
     @staticmethod
     def _reserved(attr):
@@ -376,6 +376,20 @@ class LazyThing(Thing):
     def __hash__(self):
         return self.id
         
+def transactify(f):
+    """Decorates a function to run in a TDB transaction."""
+    def g(self, *a, **kw):
+        self.transact()
+        try:
+            result = f(self, *a, **kw)
+        except:
+            self.rollback()
+            raise
+        else:
+            self.commit()
+        return result
+    return g
+        
 class SimpleTDBImpl:
     """Simple TDB implementation without any optimizations."""
     
@@ -518,12 +532,12 @@ class SimpleTDBImpl:
         web.insert('datum', False, 
           version_id=vid, key=key, value=value, data_type=dt, ordering=ordering)
 
+    @transactify
     def save(self, thing, author=None, comment='', ip=None):
         """Saves thing. author, comment and ip are stored in the version info."""
         self.stats.saves += 1
 
         _run_hooks("before_new_version", thing)
-        web.transact()
         if thing.id is None:
             thing.id = web.insert('thing', name=thing.name, parent_id=thing.parent.id, latest_revision=1)
             revision = 1
@@ -547,19 +561,12 @@ class SimpleTDBImpl:
             SimpleTDBImpl.savedatum(vid, k, v)
         SimpleTDBImpl.savedatum(vid, '__type__', thing.type)
 
-        logger.transact()
-        try:
-            if revision == 1:
-                logger.log('thing', tid, name=thing.name, parent_id=thing.parent.id)
-            logger.log('version', vid, thing_id=tid, author_id=author_id, ip=ip, 
-                comment=comment, revision=revision, created=created.isoformat())  
-            logger.log('data', vid, __type__=thing.type, **thing.d)
-            web.commit()
-        except:
-            logger.rollback()
-            raise
-        else:
-            logger.commit()
+        if revision == 1:
+            logger.log('thing', tid, name=thing.name, parent_id=thing.parent.id)
+        logger.log('version', vid, thing_id=tid, author_id=author_id, ip=ip, 
+            comment=comment, revision=revision, created=created.isoformat())  
+        logger.log('data', vid, __type__=thing.type, **thing.d)
+        
         thing.v = Version(self, vid, thing.id, revision, author_id, ip, comment, created=created)
         thing.h = History(self, thing.id)
         thing.latest_revision = revision
@@ -574,11 +581,41 @@ class SimpleTDBImpl:
             return LazyProxy(lambda: self.Versions(limit=limit, lazy=False, **query))
         else:
             return Versions(self, limit=limit, **query)
-    
+
     def stats(self):
         """Returns statistics about performance as a dictionary.
         """
         return self.stats
+        
+    def transact(self):
+        if web.ctx.db_transaction != web.ctx.get('tdb_transaction', 0):
+            raise TransactionException, 'Bad transaction'
+            
+        web.transact()
+        web.ctx.tdb_transaction = web.ctx.get('tdb_transaction', 0) + 1
+        
+        if web.ctx.tdb_transaction == 1:
+            logger.transact()
+        
+    def commit(self):
+        if web.ctx.get('tdb_transaction', 0) == 0:
+            raise TransactionException, 'commit without a transaction'
+        web.ctx.tdb_transaction = web.ctx.tdb_transaction - 1
+        
+        try:
+            web.commit()
+        except:
+            logger.rollback()
+            raise
+        else:
+            logger.commit()
+
+    def rollback(self):
+        if web.ctx.get('tdb_transaction', 0) == 0:
+            raise TransactionException, 'rollback without a transaction'
+        web.ctx.tdb_transaction = web.ctx.tdb_transaction - 1
+        web.rollback()
+        logger.rollback()
 
 class BetterTDBImpl(SimpleTDBImpl):
     """A faster tdb implementation.

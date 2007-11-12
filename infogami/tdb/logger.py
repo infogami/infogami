@@ -1,5 +1,7 @@
-"""
+r"""
 TDB Logger.
+
+Logger supports nested transactions. 
 
 Log format:
 
@@ -32,81 +34,139 @@ import threading
 import os
 import re
 import tdb
-import time
+import web
 
-_impl = None
+logger = None
 
-def tdbimpl():
-    if _impl is None:
-        _impl = tdb.CachedTDBImpl(tdb.BetterTDBImpl())
-    return _impl
+class Logger:
+    def __init__(self, file, parent=None, concurrent=True):
+        if isinstance(file, str):
+            file = open(file, 'a')
+        self.file = file
+        self.parent = parent
+        
+        if concurrent:
+            self.lock = threading.Lock()
+        else:
+            self.lock = None
+        
+    def write(self, msg):
+        self.lock and self.lock.acquire()    
+        try:
+            self.file.write(msg)
+            self.file.flush()
+            os.fsync(self.file.fileno())
+        finally:
+            self.lock and self.lock.release()
+            
+    def read(self):
+        return open(self.file.name).read()
+        
+    def destroy(self):
+        os.remove(self.file.name)
+        
+    def __str__(self):
+        return "<logger: %s (%s)>" % (self.file.name, str(self.parent))
 
-logfile = None
+def set_logfile(logfile):
+    """Setup the global logger to write into the given logfile. 
+    Logfile can be a file or a filename."""
+    global logger
+    logger = Logger(logfile)
+    # override previous logger, if any.
+    if web.ctx.get('tdb_logger'):
+        web.ctx.tdb_logger = logger
 
-# log msg for one transaction is stored in this file and on commit,
-# this file's content is appended to the logfile and this file is removed.
-txfilename = "transaction.log"
-txfile = None
-
-lock = threading.RLock()
-
-def set_logfile(f):
-    global logfile
-    logfile = f
+def _get_logger():
+    return web.ctx.get('tdb_logger', logger)
     
+def log(tag, id, **kw):
+    r"""
+        >>> import tempfile
+        >>> filename = tempfile.mktemp()
+        >>> set_logfile(filename)
+        >>> log('thing', 1, x=2)
+        >>> open(filename).read()
+        'thing 1\nx: 2\n\n'
+    """    
+    if logger:
+        msg = format(tag, id, kw)
+        _get_logger().write(msg)
+        
 def transact():
-    if logfile:
-        _acquire()
+    """Starts a log transaction."""
+    if logger:
+        _push_logger()
     
 def commit():
-    if logfile:
-        f = open(txfilename)
-        msg = f.read()
-        f.close()
-        logfile.write(msg)
-        logfile.flush()
-        os.fsync(logfile.fileno())
-        _release()
+    r"""Commits a log transaction.
 
+    >>> import tempfile
+    >>> filename = tempfile.mktemp()
+    >>> set_logfile(filename)
+    >>> transact()
+    >>> log('thing', 1, x=2)
+    >>> commit()
+    >>> open(filename).read()
+    'thing 1\nx: 2\n\n'
+    """
+    xlogger = _get_logger()
+    if xlogger:
+        msg = xlogger.read()
+        xlogger.parent.write(msg)
+        _pop_logger()
+    
 def rollback():
-    if logfile:
-        _release()
+    r"""Rollbacks a log transaction.
 
-def log(_name, id, **kw):
-    """Logs one item."""
-    if logfile:
-        msg = format(_name, id, kw)
-        txfile.write(msg)
-        txfile.flush()
-        os.fsync(txfile.fileno())
+    >>> import tempfile
+    >>> filename = tempfile.mktemp()
+    >>> set_logfile(filename)
+    >>> transact()
+    >>> log('thing', 1, x=2)
+    >>> rollback()
+    >>> open(filename).read()
+    ''
+    """
+    if logger:
+        _pop_logger()
+    
+def _pop_logger():
+    xlogger = _get_logger()
+    web.ctx.tdb_logger = xlogger.parent
+    web.ctx.tdb_log_transaction -= 1
+    xlogger.destroy()
 
-def _acquire():
-    """Acquires the lock and creates transaction log file."""
-    global txfile
-    lock.acquire()
-    txfile = open(txfilename, 'w')
+def _push_logger():
+    threadname = threading.currentThread().getName()
+    n = web.ctx.get('tdb_log_transaction', 0)
+    filename = 'transaction_%s_%d.log' % (threadname, n)
+    # It is possible that transaction log file is present because of some unfinished transaction.
+    # Opening the file in write mode solves that problem.
+    file = open(filename, 'w') 
+    web.ctx.tdb_logger = Logger(file, _get_logger(), concurrent=False)
+    web.ctx.tdb_log_transaction = n + 1
 
-def _release():
-    """Deletes the transaction log file and releases the lock."""
-    global txfile
-    txfile.close()
-    txfile = None
-    os.remove(txfilename)
-    lock.release()
+def format(tag, id, kw):
+    r"""Formats log message.
         
-def is_consistent():
-    """Checks if the log file is consistent state."""
-    return os.path.exists(txfilename) is False
-
-def format(_name, id, kw):
+        >>> format('thing', 2, dict(name='hello'))
+        "thing 2\nname: 'hello'\n\n"
+    """
     s = ""
-    s += "%s %d\n" % (_name, id)
+    s += "%s %d\n" % (tag, id)
     for k, v in kw.iteritems():
         s += "%s: %s\n" % (_keyencode(k), _encode(v))
     s += '\n'
     return s
 
 def _keyencode(key):
+    r"""
+        >>> _keyencode('hello')
+        'hello'
+        >>> _keyencode('hello:world')
+        'hello\\:world'
+    """
     key = key.replace('\\', r'\\')
     key = key.replace('\n', r'\n')
     key = key.replace('\t', r'\t')
@@ -114,6 +174,12 @@ def _keyencode(key):
     return key
     
 def _keydecode(key):
+    r"""
+        >>> _keydecode('hello')
+        'hello'
+        >>> _keydecode('hello\\:world')
+        'hello:world'
+    """
     rx = re.compile(r"\\([\\nt:])")
     env = {
         '\\': '\\', 
@@ -123,9 +189,28 @@ def _keydecode(key):
     }
     return rx.sub(lambda m: env[m.group(1)], key)
 
-def xrepr(s): return "'" + repr('"' + s)[2:]
+def xrepr(s): 
+    r"""Represents a string in single quotes.
+    
+        >>> print xrepr('hello')
+        'hello'
+        >>> print xrepr("it's monday")
+        'it\'s monday'
+        >>> print xrepr("hello\nworld")
+        'hello\nworld'
+    """
+    return "'" + repr('"' + s)[2:]
 
 def _encode(value):
+    r"""Encodes value.
+    
+        >>> _encode(1)
+        '1'
+        >>> _encode('hello')
+        "'hello'"
+        >>> _encode([1, 2, 'hello'])
+        "[1, 2, 'hello']"
+    """
     from tdb import Thing, LazyThing
 
     if isinstance(value, list):
@@ -141,155 +226,9 @@ def _encode(value):
     else:
         return repr(value)
 
-def parse(filename, infinite=False):
-    fd = open(filename)
-    return parse1(fd, infinite)
-
-def parse1(fd, infinite=False):
-    """Parses a tdb log file and returns an iteratable over the contents.
-    If argument 'infinite' is true, the iterable never terminates.
-    It instead expects the file to keep growing as new log records
-    arrive, so on reaching end of file it blocks until more data
-    becomes available.   If 'infinite' is false, generator terminates
-    when it reaches end of log file.
-    """
-    if not infinite and fd.tell() != 0:
-        raise NotImplementedError, "can't seek in non-tailing logfile"
-
-    def parse_items():
-        """Parses the file and returns an iteratable over the items."""
-        lines = []
-
-        def infinite_lines(fd):
-            def charstream(fd):
-                # generate a sequence of the lines in fd, never
-                # terminating.  On reaching end of fd, 
-                # sleep til more characters are available.
-                while True:
-                    c = fd.read(1)
-                    if c=='': time.sleep(1)
-                    else: yield c
-            while True:
-                yield ''.join(iter(charstream(fd).next, '\n'))
-
-        if infinite:
-            xlines = infinite_lines(fd)
-        else:
-            xlines = (x.strip() for x in fd.xreadlines())
-        
-        for line in xlines:
-            if line == "":
-                yield lines
-                lines = []
-            else:
-                lines.append(line)
-
-    from tdb import LazyThing    
-    class LazyThing(tdb.LazyThing):
-        def __init__(self, id):
-            tdb.LazyThing.__init__(self, lambda: tdbimpl().withID(id), id=id)
-
-        def __repr__(self):
-            return 't' + str(self.id)
-
-    class env(dict):
-        def __getitem__(self, name):
-            """Returns LazyThing(xx) for key txx"""
-            if name.startswith('t'):
-                return LazyThing(int(name[1:]))
-            else:
-                raise KeyError, name
-
-    # dirty hack to decode the value using eval
-    def decode(value):
-        return eval(value, env())
-                        
-    def parse_data(lines):
-        """Parses each line containing name-value pair and 
-        returns the result as a dictionary."""
-        d = {}
-        for line in lines:
-            name, value = line.split(":", 1)
-            name = _keydecode(name)
-            d[name] = decode(value)
-        return d
-        
-    for item in parse_items():
-        key, id = item[0].split()
-        data = parse_data(item[1:])
-        yield key, id, data
-
-def parse2(p1):
-    from tdb import Thing
-
-    while 1:
-        thing = p1.next()
-        version = p1.next()
-        data = p1.next()
-
-        yield Thing(tdbimpl(), 
-                id=thing[1], 
-                name=thing[2]['name'],
-                parent=tdbimpl().withID(thing[2]['parent_id'], lazy=True),
-                latest_revision=0,
-                v=None,
-                type=data[2].pop('__type__'), 
-                d=data[2])
-        
-def parse2a(p1):
-    """Generate sequence of things retrieved from tdb, given a parsed logfile
-    stream (from logger.parse) as input"""
-    from tdb import withID
-    
-    while 1:
-        x = p1.next()
-        if x[0] != 'version': continue
-        yield withID(x[2]['thing_id'])
-
-def parse2b(p1):
-    from tdb import Thing
-    
-    while 1:
-        x = p1.next()
-        
-        if x[0] == 'thing':
-            thing = x
-            version = p1.next()
-            data = p1.next()
-            
-            yield Thing(tdbimpl(), 
-                    id=thing[1], 
-                    name=thing[2]['name'],
-                    parent=tdbimpl().withID(thing[2]['parent_id'], lazy=True),
-                    latest_revision=None,
-                    v=None,
-                    type=data[2].pop('__type__'), 
-                    d=data[2])
-        elif x[0] == 'version':
-            yield tdbimpl().withID(x[2]['thing_id'])
-        else:
-            raise ValueError, "I wasn't expecting that..."
-
-def load(filename):
-    """Loads a tdb log file into database."""
-
-    import web, tdb
-    # assumes web.load is already called
-    web.transact()
-    for key, id, data in parse(filename):
-        if key == 'thing':
-            web.insert('thing', seqname=False, id=id, **data)
-        elif key == 'version':
-            tid = data['thing_id']
-            web.insert('version', seqname=False, id=id, **data)
-            web.update('thing', where='id=$tid', latest_revision=data['revision'], vars=locals())
-        elif key == 'data':
-            vid = id
-            for k, v in data.items():
-                tdb.SimpleTDBImpl.savedatum(vid, k, v)
-    web.commit()
+# for backward-compatibility
+from logparser import *
 
 if __name__ == "__main__":
-    import sys
-    for key, id, data in parse(sys.argv[1]):
-        print key, id, data
+    import doctest
+    doctest.testmod()

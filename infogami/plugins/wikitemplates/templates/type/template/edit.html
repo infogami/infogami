@@ -1,11 +1,6 @@
-$def with (page, preview=False)
+$def with (page)
 
 $var title: $_.EDIT $page.title
-
-<p>[<a href="$url()">view</a>][<a href="$url(m='history')">history</a>]</p>
-
-$if preview:
-    <pre>$page.body</pre>
 
 <script>
 function changeTemplate() {

@@ -3,6 +3,3 @@ $def with (page)
 $var title: $page.title
 
 <pre>$page.body</pre>
-
-<p class="status">[<a href="$url(m='edit')" accesskey="e">$_.EDIT</a>][<a href="$url(m='history')">$_.HISTORY</a>][<a href="$url(m='backlinks')">$_.BACKLINKS</a>] $_.LAST_MODIFIED $datestr(page.v.created)</p>
-

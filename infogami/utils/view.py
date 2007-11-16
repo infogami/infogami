@@ -159,7 +159,15 @@ def thingdiff(type, name, v1, v2):
         if not isinstance(v1, tdb.Thing): v1 = value_to_thing(v1, type)
         if not isinstance(v2, tdb.Thing): v2 = value_to_thing(v2, type)
         return render.xdiff(v1, v2, name)
-    
+        
+@public
+def thingview(page):
+    return render.view(page)
+
+@public    
+def thingedit(page):
+    return render.edit(page)
+
 @infogami.install_hook
 @infogami.action
 def movefiles():

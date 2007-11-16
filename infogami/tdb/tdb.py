@@ -591,11 +591,9 @@ class SimpleTDBImpl:
         if web.ctx.db_transaction != web.ctx.get('tdb_transaction', 0):
             raise TransactionException, 'Bad transaction'
             
+        logger.transact()
         web.transact()
         web.ctx.tdb_transaction = web.ctx.get('tdb_transaction', 0) + 1
-        
-        if web.ctx.tdb_transaction == 1:
-            logger.transact()
         
     def commit(self):
         if web.ctx.get('tdb_transaction', 0) == 0:

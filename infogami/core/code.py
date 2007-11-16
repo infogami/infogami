@@ -28,7 +28,7 @@ class view (delegate.mode):
             if p.type == db.get_type(site, 'type/delete'):
                 return deleted()
             else:
-                return render.view(p)
+                return render.viewpage(p)
         
 class edit (delegate.mode):
     def GET(self, site, path):
@@ -47,7 +47,7 @@ class edit (delegate.mode):
             else:
                 p.type = type
                 
-        return render.edit(p)
+        return render.editpage(p)
     
     def get_action(self, i):
         """Finds the action from input."""
@@ -70,13 +70,13 @@ class edit (delegate.mode):
             #@@ It should use the previous type
             type = db.get_type(site, 'type/page')
             p = db.new_version(site, path, type, i)
-            return render.edit(p)
+            return render.editpage(p)
             
         p = db.new_version(site, path, type, i)
         
         if action == 'preview':
             thingutil.thingtidy(p, fill_missing=True)
-            return render.edit(p, preview=True)
+            return render.editpage(p, preview=True)
         elif action == 'save':
             try:
                 thingutil.thingtidy(p, fill_missing=False)
@@ -84,7 +84,7 @@ class edit (delegate.mode):
                 return web.seeother(web.changequery(query={}))
             except db.ValidationException, e:
                 utils.view.set_error(str(e))
-                return render.edit(p)
+                return render.editpage(p)
         elif action == 'delete':
             p.type = db.get_type(site, 'type/delete')
             p.save(author=context.user, ip=web.ctx.ip)

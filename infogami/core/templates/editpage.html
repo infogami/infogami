@@ -1,0 +1,18 @@
+$def with (page, preview=False)
+
+<p>[<a href="$url()">$_.VIEW</a>][<a href="$url(m='history')">$_.HISTORY</a>]</p>
+
+$if preview:
+    <div id="preview">
+    $:thingview(page)
+    </div>
+    
+<div id="edit">
+
+$ edit = thingedit(page)
+
+$var title: $edit.title
+
+$:edit
+</div>
+

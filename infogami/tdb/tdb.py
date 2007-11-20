@@ -8,6 +8,7 @@ class TDBException(Exception): pass
 class NotFound(TDBException): pass
 class BadData(TDBException): pass
 class SecurityError(TDBException): pass
+class TransactionException(TDBException): pass
 
 class ThingData(dict):
     """Dictionary to store thing data. 

@@ -15,7 +15,7 @@ login = Form(
 vlogin = regexp(r"^[A-Za-z0-9-_]{3,20}$", 'must be between 3 and 20 letters and numbers') 
 vpass = regexp(r".{3,20}", 'must be between 3 and 20 characters')
 vemail = regexp(r".*@.*", "must be a valid email address")
-not_already_used = Validator('This email is already used', lambda email: db.get_user_by_email(email) is None)
+not_already_used = Validator('This email is already used', lambda email: db.get_user_by_email(context.site, email) is None)
 
 register = Form(
     Textbox('username', 

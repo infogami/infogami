@@ -23,7 +23,17 @@ def better_diff(a, b):
             if i2-i1 > 5:
                 x = y = [a[i1], '', a[i2-1]]
                 xn = yn = [i1, '...', i2-1]
-        
+        elif tag == 'replace':
+            isize = i2-i1
+            jsize = j2-j1
+
+            if isize < jsize:
+                x += [''] * (jsize-isize)
+                xn += [''] * (jsize-isize)
+            else:
+                y += [''] * (isize-jsize)
+                yn += [''] * (isize-jsize)
+
         map += zip([labels[tag]] * len(x), xn, x, yn, y)
 
     return map

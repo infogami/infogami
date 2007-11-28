@@ -171,14 +171,14 @@ def push(root):
     _pushpages(pages)
     
 def _pushpages(pages):
-    web.transact()
+    tdb.transact()
     try:
         for p in pages.values(): _savepage(p)    
     except:
-        web.rollback()
+        tdb.rollback()
         raise
     else:
-        web.commit()
+        tdb.commit()
 
 @infogami.install_hook
 @infogami.action
@@ -254,13 +254,13 @@ def datadump(filename):
 def dataload(filename):
     """"Loads data dumped using datadump action into the database."""
     lines = open(filename).xreadlines()
-    web.transact()
+    tdb.transact()
     try:
         for line in lines:
             data = storify(eval(line))
             _savepage(data)
     except:
-        web.rollback()
+        tdb.rollback()
         raise
     else:
-        web.commit()
+        tdb.commit()

@@ -14,7 +14,7 @@ db_kind = 'SQL'
 db_parameters = None
 site = None
 
-plugins = ['links', 'wikitemplates', 'i18n']
+plugins = ['links', 'wikitemplates', 'i18n', 'pages']
 
 plugin_path = ['infogami.plugins']
 

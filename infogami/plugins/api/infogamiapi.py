@@ -105,7 +105,7 @@ class Infogami:
         """
         q = {'q': {'name': name}}
         result = self._readquery(q)
-        status_code = result['q']['code']
+        status_code = result['code']
         
         if status_code == '/api/status/ok':
             return result['q']['result']

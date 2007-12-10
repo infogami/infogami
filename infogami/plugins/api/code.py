@@ -6,6 +6,7 @@ import simplejson
 
 from infogami.core import db, auth
 from infogami.utils import delegate
+from infogami.utils.context import context
 from infogami.plugins.pages import code as pages
 from infogami import tdb
 
@@ -42,8 +43,15 @@ def jsonify(f):
     """Decorator to support json."""
     def g(*a, **kw):
         try:
-            web.header('Content-Type', 'text/plain')
-            result = f(*a, **kw)
+            if web.ctx.path == "/api/account/login" or \
+                auth.has_permission(context.site, context.user, web.ctx.path[1:], "view"):
+                web.header('Content-Type', 'text/plain')
+                result = f(*a, **kw)
+            else:            
+                result = permission_denied('*', 'api')
+                
+            if 'code' not in result:
+                result['code'] = '/api/status/ok'
         except Exception, e:
             import traceback
             traceback.print_exc()

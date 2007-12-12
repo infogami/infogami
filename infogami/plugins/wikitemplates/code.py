@@ -55,17 +55,28 @@ class MacroSource(WikiSource):
         
     def unprocess_key(self, key):
         return web.lstrips(key, 'macros/')
+
+def get_user_root():
+    from infogami.core import db
+    if context.user:
+        preferences = db.get_user_preferences(context.user)
+        root = getattr(preferences, 'wikitemplates.template_root', None)
+        if root is not None and root.strip() != "":
+            if not root.endswith('/'):
+                root += '/'
+            return root
+            
+    return None
     
 class UserSource(WikiSource):
     """Template source for user templates."""
     def getroot(self):
-        from infogami.core import db
-        if context.user:
-            preferences = db.get_user_preferences(context.user)
-            root = getattr(preferences, 'wikitemplates.template_root', None)
-            if root is not None and root.strip() != "":
-                return root
-        return None
+        return get_user_root()
+
+class UserMacroSource(MacroSource):
+    """Template source for user macros."""
+    def getroot(self):
+        return get_user_root()
 
 wikitemplates = storage.SiteLocalDict()
 template.render.add_source(WikiSource(wikitemplates))
@@ -73,6 +84,7 @@ template.render.add_source(UserSource(wikitemplates))
 
 wikimacros = storage.SiteLocalDict()
 macro.macrostore.add_dict(MacroSource(wikimacros))
+macro.macrostore.add_dict(UserMacroSource(wikimacros))
 
 class hooks(tdb.hook):
     def on_new_version(self, page):

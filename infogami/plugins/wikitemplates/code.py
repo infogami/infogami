@@ -138,6 +138,12 @@ def setup():
         context.site = site
         load_macros(site)
         load_templates(site)
+        
+    from infogami.utils import types
+    types.register_type('templates/[^/]*.tmpl$', 'type/template')
+    types.register_type('type/[^/]*/[^/]*.tmpl$', 'type/template')
+    types.register_type('^type/[^/]*$', 'type/type')
+    types.register_type('macros/[^/]*$', 'type/macro')
     
 @infogami.install_hook
 def createtypes():

@@ -1,6 +1,6 @@
 import web
 from infogami import utils, tdb, config
-from infogami.utils import delegate
+from infogami.utils import delegate, types
 from infogami.utils.context import context
 from infogami.utils.template import render
 
@@ -29,7 +29,7 @@ class view (delegate.mode):
                 return deleted()
             else:
                 return render.viewpage(p)
-        
+
 class edit (delegate.mode):
     def GET(self, site, path):
         i = web.input(v=None, t=None)
@@ -37,7 +37,7 @@ class edit (delegate.mode):
         try:
             p = db.get_version(site, path, i.v)
         except tdb.NotFound:
-            p = db.new_version(site, path, db.get_type(site, 'type/page'), web.storage({}))
+            p = db.new_version(site, path, db.get_type(site, types.guess_type(path)), web.storage({}))
 
         if i.t:
             try:

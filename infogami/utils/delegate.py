@@ -93,7 +93,10 @@ def delegate(path):
         web.seeother(npath)
 
     if pathx in pages:
-        out = getattr(pages[pathx](), method)(context.site)
+        cls = pages[pathx]            
+        if not hasattr(cls, method):
+            return web.nomethod(method)
+        out = getattr(cls(), method)(context.site)
     else: # mode
         normalized = _keyencode(path)
         if path != normalized:
@@ -114,7 +117,7 @@ def delegate(path):
         if what not in ("view", "edit") or auth.has_permission(context.site, context.user, path, what):
             cls = modes[what]            
             if not hasattr(cls, method):
-                return web.nomethod(cls)
+                return web.nomethod(method)
             out = getattr(cls(), method)(context.site, path)
         else:
             #context.error = 'You do not have permission to do that.'

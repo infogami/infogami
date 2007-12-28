@@ -5,7 +5,7 @@ import os
 import infogami
 from infogami import tdb
 from infogami.core.diff import simple_diff, better_diff
-from infogami.utils.i18n import i18n
+from infogami.utils import i18n
 from infogami.utils.markdown import markdown, mdx_footnotes
 
 from context import context
@@ -41,7 +41,7 @@ web.template.Template.globals.update(dict(
   datestr = web.datestr,
   numify = web.numify,
   ctx = context,
-  _ = i18n(),
+  _ = i18n.strings,
   macros = storage.ReadOnlyDict(macro.macrostore),
   diff = simple_diff,
   better_diff = better_diff,

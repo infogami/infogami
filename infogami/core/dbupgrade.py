@@ -19,7 +19,8 @@ def upgrade(f):
     return f
 
 def apply_upgrades():
-    web.transact()
+    from infogami import tdb
+    tdb.transact()
     try:
         v = get_db_version()
         for u in upgrades[v:]:
@@ -27,13 +28,13 @@ def apply_upgrades():
             u()
         
         mark_upgrades()
-        web.commit()
+        tdb.commit()
         print >> web.debug, 'upgrade successful.'
     except:
         print >> web.debug, 'upgrade failed'
         import traceback
         traceback.print_exc()
-        web.rollback()
+        tdb.rollback()
         
 @infogami.action        
 def dbupgrade():
@@ -75,6 +76,9 @@ def upgrade_types():
     for t in types:
         properties = []
         backreferences = []
+        print >> web.debug, t, t.d
+        if t.name == 'type/site':
+            continue
         for name, value in t.d.items():
             p = web.storage(name=name)
             typename = web.lstrips(value, "thing ")

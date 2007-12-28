@@ -3,8 +3,6 @@ $def with (page)
 $var title: strings
 
 <table>
-$for plugin in get_plugins():
-    <tr><th>$plugin</th></tr>
-    $for key in get_i18n_keys(plugin):
-        <tr><td>$key</td><td>$page.get(plugin + '.' + key, '-')</td>
+$for key in _.getkeys():
+    <tr><td>$key</td><td>$page.get(key, '-')</td>
 </table>

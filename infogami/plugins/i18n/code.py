@@ -12,7 +12,7 @@ from infogami.utils.view import public
 
 import db
 
-re_i18n = web.re_compile(r'^i18n/strings\.(.*)$')
+re_i18n = web.re_compile(r'^i18n/strings\.([^/]*)$')
 
 class hook(tdb.hook):
     def on_new_version(self, page):
@@ -22,57 +22,39 @@ class hook(tdb.hook):
             result = re_i18n.match(path)
             if result:
                 lang = result.group(1)
-                update_strings(lang, page.d)
+                i18n.strings._set_strings(lang, page.d)
 
-def get_site():
-    from infogami.core import db
-    return db.get_site(config.site)
-
-def load_strings():
+def load_strings(site):
     """Load strings from wiki."""
-    # This function is called from the first request that uses i18n
-    pages = db.get_all_strings(get_site())
+    pages = db.get_all_strings(site)
     for page in pages:
         result = re_i18n.match(page.name)
         if result:
             lang = result.group(1)
-            update_strings(lang, page.d)
-
-i18n.i18n_hooks.append(load_strings)
-
-def update_strings(lang, data):
-    #@@ every site should have different strings
-    strings = i18n.get_strings()
-    items = [(key.split('.', 1)[1], value) for key, value in data.iteritems() if '.' in key and value.strip() != '']
-    strings[lang] = dict(items)
-
+            i18n.strings._set_strings(lang, page.d)
+            
+def setup():
+    delegate.fakeload()    
+    from infogami.utils import types
+    types.register_type('i18n/strings.[^/]*', 'type/i18n')
+    
+    for site in db.get_all_sites():
+        load_strings(site)
+    
 @infogami.install_hook
 def createtype():
     from infogami.core import db
-    db.new_type(context.site, 'type/i18n', {'*': 'string'})
+    db.new_type(context.site, 'type/i18n', [])
     
 @infogami.install_hook
 @infogami.action
 def movestrings():
     """Moves i18n strings to wiki."""
     from infogami.core import db
-    
-    strings = {}
-    
-    for p in delegate.plugins:
-        data = i18n.load_plugin(p.path)
-        for lang, d in data.iteritems():
-            if lang not in strings:
-                strings[lang] = {}
-            for key, value in d.iteritems():
-                strings[lang][p.name + '.' + key] = value
-                
     type = db.get_type(context.site, 'type/i18n')
-    for lang, d in strings.iteritems():
+    
+    for lang, d in i18n.strings._data.iteritems():
         wikipath = "i18n/strings." + lang
         db.new_version(context.site, wikipath, type, d).save()
 
-@public
-def get_i18n_keys(plugin):
-    keys = i18n.get_keys()
-    return keys.get(plugin, {})
+setup()

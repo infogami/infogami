@@ -5,6 +5,7 @@ from infogami import config
 import template
 import macro
 import view
+import i18n
 from context import context
 
 urls = (
@@ -186,4 +187,5 @@ def _load():
     for plugin in plugins:
         template.load_templates(plugin.path)
         macro.load_macros(plugin.path)
+        i18n.load_strings(plugin.path)
         __import__(plugin.module + '.code', globals(), locals(), ['plugins'])

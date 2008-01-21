@@ -39,7 +39,8 @@ class i18n_string:
     def __str__(self):
         default_data = self._i18n._data.get(DEFAULT_LANG) or {}
         data = self._i18n._data.get(web.ctx.lang) or default_data
-        return data.get(self._key) or default_data.get(self._key) or self._key
+        text = data.get(self._key) or default_data.get(self._key) or self._key
+        return web.utf8(text)
     
     def __call__(self, *a):
         return str(self) % a

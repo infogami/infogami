@@ -1,0 +1,9 @@
+{
+    'name': 'templates', 
+    'type': {'name': 'type/page'},
+    'd': {
+        'title': 'Templates', 
+        'body': '{{PageList("templates")}}'
+    }
+}
+

@@ -1,0 +1,9 @@
+{
+    'name': 'type', 
+    'type': {'name': 'type/page'},
+    'd': {
+        'title': 'Types', 
+        'body': '{{PageList("type")}}'
+    }
+}
+

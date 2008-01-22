@@ -3,6 +3,7 @@ $def with (page)
 $var title: strings
 
 <table>
-$for key in _.getkeys():
+$ lang = page.name.split('.')[-1]
+$for key in _.getkeys(lang):
     <tr><td>$key</td><td>$page.get(key, '-')</td>
 </table>

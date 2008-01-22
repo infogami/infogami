@@ -10,10 +10,13 @@ class i18n:
     def __init__(self):
         self._data = {}
         
-    def getkeys(self):
-        keys = set()
-        for lang in self._data:
-            keys.update(self._data[lang].keys())
+    def getkeys(self, lang=None):
+        lang = lang or DEFAULT_LANG
+        # making a simplified assumption here.
+        # Keys for a language are all the strings defined for that language and 
+        # all the strings defined for default language. By doing this, once a key is 
+        # added to default lang, then it will automatically appear in all other languages.
+        keys = set(self._data.get(lang, {}).keys() + self._data[DEFAULT_LANG].keys())
         return sorted(keys)
         
     def _set_strings(self, lang, data):

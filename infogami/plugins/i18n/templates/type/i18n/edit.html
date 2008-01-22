@@ -13,10 +13,28 @@ function changeTemplate() {
 <strong>$_.PAGETYPE</strong> <input type="text" name="_type" value="$page.type.name" />
 <input type="button" onclick="changeTemplate()" value="$_.CHANGE"/><br /><br />
 
-<table>
-$for key in _.getkeys():
+<table id="strings_table">
+$ lang = page.name.split('.')[-1]
+$for key in _.getkeys(lang):
     <tr><td>$key</td><td><input type="text" name="$key" value="$page.get(key, '')"/></td>
 </table>
+
+<script>
+function add_key() {
+	var key = document.getElementById("newkey").value.toUpperCase();
+	var table = document.getElementById("strings_table");
+	var row = table.insertRow(table.rows.length);
+	var cell1 = row.insertCell(0);
+	var cell2 = row.insertCell(1);
+	cell1.innerHTML = key;
+    cell2.innerHTML = '<input type="text" name="' + key + '" value=""/>';
+	return false;
+}
+</script>
+
+<p>
+Add new key: <input type="text" name="_newkey" id="newkey"/> <input type="button" onclick="add_key()" name="_addkey" value="Add"/>
+</p>
 
 <input type="submit" name="_save" value="$_.SAVE" />
 <input type="submit" name="_preview" value="$_.PREVIEW" />

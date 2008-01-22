@@ -47,15 +47,24 @@ class i18n_string:
 
 def i18n_loadhook():
     """Load hook to set web.ctx.lang bases on HTTP_ACCEPT_LANGUAGE header."""
-    accept_language = web.ctx.get('env', {}).get('HTTP_ACCEPT_LANGUAGE', '')
+    def parse_lang_header():
+        """Parses HTTP_ACCEPT_LANGUAGE header."""
+        accept_language = web.ctx.get('env', {}).get('HTTP_ACCEPT_LANGUAGE', '')
 
-    re_accept_language = web.re_compile(', *')
-    tokens = re_accept_language.split(accept_language)
+        re_accept_language = web.re_compile(', *')
+        tokens = re_accept_language.split(accept_language)
 
-    # take just the language part. ignore other details.
-    # for example `en-gb;q=0.8` will be treated just as `en`.
-    langs = [t[:2] for t in tokens]
-    web.ctx.lang = langs and langs[0] or ''
+        # take just the language part. ignore other details.
+        # for example `en-gb;q=0.8` will be treated just as `en`.
+        langs = [t[:2] for t in tokens]
+        return langs and langs[0]
+        
+    def parse_lang_cookie():
+        """Parses HTTP_LANG cookie."""
+        cookies = web.cookies()
+        return cookies.get('HTTP_LANG')
+        
+    web.ctx.lang = parse_lang_cookie() or parse_lang_header() or ''
 
 def load_strings(plugin_path):
     """Load string.xx files from plugin/i18n/string.* files."""

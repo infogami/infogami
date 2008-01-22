@@ -1,7 +1,7 @@
 from tdb import SimpleTDBImpl, CachedTDBImpl
 from tdb import NotFound, hook, Thing
 
-impl = SimpleTDBImpl()
+impl = CachedTDBImpl()
 
 root = impl.root
 setup = impl.setup

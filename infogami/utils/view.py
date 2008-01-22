@@ -80,7 +80,8 @@ def format(text):
     
 @lrumemoize(1000)
 def _format(text):
-    md = get_markdown(text.decode('utf-8'))
+    text = web.utf8(text).decode('utf-8')
+    md = get_markdown(text)
     html = md.convert().encode('utf-8')
     return html, md.macros
 

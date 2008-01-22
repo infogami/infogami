@@ -46,7 +46,7 @@ class ThingData(dict):
                 return nothing
             elif self._is_backreference(name):
                 p = self._get_backreference(name)
-                q = {'type': p.d.type, p.d.property_name: self._thing}
+                q = {'type': p.d.type, str(p.d.property_name): self._thing}
                 return self._thing._tdb.Things(limit=20, **q).list()
             else:
                 raise
@@ -96,9 +96,10 @@ class Thing:
                     
     def __repr__(self):
         dirty = (self._dirty and " dirty") or ""
-        return '<Thing "%s" at %s%s>' % (self.name, self.id, dirty)
+        s = '<Thing "%s" at %s%s>' % (self.name, self.id, dirty)
+        return web.utf8(s)
 
-    def __str__(self): return self.name
+    def __str__(self): return web.utf8(self.name)
     
     def __cmp__(self, other):
         return cmp(self.id, other.id)
@@ -746,7 +747,7 @@ class ThingCache(LRU):
         key = value.id
         LRU.__setitem__(self, key, value)
         # name2id mapping must be updated whenever a thing is added to the cache
-        self.name2id[value.name, value.parent.id] = value.id
+        self.name2id[web.utf8(value.name), value.parent.id] = value.id
     
     def remove_node(self, node=None):
         node = LRU.remove_node(self, node)

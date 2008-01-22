@@ -83,8 +83,7 @@ def replace_macros(html, macros):
     """Replaces the macro place holders with real macro output."""    
     for placeholder, macro_info in macros.items():
         name, args = macro_info
-        
-        html = html.replace("<p>%s\n</p>" % placeholder, call_macro(name, args))
+        html = html.replace("<p>%s\n</p>" % placeholder, web.utf8(call_macro(name, args)))
         
     return html
 

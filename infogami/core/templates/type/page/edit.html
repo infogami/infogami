@@ -2,17 +2,9 @@ $def with (page)
 
 $var title: $_.EDIT $page.title
 
-<script>
-function changeTemplate() {
-    var t = document.edit._type.value;
-    document.location.href += '&t=' + t;
-}
-</script>
-
 <form name="edit" method="post" action="">
 
-<strong>$_.PAGETYPE</strong> $:thinginput("type/type", "_type", page.type)
-<input type="button" onclick="changeTemplate()" value="$_.CHANGE"/><br /><br />
+$:macros.TypeChanger()
 
 <strong>$_.TITLE</strong> <input type="text" name="title" value="$page.title" /><br />
 <textarea name="body" rows="15" cols="80">$page.body</textarea>

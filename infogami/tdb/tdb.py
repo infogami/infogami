@@ -566,8 +566,10 @@ class SimpleTDBImpl:
         if revision == 1:
             logger.log('thing', tid, name=thing.name, parent_id=thing.parent.id)
         logger.log('version', vid, thing_id=tid, author_id=author_id, ip=ip, 
-            comment=comment, revision=revision, created=created.isoformat())  
-        logger.log('data', vid, __type__=thing.type, **thing.d)
+            comment=comment, revision=revision, created=created.isoformat())
+        #@@ quick fix to convert all keys to string
+        d = dict((web.utf8(k), v) for k, v in thing.d.items())
+        logger.log('data', vid, __type__=thing.type, **d)
         
         thing.v = Version(self, vid, thing.id, revision, author_id, ip, comment, created=created)
         thing.h = History(self, thing.id)

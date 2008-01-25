@@ -1,0 +1,4 @@
+forgot_password = 'Forgot Password'
+email_not_registered = 'This email address is not registered.'
+forgot_password_statement  = 'Please enter your email address. We will generate a new password and email it to you. '
+email = 'E-Mail'

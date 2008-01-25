@@ -1,0 +1,5 @@
+properties = 'Properties'
+backreferences = 'Back-references'
+name = 'Name'
+is_primitive = 'Is this a primitive type?'
+description = 'Description'

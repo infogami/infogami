@@ -1,26 +1,10 @@
 $def with (page)
 
+
 <html>
 <head>
-    <title>$page.title (Infogami)</title>
-    <style type="text/css">
-    .login { text-align: right; }
-    .login, .status { color: gray; }
-    .login :link, .login :visited, .status :link, .status :visited { color: gray; text-decoration: underline;}
-
-    .error { color: red; font-weight: bold; }
-
-    .linky {
-        color: gray; background-color: transparent;
-        border: none; cursor: pointer;
-        margin: 0px; padding: 0px; vertical-align: bottom;
-        display: inline;
-        text-align: right;
-        text-decoration: underline;
-    }
-    form th { text-align: right; color: gray; font-weight: normal; text-transform: lowercase; }
-    form .wrong { color: red; font-weight: bold; }
-    </style>
+    <title>$page.title ($_.site_title)</title>
+    <link href="/static/style.css" type="text/css" rel="stylesheet" media="all" />
 
 $for s in ctx.stylesheets:
     <link rel="stylesheet" type="text/css" href="$s">
@@ -30,24 +14,46 @@ $for jsurl in ctx.javascripts:
 
 </head>
 <body>
+    <div id="wrapper">
+    <div id="header">
+        <div id="menu">
 $if ctx.user:
-    <form action="$homepath()/account/logout" method='POST'>
-    <p class="login">
-    Welcome, <a href="$homepath()/$ctx.user.name">$ctx.user.displayname</a>
-    | <a href="$homepath()/account/preferences">Preferences</a>
-    | <button class="linky" type="submit">Log Out</button>
-    </p>
-    </form>
+    <form name='logout' action="$homepath()/account/logout" method='POST'></form>
+    
+    $:_.welcome_user(homepath() + '/' + ctx.user.name, ctx.user.displayname)
+    | <a href="$homepath()/account/preferences">$_.preferences</a>
+    | <a href="#" onclick="document.forms['logout'].submit()">$_.logout</a>
 $else:
-    <p class="login">[<a href="$homepath()/account/login">Log In</a>]</p>
+    <a href="/account/login">$_.login</a>
 
-<h1>$page.title</h1>
+        </div>
+
+        <div id="title"><a href="/">$_.site_title</a></div>
+        <!--
+        <div id="subtitle">$_.site_subtitle</div>
+        -->
+
+       <script>
+       function setlang(lang) {
+           document.cookie = "HTTP_LANG=" + lang + "; path=/;";
+           window.location.reload()
+       }
+       </script>
+    </div>
+
+    <div id="content">
+
+        <h1>$page.title</h1>
 
 $if ctx.error:
     <p class="error"><pre>$ctx.error</pre></p>
 
-<p>
-$:page
-</p>
+    $:page
+   </div>
+   <div id="footer">
+        $:_.powered_by_infogami("http://infogami.org")
+   </div>
+   </div>
 </body>
 </html>
+

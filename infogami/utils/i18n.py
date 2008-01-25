@@ -6,24 +6,64 @@ import web
 
 DEFAULT_LANG = 'en'
 
+def find_i18n_namespace(path):
+    """Finds i18n namespace from the path.
+    
+        >>> find_i18n_namespace('i18n/type/type/strings.en')
+        'type/type'
+        >>> find_i18n_namespace('i18n/strings.en')
+        ''
+    """
+    import os.path
+    return os.path.dirname(web.lstrips(path, 'i18n/'))
+
 class i18n:
     def __init__(self):
         self._data = {}
         
-    def getkeys(self, lang=None):
+    def get_namespaces(self):
+        return sorted(set(k[0] for k in self._data))
+        
+    def get_languages(self):
+        return sorted(set(k[1] for k in self._data))
+    
+    def get_count(self, namespace, lang=None):
         lang = lang or DEFAULT_LANG
+        return len(self._data.get((namespace, lang)) or {})
+        
+    def set_namespace(self, namespace):
+        """Set default namespace for this context."""
+        web.ctx.i18n_namespace = namespace
+        doom
+        
+    def get_namespace(self, namespace):
+        return i18n_namespace(self, namespace)
+        
+    def getkeys(self, namespace, lang=None):
+        namespace = web.utf8(namespace)
+        lang = web.utf8(lang)
+        
         # making a simplified assumption here.
         # Keys for a language are all the strings defined for that language and 
         # all the strings defined for default language. By doing this, once a key is 
         # added to default lang, then it will automatically appear in all other languages.
-        keys = set(self._data.get(lang, {}).keys() + self._data[DEFAULT_LANG].keys())
+        keys = set(self._data.get((namespace, lang), {}).keys() + self._data.get((namespace, DEFAULT_LANG), {}).keys())
         return sorted(keys)
         
-    def _set_strings(self, lang, data):
-        self._data[lang] = dict(data)
+    def _set_strings(self, namespace, lang, data):
+        namespace = web.utf8(namespace)
+        lang = web.utf8(lang)
+        self._data[namespace, lang] = dict(data)
         
-    def _update_strings(self, lang, data):
-        self._data.setdefault(lang, {}).update(data)
+    def _update_strings(self, namespace, lang, data):
+        namespace = web.utf8(namespace)
+        lang = web.utf8(lang)
+        self._data.setdefault((namespace, lang), {}).update(data)
+        
+    def get(self, namespace, key):
+        namespace = web.utf8(namespace)
+        key = web.utf8(key)
+        return i18n_string(self, namespace, key)
         
     def __getattr__(self, key):
         if not key.startswith('__'):
@@ -32,21 +72,44 @@ class i18n:
             raise AttributeError, key
             
     def __getitem__(self, key):
-        return i18n_string(self, key)
+        namespace = web.ctx.get('i18n_namespace', '')
+        key = web.utf8(key)
+        return i18n_string(self, namespace, key)
+        
+class i18n_namespace:
+    def __init__(self, i18n, namespace):
+        self._i18n = i18n
+        self._namespace = namespace
+        
+    def __getattr__(self, key):
+        if not key.startswith('__'):
+            return self[key]
+        else:
+            raise AttributeError, key
+            
+    def __getitem__(self, key):
+        return self._i18n.get(self._namespace, key)
             
 class i18n_string:
-    def __init__(self, i18n, key):
+    def __init__(self, i18n, namespace, key):
         self._i18n = i18n
+        self._namespace = namespace
         self._key = key
         
     def __str__(self):
-        default_data = self._i18n._data.get(DEFAULT_LANG) or {}
-        data = self._i18n._data.get(web.ctx.lang) or default_data
+        def get(lang): 
+            return self._i18n._data.get((self._namespace, lang))
+        default_data = get(DEFAULT_LANG) or {}
+        data = get(web.ctx.lang) or default_data
         text = data.get(self._key) or default_data.get(self._key) or self._key
         return web.utf8(text)
     
     def __call__(self, *a):
-        return str(self) % a
+        try:
+            return str(self) % tuple(web.utf8(x) for x in a)
+        except:
+            print >> web.debug, 'failed to substitute (%s/%s) in language %s' % (self._namespace, self._key, web.ctx.lang)
+        return str(self)
 
 def i18n_loadhook():
     """Load hook to set web.ctx.lang bases on HTTP_ACCEPT_LANGUAGE header."""
@@ -69,15 +132,34 @@ def i18n_loadhook():
         
     web.ctx.lang = parse_lang_cookie() or parse_lang_header() or ''
 
+def find(path, pattern):
+    """Find all files matching the given pattern in the file hierarchy rooted at path.
+    """
+    import os
+    import re
+    for dirname, dirs, files in os.walk(path):
+        for f in files:
+            if re.match(pattern, f):
+                yield os.path.join(dirname, f)
+                
+def dirstrip(f, dir):
+    """Strips dir from f.
+        >>> dirstrip('a/b/c/d', 'a/b/')
+        'c/d'
+    """
+    f = web.lstrips(f, dir)
+    return web.lstrips(f, '/')
+    
 def load_strings(plugin_path):
     """Load string.xx files from plugin/i18n/string.* files."""
     import os.path
     import glob
     
-    def parse_lang(path):
-        """Find lang from extenstion."""
+    def parse_path(path):
+        """Find namespace and lang from path."""
+        namespace = os.path.dirname(path)
         _, extn = os.path.splitext(p)
-        return extn[1:] # strip dot
+        return namespace, extn[1:] # strip dot
         
     def read_strings(path):
         env = {}
@@ -86,14 +168,15 @@ def load_strings(plugin_path):
         del env['__builtins__']
         return env
 
-    path = os.path.join(plugin_path, "i18n", "strings.*")
-    for p in glob.glob(path):
+    root = os.path.join(plugin_path, 'i18n')
+    for p in find(root, 'strings\..*'):
         try:
-            print >> web.debug, "load", p
-            lang = parse_lang(p)
+            namespace, lang = parse_path(dirstrip(p, root))
             data = read_strings(p)
-            strings._update_strings(lang, data)
+            strings._update_strings(namespace, lang, data)
         except:
+            import traceback
+            traceback.print_exc()
             print >> web.debug, "failed to load strings from", p
 
 # global state

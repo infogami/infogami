@@ -1,6 +1,6 @@
 $def with (page)
 
-$var title: Edit $page.name
+$var title: $_.get('mode/edit', 'edit_title')(page.name)
 
 $add_javascript("/static/js/repetition/repetition-model.js")
 $add_javascript("/static/js/jquery/jquery.js")
@@ -63,9 +63,9 @@ function swap(a, b) {
 <table>
 <tbody>
     <tr>
-        <td>$_.PAGETYPE</td>
+        <td>$_.get('mode/edit', 'page_type')</td>
         <td>$:macros.ThingReference("type/type", "_type", page.type.name)</td>
-        <td><input type="button" onclick="changeTemplate()" value="$_.CHANGE"/></td>
+        <td><input type="button" onclick="changeTemplate()" value="$_.get('mode/edit', 'change')"/></td>
     </tr>
     <tr>
         <td>&nbsp;</td>
@@ -76,11 +76,12 @@ function swap(a, b) {
 
 $for p in page.type.properties:
     $ key = p.name
+    $ label = _.get(page.type.name, key)
     <tbody>
     $if not p.get('unique'):
         $ i = 0
         <tr>
-            <td>$key</td>
+            <td>$label</td>
             <td></td>
             <td></td>
         </tr>
@@ -88,9 +89,9 @@ $for p in page.type.properties:
             <tr repeat="$i">
                 <td colspan="2" style="padding-left:1.0em"> $:thinginput(p.d.type, key + "#" + str(i), value=x)</td>
                 <td>
-                    <button type="remove" template="row_$key">Delete</button>
-                    <button type="move-up" template="row_$key" onclick="return moveup.apply(this, [event]);">Move Up</button>
-                    <button type="move-down" template="row_$key" onclick="return movedown.apply(this, [event]);">Move Down</button>
+                    <button type="remove" template="row_$key">$_.get('mode/edit', 'delete')</button>
+                    <button type="move-up" template="row_$key" onclick="return moveup.apply(this, [event]);">$_.get('mode/edit', 'move_up')</button>
+                    <button type="move-down" template="row_$key" onclick="return movedown.apply(this, [event]);">$_.get('mode/edit', 'move_down')</button>
                 </td>
             </tr>
             $ i = i + 1
@@ -99,30 +100,30 @@ $for p in page.type.properties:
                 $:thinginput(p.d.type, key + '#[row_' + key + ']', value="")
             </td>
             <td>
-                <button type="remove" template="row_$key">Delete</button>
-            	<button type="move-up" template="row_$key" onclick="return moveup.apply(this, [event]);">Move Up</button>
-            	<button type="move-down" template="row_$key" onclick="return movedown.apply(this, [event]);">Move Down</button>
+                <button type="remove" template="row_$key">$_.get('mode/edit', 'delete')</button>
+            	<button type="move-up" template="row_$key" onclick="return moveup.apply(this, [event]);">$_.get('mode/edit', 'move_up')</button>
+            	<button type="move-down" template="row_$key" onclick="return movedown.apply(this, [event]);">$_.get('mode/edit', 'move_down')</button>
             </td>
         </tr>
         <tr>
             <td></td>
             <td></td>
-            <td><button type="add" template="row_$key">Add $key</button></td>
+            <td><button type="add" template="row_$key">$_.get('mode/edit', 'add_property')(label)</button></td>
         </tr>
     $else:
         <tr>
-            <td>$key</td>
+            <td>$label</td>
             <td>$:thinginput(p.d.type, key, value=page.d[key])</td>
             <td></td>
         </tr>
     </tbody>
 </table>
-<p><strong>Edit summary</strong> (briefly describe the changes you have made):<br />
+<p>$:_.get('mode/edit', 'edit_summary')<br />
 <input type="text" name="_comment" value="" />
 </p>
 <p>
-<input type="submit" name='_save' value="$_.SAVE" />
-<input type="submit" name='_preview' value="$_.PREVIEW" />
-<input type="submit" name='_delete' value="$_.DELETE" />
+<input type="submit" name='_save' value="$_.get('mode/edit', 'save')" />
+<input type="submit" name='_preview' value="$_.get('mode/edit', 'save')" />
+<input type="submit" name='_delete' value="$_.get('mode/edit', 'delete')" />
 </p>
 </form>

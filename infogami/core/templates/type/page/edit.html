@@ -1,21 +1,25 @@
 $def with (page)
 
-$var title: $_.EDIT $page.title
+$ _e = _.get_namespace('mode/edit')
+$ _t = _.get_namespace('type/page')
+
+$var title: $_e.edit_title(page.name)
+
 
 <form name="edit" method="post" action="">
 
 $:macros.TypeChanger(page.type)
 
-<strong>$_.TITLE</strong> <input type="text" name="title" value="$page.title" /><br />
+<strong>$_t.title</strong> <input type="text" name="title" value="$page.title" /><br />
 <textarea name="body" rows="15" cols="80">$page.body</textarea>
 
-<p><strong>Edit summary</strong> (briefly describe the changes you have made):<br />
+<p>$:_e.edit_summary<br />
 <input type="text" name="_comment" value="" />
 </p>
 
 <p>
-<input type="submit" name='_save' value="$_.SAVE" />
-<input type="submit" name='_preview' value="$_.PREVIEW" />
-<input type="submit" name='_delete' value="$_.DELETE" />
+<input type="submit" name='_save' value="$_e.save" />
+<input type="submit" name='_preview' value="$_e.preview" />
+<input type="submit" name='_delete' value="$_e.delete" />
 </p>
 </form>

@@ -1,0 +1,101 @@
+body
+{
+    font-size: 0.8em;
+    font-family: Verdana;
+    padding: 0;
+    margin: 0;
+}
+
+
+#wrapper {
+}
+
+/* header */
+
+#header {
+    margin: 0;
+    padding: 10px;
+    background: gray;
+    background-color: #B39565; 
+}
+
+#header #menu {
+    clear: both;
+    text-align: right;
+    margin: 0px;
+    color: white;
+}
+
+#header #menu a {
+    color: white;
+}
+
+#header #title a {
+    color: white;
+    text-decoration:none
+}
+
+#header #title {
+    font-size: 2em;
+    color: white;
+    text-align: left;
+    padding: 0px 0px 10px 0px;
+    margin-top: -5px;
+}
+
+#header #subtitle {
+    font-size: 1em;
+    color: #dddddd;
+    text-align: left;
+}
+
+#content {
+    margin: 0px 20px 0px 20px;
+}
+
+#content a {
+    color: #937545;
+}
+
+#footer
+{
+    margin: 10px;
+    padding: 10px;
+    font-size: 0.8em;
+    text-align: center;
+    clear: both;
+    border-top: 1px solid #ccc;
+}
+
+#footer a
+{
+    color: gray;
+    text-decoration: none;
+}
+
+#footer a:hover 
+{
+    text-decoration: underline;
+}
+
+#dateline {
+    color:gray;
+    font-family:verdana,arial,helvetica,sans-serif;
+    font-size:0.9em;
+    margin-top:13px;
+    margin-bottom: 10px;
+    padding-top:2px;
+    text-align:left;
+}
+
+#dateline a {
+    background:#EEEEEE none repeat scroll 0% 0%;
+    color:#555555;
+    padding:2px;
+}
+
+#dateline a:hover {
+    background:#555555 none repeat scroll 0% 0%;
+    color:white;
+}
+

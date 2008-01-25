@@ -45,6 +45,7 @@ web.template.Template.globals.update(dict(
   macros = storage.ReadOnlyDict(macro.macrostore),
   diff = simple_diff,
   better_diff = better_diff,
+  find_i18n_namespace = i18n.find_i18n_namespace,
     
   # common utilities
   int = int,
@@ -113,6 +114,7 @@ def spacesafe(text):
     return text
 
 def value_to_thing(value, type):
+    if value is None: value = ""
     d = web.storage(value=value)
     thing = web.storage(d=web.storage(value=value), name="", type=type)
     thing.update(d)

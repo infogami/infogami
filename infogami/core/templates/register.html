@@ -1,8 +1,10 @@
 $def with (f)
 
-$var title: $_.CREATE_NEW_ACCOUNT
+$ _ = _.get_namespace('account/register')
+
+$var title: $_.create_new_account
 
 <form name="register" method="POST">
 $:f.render()
-    <input type="submit" name="submit" value="$_.REGISTER">
+    <input type="submit" name="submit" value="$_.register">
 </form>

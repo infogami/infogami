@@ -1,9 +1,16 @@
 $def with (page)
 
+$ _ = _.get_namespace('mode/view')
+
 $ view = thingview(page)
 
 $var title: $view.title
 
 $:view
 
-<p class="status">[<a href="$url(m='edit')" accesskey="e">$_.EDIT</a>][<a href="$url(m='history')">$_.HISTORY</a>][<a href="$url(m='backlinks')">$_.BACKLINKS</a>] $_.LAST_MODIFIED $datestr(page.v.created)</p>
+<div id="dateline">
+    <a href="$url(m='edit')" accesskey="e">$_.edit</a>
+    <a href="$url(m='history')" accesskey="h">$_.history</a>
+    $_.last_modified $datestr(page.v.created)
+</div>
+

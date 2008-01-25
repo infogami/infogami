@@ -1,0 +1,4 @@
+users_activity = "%s's wiki activity"
+displayname = 'Display Name'
+description = 'Description'
+email = 'E-Mail'

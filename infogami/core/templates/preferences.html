@@ -1,9 +1,11 @@
 $def with (preferences)
 
-$var title: Preferences
+$ _ = _.get_namespace('account/preferences')
+
+$var title: $_.preferences
 
 <div id="header-fullpage">
-        <span id="title">${ctx.user.displayname}'s Preferences</span> 
+        <span id="title">$_.users_preferences(ctx.user.displayname)</span> 
 </div>
 
 <div id="form-border">

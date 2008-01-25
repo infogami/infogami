@@ -173,7 +173,9 @@ def push(root):
 def _pushpages(pages):
     tdb.transact()
     try:
-        for p in pages.values(): _savepage(p)    
+        for p in pages.values(): 
+            print 'saving', p.name
+            _savepage(p)    
     except:
         tdb.rollback()
         raise

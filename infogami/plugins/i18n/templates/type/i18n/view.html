@@ -4,6 +4,7 @@ $var title: strings
 
 <table>
 $ lang = page.name.split('.')[-1]
-$for key in _.getkeys(lang):
-    <tr><td>$key</td><td>$page.get(key, '-')</td>
+$ namespace = find_i18n_namespace(page.name)
+$for key in _.getkeys(namespace, lang):
+    <tr><td>$key</td><td>$page.d.get(key, '-')</td>
 </table>

@@ -1,6 +1,6 @@
 $def with (page)
 
-$var title: $_.EDIT $page.name
+$var title: $_.get('mode/edit', 'edit_title')(page.name)
 
 <form name="edit" method="POST">
 
@@ -8,13 +8,14 @@ $:macros.TypeChanger(page.type)
 
 <table id="strings_table">
 $ lang = page.name.split('.')[-1]
-$for key in _.getkeys(lang):
-    <tr><td>$key</td><td><input type="text" name="$key" value="$page.get(key, '')"/></td>
+$ namespace = find_i18n_namespace(page.name)
+$for key in _.getkeys(namespace, lang):
+    <tr><td>$key</td><td><input type="text" name="$key" value="$page.d.get(key, '')"/></td>
 </table>
 
 <script>
 function add_key() {
-	var key = document.getElementById("newkey").value.toUpperCase();
+	var key = document.getElementById("newkey").value;
 	var table = document.getElementById("strings_table");
 	var row = table.insertRow(table.rows.length);
 	var cell1 = row.insertCell(0);
@@ -26,11 +27,13 @@ function add_key() {
 </script>
 
 <p>
-Add new key: <input type="text" name="_newkey" id="newkey"/> <input type="button" onclick="add_key()" name="_addkey" value="Add"/>
+$_.get('type/i18n', 'add_new_key') <input type="text" name="_newkey" id="newkey"/> <input type="button" onclick="add_key()" name="_addkey" value="$_.get('type/i18n', 'add')"/>
 </p>
 
-<input type="submit" name="_save" value="$_.SAVE" />
-<input type="submit" name="_preview" value="$_.PREVIEW" />
-<input type="submit" name="_delete" value="$_.DELETE" />
+<p>
+<input type="submit" name='_save' value="$_.get('mode/edit', 'save')" />
+<input type="submit" name='_preview' value="$_.get('mode/edit', 'preview')" />
+<input type="submit" name='_delete' value="$_.get('mode/edit', 'delete')" />
+</p>
 </form>
 

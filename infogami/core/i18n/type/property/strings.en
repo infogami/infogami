@@ -1,0 +1,4 @@
+is_unique = 'Unique'
+type = 'Expected type'
+description = 'Description'
+name = 'Name'

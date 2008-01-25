@@ -1,8 +1,13 @@
 $def with (page)
 
-$var title: $_.HISTORY
+$ _ = _.get_namespace('mode/history')
 
-<p>[<a href="$url()">$_.VIEW</a>][<a href="$url(m='edit')">$_.EDIT</a>]</p>
+$var title: $_.history
+
+<div id="dateline">
+    <a href="$url(m='view')" accesskey="v">$_.view</a>
+    <a href="$url(m='edit')" accesskey="e">$_.edit</a>
+</div>
 
 <form>
 <table>
@@ -11,22 +16,25 @@ $var title: $_.HISTORY
   <th></th>
   <th></th>
   <th></th>
-  <th>$_.WHO</th>
-  <th>$_.WHEN</th>
+  <th>$_.who</th>
+  <th>$_.when</th>
 </tr>
 $for v in page.h:
     <tr>
       <td>$v.revision</td>
       <td><input type="radio" id="a$v.revision" name="a" value="$v.revision"></td>
       <td><input type="radio" id="b$v.revision" name="b" value="$v.revision"></td>
-      <td><a href="$url(m='edit', v=v.revision)">$_.EDIT</a></td>
-      <td>$(v.author or v.ip)</td>
+      <td><a href="$url(m='edit', v=v.revision)">$_.edit</a></td>
+      $if v.author:
+          <td class="history"><a href="$homepath()/$v.author.name">$v.author.displayname</a></td>
+      $else:
+          <td class="history">$v.ip</td>
       <td><a href="$url(v=v.revision)">$datestr(v.created)</a></td>
       <td>
     </tr>
 </table>
-<input type="hidden" name='m' value="diff">
-<input type="submit" value="$_.COMPARE">
+<input type="hidden" name='m' value="diff"/>
+<input type="submit" value="$_.compare"/>
 </form>
 
 <script>

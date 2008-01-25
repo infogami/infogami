@@ -1,6 +1,6 @@
 $def with (form)
 
-$var title: Login Preferences
+$var title: $_.get('account/preferences', 'login_preferences')
 
 <form method="POST">
 $:form.render()

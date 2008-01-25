@@ -1,6 +1,8 @@
 $def with (form)
 
-$var title: Template Preferences
+$ _ = _.get_namespace('account/preferences')
+
+$var title: $_.template_preferences
 
 <form method="POST">
 $:form.render()

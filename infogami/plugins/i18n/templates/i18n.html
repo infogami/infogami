@@ -1,0 +1,37 @@
+$def with (namespace, lang, page)
+
+<script>
+function change_ns(ns) {
+	document.forms['i18n']['ns'].value = ns;
+	document.forms['i18n'].submit();
+}
+
+function changelang() {
+	document.forms['i18n'].submit();
+}
+
+</script>
+
+<form name="i18n" method="GET">
+Language: $:Dropdown('lang', _.get_languages(), onchange="changelang();", value=lang).render()<br/><br/>
+<input type="hidden" name="ns" value="$namespace">
+</form>
+
+<table border=1>
+<tr>
+<td style="vertical-align: top">
+$for ns in _.get_namespaces():
+    <a href="$:changequery(ns=ns)" >$(ns or "root")</a> <span id="count" style="font-size: 0.8em; ">$(_.get_count(ns, lang))/$_.get_count(ns)</span> <br/>
+</td>
+<td style="vertical-align: top">
+$if page:
+	<b>$page.name</b>
+    <div><a href="$homepath()/$page.name?m=edit">edit</a></div>
+    $:thingview(page)
+$else:
+    $ name = homepath() + "/i18n/" + namespace + "/strings." + lang
+	<b>$:name</b><br/>
+    <div>Page not found. [<a href="$name?m=edit">create</a>]</div>
+</td>
+</tr>
+</table>

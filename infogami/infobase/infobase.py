@@ -1,7 +1,7 @@
 import web
 from multiple_insert import multiple_insert
 
-KEYWORDS = "id", "create"
+KEYWORDS = "id", "create", "limit", "offset", "index"
 
 DATETYPE_REFERENCE = 0
 
@@ -47,6 +47,7 @@ class Infobase:
         site = Infosite(id, name)
         import bootstrap
         site.create(bootstrap.types)
+        return site
     
     def delete_site(self, name):
         pass

@@ -39,6 +39,12 @@ CREATE TABLE datum (
     CHECK(key ~ '^[a-z][a-z/_]*$')
 );
 
+CREATE TABLE store (
+    site_id int reference site,
+    key text,
+    value text
+);
+
 --- index ---
 
 CREATE INDEX version_created_idx ON version (created);
@@ -47,8 +53,15 @@ CREATE FUNCTION text2timestap(text) RETURNS timestamp AS $$
     SELECT CAST($1 AS TIMESTAMP);
 $$ LANGUAGE SQL IMMUTABLE;
 
+CREATE FUNCTION dirname(text) RETURNS text AS $$
+    SELECT ltrim(regexp_replace('/' || $1, '[^/]*$', ''), '/');
+$$ LANGUAGE SQL IMMUTABLE;
+
 --- index for keys, strings and uris 
 CREATE INDEX datum_key_val_str_idx ON datum (key, value, datatype) WHERE datatype=1 OR datatype=2 OR datatype = 4;
+
+-- index dirname(key) for datatype key
+CREATE INDEX datum_key_val_str_idx ON datum (key, dirname(value), datatype) WHERE datatype=1;
 
 --- index for integers, booleans and references
 CREATE INDEX datum_key_val_int_idx ON datum (key, cast(value as integer), datatype) WHERE datatype=0 OR datatype = 5 OR datatype = 6;
@@ -106,7 +119,8 @@ BEGIN
     END IF;
 
     -- key should not have leading or trailing /'s and should not have spaces
-    IF NEW.datatype = 1 AND NEW.value !~  '^[^/\s](?:/[^/\s\])*$' THEN
+    IF NEW.datatype = 1 AND NEW.value !~ E'^[^/\\s]+(?:/[^/\\s]+)*$' THEN
+            RAISE EXCEPTION 'Invalid key %', NEW.value;
     END IF;
         
     RETURN NULL;

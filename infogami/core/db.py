@@ -219,7 +219,7 @@ def get_things(site, typename, prefix, limit):
 
 def get_site_permissions(site):
     if hasattr(site, 'permissions'):
-        return pickle.loads(site.permissions)
+        return pickle.loads(str(site.permissions))
     else:
         return [
             ('/(user/[^/]*)(/.*)?', [('$1', 'view,edit'), ('everyone', 'view')]),

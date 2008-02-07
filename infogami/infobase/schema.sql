@@ -34,13 +34,13 @@ CREATE TABLE datum (
     end_revision int default 2147483647, -- MAX_INT: 2**31 -1 
     key text,
     value text,
-    datatype int default 1, -- 0: reference, 1: key, 2: string, 3: text, 4: uri, 5: boolean, 6: int, 7: float, 8: datatime
+    datatype int, --- 0: reference, 1: key, 2: string, 3: text, 4: uri, 5: boolean, 6: int, 7: float, 8: datatime
     ordering int default null,
     CHECK(key ~ '^[a-z][a-z/_]*$')
 );
 
 CREATE TABLE store (
-    site_id int reference site,
+    site_id int references site,
     key text,
     value text
 );
@@ -58,19 +58,19 @@ CREATE FUNCTION dirname(text) RETURNS text AS $$
 $$ LANGUAGE SQL IMMUTABLE;
 
 --- index for keys, strings and uris 
-CREATE INDEX datum_key_val_str_idx ON datum (key, value, datatype) WHERE datatype=1 OR datatype=2 OR datatype = 4;
+CREATE INDEX datum_key_val_str_idx ON datum (key, value, datatype, begin_revision, end_revision) WHERE datatype=1 OR datatype=2 OR datatype = 4;
 
 -- index dirname(key) for datatype key
-CREATE INDEX datum_key_val_str_idx ON datum (key, dirname(value), datatype) WHERE datatype=1;
+CREATE INDEX datum_key_val_dirname_idx ON datum (key, dirname(value), datatype, begin_revision, end_revision) WHERE datatype=1;
 
---- index for integers, booleans and references
-CREATE INDEX datum_key_val_int_idx ON datum (key, cast(value as integer), datatype) WHERE datatype=0 OR datatype = 5 OR datatype = 6;
+--- index for integers and references
+CREATE INDEX datum_key_val_int_idx ON datum (key, cast(value as integer), datatype, begin_revision, end_revision) WHERE datatype=0 OR datatype = 5 OR datatype = 6;
 
 --- index for floats
-CREATE INDEX datum_key_val_float_idx ON datum (key, CAST(value AS float), datatype) WHERE datatype=7;
+CREATE INDEX datum_key_val_float_idx ON datum (key, CAST(value AS float), datatype, begin_revision, end_revision) WHERE datatype=7;
 
 --- index for timestamps
-CREATE INDEX datum_key_val_timestamp_idx ON datum (key, text2timestap(value), datatype) WHERE datatype=8;
+CREATE INDEX datum_key_val_timestamp_idx ON datum (key, text2timestap(value), datatype, begin_revision, end_revision) WHERE datatype=8;
 
 ----------------
 --- triggers ---
@@ -119,7 +119,7 @@ BEGIN
     END IF;
 
     -- key should not have leading or trailing /'s and should not have spaces
-    IF NEW.datatype = 1 AND NEW.value !~ E'^[^/\\s]+(?:/[^/\\s]+)*$' THEN
+    IF NEW.datatype = 1 AND NEW.key !~ E'^[^/\\s]+(?:/[^/\\s]+)*$' THEN
             RAISE EXCEPTION 'Invalid key %', NEW.value;
     END IF;
         
@@ -131,3 +131,4 @@ CREATE TRIGGER thing_key
 AFTER INSERT ON datum 
 FOR EACH ROW EXECUTE PROCEDURE on_datum_insert();
 
+\dt

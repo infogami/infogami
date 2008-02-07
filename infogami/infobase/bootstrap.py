@@ -1,53 +1,54 @@
 types = [
     {
-        'create': True,
+        'create': 'unless_exists',
         'key': 'type/type',
         'name': 'Type',
-        'type': {'key': 'type/type'},
-        'properties': [
-            {
-                'create': True,
-                'key': 'type/type/properties',
-                'name': 'Properties',
-                'type': {'key': 'type/property'},
-                'expected_type': {'key': 'type/property'},
-                'unique': "false"
-            },
-            {
-                'create': True,
-                'key': 'type/type/description',
-                'name': 'Description',
-                'type': {'key': 'type/property'},
-                'expected_type': {'key': 'type/text'},
-                'unique': "true"
-            },
-        ],
+        'type': 'type/type',
+        'properties': [{
+            'create': 'unless_exists',
+            'key': 'type/type/properties',
+            'name': 'Properties',
+            'type': {
+                'create': 'unless_exists',
+                'key': 'type/property',
+            }
+            'expected_type': 'type/property',
+            'unique': False
+        },
+        {
+            'create': 'unless_exists',
+            'key': 'type/type/description',
+            'name': 'Description',
+            'type': 'type/property',
+            'expected_type': 'type/text',
+            'unique': True
+        }],
         'description': {
             'type': 'type/text',
             'value': 'Metatype.\nThis is the type of all types including it self.'
         }
     }, 
     {
-        'create': True,
+        'create': 'unless_exists',
         'key': 'type/property',
         'name': 'Property',
-        'type': {'key': 'type/type'},
+        'type': 'type/type',
         'properties': [
             {
-                'create': True,
+                'create': 'unless_exists',
                 'key': 'type/property/expected_type',
                 'name': 'Expected Type',
-                'type': {'key': 'type/property'},
+                'type': 'type/property',
                 'expected_type': {'key': 'type/type'},
-                'unique': 'true'
+                'unique': True
             },
             {
-                'create': True,
+                'create': 'unless_exists',
                 'key': 'type/property/unique',
                 'name': 'Unique',
                 'type': {'key': 'type/property'},
                 'expected_type': {'key': 'type/boolean'},
-                'unique': 'true'
+                'unique': True
             },
         ],
         'description': {
@@ -56,7 +57,7 @@ types = [
         }
     },
     {
-        'create': True,
+        'create': 'unless_exists',
         'key': 'type/key',
         'name': 'Key',
         'type': {'key': 'type/type'},
@@ -67,7 +68,7 @@ types = [
         }
     },
     {
-        'create': True,
+        'create': 'unless_exists',
         'key': 'type/string',
         'name': 'String',
         'type': {'key': 'type/type'},
@@ -78,7 +79,7 @@ types = [
         }
     },
     {
-        'create': True,
+        'create': 'unless_exists',
         'key': 'type/text',
         'name': 'Text',
         'type': {'key': 'type/type'},
@@ -89,7 +90,7 @@ types = [
         }
     },
     {
-        'create': True,
+        'create': 'unless_exists',
         'key': 'type/uri',
         'name': 'URI',
         'type': {'key': 'type/type'},
@@ -100,7 +101,7 @@ types = [
         }
     },
     {
-        'create': True,
+        'create': 'unless_exists',
         'key': 'type/boolean',
         'name': 'Boolean',
         'type': {'key': 'type/type'},
@@ -111,7 +112,7 @@ types = [
         }
     },
     {
-        'create': True,
+        'create': 'unless_exists',
         'key': 'type/int',
         'name': 'Integer',
         'type': {'key': 'type/type'},
@@ -122,7 +123,7 @@ types = [
         }
     },
     {
-        'create': True,
+        'create': 'unless_exists',
         'key': 'type/float',
         'name': 'Floating Point Number',
         'type': {'key': 'type/type'},
@@ -133,7 +134,7 @@ types = [
         }
     },
     {
-        'create': True,
+        'create': 'unless_exists',
         'key': 'type/datetime',
         'name': 'Datetime',
         'type': {'key': 'type/type'},

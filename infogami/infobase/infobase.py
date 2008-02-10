@@ -7,8 +7,13 @@ Each object has a key, that is unique to the site it belongs.
 import web
 from multiple_insert import multiple_insert
 
-KEYWORDS = "id", "create", "limit", "offset", "index", "sort", "revision", "versions"
-
+KEYWORDS = ["id", 
+    "action", "create", "update", "insert", "delete", 
+    "limit", "offset", "index", "sort", 
+    "revision", "version", "history", 
+    "value", "metadata"
+]
+    
 TYPES = {}
 TYPES['type/key'] = 1
 TYPES['type/string'] = 2
@@ -44,6 +49,14 @@ class NotFound(InfobaseException):
 
 class AlreadyExists(InfobaseException):
     pass
+    
+
+def loadhook():
+    ctx = web.storage()
+    ctx.dirty = []
+    web.ctx.infobase_ctx = ctx
+            
+web.loadhooks['infobase_hook'] = loadhook
 
 def transactify(f):
     def g(*a, **kw):
@@ -83,20 +96,79 @@ class ThingList(list):
             if t.key == key:
                 return t
         return default
+
+    def _get_value(self):
+        return [t._get_value() for t in self]
+
+class Datum:
+    def __init__(self, value, datatype):
+        self.value = value
+        self.datatype = datatype
+
+    def _get_value(self):
+        return self.value
+    
+    def _get_datatype(self):
+        return self.datatype
+        
+    def coerce(self, ctx, expected_type):
+        if isinstance(expected_type, Thing):
+            expected_type = expected_type.key
+
+        def makesure(condition):
+            if not condition:
+                raise Exception, "%s: expected %s but found %s" % (self.value, expected_type, self.type)
+
+        if self.type is not None:
+            makesure(self.type == expected_type)
+        else:
+            if expected_type not in infobase.TYPES:
+                thing = ctx.site.withKey(self.value)
+                self.type = expected_type
+                self.datatype = infobase.DATATYPE_REFERENCE
+            elif expected_type == 'type/int':
+                makesure(isinstance(value, int))
+                self.datatype = infobase.TYPES['type/int']
+            elif expected_type == 'type/boolean':
+                makesure(isinstance(value, boolean))
+                self.datatype = infobase.TYPES['type/boolean']
+                self.value = int(self.value)
+            elif expected_type == 'type/float':
+                makesure(isinstance(value, (int, float)))
+                self.datatype = infobase.TYPES['type/float']
+                self.value = float(value)
+            else: # one of 'type/string', 'type/text', 'type/key', 'type/uri', 'type/datetime'
+                self.type = expected_type
+                self.datatype = infobase.TYPES[expected_type]
+                # validate for type/key, type/uri and type/datetime 
+                # (database will anyway do it, but we can give better error messages).
+
+        print self.value, self.type
+
+    def __repr__(self):
+        return repr(self.value)
+    __str__ = __repr__
         
 class Thing:
     """Thing: an object in infobase."""
-    def __init__(self, site, id, key, revision=None):
+    def __init__(self, site, id, key, last_modified=None, revision=None):
         self._site = site
         self.id = id
         self.key = key
         self.revision = revision
+        self.last_modified = last_modified and last_modified.isoformat()
         self._d = None # data is loaded lazily on demand
+
+    def _get_value(self):
+        return self.id
+
+    def _get_datatype(self):
+        return DATATYPE_REFERENCE
         
     def _load(self):
         if self._d is None:
             revision = self.revision or MAX_REVISION
-            d = web.select('datum', where='thing_id=$self.id AND begin_revision <= $revision AND end_revision > $revision', vars=locals())
+            d = web.select('datum', where='thing_id=$self.id AND begin_revision <= $revision AND end_revision > $revision', order='key, ordering', vars=locals())
             d = self._parse_data(d)
             self._d = d
         
@@ -105,12 +177,14 @@ class Thing:
             if isinstance(thing, list):
                 return [unthingify(x) for x in thing]
             elif isinstance(thing, Thing):
-                return thing.key
+                return {'key': thing.key}
+            elif isinstance(thing, Datum):
+                return thing._get_value()
             else:
                 return thing
         
         self._load()
-        d = {}
+        d = {'last_modified': self.last_modified}
         for k, v in self._d.items():
             d[k] = unthingify(v)
         return d
@@ -138,22 +212,21 @@ class Thing:
     def _parse_data(self, data):
         d = web.storage()
         for r in data:
-            value = r.value
             if r.datatype == DATATYPE_REFERENCE:
-                value = self._site.withID(int(value))
-            elif r.datatype in (TYPES['type/string'], TYPES['type/key'], TYPES['type/uri']):
-                pass # already a string
+                value = self._site.withID(int(r.value))
+            elif r.datatype in (TYPES['type/string'], TYPES['type/key'], TYPES['type/uri'], TYPES['type/text']):
+                value = Datum(r.value, r.datatype)
             elif r.datatype == TYPES['type/int']:
-                value = int(value)
+                value = Datum(int(r.value), r.datatype)
             elif r.datatype == TYPES['type/float']:
-                value = float(value)
+                value = Datum(float(r.value), r.datatype)
             elif r.datatype == TYPES['type/boolean']:
-                value = (str(value).lower() != "false")
+                value = Datum(bool(int(r.value)), r.datatype)
+            else:
+                raise Exception, "unknown datatype: %s" % r.datatype
 
-            if r.key in d:
-                if not isinstance(d[r.key], list):
-                    d[r.key] = ThingList([d[r.key]])
-                d[r.key].append(value)
+            if r.ordering is not None:
+                d.setdefault(r.key, []).append(value)
             else:
                 d[r.key] = value
 
@@ -164,7 +237,13 @@ class Thing:
         
     def __str__(self):
         return self.key
-        
+
+    def __eq__(self, other):
+        return isinstance(other, Thing) and self.id == other.id
+
+    def __ne__(self, other):
+        return not (self == other)
+
 class Infosite:
     def __init__(self, id, name):
         self.id = id
@@ -180,14 +259,14 @@ class Infosite:
         except IndexError:
             raise NotFound, key
             
-        return Thing(self, d.id, d.key)
+        return Thing(self, d.id, d.key, d.last_modified)
         
     def withID(self, id):
         try:
             d = web.select('thing', where='site_id = $self.id AND id = $id', vars=locals())[0]        
         except IndexError:
             raise NotFound, id
-        return Thing(self, d.id, d.key)
+        return Thing(self, d.id, d.key, d.last_modified)
         
     def get_datatype(self, type, key):
         if key == 'key':
@@ -200,7 +279,6 @@ class Infosite:
 
         if p:
             expected_type = p.expected_type.key
-            print >> web.debug, p, expected_type
             if expected_type in TYPES:
                 return TYPES[expected_type]
             else:
@@ -212,7 +290,7 @@ class Infosite:
         assert isinstance(query, dict)
         assert 'type' in query
         assert query['type'] is not None
-            
+
         type = self.withKey(query['type'])
         
         #@@ make sure all keys are valid.
@@ -275,9 +353,9 @@ class Infosite:
     @transactify
     def write(self, query):
         import writequery
-        q = writequery.make_query(query, self)
-        q.execute()
-        return q.dict()
+        print >> web.debug, 'write', query
+        ctx = writequery.Context(self)
+        return ctx.execute(query)
         
 if __name__ == "__main__":
     import sys
@@ -289,11 +367,8 @@ if __name__ == "__main__":
     infobase = Infobase()
     
     if '--create' in sys.argv:
-        #os.system('dropdb infobase; createdb infobase; createlang plpgsql infobase; psql infobase < schema.sql')
-        #site = infobase.create_site('infogami.org')
-        site = infobase.create_site('test')
+        os.system('dropdb infobase; createdb infobase; createlang plpgsql infobase; psql infobase < schema.sql')
+        site = infobase.create_site('infogami.org')
 
     site = infobase.get_site('infogami.org')
-    web.commit()
-    print site.create({"type": "type/property", 'sort': 'name'})
-    web.rollback()
+    print site.withKey('type/page')._get_data()

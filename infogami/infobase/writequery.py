@@ -3,67 +3,22 @@
 import web
 import infobase
 
-PRIMITIVE_TYPES = "type/string", "type/text", "type/key", "type/uri", "type/datetime", "type/int", "type/float", "type/text", "type/boolean"
 MAX_INT = 2 ** 31 - 1 
-
-def make_query(q, site, path="", context=None):
-    """Takes nested dictionary as input and returns nested query object."""
-    context = context or Context(site)
-    if isinstance(q, list):
-        return QueryList([make_query(x, site, "%s/%d" % (path, i), context) for i, x in enumerate(q)])
-    elif isinstance(q, dict):
-        d = dict((k, make_query(v, site, path + "/" + k, context)) for k, v in q.items())
-        return Query(context, d, path)
-    else:
-        return SimpleQuery(context, q, path)
-
-class Context:
-    """Query execution context for bookkeeping."""
-    def __init__(self, site):
-        self.site = site
-        self.revisions = {}
-
-    def get_revision(self, thing_id):
-        if thing_id not in self.revisions:
-            id = web.insert('version', thing_id=thing_id)
-            version = web.select('version', where='id=$id', vars=locals())[0]
-            self.revisions[thing_id] = version.revision
-        return self.revisions[thing_id]
-
-    def insert(self, thing_id, key, value):
-        if isinstance(value, list):
-            for v in value:
-                self.insert(thing_id, key, v)
-        else:
-            revision = self.get_revision(thing_id)
-            web.insert('datum', False, thing_id=thing_id, key=key, value=value.value, datatype=value.datatype, begin_revision=revision)
-
-    def delete(self, thing_id, key, value):
-        revision = self.get_revision(thing_id)
-        max_rev = MAX_INT-1
-        count = web.update('datum', where="thing_id=$thing_id AND key=$key AND value=$value.value" +
-            " AND datatype=$value.datatype AND end_revision=$max_rev", end_revision=revision, vars=locals())
-        assert count <= 1
-
-    def update(self, thing_id, key, value):
-        revision = self.get_revision(thing_id)
-        max_rev = MAX_INT-1
-        count = web.update('datum', where='thing_id=$thing_id AND key=$key AND end_revision=$max_rev', end_revision=revision, vars=locals())
-        assert count <= 1
-        self.insert(thing_id, key, value)
 
 class Value:
     """Datastucture to store value and its type. 
     Execution of every query returns this.
     """
-    def __init__(self, site, value, type):
-        self.type = type
+    def __init__(self, value, type):
+        assert isinstance(value, (basestring, int, float, bool, infobase.Thing))
+        if type:
+            assert isinstance(type, basestring)
 
-        self.datatype = infobase.TYPES.get(type, infobase.DATATYPE_REFERENCE)
+        self.type = type
+        self.datatype = type and infobase.TYPES.get(type, infobase.DATATYPE_REFERENCE)
 
         if self.datatype == infobase.DATATYPE_REFERENCE:
-            thing = site.withKey(value)
-            self.value = thing.id
+            self.value = value.id
             self.key = value
         else:
             self.value = value
@@ -71,236 +26,235 @@ class Value:
             if type == "type/boolean":
                 self.value = int(value)
 
+    def __eq__(self, other):
+        return isinstance(other, Value) and self.value == other.value and self.get_datatype() == other.get_datatype()
+
+    def get_datatype(self):
+        if self.datatype is None:
+            return infobase.TYPES['type/string']
+        else:
+            return self.datatype
+
+    def coerce(self, ctx, expected_type):
+        if isinstance(expected_type, infobase.Thing):
+            expected_type = expected_type.key
+
+        def makesure(condition):
+            if not condition:
+                raise Exception, "%s: expected %s but found %s" % (self.value, expected_type, self.type)
+
+        if self.type is not None:
+            makesure(self.type == expected_type)
+        else:
+            if expected_type not in infobase.TYPES:
+                thing = ctx.site.withKey(self.value)
+                self.type = expected_type
+                self.value = thing.id
+                self.datatype = infobase.DATATYPE_REFERENCE
+            elif expected_type == 'type/int':
+                makesure(isinstance(self.value, int))
+                self.datatype = infobase.TYPES['type/int']
+            elif expected_type == 'type/boolean':
+                makesure(isinstance(self.value, bool))
+                self.datatype = infobase.TYPES['type/boolean']
+                self.value = int(self.value)
+            elif expected_type == 'type/float':
+                makesure(isinstance(self.value, (int, float)))
+                self.datatype = infobase.TYPES['type/float']
+                self.value = float(self.value)
+            else: # one of 'type/string', 'type/text', 'type/key', 'type/uri', 'type/datetime'
+                self.type = expected_type
+                self.datatype = infobase.TYPES[expected_type]
+                # validate for type/key, type/uri and type/datetime 
+                # (database will anyway do it, but we can give better error messages).
+
     def __str__(self): return str((self.value, self.type))
     __repr__ = __str__
 
-class WriteException(infobase.InfobaseException):
-    def __init__(self, path, message):
-        infobase.InfobaseException.__init__(self, message)
-        self.path = path
-        self.message = message
-
-class QueryList(list):
-    def __init__(self, data):
-        list.__init__(self, data)
-        self.expected_type = None
-
-    def execute(self):
-        return [q.execute() for q in self]
-
-    def dict(self):
-        return [q.dict() for q in self]
-
 class Query:
-    """Infobase write query."""
     def __init__(self, ctx, d, path):
-        self.create = d.pop('create', None)
-        self.connect = d.pop('connect', None)
-        if self.create: self.create = self.create.value
-        if self.connect: self.connect = self.connect.value
-
         self.ctx = ctx
-        self.site = ctx.site
         self.d = d
         self.path = path
+        self.value = None
 
-        self.expected_type = None
-        self.result = None
-
-    def get_type(self):
-        if 'type' in self.d:
-            type = self.d['type']
-            if isinstance(type, SimpleQuery):
-                return type.value
-            elif isinstance(type, basestring):
-                return type
-            else:
-                return type.execute().value
+    def get_expected_type(self, type, name):
+        if name == 'key':
+            return 'type/key', True
+        elif name == 'type':
+            return 'type/type', True
         else:
-            return None
+            for p in type._get('properties', []):
+                if p.key.split('/')[-1] == name:
+                    return p.expected_type, p.unique.value
+        return None, None
+
+    def update(self, thing, key, value):
+        assert isinstance(key, basestring)
+        assert isinstance(value, (Value, list))
+        assert isinstance(thing, infobase.Thing)
+
+        old = thing._get(key, None)
+
+        expected_type, unique = self.get_expected_type(thing.type, key)
+        if expected_type:
+            if unique:
+                if isinstance(value, list):
+                    raise Exception, '%s: expected unique value but found list.' % value
+            else:
+                if not isinstance(value, list):
+                    raise Exception, '%s: expected list but found unique value.' % value.value
+
+            if isinstance(value, list):
+                for v in value:
+                    v.coerce(self.ctx, expected_type)
+            else:
+                value.coerce(self.ctx, expected_type)
+
+        def datum2value(d):
+            if isinstance(d, list):
+                return [datum2value(x) for x in d]
+            elif isinstance(d, infobase.Thing):
+                return Value(d, d.type.key)
+            elif isinstance(d, infobase.Datum):
+                def get_type(datatype):
+                    for k, v in infobase.TYPES.items():
+                        if v == datatype: 
+                            return k
+                type = get_type(d._get_datatype())
+                return Value(d.value, type)
+
+        if datum2value(old) == value:
+            return
+        
+        max_rev = MAX_INT
+        revision = self.ctx.get_revision(thing)
+        web.update('datum', 
+            where='thing_id=$thing.id AND key=$key AND end_revision=$max_rev', 
+            end_revision=revision, vars=locals())
+
+        if value:
+            if isinstance(value, list):
+                for i, v in enumerate(value):
+                    web.insert('datum', False, thing_id=thing.id, key=key, value=v.value, datatype=v.get_datatype(), begin_revision=revision, ordering=i)
+            else:
+                web.insert('datum', False, thing_id=thing.id, key=key, value=value.value, datatype=value.get_datatype(), begin_revision=revision)
 
     def execute(self):
-        """Executes the query and returns its value."""
-        if self.result:
-            return self.result
+        if self.value:
+            return self.value
 
-        if 'key' in self.d:
-            self.d['key'].expected_type = 'type/key'
-        if 'type' in self.d:
-            self.d['type'].expected_type = 'type/type'
+        def get(key):
+            try: 
+                return self.ctx.site.withKey(key)
+            except infobase.NotFound: 
+                return None
 
-        if self.create:
-            thing = self.get_thing(validate_type=False)
-            if thing:
-                self.create = 'present'
+        if isinstance(self.d, list):
+            self.value = [q.execute() for q in self.d]
+        elif isinstance(self.d, dict):
+            if 'value' in self.d: # primitive type
+                assert 'type' in self.d
+                value = self.d['value'].execute().value
+                type = self.d['type'].execute().value
+                assert isinstance(value, (basestring, int, float, bool))
+                assert isinstance(type, basestring)
+                self.value = Value(value, type)
             else:
-                thing = self.create_thing()
-                self.create = 'created'
-                
-                if 'type' in self.d:
-                    self.d['type'].expected_type = 'type/type'
+                assert 'key' in self.d
+                key = self.d['key'].execute().value
+                assert isinstance(key, basestring)
+                thing = get(key)
 
-                self.fill_types()
+                if not thing:
+                    assert 'type' in self.d
+                    web.insert('thing', site_id=self.ctx.site.id, key=key)
+                    thing = get(key)
+                    type = self.d['type'].execute()
+                    type.coerce(self.ctx, 'type/type')
+                    thing.type = self.ctx.site.withID(type.value)
+                    
                 for k, v in self.d.items():
                     v = v.execute()
-                    self.ctx.insert(thing.id, k, v)
-            self.result = Value(self.site, thing.key, thing.type.key)
-        elif self.is_primitive():
-            assert "type" in self.d
-            assert "value" in self.d
-            self.result = Value(self.site, self.d['value'].value, self.d['type'].value)
+                    self.update(thing, k, v)
+                self.value = Value(thing, thing.type.key)
         else:
-            if 'type' in self.d:
-                self.d['type'].expected_type = 'type/type'
-            thing = self.get_thing()
-            if not thing:
-                raise WriteException(self.path, "Not Found")
-            self.fill_types(thing.type)
-            for k, v in self.d.items():
-                v1 = v.execute()
-                self.xconnect(thing.id, k, v1, v)
-            self.result = Value(self.site, thing.key, thing.type)
-        return self.result
+            self.value = Value(self.d, None)
+        return self.value
 
-    def get_thing(self, validate_type=True):
-        """Returns the thing matching the given query.
-        If the query has 'type' then type the resulting object be same as the given type.
-        """
-        assert 'key' in self.d
-        key = self.d['key'].execute().value
-
-        try:
-            thing = self.site.withKey(key)
-            if validate_type and self.expected_type:
-                assert thing.type == self.expected_type
-            if validate_type and 'type' in self.d:
-                assert thing.type.key == self.d['type'].execute().key
-            return thing
-        except infobase.NotFound:
-            return None
-
-    def create_thing(self):
-        """Creates a new thing using the query.
-        It also make sure that all the given properties are of required type.
-        """
-        assert 'key' in self.d and 'type' in self.d
-        key = self.d['key'].execute().value
-        id = web.insert('thing', site_id=self.site.id, key=key)
-        self.thing = infobase.Thing(self.site, id, key)
-        return self.thing
-
-    def xconnect(self, thing_id, key, value, query):
-        if isinstance(value, list):
-            for q, v in zip(query, value):
-                self.xconnect(thing_id, key, v, q)
+    def primitive_value(self, value):
+        if isinstance(value, int):
+            return Value(value, 'type/int')
+        elif isinstance(value, bool):
+            return Value(int(value), 'type/boolean')
+        elif isinstance(value, float):
+            return Value(value, 'type/float')
         else:
-            d = web.select('datum', 
-                where='thing_id=$thing_id AND key=$key AND value=$value.value AND datatype=$value.datatype',
-                vars=locals())
-            d = [row.value for row in d]
-            present = value.value in d
-            if query.connect == "insert" or query.create:
-                if present:
-                    query.connect = 'present'
-                else:
-                    query.connect = 'connected'
-                    self.ctx.insert(thing_id, key, value)
-            elif query.connect == 'delete':
-                if not present:
-                    query.connect = 'absent'
-                else:
-                    query.connect = 'deleted'
-                    self.ctx.delete(thing_id, key, value)
-            elif query.connect == 'update':
-                if present:
-                    query.connect = 'present'
-                else:
-                    query.connect = 'updated'
-                    self.ctx.update(thing_id, key, value)
-
-    def is_primitive(self):
-        if 'type' in self.d:
-            type = self.d['type']
-            if isinstance(type, SimpleQuery):
-                type = type.value
-            else:
-                type = type.execute().value
-            return type in PRIMITIVE_TYPES
-        else:
-            return False
-
-    def fill_types(self, type=None):
-        """Fill expected types of all the children."""
-        if 'key' in self.d:
-            self.d['key'].expected_type = 'type/type'
-        
-        if type == None:
-            assert 'type' in self.d
-            # improve
-            type_id = self.d['type'].execute().value
-            type = self.site.withID(type_id)
-        elif isinstance(type, basestring):
-            type = self.site.withKey(type)
-
-        def get_properties(type):
-            return dict((web.lstrips(p.key, type.key + '/'), p) for p in type._get('properties', []))
-
-        for name, p in get_properties(type).items():
-            if name in self.d:
-                t = p.expected_type
-                if isinstance(t, infobase.Thing):
-                    t = t.key
-                self.d[name].expected_type = t
-
-    def dict(self):
-        if not isinstance(self.d, dict):
-            return self.d
-        d = self.d.copy()
-        for k, v in d.items():
-            if isinstance(v, Query):
-                d[k] = v.dict()
-            elif isinstance(v, list):
-                d[k] = [x.dict() for x in v]
-        if self.create:
-            d['create'] = self.create
-        elif self.connect:
-            d['connect'] = self.connect
-
-        return d
+            return Value(value, 'type/string')
 
     def __str__(self):
-        if self.create: action = 'create '
-        elif self.connect: action = 'connect '
-        else: action = ""
-        return "<%squery: %s>" % (action, repr(self.d))
-
+        return "<query: %s>" % repr(self.d)
     __repr__ = __str__
 
+class Context:
+    """Query execution context for bookkeeping."""
+    def __init__(self, site):
+        self.site = site
+        self.revisions = {}
+        self.updated = set()
+        self.created = set()
 
-class SimpleQuery:
-    """Query class for handling leaf nodes in the query."""
-    def __init__(self, ctx, value, path):
-        self.ctx = ctx
-        self.value = value
-        self.path = path
-        self.expected_type = None
-        self.parent = None
-        self.result = None
-        self.connect = None
-        self.create = None
+    def get_revision(self, thing):
+        if thing.id not in self.revisions:
+            id = web.insert('version', thing_id=thing.id)
+            version = web.select('version', where='id=$id', vars=locals())[0]
+            self.revisions[thing.id] = version.revision
+            if version.revision == 1:
+                self.created.add(thing.key)
+            else:
+                self.updated.add(thing.key)
+        return self.revisions[thing.id]
 
-    def execute(self):
-        if not self.result:
-            self.result = Value(self.ctx.site, self.value, self.expected_type or "type/string")
-        return self.result
+    def make_query(self, q, path=""):
+        """Takes nested dictionary as input and returns nested query object."""
+        if isinstance(q, list):
+            return Query(self, [self.make_query(x, "%s/%d" % (path, i)) for i, x in enumerate(q)], path)
+        elif isinstance(q, dict):
+            d = dict((k, self.make_query(v, path + "/" + k)) for k, v in q.items())
+            return Query(self, d, path)
+        else:
+            return Query(self, q, path)
 
-    def dict(self):
-        return self.value
-    
-    def __str__(self): return repr(self.value)
-    __repr__ = __str__
+    def execute(self, query):
+        query = self.make_query(query)
+        query.execute()
+        return dict(created=list(self.created), updated=list(self.updated))
 
 if __name__ == "__main__":
-    import doctest
-    doctest.testmod()
+    import config
+    import web
+    q = [{
+        'key': 'pagelist',
+        'type': {'key': 'type/page'},
+        'title': 'Page List',
+        'body': '{{PageList("")}}'
+    },
+    {
+        'key': 'recentchanges',
+        'type': {'key': 'type/page'},
+        'title': 'Recent Changes',
+        'body': '{{RecentChanges("")}}'
+    }]
+
+    q = {
+        'key': 'type/type',
+        'type': 'type/type',
+    }
+    
+    web.transact()
+    ctx = Context(config.site) 
+    #print ctx.execute([q, q])
+    import bootstrap2
+    print ctx.execute(bootstrap2.types)
+    web.commit()
 

@@ -14,6 +14,8 @@ CREATE TABLE thing (
     key varchar(4096),
     latest_revision int,
     deleted boolean DEFAULT false,
+    created timestamp default (current_timestamp at time zone 'utc'),
+    last_modified timestamp default (current_timestamp at time zone 'utc'),
     UNIQUE (site_id, key)
 );
 
@@ -96,7 +98,7 @@ FOR EACH ROW EXECUTE PROCEDURE before_version_insert();
 
 CREATE FUNCTION on_version_insert() RETURNS TRIGGER AS $$
 BEGIN
-    UPDATE thing SET latest_revision = NEW.revision WHERE thing.id = NEW.thing_id;
+    UPDATE thing SET latest_revision = NEW.revision, last_modified=NEW.created WHERE thing.id = NEW.thing_id;
     RETURN NULL;
 END
 $$ LANGUAGE plpgsql;
@@ -131,4 +133,3 @@ CREATE TRIGGER thing_key
 AFTER INSERT ON datum 
 FOR EACH ROW EXECUTE PROCEDURE on_datum_insert();
 
-\dt

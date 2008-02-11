@@ -1,6 +1,6 @@
 $def with (author=None, limit=50)
 
-$ changes = get_recent_changes(ctx.site, author=author, limit=limit)
+$ changes = get_recent_changes(author=author, limit=limit)
 
 $var title: $_.RECENT_CHANGES
 
@@ -16,16 +16,16 @@ $var title: $_.RECENT_CHANGES
 $for v in changes:
     <tr>
     <td>$datestr(v.created)</td>
-    <td><a href="$homepath()/$v.thing.name">$v.thing.name</a></td>
-    $if v.author:
-        <td><a href="$homepath()/$v.author.name" title="$v.author.displayname">$v.author.displayname</a></div></td>
+    <td><a href="$homepath()/$v.key">$v.key</a></td>
+    $if v.author_id:
+        <td><a href="$homepath()/$v.author.key" title="$v.author.displayname">$v.author.displayname</a></div></td>
     $else:
         <td>$v.ip</td>    
     <td>$v.comment</td>
     <td>
-    <a href="$homepath()/$v.thing.name?m=view&v=$v.revision">$_.VIEW</a>&nbsp;
-    <a href="$homepath()/$v.thing.name?m=edit&v=$v.revision">$_.EDIT</a>&nbsp;
-    <a href="$homepath()/$v.thing.name?m=diff&b=$v.revision">$_.DIFF</a>&nbsp;
+    <a href="$homepath()/$v.key?m=view&v=$v.revision">$_.VIEW</a>&nbsp;
+    <a href="$homepath()/$v.key?m=edit&v=$v.revision">$_.EDIT</a>&nbsp;
+    <a href="$homepath()/$v.key?m=diff&b=$v.revision">$_.DIFF</a>&nbsp;
     </td>
     </tr>
 </table>

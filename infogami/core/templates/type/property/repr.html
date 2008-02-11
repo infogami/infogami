@@ -1,3 +1,2 @@
 $def with (p)
-${p.name}${(p.get('unique') and " ") or []} of type $:thingrepr(p.d.type)
-
+${p.name}${(p.unique and " ") or []} of type $:thingrepr(p.expected_type)

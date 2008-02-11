@@ -1,9 +1,9 @@
 $def with (a, b, name)
 
-$if a.type.d.get("is_primitive"):
+$if a.is_primitive:
     $ diffresults = diff(a.value, b.value)
 $else:
-    $ diffresults = diff(a.name, b.name)
+    $ diffresults = diff(a.key, b.key)
 
 <tr><td class="diff-header-side" valign="top">$name</td><td class="diff-body" valign="top">
 $for r in diffresults:

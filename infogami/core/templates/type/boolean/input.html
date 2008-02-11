@@ -1,6 +1,11 @@
 $def with (p, name)
 
+$# when checkbox is not selected, browser doesn't send any value to the server.
+$# Adding a hidden field sends empty value when checkbox is not selected
+$# and 2 values when checkbox is selected and the server takes only the latter value.
+<input type="hidden" name="$name" value=""/>
+
 $if p.value:
-    <input type="checkbox" name="$name" checked="checked"/>
+    <input type="checkbox" name="$name" value="true" checked="checked"/>
 $else:
-    <input type="checkbox" name="$name"/>
+    <input type="checkbox" name="$name" value="true"/>

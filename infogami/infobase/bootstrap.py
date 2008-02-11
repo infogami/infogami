@@ -90,8 +90,7 @@ type_datatime = {
     }
 }
 
-# type/property and type/type are special system types.
-# Since they are inter-linked, first type/type is created with no properties and then updated.
+# system types.
 type_property = {
     'key': 'type/property',
     'name': 'Property',
@@ -99,21 +98,21 @@ type_property = {
     'properties': [
         {
             'key': 'type/property/name',
-            'name': 'Name',
+            'name': 'name',
             'type': 'type/property',
             'expected_type': {'key': 'type/string'},
             'unique': {'type': 'type/boolean', 'value': True}
         },
         {
             'key': 'type/property/expected_type',
-            'name': 'Expected Type',
+            'name': 'expected_type',
             'type': 'type/property',
             'expected_type': {'key': 'type/type'},
             'unique': {'type': 'type/boolean', 'value': True}
         },
         {
             'key': 'type/property/unique',
-            'name': 'Unique',
+            'name': 'unique',
             'type': 'type/property',
             'expected_type': {'key': 'type/boolean'},
             'unique': {'type': 'type/boolean', 'value': True}
@@ -127,45 +126,113 @@ type_property = {
 
 type_type = {
     'key': 'type/type',
-    'name': 'Type',
-    'type': 'type/type',
-}
-
-type_type = {
-    'key': 'type/type',
     'type': 'type/type',
     'properties': [
         {
             'key': 'type/type/name',
-            'name': 'Name',
+            'name': 'name',
             'type': 'type/property',
             'expected_type': 'type/string',
             'unique': {'type': 'type/boolean', 'value': True}
         },
         {
             'key': 'type/type/properties',
-            'name': 'Properties',
+            'name': 'properties',
             'type': "type/property",
             'expected_type': 'type/property',
             'unique': {'type': 'type/boolean', 'value': False}
         },
         {
             'key': 'type/type/description',
-            'name': 'Description',
+            'name': 'description',
             'type': 'type/property',
             'expected_type': "type/text",
             'unique': {'type': 'type/boolean', 'value': True}
         },
     ],
     'description': {
-        'connect': 'update',
         'type': 'type/text',
         'value': 'Metatype.\nThis is the type of all types including it self.'
     }
 } 
 
-def make_type(key):
-    return 
+type_user = {
+    'key': 'type/user',
+    'type': 'type/type',
+    'properties': [
+        {
+            'key': 'type/user/name',
+            'name': 'name',
+            'type': 'type/property',
+            'expected_type': 'type/string',
+            'unique': {'type': 'type/boolean', 'value': True}
+        },
+        {
+            'key': 'type/user/website',
+            'name': 'website',
+            'type': 'type/property',
+            'expected_type': 'type/uri',
+            'unique': {'type': 'type/boolean', 'value': True}
+        },
+        {
+            'key': 'type/user/description',
+            'name': 'description',
+            'type': 'type/property',
+            'expected_type': 'type/text',
+            'unique': {'type': 'type/boolean', 'value': True}
+        },
+    ]
+}
+
+type_usergroup = {
+    'key': 'type/usergroup',
+    'type': 'type/type',
+    'properties': [
+        {
+            'key': 'type/usergroup/description',
+            'name': 'description',
+            'type': 'type/property',
+            'expected_type': 'type/text',
+            'unique': {'type': 'type/boolean', 'value': True}
+        },
+        {
+            'key': 'type/usergroup/members',
+            'name': 'members',
+            'type': 'type/property',
+            'expected_type': 'type/user',
+            'unique': {'type': 'type/boolean', 'value': False}
+        },
+    ]
+}
+
+type_permission = {
+    'key': 'type/permission',
+    'type': 'type/type',
+    'properties': [
+        {
+            'key': 'type/permission/description',
+            'name': 'description',
+            'type': 'type/property',
+            'expected_type': 'type/text',
+            'unique': {'type': 'type/boolean', 'value': True}
+        }, 
+        {
+            'key': 'type/user/readers',
+            'name': 'readers',
+            'type': 'type/property',
+            'expected_type': 'type/usergroup',
+            'unique': {'type': 'type/boolean', 'value': False}
+        },
+        {
+            'key': 'type/user/writers',
+            'name': 'writers',
+            'type': 'type/property',
+            'expected_type': 'type/usergroup',
+            'unique': {'type': 'type/boolean', 'value': False}
+        }
+    ]
+}
+    
 
 a = [
     {'key': 'type/type', 'type': 'type/type'},
@@ -180,7 +247,15 @@ a = [
     {'key': 'type/datetime', 'type': 'type/type'},
 ]
 
-types = a + [type_property, type_type, type_key, type_string, type_text, type_int, type_boolean, type_float, type_uri, type_datatime]
+b =  [
+    type_property, type_type, 
+    type_key, type_string, type_text, 
+    type_int, type_boolean, type_float, 
+    type_uri, type_datatime, 
+    type_user, type_usergroup, type_permission
+]
+
+types = a + b
 
 if __name__ == "__main__":
     import web

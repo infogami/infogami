@@ -143,20 +143,19 @@ class Datum:
                 # validate for type/key, type/uri and type/datetime 
                 # (database will anyway do it, but we can give better error messages).
 
-        print self.value, self.type
-
     def __repr__(self):
         return repr(self.value)
     __str__ = __repr__
         
 class Thing:
     """Thing: an object in infobase."""
-    def __init__(self, site, id, key, last_modified=None, revision=None):
+    def __init__(self, site, id, key, last_modified=None, latest_revision=None, revision=None):
         self._site = site
         self.id = id
         self.key = key
         self.revision = revision
         self.last_modified = last_modified and last_modified.isoformat()
+        self.latest_revision = latest_revision
         self._d = None # data is loaded lazily on demand
 
     def _get_value(self):
@@ -184,7 +183,11 @@ class Thing:
                 return thing
         
         self._load()
-        d = {'last_modified': self.last_modified}
+        d = {
+            'last_modified': self.last_modified, 
+            'latest_revision': self.latest_revision,
+            'revision': self.revision or self.latest_revision
+        }
         for k, v in self._d.items():
             d[k] = unthingify(v)
         return d
@@ -253,45 +256,26 @@ class Infosite:
         d = web.select('thing', where='site_id = $self.id AND key = $key', vars=locals())
         obj = d and d[0] or None
 
-    def withKey(self, key, lazy=False):
+    def withKey(self, key, revision=None, lazy=False):
         try:
             d = web.select('thing', where='site_id = $self.id AND key = $key', vars=locals())[0]
         except IndexError:
             raise NotFound, key
             
-        return Thing(self, d.id, d.key, d.last_modified)
+        return Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision)
         
-    def withID(self, id):
+    def withID(self, id, revision=None):
         try:
             d = web.select('thing', where='site_id = $self.id AND id = $id', vars=locals())[0]        
         except IndexError:
             raise NotFound, id
-        return Thing(self, d.id, d.key, d.last_modified)
-        
-    def get_datatype(self, type, key):
-        if key == 'key':
-            return TYPES['type/key']
-        elif key == 'type':
-            return DATATYPE_REFERENCE
-            
-        key = type.key + '/' + key
-        p = type.properties.get(key)
-
-        if p:
-            expected_type = p.expected_type.key
-            if expected_type in TYPES:
-                return TYPES[expected_type]
-            else:
-                return DATATYPE_REFERENCE
-        else:
-            return TYPES['type/string']
+        return Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision)
 
     def things(self, query):
         assert isinstance(query, dict)
-        assert 'type' in query
-        assert query['type'] is not None
-
-        type = self.withKey(query['type'])
+        
+        type = query.get('type')
+        type = type and self.withKey(type)
         
         #@@ make sure all keys are valid.
         tables = ['thing']
@@ -300,60 +284,76 @@ class Infosite:
         
         where = '1 = 1'
         
-        def cast(v, datatype):
-            if datatype == TYPES['type/int'] or TYPES['type/boolean'] or DATATYPE_REFERENCE:
-                return 'cast(%s as int)' % v
-            else:
-                return v
-                
-        def join(table, key, value, datatype, revision):
-            if datatype in [TYPE_BOOLEAN, TYPE_INT, TYPE_REFERENCE]:
-                value_column = 'cast(%s.value as int)' % table
-                
-                if datatype == TYPE_REFERENCE:
-                    value = self.withKey(value).id
-                elif datatype == TYPE_BOOLEAN:
-                    value = int(value)
-            elif datatype == TYPE_FLOAT:
-                value_column = 'cast(%s.value as float)' % table
-                value = float(value)
-            else:
-                value_column = '%s.value' % table
-                value = str(value)
-                
-            q = ['%(table)s.thing_id = thing.id',
-                '%(table)s.begin_revision <= $revision',
-                '%(table)s.end_revision > $revision',
-                '%(table)s.key = $key',
-                '%(value_column)s = $value',
-                '%(table)s.datatype = $datatype']
-                
-            q = ' AND '.join(q) % locals()
-            return web.reparam(q, locals())
-        
         offset = query.pop('offset', None)
         limit = query.pop('limit', None)
         order = query.pop('sort', None)
-        
+
+        from readquery import join, get_datatype
+
         if order:
-            datatype = self.get_datatype(type, order)            
+            if order.startswith('-'):
+                order = order[1:]
+                desc = " desc"
+            else:
+                desc = ""
+            datatype = get_datatype(type, order)            
             tables.append('datum as ds')
             where += web.reparam(" AND ds.thing_id = thing.id"
                 + " AND ds.begin_revision <= $revision AND ds.end_revision > $revision"
                 + " AND ds.key = $order AND ds.datatype = $datatype", locals())
-            order = "ds.value"
-                
+            order = "ds.value" + desc
+            
         for i, (k, v) in enumerate(query.items()):
             d = 'd%d' % i
             tables.append('datum as ' + d)
-            where  += ' AND ' + join(d, k, v, self.get_datatype(type, k), revision)
+            where  += ' AND ' + join(self, type, d, k, v, revision)
                 
         return [r.key for r in web.select(tables, what=what, where=where, offset=offset, limit=limit, order=order)]
+        
+    def versions(self, query):
+        offset = query.pop('offset', None)
+        limit = query.pop('limit', None)
+        order = query.pop('sort', None)
+        
+        query = web.storage(query)
+        
+        
+        if order and order.startswith('-'):
+            order = order[1:]
+            desc = " desc"
+        else:
+            desc = ""
+        
+        keys = ["key", "revision", "author", "comment", "created"]
+        if order:
+            assert order in keys
+            order = order + desc
+        
+        what = 'thing.key, version.revision, version.author_id, version.comment, version.comment, version.ip, version.created'
+        where = 'thing.id = version.thing_id'
+                        
+        if 'key' in query:
+            key = query['key']
+            where += ' AND key=$key'
+        if 'revision' in query:
+            where += ' AND revision=query.revision'
+        if 'author' in query:
+            key = query['author']
+            author = self.withKey(key)
+            where += ' AND author_id=$author.id'
+        if 'created' in query:
+            where += 'AND created = $created'
+            
+        result = web.select(['version', 'thing'], what=what, where=where, offset=offset, limit=limit, order=order, vars=locals())
+        out = []
+        for r in result:
+            r.created = r.created.isoformat()
+            out.append(dict(r))
+        return out
 
     @transactify
     def write(self, query):
         import writequery
-        print >> web.debug, 'write', query
         ctx = writequery.Context(self)
         return ctx.execute(query)
         
@@ -371,4 +371,5 @@ if __name__ == "__main__":
         site = infobase.create_site('infogami.org')
 
     site = infobase.get_site('infogami.org')
-    print site.withKey('type/page')._get_data()
+    for v in  site.versions({'sort': '-created', 'limit':10}):
+        print v

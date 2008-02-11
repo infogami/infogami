@@ -5,117 +5,21 @@ import infogami
 from infogami import tdb
 from infogami.utils.view import public
 
-def _create_type(site, name, properties=[], backreferences=[], description="", is_primitive=False):
-    """Quick hack to create a type."""
-    def _property(name, type, unique=True, description=""):
-        return _get_thing(t, name, tproperty, dict(type=type, unique=unique, description=description))
-        
-    def _backreference(name, type, property_name):
-        return _get_thing(t, name, tbackreference, dict(type=type, property_name=property_name))
+def get_version(path, revision=None):
+    print >> web.debug, 'get_version', path, revision
+    return web.ctx.site.get(path, revision)
 
-    ttype = get_type(site, 'type/type')
-    tproperty = get_type(site, 'type/property')
-    tbackreference = get_type(site, 'type/backreference')
-
-    t = _get_thing(site, name, ttype)
-
-    d = {}
-    d['is_primitive'] = is_primitive
-    d['description'] = description
-    d['properties'] = [_property(**p) for p in properties]
-
-    if backreferences:
-        d['backreferences'] = [_backreference(**b) for b in backreferences]
-        
-    t = new_version(site, name, ttype, d)
-    t.save()
-    return t
-
-def _get_thing(parent, name, type, d={}):
-    try:
-        thing = tdb.withName(name, parent)
-    except:
-        thing = tdb.new(name, parent, type, d)
-        thing.save()
-    return thing
-
-@infogami.install_hook
-@infogami.action
-def tdbsetup():
-    """setup tdb for infogami."""
-    from infogami import config
-    # hack to disable tdb hooks
-    tdb.tdb.hooks = []
-    tdb.setup()
-
-    site = _get_thing(tdb.root, config.site, tdb.root)
-    from infogami.utils.context import context
-    context.site = site 
+@public
+def get_type(path):
+    return get_version(path)
     
-    # type is created with tdb.root as type first and later its type is changed to itself.
-    ttype = _get_thing(site, "type/type", tdb.root)
-    tproperty = _get_thing(site, "type/property", ttype)
-    tbackreference = _get_thing(site, "type/backreference", ttype)
+def new_version(path, type):
+    if isinstance(type, basestring):
+        type = get_type(type)
+    return web.ctx.site.new(path, type)
 
-    tint = _create_type(site, "type/int", is_primitive=True)
-    tboolean = _create_type(site, "type/boolean", is_primitive=True)
-    tstring = _create_type(site, "type/string", is_primitive=True)
-    ttext = _create_type(site, "type/text", is_primitive=True)
-    
-    tproperty = _create_type(site, "type/property", [
-       dict(name='type', type=ttype),
-       dict(name='unique', type=tboolean),
-       dict(name='description', type=ttext),
-    ])
-    
-    tbackreference = _create_type(site, 'type/backreference', [
-        dict(name='type', type=ttype),
-        dict(name='property_name', type=tstring),
-    ])
-
-    ttype = _create_type(site, "type/type", [
-       dict(name='description', type=ttext, unique=True),
-       dict(name='is_primitive', type=tboolean, unique=True),
-       dict(name='properties', type=tproperty, unique=False),
-       dict(name='backreferences', type=tbackreference, unique=False),
-    ])
-
-    _create_type(site, 'type/page', [
-        dict(name='title', type=tstring), 
-        dict(name='body', type=ttext)])
-        
-    _create_type(site, 'type/user', [
-        dict(name='displayname', type=tstring),
-        dict(name='email', type=tstring), 
-        dict(name='description', type=ttext)
-    ])
-        
-    _create_type(site, 'type/delete', [])
-
-    # for internal use
-    _create_type(site, 'type/thing', [])
-    
-    import dbupgrade
-    dbupgrade.mark_upgrades()
-    
 class ValidationException(Exception): pass
 
-def get_version(site, path, revision=None):
-    return tdb.withName(path, site, revision=revision and int(revision))
-
-def new_version(site, path, type, data):
-    # There are cases where site.id is None. 
-    if site.id:
-        try:
-            p = tdb.withName(path, site)
-            p.type = type
-            p.setdata(data)
-            return p
-        except tdb.NotFound:
-            pass
-                
-    return tdb.new(path, site, type, data)
-    
 def get_user(site, userid):
     try:
         u = tdb.withID(userid)
@@ -159,10 +63,6 @@ def get_user_preferences(user):
         type = get_type(site, 'type/thing')
         return tdb.new('preferences', user, type)
     
-@public
-def get_type(site, name):
-    return tdb.withName(name, site)
-
 def new_type(site, name, data):
     try:
         return get_type(site, name)
@@ -175,48 +75,47 @@ def get_site(name):
     return tdb.withName(name, tdb.root)
 
 @public
-def get_recent_changes(site, author=None, limit=None):
+def get_recent_changes(key=None, author=None, limit=None):
+    q = {'sort': '-created'}
+    if key is not None:
+        q['key'] = key
+
     if author:
-        return tdb.Versions(parent=site, author=author, limit=limit)
-    else:
-        return tdb.Versions(parent=site, limit=limit)
+        q['author'] = author.key
+    
+    if limit:
+        q['limit'] = limit or 100
+    return web.ctx.site.versions(q)
 
 @public
-def list_pages(site, path):
+def list_pages(path):
     """Lists all pages with name path/*"""
-    return _list_pages(site, path, limit=100)
+    return _list_pages(path, limit=100)
     
-def _list_pages(site, path, limit=None):
-    delete = get_type(site, 'type/delete')
-    
+def _list_pages(path, limit=None):
     if path == "":
-        pattern = '%'
+        pattern = '*'
     else:
-        pattern = path + '/%'
-        
-    q = """SELECT t.id, t.name FROM thing t 
-            JOIN version ON version.revision = t.latest_revision AND version.thing_id = t.id
-            JOIN datum ON datum.version_id = version.id 
-            WHERE t.parent_id=$site.id AND t.name LIKE $pattern 
-            AND datum.key = '__type__' AND datum.value != $delete.id
-            ORDER BY t.name"""
+        pattern = path + '/*'
+    
+    q = {
+        'key~': pattern,
+        'sort': 'key'
+    }
     if limit:
-        q += ' LIMIT $limit'
-    return web.query(q, vars=locals())
+        q['limit'] = limit    
+    return [web.ctx.site.get(key, lazy=True) for key in web.ctx.site.things(q)]    
                    
-def get_things(site, typename, prefix, limit):
-    """Lists all things whose names start with typename"""
-	
-    pattern =  prefix+'%'
-    type = get_type(site, typename)
-    return web.query("""SELECT t.name FROM thing t 
-            JOIN version ON version.revision = t.latest_revision 
-						AND version.thing_id = t.id
-            JOIN datum ON datum.version_id = version.id 
-            WHERE t.parent_id=$site.id AND t.name LIKE $pattern
-            AND datum.key = '__type__' AND datum.value = $type.id
-            ORDER BY t.name LIMIT $limit""", vars=locals())
-
+def get_things(typename, prefix, limit):
+    """Lists all things whose names start with typename"""	
+    q = {
+        'key~': prefix + '*',
+        'type': typename,
+        'sort': 'key',
+        'limit': limit
+    }
+    return [web.ctx.site.get(key, lazy=True) for key in web.ctx.site.things(q)]    
+    
 def get_site_permissions(site):
     if hasattr(site, 'permissions'):
         return pickle.loads(str(site.permissions))

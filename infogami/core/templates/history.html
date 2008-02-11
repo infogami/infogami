@@ -1,11 +1,11 @@
-$def with (page)
+$def with (h)
 
 $ _ = _.get_namespace('mode/history')
 
 $var title: $_.history
 
 <div id="dateline">
-    <a href="$url(m='view')" accesskey="v">$_.view</a>
+    <a href="$url(m=None)" accesskey="v">$_.view</a>
     <a href="$url(m='edit')" accesskey="e">$_.edit</a>
 </div>
 
@@ -19,13 +19,13 @@ $var title: $_.history
   <th>$_.who</th>
   <th>$_.when</th>
 </tr>
-$for v in page.h:
+$for v in h:
     <tr>
       <td>$v.revision</td>
       <td><input type="radio" id="a$v.revision" name="a" value="$v.revision"></td>
       <td><input type="radio" id="b$v.revision" name="b" value="$v.revision"></td>
       <td><a href="$url(m='edit', v=v.revision)">$_.edit</a></td>
-      $if v.author:
+      $if v.author_id:
           <td class="history"><a href="$homepath()/$v.author.name">$v.author.displayname</a></td>
       $else:
           <td class="history">$v.ip</td>
@@ -39,9 +39,9 @@ $for v in page.h:
 
 <script>
 
-var a = document.getElementById("a${page.latest_revision - 1}");
-var a2 = document.getElementById("a$page.latest_revision");
-var b = document.getElementById("b$page.latest_revision");
+var a = document.getElementById("a${h[0].revision - 1}");
+var a2 = document.getElementById("a$h[0].revision");
+var b = document.getElementById("b$h[0].revision");
 
 if (a) 
     a.checked = true;

@@ -16,14 +16,16 @@ $var title: $_.diff_title(a.name)
        <colgroup class="r"><col class="lineno" /><col class="content" /></colgroup>
        <thead>
            <tr> 
-              <td colspan="2" class="diff-header-top">$_.revision $a.v.revision</td> 
-              <td colspan="2" class="diff-header-top">$_.revision $b.v.revision</td>
+              <td colspan="2" class="diff-header-top">$_.revision $a.revision</td> 
+              <td colspan="2" class="diff-header-top">$_.revision $b.revision</td>
            </tr>
        </thead>
        <tbody>
+	
 $for p in a.type.properties:
+	<!-- $p.expected_type, $p.name, $a[p.name], $b[p.name] -->
     $ label = _t[p.name]
-    $:thingdiff(p.d.type, label, a.d.get(p.name), b.d.get(p.name))
+    $:thingdiff(p.expected_type, label, a[p.name], b[p.name])
 
     </tbody>
     </table>

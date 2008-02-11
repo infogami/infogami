@@ -6,26 +6,18 @@ $var title: $page.name
 <tbody>
 
 $for p in page.type.properties:
-    $ label = _.get(page.type.name, p.name)
-    $if p.d.get('unique'):
+    $ label = _.get(page.type.key, p.name)
+    $if p.unique:
         <tr>
             <td>$label</td>
-            <td>$:thingrepr(page.d.get(p.name), p.d.type)</td>
+            <td>$:thingrepr(page[p.name], p.expected_type)</td>
         </tr>
     $else:
-        $for x in page.d.get(p.name):
+        $for x in page[p.name]:
             <tr>
 	            <td>$label</td>
-                <td>$:thingrepr(x, p.d.type)</td>
+                <td>$:thingrepr(x, p.expected_type)</td>
             </tr>
 </tbody>
 </table>
 
-<div>
-$for p in page.type.d.get('backreferences', []):
-    $ label = _.get(page.type.name, p.name)
-    <div>$label<br/>
-    $for x in page.d.get(p.name):
-        $:thingrepr(x, p.d.type)<br/>
-    </div>
-</div>

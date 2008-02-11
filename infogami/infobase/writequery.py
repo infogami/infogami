@@ -17,6 +17,10 @@ class Value:
         self.type = type
         self.datatype = type and infobase.TYPES.get(type, infobase.DATATYPE_REFERENCE)
 
+        if self.type == None:
+            if isinstance(value, bool):
+                self.type = type = 'type/boolean'
+
         if self.datatype == infobase.DATATYPE_REFERENCE:
             self.value = value.id
             self.key = value
@@ -55,9 +59,8 @@ class Value:
                 makesure(isinstance(self.value, int))
                 self.datatype = infobase.TYPES['type/int']
             elif expected_type == 'type/boolean':
-                makesure(isinstance(self.value, bool))
                 self.datatype = infobase.TYPES['type/boolean']
-                self.value = int(self.value)
+                self.value = int(bool(self.value))
             elif expected_type == 'type/float':
                 makesure(isinstance(self.value, (int, float)))
                 self.datatype = infobase.TYPES['type/float']
@@ -251,10 +254,6 @@ if __name__ == "__main__":
         'type': 'type/type',
     }
     
-    web.transact()
     ctx = Context(config.site) 
-    #print ctx.execute([q, q])
-    import bootstrap2
-    print ctx.execute(bootstrap2.types)
-    web.commit()
+    print ctx.execute([q, q])
 

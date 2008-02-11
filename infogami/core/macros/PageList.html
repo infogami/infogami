@@ -1,6 +1,6 @@
 $def with (path="")
 
 <ul>
-$for p in list_pages(ctx.site, path):
-    <li><a href="$homepath()/$p.name">$p.name</a></li>
+$for p in list_pages(path):
+    <li><a href="$homepath()/$p.key">$p.key</a></li>
 </ul>

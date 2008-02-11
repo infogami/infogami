@@ -1,6 +1,6 @@
 $def with (thing, name)
 
-$if thing.type.d.get('is_primitive'):
+$if thing.is_primitive:
     <input type="text" id="input_$name" name="$name" value="$thing.value">
 $else:
     $:macros.ThingReference(thing.type, name, thing)

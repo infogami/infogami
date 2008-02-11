@@ -115,10 +115,7 @@ def spacesafe(text):
 
 def value_to_thing(value, type):
     if value is None: value = ""
-    d = web.storage(value=value)
-    thing = web.storage(d=web.storage(value=value), name="", type=type)
-    thing.update(d)
-    return thing
+    return web.storage(value=value, is_primitive=True, type=type)
     
 def set_error(msg):
     if not context.error: context.error = ''
@@ -132,36 +129,41 @@ def thingrepr(value, type=None):
     if isinstance(value, list):
         return ','.join(thingrepr(t, type) for t in value)
 
-    # and some more? DefaultThing etc?
-    if isinstance(value, (tdb.Thing, dict)):
-        return render.repr(value)
-    else:
-        value = value_to_thing(value, type)
-        return render.repr(value)
+    # primitive values
+    if not hasattr(value, 'key'):
+        value = web.storage(value=value, is_primitive=True, type=type)
+        
+    return render.repr(value)
         
 @public
 def thinginput(type, name, value, **attrs):
     """Renders html input field of given type."""
+    return render.input(thingify(type, value), name)
+    
+def thingify(type, value):
+    # if type is given as string then get the type from db
     if isinstance(type, basestring):
         from infogami.core import db
-        type = db.get_type(context.site, type)
-        
-    if type.d.get("is_primitive"):
-        value = value_to_thing(value, type)
-    elif not isinstance(value, (tdb.Thing, dict)):
-        from infogami.core import thingutil
-        value = thingutil.DefaultThing(type)
+        type = db.get_version(type)
     
-    return render.input(value, name)
+    PRIMITIVE_TYPES = "type/key", "type/string", "type/text", "type/int", "type/float", "type/boolean"    
+    from infogami.infobase import client
+    
+    if type.key not in PRIMITIVE_TYPES and isinstance(value, basestring) and not value.strip():
+        value = web.ctx.site.new('', {'type': type})
+
+    # primitive values
+    if not isinstance(value, client.Thing):
+        value = web.storage(value=value, is_primitive=True, type=type)
+        
+    return value
 
 @public
 def thingdiff(type, name, v1, v2):
     if v1 == v2:
         return ""
     else:
-        if not isinstance(v1, tdb.Thing): v1 = value_to_thing(v1, type)
-        if not isinstance(v2, tdb.Thing): v2 = value_to_thing(v2, type)
-        return render.xdiff(v1, v2, name)
+        return render.xdiff(thingify(type, v1), thingify(type, v2), name)
         
 @public
 def thingview(page):

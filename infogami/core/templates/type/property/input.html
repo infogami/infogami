@@ -7,15 +7,15 @@ $def with (p, name)
     </tr>
     <tr>
         <td>Type</td>
-        <td>$:thinginput("type/type", name + ".type", p.d.get('type'))</td>
+        <td>$:thinginput("type/type", name + ".expected_type", p.expected_type)</td>
     </tr>
     <tr>
         <td>Unique</td>
-        <td>$:thinginput("type/boolean", name + ".unique", p.d.get('unique'))</td>
+        <td>$:thinginput("type/boolean", name + ".unique", p.unique)</td>
     </tr>
     <tr>
         <td>Description</td>
-        <td>$:thinginput("type/string", name + ".description", p.d.get('description'))</td>
+        <td>$:thinginput("type/string", name + ".description", p.description)</td>
     </tr>
 </table>
 <br/>

@@ -50,13 +50,16 @@ def _changepath(new_path):
 def initialize_context():
     from infogami.core import auth
     from infogami.core import db
+
+    from infogami.infobase import client
+    web.ctx.site = client.Site(client.Client(None, 'infogami.org'))
     
     context.load()
     context.error = None
     context.stylesheets = []
     context.javascripts = []
-    context.site = db.get_site(config.site)
-    context.user = auth.get_user(context.site)
+    #context.user = auth.get_user(context.site)
+    context.user = None
     
     i = web.input(_method='GET', rescue="false")
     context.rescue_mode = (i.rescue.lower() == 'true')
@@ -71,10 +74,6 @@ def fakeload():
     context.stylesheets = []
     context.javascripts = []
     context.user = None
-    try:
-        context.site = db.get_site(config.site)
-    except:
-        pass
         
 def delegate(path):
     method = web.ctx.method
@@ -97,7 +96,7 @@ def delegate(path):
         cls = pages[pathx]            
         if not hasattr(cls, method):
             return web.nomethod(method)
-        out = getattr(cls(), method)(context.site)
+        out = getattr(cls(), method)()
     else: # mode
         normalized = _keyencode(path)
         if path != normalized:
@@ -115,11 +114,11 @@ def delegate(path):
             web.seeother(web.changequery(m=None))
             return
         
-        if what not in ("view", "edit") or auth.has_permission(context.site, context.user, path, what):
+        if what not in ("view", "edit") or True: #or auth.has_permission(context.site, context.user, path, what):
             cls = modes[what]            
             if not hasattr(cls, method):
                 return web.nomethod(method)
-            out = getattr(cls(), method)(context.site, path)
+            out = getattr(cls(), method)(path)
         else:
             #context.error = 'You do not have permission to do that.'
             return auth.login_redirect()

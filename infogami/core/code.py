@@ -19,35 +19,102 @@ def deleted():
     return render.deleted()
 
 class view (delegate.mode):
-    def GET(self, site, path):
-        try:
-            p = db.get_version(site, path, web.input(v=None).v)
-        except tdb.NotFound:
+    def GET(self, path):
+        i = web.input(v=None)
+        p = db.get_version(path, i.v)
+        
+        if p is None:
             return notfound()
+        elif p.deleted:
+            return deleted()
         else:
-            if p.type == db.get_type(site, 'type/delete'):
-                return deleted()
-            else:
-                return render.viewpage(p)
+            return render.viewpage(p)
 
 class edit (delegate.mode):
-    def GET(self, site, path):
+    def GET(self, path):
         i = web.input(v=None, t=None)
         
-        try:
-            p = db.get_version(site, path, i.v)
-        except tdb.NotFound:
-            p = db.new_version(site, path, db.get_type(site, types.guess_type(path)), web.storage({}))
-
+        p = db.get_version(path) or db.new_version(path, 'type/page')
+        
         if i.t:
             try:
-                type = db.get_type(site, i.t)
+                type = db.get_type(i.t)
             except tdb.NotFound:
                 utils.view.set_error('Unknown type: ' + i.t)
             else:
-                p.type = type
-                
+                p.type = type 
+
         return render.editpage(p)
+    
+    def POST(self, path):
+        i = web.input(_method='post')
+        i = web.storage(helpers.unflatten(i))
+        i.key = path
+        
+        _ = web.storage((k, i.pop(k)) for k in i.keys() if k.startswith('_'))
+        action = self.get_action(_)
+        comment = _.get('_comment', None)
+        
+        def hack(d):
+            if isinstance(d, list):
+                for x in d:
+                    hack(x)
+            elif isinstance(d, dict):
+                if 'key' not in d and 'name' in d:
+                    d['key'] = path + '/' + d['name']
+                for k, v in d.items():
+                    hack(v)
+        
+        def non_empty(items):
+            return [i for i in items if i]
+
+        def trim(d):
+            if isinstance(d, list):
+                return non_empty([trim(x) for x in d])
+            elif isinstance(d, dict):
+                for k, v in d.items():
+                    d[k] = trim(v)
+                if non_empty(d.values()) and (path == '' or d.get('key') or d.get('name')):
+                    return d
+                else: 
+                    return None
+            else:
+                return d.strip()
+                   
+        i = trim(i)
+        hack(i)  
+        
+        if action == 'preview':
+            p = self.process(i)
+            return render.editpage(p, preview=True)
+        elif action == 'save':
+            try:
+                web.ctx.site.write(i)
+                return web.seeother(web.changequery(query={}))
+            except db.ValidationException, e:
+                utils.view.set_error(str(e))
+                return render.editpage(p)
+        elif action == 'delete':
+            # delete is not yet implemented
+            return web.seeother(web.changequery(query={}))
+
+    def process(self, data):
+        """Updates thing with given data recursively."""
+        def new_version(data):
+            thing = db.get_version(data['key'])
+            if not thing:
+                thing = Thing(data['key'], {'type': self.process(data['key'])})
+            return thing
+                
+        if isinstance(data, dict):
+            thing = new_version(data)
+            for k, v in data.items():
+                thing[k] = self.process(v)
+            return thing
+        elif isinstance(data, list):
+            return [self.process(d) for d in data]
+        else:
+            return data
     
     def get_action(self, i):
         """Finds the action from input."""
@@ -55,62 +122,41 @@ class edit (delegate.mode):
         elif '_preview' in i: return 'preview'
         elif '_delete' in i: return 'delete'
         else: return None
-        
-    def POST(self, site, path):
-        i = web.input(_type="page", _method='post')
-        i = web.storage(helpers.trim(helpers.unflatten(i)))
-        
-        action = self.get_action(i)
-        comment = i.pop('_comment', None)
-        try:
-            type = db.get_type(site, i._type)
-        except tdb.NotFound:
-            utils.view.set_error('Unknown type: ' + i._type)
-            #@@ using type/page here is not correct. 
-            #@@ It should use the previous type
-            type = db.get_type(site, 'type/page')
-            p = db.new_version(site, path, type, i)
-            return render.editpage(p)
             
-        p = db.new_version(site, path, type, i)
-        
-        if action == 'preview':
-            thingutil.thingtidy(p, fill_missing=True)
-            return render.editpage(p, preview=True)
-        elif action == 'save':
-            try:
-                thingutil.thingtidy(p, fill_missing=False)
-                p.save(author=context.user, ip=web.ctx.ip, comment=comment)
-                return web.seeother(web.changequery(query={}))
-            except db.ValidationException, e:
-                utils.view.set_error(str(e))
-                return render.editpage(p)
-        elif action == 'delete':
-            p.type = db.get_type(site, 'type/delete')
-            p.save(author=context.user, ip=web.ctx.ip)
-            return web.seeother(web.changequery(query={}))
-
 class history (delegate.mode):
-    def GET(self, site, path):
+    def GET(self, path):
         try:
-            p = db.get_version(site, path)
-            return render.history(p)
+            history = db.get_recent_changes(key=path, limit=20)
+            return render.history(history)
         except tdb.NotFound:
             return web.seeother('/' + path)
                 
 class diff (delegate.mode):
-    def GET(self, site, path):  
+    def GET(self, path):  
         i = web.input("b", a=None)
-        i.a = i.a or int(i.b)-1
 
         try:
-            b = db.get_version(site, path, revision=i.b)
+            rev_b = int(i.b)
+            if i.a:
+                rev_a = int(i.a)
+            else:
+                rev_a = rev_b - 1
+        except ValueError:
+            raise
+            return web.badrequest()
+            
+        try:
+            b = db.get_version(path, revision=rev_b)
             #@@ what to do diff is called when there is only one version
             # Probably diff should be displayed with empty thing and current thing.  
             # Displaying diff with itself, since it is easy to implement.
-            if i.a == 0: a = b
-            else: a = db.get_version(site, path, revision=i.a)
+            if i.a == 0: 
+                a = web.ctx.site.new(path, {})
+                a.revision = i.a
+            else: 
+                a = db.get_version(path, revision=rev_a)
         except:
+            raise
             return web.badrequest()
             
         return render.diff(a, b)
@@ -227,10 +273,8 @@ register_preferences("login_preferences", login_preferences())
 
 class getthings(delegate.page):
     """Lists all pages with name path/*"""
-    def GET(self, site):
-        i = web.input("q", "type", "limit")
-        things = db.get_things(site, i.type, i.q, i.limit)
-        print "\n".join([thing.name for thing in things])
+    def GET(self):
+        print ''
     
 class sitepreferences(delegate.page):
     path = "/admin/sitepreferences"

@@ -64,7 +64,7 @@ function swap(a, b) {
 <tbody>
     <tr>
         <td>$_.get('mode/edit', 'page_type')</td>
-        <td>$:macros.ThingReference("type/type", "_type", page.type.name)</td>
+        <td>$:macros.ThingReference("type/type", "_type", page.type.key)</td>
         <td><input type="button" onclick="changeTemplate()" value="$_.get('mode/edit', 'change')"/></td>
     </tr>
     <tr>
@@ -76,18 +76,18 @@ function swap(a, b) {
 
 $for p in page.type.properties:
     $ key = p.name
-    $ label = _.get(page.type.name, key)
+    $ label = _.get(page.type.key, key)
     <tbody>
-    $if not p.get('unique'):
+    $if not p.unique:
         $ i = 0
         <tr>
             <td>$label</td>
             <td></td>
             <td></td>
         </tr>
-        $for x in page.d[key]:
+        $for x in page[key]:
             <tr repeat="$i">
-                <td colspan="2" style="padding-left:1.0em"> $:thinginput(p.d.type, key + "#" + str(i), value=x)</td>
+                <td colspan="2" style="padding-left:1.0em"> $:thinginput(p.expected_type, key + "#" + str(i), value=x)</td>
                 <td>
                     <button type="remove" template="row_$key">$_.get('mode/edit', 'delete')</button>
                     <button type="move-up" template="row_$key" onclick="return moveup.apply(this, [event]);">$_.get('mode/edit', 'move_up')</button>
@@ -97,7 +97,7 @@ $for p in page.type.properties:
             $ i = i + 1
         <tr id="row_$key" repeat="template">
             <td colspan="2" style="padding-left:1.0em">
-                $:thinginput(p.d.type, key + '#[row_' + key + ']', value="")
+                $:thinginput(p.expected_type, key + '#[row_' + key + ']', value="")
             </td>
             <td>
                 <button type="remove" template="row_$key">$_.get('mode/edit', 'delete')</button>
@@ -113,7 +113,7 @@ $for p in page.type.properties:
     $else:
         <tr>
             <td>$label</td>
-            <td>$:thinginput(p.d.type, key, value=page.d[key])</td>
+            <td>$:thinginput(p.expected_type, key, value=page[key])</td>
             <td></td>
         </tr>
     </tbody>
@@ -123,7 +123,7 @@ $for p in page.type.properties:
 </p>
 <p>
 <input type="submit" name='_save' value="$_.get('mode/edit', 'save')" />
-<input type="submit" name='_preview' value="$_.get('mode/edit', 'save')" />
+<input type="submit" name='_preview' value="$_.get('mode/edit', 'preview')" />
 <input type="submit" name='_delete' value="$_.get('mode/edit', 'delete')" />
 </p>
 </form>

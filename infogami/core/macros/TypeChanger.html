@@ -2,10 +2,10 @@ $def with (type)
 
 <script>
 function changeTemplate() {
-    var t = document.edit._type.value;
+    var t = document.edit['type.key'].value;
     document.location.href += '&t=' + t;
 }
 </script>
 
-<strong>$_.PAGETYPE</strong>  $:thinginput("type/type", "_type", type)
+<strong>$_.PAGETYPE</strong>  $:thinginput("type/type", "type.key", type)
 <input type="button" onclick="changeTemplate()" value="$_.CHANGE"/><br /><br />

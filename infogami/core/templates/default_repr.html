@@ -1,3 +1,4 @@
 $def with (thing)
-$if thing.type.d.get("is_primitive"): $thing.value
-$else: <a href="/$thing.name">$thing.name</a>
+$if thing.is_primitive: $thing.value
+$else: <a href="/$thing.key">$thing.key</a>
+

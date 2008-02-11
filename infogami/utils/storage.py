@@ -161,11 +161,11 @@ class SiteLocalDict:
         
     def _getd(self):
         from context import context
-        site = getattr(context, 'site', None)
-        site_id = site and site.id
-        if site_id not in self.__d:
-            self.__d[site_id] = web.storage()
-        return self.__d[site_id]
+        site = web.ctx.get('site')
+        key = site and site.name
+        if key not in self.__d:
+            self.__d[key] = web.storage()
+        return self.__d[key]
 
 class ReadOnlyDict:
     """Dictionary wrapper to provide read-only access to a dictionary."""

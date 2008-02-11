@@ -1,4 +1,7 @@
 import web
+import os
+
+import infogami
 from infogami import utils, tdb, config
 from infogami.utils import delegate, types
 from infogami.utils.context import context
@@ -55,6 +58,7 @@ class edit (delegate.mode):
         action = self.get_action(_)
         comment = _.get('_comment', None)
         
+        #@@ hack to make editing types work.
         def hack(d):
             if isinstance(d, list):
                 for x in d:
@@ -320,3 +324,4 @@ class sitepreferences(delegate.page):
             values.append((path, perms))
             
         return values
+

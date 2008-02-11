@@ -401,6 +401,7 @@ class SimpleTDBImpl:
         self.hints = web.storage()
             
     def setup(self):
+        return
         try:
             self.withID(1)
         except NotFound:

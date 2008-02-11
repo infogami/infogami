@@ -1,0 +1,19 @@
+{
+    'key': 'type/macro',
+    'type': 'type/type',
+    'name': 'Macro',
+    'properties': [{
+        'key': 'type/macro/macro',
+        'name': 'macro',
+        'type': 'type/property',
+        'expected_type': 'type/text',
+        'unique': True
+    }, {
+        'key': 'type/macro/description',
+        'name': 'description',
+        'type': 'type/property',
+        'expected_type': 'type/string',
+        'unique': True
+    }]
+}
+    

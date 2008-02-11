@@ -6,7 +6,6 @@ from infogami import tdb
 from infogami.utils.view import public
 
 def get_version(path, revision=None):
-    print >> web.debug, 'get_version', path, revision
     return web.ctx.site.get(path, revision)
 
 @public

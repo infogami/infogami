@@ -1,0 +1,7 @@
+{
+    'key': 'templates', 
+    'type': 'type/page',
+    'title': 'Templates', 
+    'body': '{{PageList("templates")}}'
+}
+

@@ -3,6 +3,16 @@ import httplib, urllib
 import simplejson
 import web
 
+def storify(d):
+    if isinstance(d, dict):
+        for k, v in d.items():
+            d[k] = storify(v)
+        return web.storage(d)
+    elif isinstance(d, list):
+        return [storify(x) for x in d]
+    else:
+        return d
+
 class ClientException(Exception):
     pass
 
@@ -37,8 +47,9 @@ class Client:
         
         import web
         out = simplejson.loads(out)
+        out = storify(out)
         import web
-        if out['status'] == 'fail':
+        if out.status == 'fail':
             raise ClientException(out['message'])
         else:
             return out
@@ -71,7 +82,7 @@ class Client:
 
     def write(self, query):
         query = simplejson.dumps(query)
-        return self.request('/write', 'POST', query)
+        return self.request('/write', 'POST', query)['result']
 
 def parse_datetime(datestring):
     """Parses datetime from isoformat.
@@ -175,6 +186,7 @@ class Thing:
 class Site:
     def __init__(self, client):
         self.client = client
+        self.name = client.sitename
         self.cache = {}
         
     def _load(self, key, revision=None):
@@ -214,13 +226,44 @@ class Site:
         return self.client.versions(query)
 
     def write(self, query):
-        import web
-        return self.client.write(query)
+        #@@ quick hack to run hooks on save
+        key = query['key']
+        type = query['type']
+        if isinstance(type, dict):
+            type = type['key']
+        type = self.get(type)
+        data = query.copy()
+        data['type'] = type
+        t = self.new(key, data)
+        _run_hooks('before_new_version', t)
+        result = self.client.write(query)
+        _run_hooks('on_new_version', t)
+        return result
     
     def new(self, path, data):
         """Creates a new thing in memory.
         """
-        return Thing(self, path, data=data)      
+        return Thing(self, path, data=data)
+
+# hooks can be registered by extending the hook class
+hooks = []
+class metahook(type):
+    def __init__(self, name, bases, attrs):
+        hooks.append(self())
+        type.__init__(self, name, bases, attrs)
+
+class hook:
+    __metaclass__ = metahook
+
+#remove hook from hooks    
+hooks.pop()
+
+def _run_hooks(name, thing):
+    for h in hooks:
+        m = getattr(h, name, None)
+        if m:
+            m(thing)
+
 
 if __name__ == "__main__":
     import web

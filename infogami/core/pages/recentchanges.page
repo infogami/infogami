@@ -1,9 +1,7 @@
 {
-    'name': 'recentchanges', 
-    'type': {'name': 'type/page'}, 
-    'd': {
-        'title': 'Recent Changes', 
-        'body': '{{RecentChanges()}}'
-    }
+    'key': 'recentchanges', 
+    'type': 'type/page', 
+    'title': 'Recent Changes', 
+    'body': '{{RecentChanges()}}'
 }
 

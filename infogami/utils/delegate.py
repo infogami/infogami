@@ -74,7 +74,9 @@ def fakeload():
     context.stylesheets = []
     context.javascripts = []
     context.user = None
-        
+    from infogami.infobase import client
+    web.ctx.site = client.Site(client.Client(None, 'infogami.org'))
+    
 def delegate(path):
     method = web.ctx.method
     if method == 'HEAD': 

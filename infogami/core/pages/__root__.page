@@ -1,11 +1,9 @@
 {
-    'name': '', 
-    'type': {'name': 'type/page'},
-    'd': {
-        'title': 'Welcome', 
-        'body': 'Infogami is a free, easy-to-use, structured wiki.\n'
-                'Visit [Infogami Developer Site](http://infogami.org/dev/) for more details.\n\n'
-                '* [[pagelist]]\n'
-                '* [[recentchanges]]\n'
-    }
+    'key': '',
+    'type': 'type/page',
+    'title': 'Welcome', 
+    'body': 'Infogami is a free, easy-to-use, structured wiki.\n'
+            'Visit [Infogami Developer Site](http://infogami.org/dev/) for more details.\n\n'
+            '* [[pagelist]]\n'
+            '* [[recentchanges]]\n'
 }

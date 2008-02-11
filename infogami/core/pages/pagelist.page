@@ -1,9 +1,7 @@
 {
-    'name': 'pagelist', 
-    'type': {'name': 'type/page'},
-    'd': {
-        'title': 'Page List', 
-        'body': '{{PageList()}}'
-    }
+    'key': 'pagelist', 
+    'type': 'type/page',
+    'title': 'Page List', 
+    'body': '{{PageList()}}'
 }
 

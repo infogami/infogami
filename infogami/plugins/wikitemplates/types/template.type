@@ -1,0 +1,19 @@
+{
+    'key': 'type/template',
+    'type': 'type/type',
+    'name': 'Template',
+    'properties': [{
+        'key': 'type/template/title',
+        'name': 'title',
+        'type': 'type/property',
+        'expected_type': 'type/string',
+        'unique': True
+    }, {
+        'key': 'type/template/body',
+        'name': 'body',
+        'type': 'type/property',
+        'expected_type': 'type/text',
+        'unique': True
+    }]
+}
+    

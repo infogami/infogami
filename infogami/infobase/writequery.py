@@ -20,6 +20,7 @@ class Value:
         if self.type == None:
             if isinstance(value, bool):
                 self.type = type = 'type/boolean'
+                self.datatype = infobase.TYPES['type/boolean']
 
         if self.datatype == infobase.DATATYPE_REFERENCE:
             self.value = value.id
@@ -70,7 +71,7 @@ class Value:
                 self.datatype = infobase.TYPES[expected_type]
                 # validate for type/key, type/uri and type/datetime 
                 # (database will anyway do it, but we can give better error messages).
-
+        
     def __str__(self): return str((self.value, self.type))
     __repr__ = __str__
 
@@ -254,6 +255,6 @@ if __name__ == "__main__":
         'type': 'type/type',
     }
     
-    ctx = Context(config.site) 
+    ctx = Context(config.site)
     print ctx.execute([q, q])
 

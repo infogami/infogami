@@ -9,9 +9,11 @@ from UserDict import DictMixin
 import infogami
 from infogami import core, tdb
 from infogami.core.db import ValidationException
-from infogami.utils import delegate, macro, template, storage
+from infogami.utils import delegate, macro, template, storage, view
 from infogami.utils.context import context
 from infogami.utils.template import render
+
+from infogami.infobase import client
 
 import db
 
@@ -34,14 +36,7 @@ class WikiSource(DictMixin):
         return [self.unprocess_key(k) for k in self.templates.keys()]
         
     def process_key(self, key):
-        # There are two types of templates; regular templates and type templates.
-        # regular template with name xxx will be available at templates/xxx.tmpl in the wiki.
-        # type template with name type/xxx/yyy will be available at type/xxx/yyy.tmpl in the wiki.
-        # So name of regular templates need to be prefixed with 'templates/' to get the wiki path.
-        if not key.startswith('type/'):
-            return 'templates/' + key + ".tmpl"
-        else:
-            return key + ".tmpl"
+        return 'templates/%s.tmpl' % key
             
     def unprocess_key(self, key):
         key = web.lstrips(key, 'templates/')
@@ -80,31 +75,31 @@ class UserMacroSource(MacroSource):
 
 wikitemplates = storage.SiteLocalDict()
 template.render.add_source(WikiSource(wikitemplates))
-template.render.add_source(UserSource(wikitemplates))
+#template.render.add_source(UserSource(wikitemplates))
 
 wikimacros = storage.SiteLocalDict()
 macro.macrostore.add_dict(MacroSource(wikimacros))
-macro.macrostore.add_dict(UserMacroSource(wikimacros))
+#macro.macrostore.add_dict(UserMacroSource(wikimacros))
 
-class hooks(tdb.hook):
+class hooks(client.hook):
     def on_new_version(self, page):
         """Updates the template/macro cache, when a new version is saved or deleted."""
-        if page.type.name == 'type/template':
+        if page.type.key == 'type/template':
             _load_template(page)            
-        elif page.type.name == 'type/macro':
+        elif page.type.key == 'type/macro':
             _load_macro(page)
-        elif page.type.name == 'type/delete':
+        elif page.type.key == 'type/delete':
             if page.name in wikitemplates:
-                del wikitemplates[page.name]
+                del wikitemplates[page.key]
             if page.name in wikimacros:
-                del wikimacros[page.name]
+                del wikimacros[page.key]
                 
     def before_new_version(self, page):
         """Validates template/macro, before it is saved, by compiling it."""
-        if page.type.name == 'type/template':
-            _compile_template(page.name, page.body)
-        elif page.type.name == 'type/macro':
-            _compile_template(page.name, page.macro)
+        if page.type.key == 'type/template':
+            _compile_template(page.key, page.body)
+        elif page.type.key == 'type/macro':
+            _compile_template(page.key, page.macro)
 
 def _compile_template(name, text):
     try:
@@ -117,12 +112,12 @@ def _compile_template(name, text):
 
 def _load_template(page):
     """load template from a wiki page."""
-    wikitemplates[page.name] = _compile_template(page.name, page.body)
-                    
+    wikitemplates[page.key] = _compile_template(page.key, page.body)
+    
 def _load_macro(page):
-    t = _compile_template(page.name, page.macro)
-    t.__doc__ = page.d.get('description')
-    wikimacros[page.name] = t
+    t = _compile_template(page.key, page.macro)
+    t.__doc__ = page.description or ''
+    wikimacros[page.key] = t
     
 def setup():
     delegate.fakeload()
@@ -146,24 +141,6 @@ def setup():
     types.register_type('macros/[^/]*$', 'type/macro')
     
 @infogami.install_hook
-def createtypes():
-    """Create type/template and type/macro on install."""
-    delegate.fakeload()
-    from infogami.core import db
-    
-    site = context.site
-    tstring = db.get_type(site, 'type/string')
-    ttext = db.get_type(site, 'type/text')
-
-    db._create_type(site, 'type/template', [
-        dict(name='title', type=tstring), 
-        dict(name='body', type=ttext)])
-
-    db._create_type(site, 'type/macro', [
-        dict(name='description', type=tstring), 
-        dict(name='macro', type=ttext)])
-    
-@infogami.install_hook
 @infogami.action
 def movetemplates(prefix_pattern=None):
     """Move templates to wiki."""
@@ -174,32 +151,39 @@ def movetemplates(prefix_pattern=None):
         else:
             title = '%s template' % (name)
         return title
-
-    delegate.fakeload()
+    
+    templates = []
+    
     for name, t in template.disktemplates.items():
-        if name.startswith('type'): 
-            prefix = ''
-        else: 
-            prefix = 'templates/'
+        prefix = 'templates/'
         wikipath = _wikiname(name, prefix, '.tmpl')
         if prefix_pattern is None or wikipath.startswith(prefix_pattern):
             title = get_title(name)
             body = open(t.filepath).read()
-            d = web.storage(title=title, body=body)
-            print 'movetemplates: %s -> %s' % (t.filename, wikipath)
-            _new_version(wikipath, 'type/template', d)
+            d = web.storage(key=wikipath, type='type/template', title=title, body=body)
+            templates.append(d)
+            
+    result = web.ctx.site.write(templates)
+    for p in result.created:
+        print "created", p
+    for p in result.updated:
+        print "updated", p
         
 @infogami.install_hook
 @infogami.action
 def movemacros():
     """Move macros to wiki."""
-    delegate.fakeload()
+    macros = []
     for name, m in macro.diskmacros.items():
-        wikipath = _wikiname(name, 'macros/', '')
+        key = _wikiname(name, 'macros/', '')
         body = open(m.filepath).read()
-        d = web.storage(description='', macro=body)
-        print 'movemacros: %s -> %s' % (m.filename, wikipath)
-        _new_version(wikipath, 'type/macro', d)
+        d = web.storage(key=key, type='type/macro', description='', macro=body)
+        macros.append(d)
+    result = web.ctx.site.write(macros)
+    for p in result.created:
+        print "created", p
+    for p in result.updated:
+        print "updated", p
 
 def _wikiname(name, prefix, suffix):
     base, extn = os.path.splitext(name)
@@ -226,8 +210,8 @@ class template_preferences:
         prefs['wikitemplates.template_root'] = i.path
         prefs.save()
 
-from infogami.core.code import register_preferences
-register_preferences("template_preferences", template_preferences())
+#from infogami.core.code import register_preferences
+#register_preferences("template_preferences", template_preferences())
 
 # load templates and macros from all sites.
 setup()

@@ -1,0 +1,19 @@
+{
+    'key': 'type/page',
+    'type': 'type/type',
+    'name': 'Page',
+    'properties': [{
+        'key': 'type/page/title',
+        'name': 'title',
+        'type': 'type/property',
+        'expected_type': 'type/string',
+        'unique': True
+    }, {
+        'key': 'type/page/body',
+        'name': 'body',
+        'type': 'type/property',
+        'expected_type': 'type/text',
+        'unique': True
+    }]
+}
+    

@@ -199,3 +199,30 @@ def movefiles():
         src = os.path.join(plugin.path, "files")
         cp_r(src, static_dir)
 
+@infogami.install_hook
+def movetypes():
+    move("types", ".type", recursive=False)
+
+@infogami.install_hook
+def movepages():
+    move('pages', '.page', recursive=False)
+
+def move(dir, extension, recursive=False, readfunc=None):
+    import delegate
+        
+    readfunc = readfunc or eval
+    pages = []    
+    for p in delegate.plugins:
+        path = os.path.join(p.path, dir)
+        if os.path.exists(path) and os.path.isdir(path):
+            files = [os.path.join(path, f) for f in os.listdir(path) if f.endswith(extension)]
+            for f in files:
+                type = readfunc(open(f).read())
+                pages.append(type)
+
+    result = web.ctx.site.write(pages)
+    for key in result.created:
+        print 'created', key
+    for key in result.updated:
+        print 'updated', key
+

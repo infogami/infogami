@@ -52,7 +52,7 @@ def initialize_context():
     from infogami.core import db
 
     from infogami.infobase import client
-    web.ctx.site = client.Site(client.Client(None, 'infogami.org'))
+    web.ctx.site = client.Site(client.Client(None, config.site))
     
     context.load()
     context.error = None
@@ -75,7 +75,7 @@ def fakeload():
     context.javascripts = []
     context.user = None
     from infogami.infobase import client
-    web.ctx.site = client.Site(client.Client(None, 'infogami.org'))
+    web.ctx.site = client.Site(client.Client(None, config.site))
     
 def delegate(path):
     method = web.ctx.method

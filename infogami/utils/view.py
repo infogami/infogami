@@ -150,7 +150,7 @@ def thingify(type, value):
     from infogami.infobase import client
     
     if type.key not in PRIMITIVE_TYPES and isinstance(value, basestring) and not value.strip():
-        value = web.ctx.site.new('', {'type': type})
+        value = web.ctx.site.new('', type)
 
     # primitive values
     if not isinstance(value, client.Thing):

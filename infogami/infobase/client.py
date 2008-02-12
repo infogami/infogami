@@ -217,6 +217,8 @@ class Site:
             return None
     
     def new(self, key, type):
+        """Creates a new thing in memory.
+        """
         return Thing(self, key, {'type': type})
         
     def things(self, query):
@@ -227,23 +229,22 @@ class Site:
 
     def write(self, query):
         #@@ quick hack to run hooks on save
-        key = query['key']
-        type = query['type']
-        if isinstance(type, dict):
-            type = type['key']
-        type = self.get(type)
-        data = query.copy()
-        data['type'] = type
-        t = self.new(key, data)
-        _run_hooks('before_new_version', t)
+        if isinstance(query, dict):
+            key = query['key']
+            type = query['type']
+            if isinstance(type, dict):
+                type = type['key']
+            type = self.get(type)
+            data = query.copy()
+            data['type'] = type
+            t = self.new(key, data)
+            _run_hooks('before_new_version', t)
+
         result = self.client.write(query)
-        _run_hooks('on_new_version', t)
+
+        if isinstance(query, dict):
+            _run_hooks('on_new_version', t)
         return result
-    
-    def new(self, path, data):
-        """Creates a new thing in memory.
-        """
-        return Thing(self, path, data=data)
 
 # hooks can be registered by extending the hook class
 hooks = []

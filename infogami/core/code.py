@@ -37,7 +37,7 @@ class edit (delegate.mode):
     def GET(self, path):
         i = web.input(v=None, t=None)
         
-        p = db.get_version(path) or db.new_version(path, 'type/page')
+        p = db.get_version(path) or db.new_version(path, types.guess_type(path))
         
         if i.t:
             try:
@@ -107,7 +107,7 @@ class edit (delegate.mode):
         def new_version(data):
             thing = db.get_version(data['key'])
             if not thing:
-                thing = Thing(data['key'], {'type': self.process(data['key'])})
+                thing = web.ctx.site.new(data['key'], self.process(data['type']))
             return thing
                 
         if isinstance(data, dict):

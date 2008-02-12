@@ -107,7 +107,7 @@ class edit (delegate.mode):
         def new_version(data):
             thing = db.get_version(data['key'])
             if not thing:
-                thing = web.ctx.site.new(data['key'], self.process(data['type']))
+                thing = web.ctx.site.new(data['key'], {'type': self.process(data['type'])})
             return thing
                 
         if isinstance(data, dict):

@@ -216,10 +216,10 @@ class Site:
         except NotFound:
             return None
     
-    def new(self, key, type):
+    def new(self, key, data):
         """Creates a new thing in memory.
         """
-        return Thing(self, key, {'type': type})
+        return Thing(self, key, data)
         
     def things(self, query):
         return self.client.things(query)

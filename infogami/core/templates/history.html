@@ -17,6 +17,7 @@ $var title: $_.history
   <th></th>
   <th></th>
   <th>$_.who</th>
+  <th>$_.what</th>
   <th>$_.when</th>
 </tr>
 $for v in h:
@@ -25,10 +26,11 @@ $for v in h:
       <td><input type="radio" id="a$v.revision" name="a" value="$v.revision"></td>
       <td><input type="radio" id="b$v.revision" name="b" value="$v.revision"></td>
       <td><a href="$url(m='edit', v=v.revision)">$_.edit</a></td>
-      $if v.author_id:
-          <td class="history"><a href="$homepath()/$v.author.name">$v.author.displayname</a></td>
+      $if v.author:
+          <td class="history"><a href="$homepath()/$v.author.key">$v.author.displayname</a></td>
       $else:
           <td class="history">$v.ip</td>
+      <td>$v.comment</td>
       <td><a href="$url(v=v.revision)">$datestr(v.created)</a></td>
       <td>
     </tr>

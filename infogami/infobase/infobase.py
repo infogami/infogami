@@ -50,7 +50,6 @@ class NotFound(InfobaseException):
 class AlreadyExists(InfobaseException):
     pass
     
-
 def loadhook():
     ctx = web.storage()
     ctx.dirty = []
@@ -76,17 +75,23 @@ class Infobase:
         d = web.select('site', where='name=$name', vars=locals())
         if d:
             s = d[0]
-            return Infosite(s.id, s.name)
+            return Infosite(s.id, s.name, s.secret_key)
         else:
             raise SiteNotFound(name)
-    
+
     def create_site(self, name):
-        id = web.insert('site', name=name)
-        site = Infosite(id, name)
+        secret_key = self.randomkey()
+        id = web.insert('site', name=name, secret_key=secret_key)
+        site = Infosite(id, name, secret_key)
         import bootstrap
         site.write(bootstrap.types)
         return site
-    
+
+    def randomkey(self):
+        import string, random
+        chars = string.letters + string.digits
+        return "".join(random.choice(chars) for i in range(25))
+
     def delete_site(self, name):
         pass
         
@@ -248,9 +253,10 @@ class Thing:
         return not (self == other)
 
 class Infosite:
-    def __init__(self, id, name):
+    def __init__(self, id, name, secret_key):
         self.id = id
         self.name = name
+        self.secret_key = secret_key
         
     def get_object(self, key):
         d = web.select('thing', where='site_id = $self.id AND key = $key', vars=locals())
@@ -346,15 +352,21 @@ class Infosite:
             
         result = web.select(['version', 'thing'], what=what, where=where, offset=offset, limit=limit, order=order, vars=locals())
         out = []
+
         for r in result:
             r.created = r.created.isoformat()
+            r.author = r.author_id and self.withID(r.author_id).key
+            del r.author_id
             out.append(dict(r))
         return out
 
     @transactify
-    def write(self, query):
-        import writequery
-        ctx = writequery.Context(self)
+    def write(self, query, comment=None):
+        import writequery, account
+        a = account.AccountManager(self)
+        user = a.get_user()
+        author_id = user and user.id
+        ctx = writequery.Context(self, comment, author_id=author_id, ip=web.ctx.get('ip'))
         return ctx.execute(query)
         
 if __name__ == "__main__":

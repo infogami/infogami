@@ -5,6 +5,7 @@
 CREATE TABLE site (
     id serial primary key,
     name text,
+    secret_key text,
     UNIQUE (name)
 );
 
@@ -41,10 +42,10 @@ CREATE TABLE datum (
     CHECK(key ~ '^[a-z][a-z/_]*$')
 );
 
-CREATE TABLE store (
-    site_id int references site,
-    key text,
-    value text
+CREATE TABLE account (
+    thing_id int references thing,
+    email text,
+    password text
 );
 
 --- index ---

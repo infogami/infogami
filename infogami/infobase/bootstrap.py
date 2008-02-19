@@ -161,8 +161,8 @@ type_user = {
     'type': 'type/type',
     'properties': [
         {
-            'key': 'type/user/name',
-            'name': 'name',
+            'key': 'type/user/displayname',
+            'name': 'displayname',
             'type': 'type/property',
             'expected_type': 'type/string',
             'unique': {'type': 'type/boolean', 'value': True}
@@ -232,7 +232,7 @@ type_permission = {
         }
     ]
 }
-    
+
 
 a = [
     {'key': 'type/type', 'type': 'type/type'},

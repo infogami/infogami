@@ -169,7 +169,7 @@ class Query:
                 key = self.d['key'].execute().value
                 assert isinstance(key, basestring)
                 thing = get(key)
-
+                
                 if not thing:
                     assert 'type' in self.d
                     web.insert('thing', site_id=self.ctx.site.id, key=key)
@@ -202,15 +202,18 @@ class Query:
 
 class Context:
     """Query execution context for bookkeeping."""
-    def __init__(self, site):
+    def __init__(self, site, comment, author_id=None, ip=None):
         self.site = site
+        self.comment = comment
+        self.author_id = author_id
+        self.ip = ip
         self.revisions = {}
         self.updated = set()
         self.created = set()
 
     def get_revision(self, thing):
         if thing.id not in self.revisions:
-            id = web.insert('version', thing_id=thing.id)
+            id = web.insert('version', thing_id=thing.id, comment=self.comment, author_id=self.author_id, ip=self.ip)
             version = web.select('version', where='id=$id', vars=locals())[0]
             self.revisions[thing.id] = version.revision
             if version.revision == 1:
@@ -257,4 +260,3 @@ if __name__ == "__main__":
     
     ctx = Context(config.site)
     print ctx.execute([q, q])
-

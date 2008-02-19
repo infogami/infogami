@@ -30,8 +30,9 @@ class Client:
     def request(self, path, method='GET', data=None):
         path = "/%s%s" % (self.sitename, path)
         if self.host:
+            data = data and urllib.urlencode(data)
             if data and method == 'GET':
-                path += '?' + urllib.urlencode(data)
+                path += '?' + data
                 data = None
             conn = httplib.HTTPConnection(self.host)
             conn.request(method, path, data)
@@ -43,7 +44,6 @@ class Client:
         else:
             import server
             out = server.request(path, method, data)
-        
         
         import web
         out = simplejson.loads(out)
@@ -80,9 +80,19 @@ class Client:
             versions[i].created = parse_datetime(versions[i].created)
         return versions
 
-    def write(self, query):
+    def write(self, query, comment):
         query = simplejson.dumps(query)
-        return self.request('/write', 'POST', query)['result']
+        return self.request('/write', 'POST', dict(query=query, comment=comment))['result']
+        
+    def login(self, username, password, remember):
+        return self.request('/account/login', 'POST', dict(username=username, password=password))
+        
+    def register(self, username, displayname, email, password):
+        return self.request('/account/register', 'POST', 
+            dict(username=username, displayname=displayname, email=email, password=password))
+
+    def get_user(self):
+        return self.request('/account/get_user')['result']
 
 def parse_datetime(datestring):
     """Parses datetime from isoformat.
@@ -225,9 +235,23 @@ class Site:
         return self.client.things(query)
         
     def versions(self, query):
-        return self.client.versions(query)
-
-    def write(self, query):
+        versions = self.client.versions(query)
+        for v in versions:
+            author = v.author
+            v.author = v.author and self.get(v.author, lazy=True)
+        return versions
+        
+    def login(self, username, password, remember=False):
+        return self.client.login(username, password, remember)
+    
+    def register(self, username, displayname, email, password):
+        return self.client.register(username, displayname, email, password)
+        
+    def get_user(self):
+        u = self.client.get_user()
+        return u and self.get(u)
+        
+    def write(self, query, comment=None):
         #@@ quick hack to run hooks on save
         if isinstance(query, dict):
             key = query['key']
@@ -240,7 +264,7 @@ class Site:
             t = self.new(key, data)
             _run_hooks('before_new_version', t)
 
-        result = self.client.write(query)
+        result = self.client.write(query, comment)
 
         if isinstance(query, dict):
             _run_hooks('on_new_version', t)
@@ -264,7 +288,6 @@ def _run_hooks(name, thing):
         m = getattr(h, name, None)
         if m:
             m(thing)
-
 
 if __name__ == "__main__":
     import web

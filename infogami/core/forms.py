@@ -26,13 +26,10 @@ not_already_used = Validator('This email is already used', lambda email: db.get_
 
 register = Form(
     Textbox('username', 
-            Validator(
-                _.get('account/register', 'username_already_exists'),
-                lambda name: not db.get_user_by_name(context.site, name)),
             vlogin,
             description=_.get('account/register', 'username')),
     Textbox('displayname', notnull, description=_.get('account/register', 'display_name')),
-    Textbox('email', notnull, vemail, not_already_used, description=_.get('account/register', 'email')),
+    Textbox('email', notnull, vemail, description=_.get('account/register', 'email')),
     Password('password', notnull, vpass, description=_.get('account/register', 'password')),
     Password('password2', notnull, description=_.get('account/register', 'confirm_password')),
     validators = [

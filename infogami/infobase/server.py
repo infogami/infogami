@@ -9,6 +9,9 @@ urls = (
     "/([^/]*)/things", "things",
     "/([^/]*)/versions", "versions",
     "/([^/]*)/write", "write",
+    "/([^/]*)/account/register", "register",
+    "/([^/]*)/account/login", "login",
+    "/([^/]*)/account/get_user", "get_user",
 )
 
 def jsonify(f):
@@ -18,7 +21,7 @@ def jsonify(f):
             d['result'] = f(self, *a, **kw)
         except infobase.InfobaseException, e:
             d['status'] = 'fail'
-            d['message'] = '%s: %s' % (e.__class__.__name__, str(e))
+            d['message'] = str(e)
         except Exception, e:
             import traceback
             traceback.print_exc()
@@ -31,11 +34,11 @@ def jsonify(f):
             print result
     return g
     
-def readdata():
-    if web.ctx.get('infobase_localmode'):
-        return web.ctx.infobase_data
+def input(*a, **kw):
+    if 'infobase_input' in web.ctx:
+        return web.storify(web.ctx.infobase_input, *a, **kw)
     else:
-        return web.data()
+        return web.input(*a, **kw)
     
 ibase = None
 def get_site(sitename):
@@ -48,8 +51,9 @@ class write:
     @jsonify
     def POST(self, sitename):
         site = get_site(sitename)
-        query = simplejson.loads(readdata())
-        result = site.write(query)
+        i = input('query', comment=None)
+        query = simplejson.loads(i.query)
+        result = site.write(query, i.comment)
         return result
 
 class withkey:
@@ -63,12 +67,6 @@ class withkey:
         except infobase.NotFound:
             return None
             
-def input(*a, **kw):
-    if 'infobase_input' in web.ctx:
-        return web.storify(web.ctx.infobase_input, *a, **kw)
-    else:
-        return web.input(*a, **kw)
-        
 class things:
     @jsonify
     def GET(self, sitename):
@@ -84,13 +82,41 @@ class versions:
         i = input('query')
         q = simplejson.loads(i.query)
         return site.versions(q)
-        
+                
+class login:
+    @jsonify
+    def POST(self, sitename):
+        site = get_site(sitename)
+        i = input('username', 'password')
+        import account
+        a = account.AccountManager(site)
+        a.login(i.username, i.password)
+        return ""
+
+class register:
+    @jsonify
+    def POST(self, sitename):
+        site = get_site(sitename)
+        i = input('username', 'password', 'displayname', 'email')
+        import account
+        a = account.AccountManager(site)
+        a.register(username=i.username, displayname=i.displayname, email=i.email, password=i.password)
+        return ""
+
+class get_user:
+    @jsonify
+    def GET(self, sitename):
+        import account
+        site = get_site(sitename)
+        a = account.AccountManager(site)
+        user = a.get_user()
+        return user and user.key
+
 def request(path, method, data):
     """Fakes the web request.
     Useful when infobase is not run as a separate process.
     """
     web.ctx.infobase_localmode = True
-    web.ctx.infobase_data = data 
     web.ctx.infobase_input = data or {}
     for pattern, classname in web.group(urls, 2):
         m = web.re_compile(pattern).match(path)

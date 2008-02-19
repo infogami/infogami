@@ -17,7 +17,7 @@ $for v in changes:
     <tr>
     <td>$datestr(v.created)</td>
     <td><a href="$homepath()/$v.key">$v.key</a></td>
-    $if v.author_id:
+    $if v.author:
         <td><a href="$homepath()/$v.author.key" title="$v.author.displayname">$v.author.displayname</a></div></td>
     $else:
         <td>$v.ip</td>    

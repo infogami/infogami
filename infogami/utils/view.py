@@ -220,7 +220,7 @@ def move(dir, extension, recursive=False, readfunc=None):
                 type = readfunc(open(f).read())
                 pages.append(type)
 
-    result = web.ctx.site.write(pages)
+    result = web.ctx.site.write(pages, "install")
     for key in result.created:
         print 'created', key
     for key in result.updated:

@@ -37,7 +37,7 @@ class edit (delegate.mode):
     def GET(self, path):
         i = web.input(v=None, t=None)
         
-        p = db.get_version(path) or db.new_version(path, types.guess_type(path))
+        p = db.get_version(path, i.v) or db.new_version(path, types.guess_type(path))
         
         if i.t:
             try:
@@ -93,7 +93,7 @@ class edit (delegate.mode):
             return render.editpage(p, preview=True)
         elif action == 'save':
             try:
-                web.ctx.site.write(i)
+                web.ctx.site.write(i, comment)
                 return web.seeother(web.changequery(query={}))
             except db.ValidationException, e:
                 utils.view.set_error(str(e))
@@ -131,6 +131,8 @@ class history (delegate.mode):
     def GET(self, path):
         try:
             history = db.get_recent_changes(key=path, limit=20)
+            if not history:
+                return web.seeother('/' + path)
             return render.history(history)
         except tdb.NotFound:
             return web.seeother('/' + path)
@@ -151,9 +153,9 @@ class diff (delegate.mode):
             
         try:
             b = db.get_version(path, revision=rev_b)
-            #@@ what to do diff is called when there is only one version
-            # Probably diff should be displayed with empty thing and current thing.  
-            # Displaying diff with itself, since it is easy to implement.
+            if not b:
+                return web.seeother('/' + path)
+            
             if i.a == 0: 
                 a = web.ctx.site.new(path, {})
                 a.revision = i.a
@@ -162,7 +164,7 @@ class diff (delegate.mode):
         except:
             raise
             return web.badrequest()
-            
+        
         return render.diff(a, b)
 
 class random(delegate.page):
@@ -173,45 +175,48 @@ class random(delegate.page):
 class login(delegate.page):
     path = "/account/login"
     
-    def GET(self, site):
+    def GET(self):
         referer = web.ctx.env.get('HTTP_REFERER', '/')
         i = web.input(redirect=referer)
         f = forms.login()
         f['redirect'].value = i.redirect 
         return render.login(f)
 
-    def POST(self, site):
-        i = web.input(remember=False, redirect='/')        
-        user = auth.login(site, i.username, i.password, i.remember)
+    def POST(self):
+        i = web.input(remember=False, redirect='/')
+        user = web.ctx.site.login(i.username, i.password, i.remember)
         if user is None:
             f = forms.login()
             f.fill(i)
             f.note = 'Invalid username or password.'
             return render.login(f)
-
         web.seeother(i.redirect)
         
 class register(delegate.page):
     path = "/account/register"
     
-    def GET(self, site):
+    def GET(self):
         return render.register(forms.register())
         
-    def POST(self, site):
+    def POST(self):
         i = web.input(remember=False, redirect='/')
         f = forms.register()
         if not f.validates(i):
             return render.register(f)
         else:
-            user = db.new_user(site, i.username, i.displayname, i.email, i.password)
-            auth.setcookie(user, i.remember)
+            from infogami.infobase.client import ClientException
+            try:
+                web.ctx.site.register(i.username, i.displayname, i.email, i.password)
+            except ClientException, e:
+                f.note = str(e)
+                return render.register(f)
             web.seeother(i.redirect)
 
 class logout(delegate.page):
     path = "/account/logout"
     
-    def POST(self, site):
-        web.setcookie("infogami_session", "", expires=-1)
+    def POST(self):
+        web.setcookie("infobase_session", "", expires=-1)
         referer = web.ctx.env.get('HTTP_REFERER', '/')
         web.seeother(referer)
 

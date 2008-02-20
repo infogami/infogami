@@ -10,7 +10,7 @@ class Value:
     Execution of every query returns this.
     """
     def __init__(self, value, type):
-        assert isinstance(value, (basestring, int, float, bool, infobase.Thing))
+        assert value is None or isinstance(value, (basestring, int, float, bool, infobase.Thing))
         if type:
             assert isinstance(type, basestring)
 
@@ -41,6 +41,9 @@ class Value:
             return self.datatype
 
     def coerce(self, ctx, expected_type):
+        if self.value is None:
+            return self.value
+            
         if isinstance(expected_type, infobase.Thing):
             expected_type = expected_type.key
 
@@ -87,6 +90,8 @@ class Query:
             return 'type/key', True
         elif name == 'type':
             return 'type/type', True
+        elif name in ['permission', 'child_permission']:
+            return 'type/permission', True
         else:
             for p in type._get('properties', []):
                 if p.key.split('/')[-1] == name:
@@ -131,6 +136,9 @@ class Query:
         if datum2value(old) == value:
             return
         
+        if key == 'permission' and not self.ctx.can_admin(thing.key):
+            raise PermissionDenied('Permission denied to change permission of ' + repr(thing.key))
+        
         max_rev = MAX_INT
         revision = self.ctx.get_revision(thing)
         web.update('datum', 
@@ -147,7 +155,7 @@ class Query:
     def execute(self):
         if self.value:
             return self.value
-
+        
         def get(key):
             try: 
                 return self.ctx.site.withKey(key)
@@ -168,6 +176,10 @@ class Query:
                 assert 'key' in self.d
                 key = self.d['key'].execute().value
                 assert isinstance(key, basestring)
+                
+                if not self.ctx.can_write(key):
+                    raise infobase.PermissionDenied('Permission denied to modify: ' + repr(key))
+                
                 thing = get(key)
                 
                 if not thing:
@@ -199,17 +211,61 @@ class Query:
     def __str__(self):
         return "<query: %s>" % repr(self.d)
     __repr__ = __str__
-
+    
 class Context:
     """Query execution context for bookkeeping."""
-    def __init__(self, site, comment, author_id=None, ip=None):
+    def __init__(self, site, comment, author=None, ip=None):
         self.site = site
         self.comment = comment
-        self.author_id = author_id
+        self.author = author
+        self.author_id = author and author.id
         self.ip = ip
         self.revisions = {}
         self.updated = set()
         self.created = set()
+        
+    def has_permission(self, key, get_groups):
+        if web.ctx.get('infobase_bootstrap'):
+            return True
+            
+        #@@ as of now, only logged-in user can write
+        if not self.author:
+            return False
+            
+        permission = self.get_permission(key)
+        if permission is None:
+            return True
+        
+        for group in get_groups(permission):
+            if group.key == 'permission/everyone':
+                return True
+            else:
+                if self.author in group.members:
+                    return True
+        
+        return False
+    
+    def can_write(self, key):
+        return self.has_permission(key, lambda p: p._get('writers', []))
+    
+    def can_admin(self, key):
+        return self.has_permission(key, lambda p: p._get('admins', []))
+            
+    def get_permission(self, key):
+        def parent(key):
+            if '/' in key:
+                return key.rsplit('/', 1)[0]
+        
+        if key == None:
+            return None
+        
+        try:
+            thing = self.site.withKey(key)
+        except infobase.NotFound:
+            thing = None
+        
+        permission = thing and thing._get('permission')
+        return permission or self.get_permission(parent(key))
 
     def get_revision(self, thing):
         if thing.id not in self.revisions:

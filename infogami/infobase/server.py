@@ -20,6 +20,8 @@ def jsonify(f):
         try:
             d['result'] = f(self, *a, **kw)
         except infobase.InfobaseException, e:
+            import traceback
+            traceback.print_exc()
             d['status'] = 'fail'
             d['message'] = str(e)
         except Exception, e:

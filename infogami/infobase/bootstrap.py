@@ -217,15 +217,22 @@ type_permission = {
             'unique': {'type': 'type/boolean', 'value': True}
         }, 
         {
-            'key': 'type/user/readers',
+            'key': 'type/permission/readers',
             'name': 'readers',
             'type': 'type/property',
             'expected_type': 'type/usergroup',
             'unique': {'type': 'type/boolean', 'value': False}
         },
         {
-            'key': 'type/user/writers',
+            'key': 'type/permission/writers',
             'name': 'writers',
+            'type': 'type/property',
+            'expected_type': 'type/usergroup',
+            'unique': {'type': 'type/boolean', 'value': False}
+        },
+        {
+            'key': 'type/permission/admins',
+            'name': 'admins',
             'type': 'type/property',
             'expected_type': 'type/usergroup',
             'unique': {'type': 'type/boolean', 'value': False}
@@ -233,6 +240,36 @@ type_permission = {
     ]
 }
 
+groups_and_permissions = [
+    {
+        'key': 'usergroup/everyone',
+        'type': 'type/usergroup',
+        'members': []        
+    },
+    {
+        'key': 'usergroup/admin',
+        'type': 'type/usergroup',
+        'members': []
+    },
+    {
+        'key': 'permission/open',
+        'type': 'type/permission',
+        'readers': ['usergroup/everyone'],
+        'writers': ['usergroup/everyone'],
+    },
+    {
+        'key': 'permission/restricted',
+        'type': 'type/permission',
+        'readers': ['usergroup/everyone'],
+        'writers': ['usergroup/admin']
+    },
+    {
+        'key': 'permission/secret',
+        'type': 'type/permission',
+        'readers': ['usergroup/admin'],
+        'writers': ['usergroup/admin']
+    }
+]
 
 a = [
     {'key': 'type/type', 'type': 'type/type'},
@@ -252,7 +289,8 @@ b =  [
     type_key, type_string, type_text, 
     type_int, type_boolean, type_float, 
     type_uri, type_datatime, 
-    type_user, type_usergroup, type_permission
+    type_user, type_usergroup, type_permission,
+    groups_and_permissions
 ]
 
 types = a + b

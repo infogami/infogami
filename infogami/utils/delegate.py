@@ -72,6 +72,10 @@ def fakeload():
     context.error = None
     context.stylesheets = []
     context.javascripts = []
+    
+    # hack to disable permissions
+    web.ctx.infobase_bootstrap = True
+    
     context.user = None
     from infogami.infobase import client
     web.ctx.site = client.Site(client.Client(None, config.site))

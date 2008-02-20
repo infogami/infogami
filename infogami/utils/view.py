@@ -152,10 +152,13 @@ def thingify(type, value):
     if type.key not in PRIMITIVE_TYPES and isinstance(value, basestring) and not value.strip():
         value = web.ctx.site.new('', {'type': type})
 
+    if type.key not in PRIMITIVE_TYPES and isinstance(value, client.Nothing):
+        value = web.ctx.site.new('', {'type': type})
+    
     # primitive values
     if not isinstance(value, client.Thing):
         value = web.storage(value=value, is_primitive=True, type=type)
-        
+    
     return value
 
 @public

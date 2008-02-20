@@ -126,6 +126,37 @@ class edit (delegate.mode):
         elif '_preview' in i: return 'preview'
         elif '_delete' in i: return 'delete'
         else: return None
+
+class permission(delegate.mode):
+    def GET(self, path):
+        p = db.get_version(path)
+        if not p:
+            return web.seeother('/' + path)
+            
+        i = web.input(edit="")
+            
+        return render.permission(p, i.edit)
+        
+    def POST(self, path):
+        p = db.get_version(path)
+        if not p:
+            return web.seeother('/' + path)
+            
+        i = web.input('permission', 'child_permission')
+        q = {
+            'key': path,
+            'permission': i.permission or None,
+            'child_permission': i.child_permission or None,
+        }
+        
+        try:
+            web.ctx.site.write(q)
+            web.seeother(web.changequery({}, m='permission'))
+        except Exception, e:
+            import traceback
+            traceback.print_exc(e)
+            delegate.view.set_error(str(e))
+            return render.permission(p)
             
 class history (delegate.mode):
     def GET(self, path):
@@ -283,7 +314,14 @@ register_preferences("login_preferences", login_preferences())
 class getthings(delegate.page):
     """Lists all pages with name path/*"""
     def GET(self):
-        print ''
+        i = web.input()
+        q = {
+            'key~': i.q + '*',
+            'type': i.type,
+            'limit': i.limit
+        }
+        things = web.ctx.site.things(q)
+        print "\n".join(things)
     
 class sitepreferences(delegate.page):
     path = "/admin/sitepreferences"

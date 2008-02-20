@@ -50,6 +50,9 @@ class NotFound(InfobaseException):
 class AlreadyExists(InfobaseException):
     pass
     
+class PermissionDenied(InfobaseException):
+    pass
+    
 def loadhook():
     ctx = web.storage()
     ctx.dirty = []
@@ -84,6 +87,7 @@ class Infobase:
         id = web.insert('site', name=name, secret_key=secret_key)
         site = Infosite(id, name, secret_key)
         import bootstrap
+        web.ctx.infobase_bootstrap = True
         site.write(bootstrap.types)
         return site
 
@@ -364,9 +368,7 @@ class Infosite:
     def write(self, query, comment=None):
         import writequery, account
         a = account.AccountManager(self)
-        user = a.get_user()
-        author_id = user and user.id
-        ctx = writequery.Context(self, comment, author_id=author_id, ip=web.ctx.get('ip'))
+        ctx = writequery.Context(self, comment, author=a.get_user(), ip=web.ctx.get('ip'))
         return ctx.execute(query)
         
 if __name__ == "__main__":

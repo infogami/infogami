@@ -107,7 +107,6 @@ def typetemplate(name):
         default_template = getattr(render, 'default_' + name)
         key = page.type.key + '/' + name
         t = getattr(render, key, default_template)
-        print >> web.debug, 'typetemplate', name, key
         return t(page, *a, **kw)
     return template
     

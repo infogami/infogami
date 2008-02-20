@@ -5,7 +5,7 @@ import random
 
 def make_query(username, displayname):
     group = username + '/usergroup'
-
+    permission = username + '/permission'
     return [{
         'key': username,
         'displayname': displayname,
@@ -14,6 +14,17 @@ def make_query(username, displayname):
         'key': group,
         'type': 'type/usergroup',
         'members': [username]
+    },
+    {
+        'key': permission,
+        'type': 'type/permission',
+        'readers': ['usergroup/everyone'],
+        'writers': [group],
+        'admins': [group]
+    },
+    {
+        'key': username,
+        'permission': permission
     }]
 
 class AccountManager:
@@ -22,6 +33,7 @@ class AccountManager:
 
     def register(self, username, displayname, email, password):
         username = 'user/' + username
+        web.ctx.infobase_bootstrap = True
 
         try:
             self.site.withKey(username)

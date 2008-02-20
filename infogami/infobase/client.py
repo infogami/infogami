@@ -255,18 +255,20 @@ class Site:
         #@@ quick hack to run hooks on save
         if isinstance(query, dict):
             key = query['key']
-            type = query['type']
-            if isinstance(type, dict):
-                type = type['key']
-            type = self.get(type)
-            data = query.copy()
-            data['type'] = type
-            t = self.new(key, data)
-            _run_hooks('before_new_version', t)
+            type = query.get('type')
+            # type is none when saving permission
+            if type is not None:
+                if isinstance(type, dict):
+                    type = type['key']
+                type = self.get(type)
+                data = query.copy()
+                data['type'] = type
+                t = self.new(key, data)
+                _run_hooks('before_new_version', t)
 
         result = self.client.write(query, comment)
 
-        if isinstance(query, dict):
+        if isinstance(query, dict) and type is not None:
             _run_hooks('on_new_version', t)
         return result
 

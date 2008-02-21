@@ -18,6 +18,15 @@ $for p in page.type.properties:
 	            <td>$label</td>
                 <td>$:thingrepr(x, p.expected_type)</td>
             </tr>
+
+$for p in page.type.backreferences:
+    $ label = _.get(page.type.key, p.name)
+    $for x in page[p.name]:
+        <tr>
+            <td>$label</td>
+            <td>$:thingrepr(x, p.expected_type)</td>
+        </tr>
+
 </tbody>
 </table>
 

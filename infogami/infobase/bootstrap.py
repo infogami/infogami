@@ -101,21 +101,54 @@ type_property = {
             'name': 'name',
             'type': 'type/property',
             'expected_type': {'key': 'type/string'},
-            'unique': {'type': 'type/boolean', 'value': True}
+            'unique': True
         },
         {
             'key': 'type/property/expected_type',
             'name': 'expected_type',
             'type': 'type/property',
             'expected_type': {'key': 'type/type'},
-            'unique': {'type': 'type/boolean', 'value': True}
+            'unique': True
         },
         {
             'key': 'type/property/unique',
             'name': 'unique',
             'type': 'type/property',
             'expected_type': {'key': 'type/boolean'},
-            'unique': {'type': 'type/boolean', 'value': True}
+            'unique': True
+        },
+    ],
+    'description': {
+        'type': 'type/text',
+        'value': ''
+    }
+}
+
+type_backreference = {
+    'key': 'type/backreference',
+    'name': 'Back Reference',
+    'type': 'type/type',
+    'properties': [
+        {
+            'key': 'type/backreference/name',
+            'name': 'name',
+            'type': 'type/property',
+            'expected_type': {'key': 'type/string'},
+            'unique': True
+        },
+        {
+            'key': 'type/backreference/expected_type',
+            'name': 'expected_type',
+            'type': 'type/property',
+            'expected_type': {'key': 'type/type'},
+            'unique': True
+        },
+        {
+            'key': 'type/backreference/property_name',
+            'name': 'property_name',
+            'type': 'type/property',
+            'expected_type': {'key': 'type/string'},
+            'unique': True
         },
     ],
     'description': {
@@ -133,21 +166,28 @@ type_type = {
             'name': 'name',
             'type': 'type/property',
             'expected_type': 'type/string',
-            'unique': {'type': 'type/boolean', 'value': True}
-        },
-        {
-            'key': 'type/type/properties',
-            'name': 'properties',
-            'type': "type/property",
-            'expected_type': 'type/property',
-            'unique': {'type': 'type/boolean', 'value': False}
+            'unique': True
         },
         {
             'key': 'type/type/description',
             'name': 'description',
             'type': 'type/property',
             'expected_type': "type/text",
-            'unique': {'type': 'type/boolean', 'value': True}
+            'unique': True
+        },
+        {
+            'key': 'type/type/properties',
+            'name': 'properties',
+            'type': "type/property",
+            'expected_type': 'type/property',
+            'unique': False
+        },
+        {
+            'key': 'type/type/backreferences',
+            'name': 'Back-references',
+            'type': "type/property",
+            'expected_type': 'type/backreference',
+            'unique': False
         },
     ],
     'description': {
@@ -165,21 +205,21 @@ type_user = {
             'name': 'displayname',
             'type': 'type/property',
             'expected_type': 'type/string',
-            'unique': {'type': 'type/boolean', 'value': True}
+            'unique': True
         },
         {
             'key': 'type/user/website',
             'name': 'website',
             'type': 'type/property',
             'expected_type': 'type/uri',
-            'unique': {'type': 'type/boolean', 'value': True}
+            'unique': True
         },
         {
             'key': 'type/user/description',
             'name': 'description',
             'type': 'type/property',
             'expected_type': 'type/text',
-            'unique': {'type': 'type/boolean', 'value': True}
+            'unique': True
         },
     ]
 }
@@ -193,14 +233,14 @@ type_usergroup = {
             'name': 'description',
             'type': 'type/property',
             'expected_type': 'type/text',
-            'unique': {'type': 'type/boolean', 'value': True}
+            'unique': True
         },
         {
             'key': 'type/usergroup/members',
             'name': 'members',
             'type': 'type/property',
             'expected_type': 'type/user',
-            'unique': {'type': 'type/boolean', 'value': False}
+            'unique': False
         },
     ]
 }
@@ -214,28 +254,28 @@ type_permission = {
             'name': 'description',
             'type': 'type/property',
             'expected_type': 'type/text',
-            'unique': {'type': 'type/boolean', 'value': True}
+            'unique': True
         }, 
         {
             'key': 'type/permission/readers',
             'name': 'readers',
             'type': 'type/property',
             'expected_type': 'type/usergroup',
-            'unique': {'type': 'type/boolean', 'value': False}
+            'unique': False
         },
         {
             'key': 'type/permission/writers',
             'name': 'writers',
             'type': 'type/property',
             'expected_type': 'type/usergroup',
-            'unique': {'type': 'type/boolean', 'value': False}
+            'unique': False
         },
         {
             'key': 'type/permission/admins',
             'name': 'admins',
             'type': 'type/property',
             'expected_type': 'type/usergroup',
-            'unique': {'type': 'type/boolean', 'value': False}
+            'unique': False
         }
     ]
 }
@@ -256,24 +296,28 @@ groups_and_permissions = [
         'type': 'type/permission',
         'readers': ['usergroup/everyone'],
         'writers': ['usergroup/everyone'],
+        'admins': ['usergroup/admin'],
     },
     {
         'key': 'permission/restricted',
         'type': 'type/permission',
         'readers': ['usergroup/everyone'],
-        'writers': ['usergroup/admin']
+        'writers': ['usergroup/admin'],
+        'admins': ['usergroup/admin'],
     },
     {
         'key': 'permission/secret',
         'type': 'type/permission',
         'readers': ['usergroup/admin'],
-        'writers': ['usergroup/admin']
+        'writers': ['usergroup/admin'],
+        'admins': ['usergroup/admin'],
     }
 ]
 
 a = [
     {'key': 'type/type', 'type': 'type/type'},
     {'key': 'type/property', 'type': 'type/type'},
+    {'key': 'type/backreference', 'type': 'type/type'},
     {'key': 'type/key', 'type': 'type/type'},
     {'key': 'type/string', 'type': 'type/type'},
     {'key': 'type/text', 'type': 'type/type'},
@@ -285,7 +329,7 @@ a = [
 ]
 
 b =  [
-    type_property, type_type, 
+    type_property, type_type, type_backreference,
     type_key, type_string, type_text, 
     type_int, type_boolean, type_float, 
     type_uri, type_datatime, 

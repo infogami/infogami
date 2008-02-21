@@ -51,9 +51,7 @@ def initialize_context():
     from infogami.core import auth
     from infogami.core import db
 
-    from infogami.infobase import client
-    web.ctx.site = client.Site(client.Client(None, config.site))
-    
+    web.ctx.site = create_site()
     context.load()
     context.error = None
     context.stylesheets = []
@@ -62,6 +60,10 @@ def initialize_context():
     
     i = web.input(_method='GET', rescue="false")
     context.rescue_mode = (i.rescue.lower() == 'true')
+    
+def create_site():
+    from infogami.infobase import client
+    return client.Site(client.Client(config.infobase_host, config.site))
 
 def fakeload():
     from infogami.core import db
@@ -77,8 +79,7 @@ def fakeload():
     web.ctx.infobase_bootstrap = True
     
     context.user = None
-    from infogami.infobase import client
-    web.ctx.site = client.Site(client.Client(None, config.site))
+    web.ctx.site = create_site()
     
 def delegate(path):
     method = web.ctx.method

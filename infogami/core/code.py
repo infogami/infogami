@@ -13,6 +13,8 @@ import forms
 import thingutil
 import helpers
 
+from infogami.infobase.client import ClientException
+
 def notfound():
     web.ctx.status = '404 Not Found'
     return render.notfound()
@@ -95,8 +97,9 @@ class edit (delegate.mode):
             try:
                 web.ctx.site.write(i, comment)
                 return web.seeother(web.changequery(query={}))
-            except db.ValidationException, e:
+            except ClientException, e:
                 utils.view.set_error(str(e))
+                p = self.process(i)
                 return render.editpage(p)
         elif action == 'delete':
             # delete is not yet implemented
@@ -215,11 +218,12 @@ class login(delegate.page):
 
     def POST(self):
         i = web.input(remember=False, redirect='/')
-        user = web.ctx.site.login(i.username, i.password, i.remember)
-        if user is None:
+        try:
+            web.ctx.site.login(i.username, i.password, i.remember)
+        except Exception, e:
             f = forms.login()
             f.fill(i)
-            f.note = 'Invalid username or password.'
+            f.note = str(e)
             return render.login(f)
         web.seeother(i.redirect)
         

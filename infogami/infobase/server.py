@@ -84,7 +84,7 @@ class versions:
         i = input('query')
         q = simplejson.loads(i.query)
         return site.versions(q)
-                
+        
 class login:
     @jsonify
     def POST(self, sitename):
@@ -92,8 +92,11 @@ class login:
         i = input('username', 'password')
         import account
         a = account.AccountManager(site)
-        a.login(i.username, i.password)
-        return ""
+        user = a.login(i.username, i.password)
+        if user:
+            return user._get_data()
+        else:
+            raise infobase.InfobaseException('Invalid username or password')
 
 class register:
     @jsonify
@@ -112,7 +115,7 @@ class get_user:
         site = get_site(sitename)
         a = account.AccountManager(site)
         user = a.get_user()
-        return user and user.key
+        return user and user._get_data()
 
 def request(path, method, data):
     """Fakes the web request.

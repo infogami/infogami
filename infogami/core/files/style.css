@@ -99,3 +99,14 @@ body
     color:white;
 }
 
+.wrong {
+    color: red;
+} 
+
+.error {
+    background: #ffdfdf;
+    border: 1px solid #ffafaf;
+    margin: 2px;
+    padding: 5px;
+    color: #ff0000;
+}

@@ -21,22 +21,41 @@ class NotFound(ClientException):
     
 class HTTPError(ClientException):
     pass
-
+    
 class Client:
+    """Client to connect to infobase server. 
+    """
     def __init__(self, host, sitename):
         self.host = host
         self.sitename = sitename
         
     def request(self, path, method='GET', data=None):
+        """Sends request to the server.
+        data should be a dictonary. For GET request, it is passed as query string
+        and for POST requests, it is passed as POST data.
+        """
         path = "/%s%s" % (self.sitename, path)
         if self.host:
             data = data and urllib.urlencode(data)
             if data and method == 'GET':
                 path += '?' + data
                 data = None
+            
             conn = httplib.HTTPConnection(self.host)
-            conn.request(method, path, data)
+            env = web.ctx.get('env') or {}
+            
+            if 'HTTP_COOKIE' in env:
+                headers = {'Cookie': env['HTTP_COOKIE']}
+            else:
+                headers = {}
+            
+            conn.request(method, path, data, headers=headers)
             response = conn.getresponse()
+            
+            cookie = response.getheader('Set-Cookie')
+            if cookie:
+                web.header('Set-Cookie', cookie)
+            
             if response.status == 200:
                 out = response.read()
             else:
@@ -45,63 +64,143 @@ class Client:
             import server
             out = server.request(path, method, data)
         
-        import web
         out = simplejson.loads(out)
         out = storify(out)
-        import web
         if out.status == 'fail':
             raise ClientException(out['message'])
         else:
             return out
+            
+class Site:
+    def __init__(self, client):
+        self._client = client
+        self.name = client.sitename
+        # cache for storing pages requested in this HTTP request
+        self._cache = {}
         
-    def get(self, key, revision=None):
+    def _get(self, key, revision=None):
         """Returns properties of the thing with the specified key."""
         if revision: 
             data = {'revision': revision}
         else:
             data = None
-        result = self.request('/get/' + key, data=data)['result']
+        result = self._client.request('/get/' + key, data=data)['result']
         if result is None:
             raise NotFound, key
         else:
             return result
-    
+            
+    def _load(self, key, revision=None):
+        def process(value):
+            if isinstance(value, list):
+                return [process(v) for v in value]
+            elif isinstance(value, dict):
+                return Thing(self, value['key'], None)
+            else:
+                return value
+            
+        if (key, revision) not in self._cache:      
+            data = self._get(key, revision)
+            data = web.storage(data)
+            for k, v in data.items():
+                data[k] = process(v)
+        
+            data['last_modified'] = parse_datetime(data['last_modified'])
+            self._cache[key, revision] = data
+            # it is important to call _fill_backreferences after updating the cache.
+            # otherwise, _fill_backreferences is called recursively for type/type.
+            self._fill_backreferences(key, data)
+        return self._cache[key, revision]
+        
+    def _fill_backreferences(self, key, data):
+        def safeint(x):
+            try: return int(x)
+            except ValueError: return 0
+            
+        if 'env' in web.ctx:
+            i = web.input(_method='GET')
+        else:
+            i = web.storage()
+        page_size = 20
+        for p in data.type.backreferences:
+            offset = page_size * safeint(i.get(p.name + '.page') or '0')
+            q = {
+                'type': p.expected_type.key, 
+                p.property_name: key, 
+                'offset': offset,
+                'limit': page_size
+            }
+            data[p.name] = self.things(q)
+            
+    def get(self, key, revision=None, lazy=False):
+        try:
+            thing = Thing(self, key, data=None, revision=revision)
+            if not lazy:
+                thing._getdata()
+            return thing
+        except NotFound:
+            return None
+
     def things(self, query):
-        web.ctx.infobase_localmode = True
         query = simplejson.dumps(query)
-        return self.request('/things', 'GET', {'query': query})['result']
+        return self._client.request('/things', 'GET', {'query': query})['result']
                 
     def versions(self, query):
+        def process(v):
+            v = web.storage(v)
+            v.created = parse_datetime(v.created)
+            v.author = v.author and self.get(v.author, lazy=True)
+            return v
         query = simplejson.dumps(query)
-        versions =  self.request('/versions', 'GET', {'query': query})['result']
-        
-        for i in range(len(versions)):
-            versions[i] = web.storage(versions[i])
-            versions[i].created = parse_datetime(versions[i].created)
-        return versions
+        versions =  self._client.request('/versions', 'GET', {'query': query})['result']
+        return [process(v) for v in versions]
 
-    def write(self, query, comment):
-        query = simplejson.dumps(query)
-        return self.request('/write', 'POST', dict(query=query, comment=comment))['result']
+    def write(self, query, comment=None):
+        self._run_hooks('before_new_version', query)
+        _query = simplejson.dumps(query)
+        result = self._client.request('/write', 'POST', dict(query=_query, comment=comment))['result']
+        self._run_hooks('on_new_version', query)
+        return result
+
+    def _run_hooks(self, name, query):
+        if isinstance(query, dict):
+            key = query['key']
+            type = query.get('type')
+            # type is none when saving permission
+            if type is not None:
+                if isinstance(type, dict):
+                    type = type['key']
+                type = self.get(type)
+                data = query.copy()
+                data['type'] = type
+                t = self.new(key, data)
+                # call the global _run_hooks function
+                _run_hooks(name, t)
         
-    def login(self, username, password, remember):
-        return self.request('/account/login', 'POST', dict(username=username, password=password))
+    def login(self, username, password, remember=False):
+        return self._client.request('/account/login', 'POST', dict(username=username, password=password))
         
     def register(self, username, displayname, email, password):
-        return self.request('/account/register', 'POST', 
+        return self._client.request('/account/register', 'POST', 
             dict(username=username, displayname=displayname, email=email, password=password))
 
     def get_user(self):
-        return self.request('/account/get_user')['result']
+        data = self._client.request('/account/get_user')['result']
+        user = data and Thing(self, data['key'], data)
+        return user
 
+    def new(self, key, data):
+        """Creates a new thing in memory.
+        """
+        return Thing(self, key, data)
+        
 def parse_datetime(datestring):
-    """Parses datetime from isoformat.
+    """Parses from isoformat.
     Is there any way to do this in stdlib?
     """
     import re, datetime
     tokens = re.split('-|T|:|\.', datestring)
     return datetime.datetime(*map(int, tokens))
-
 
 class Nothing:
     """For representing missing values."""
@@ -192,86 +291,7 @@ class Thing:
     
     def __repr__(self):
         return "<Thing: %s>" % repr(self.key)
-        
-class Site:
-    def __init__(self, client):
-        self.client = client
-        self.name = client.sitename
-        self.cache = {}
-        
-    def _load(self, key, revision=None):
-        def process(value):
-            if isinstance(value, list):
-                return [process(v) for v in value]
-            elif isinstance(value, dict):
-                return Thing(self, value['key'], None)
-            else:
-                return value
-                
-        if (key, revision) not in self.cache:                
-            data = self.client.get(key, revision)
-            for k, v in data.items():
-                data[k] = process(v)
             
-            data['last_modified'] = parse_datetime(data['last_modified'])
-            self.cache[key, revision] = data
-        return self.cache[key, revision]
-        
-    def get(self, key, revision=None, lazy=False):
-        try:
-            thing = Thing(self, key, data=None, revision=revision)
-            if not lazy:
-                thing._getdata()
-            return thing
-        except NotFound:
-            return None
-    
-    def new(self, key, data):
-        """Creates a new thing in memory.
-        """
-        return Thing(self, key, data)
-        
-    def things(self, query):
-        return self.client.things(query)
-        
-    def versions(self, query):
-        versions = self.client.versions(query)
-        for v in versions:
-            author = v.author
-            v.author = v.author and self.get(v.author, lazy=True)
-        return versions
-        
-    def login(self, username, password, remember=False):
-        return self.client.login(username, password, remember)
-    
-    def register(self, username, displayname, email, password):
-        return self.client.register(username, displayname, email, password)
-        
-    def get_user(self):
-        u = self.client.get_user()
-        return u and self.get(u)
-        
-    def write(self, query, comment=None):
-        #@@ quick hack to run hooks on save
-        if isinstance(query, dict):
-            key = query['key']
-            type = query.get('type')
-            # type is none when saving permission
-            if type is not None:
-                if isinstance(type, dict):
-                    type = type['key']
-                type = self.get(type)
-                data = query.copy()
-                data['type'] = type
-                t = self.new(key, data)
-                _run_hooks('before_new_version', t)
-
-        result = self.client.write(query, comment)
-
-        if isinstance(query, dict) and type is not None:
-            _run_hooks('on_new_version', t)
-        return result
-
 # hooks can be registered by extending the hook class
 hooks = []
 class metahook(type):
@@ -297,4 +317,4 @@ if __name__ == "__main__":
     web.config.db_printing = True
     web.load()
     site = Site(Client(None, 'infogami.org'))
-    print site.client.get('', 2)
+    print site.get('', 2)

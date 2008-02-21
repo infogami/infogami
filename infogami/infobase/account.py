@@ -30,16 +30,18 @@ def make_query(username, displayname):
 class AccountManager:
     def __init__(self, site):
         self.site = site
+        
+    def get(self, key):
+        try:
+            return self.site.withKey(key)
+        except infobase.NotFound:
+            return None
 
     def register(self, username, displayname, email, password):
         username = 'user/' + username
         web.ctx.infobase_bootstrap = True
 
-        try:
-            self.site.withKey(username)
-        except infobase.NotFound:
-            pass
-        else:
+        if self.get(username):
             raise infobase.InfobaseException('Username is already used')
 
         if self.has_user(email):
@@ -72,7 +74,8 @@ class AccountManager:
         """Returns the current user from the session."""
         if not web.ctx.get('env'):
             return None
-            
+        
+        print >> web.debug, 'get_user', web.ctx.env
         session = web.cookies(infobase_session=None).infobase_session
         if session:
             user_id, login_time, digest = session.split(',')
@@ -81,7 +84,7 @@ class AccountManager:
 
     def login(self, username, password):
         username = 'user/' + username
-        user = self.site.withKey(username)
+        user = self.get(username)
         if user and self.checkpassword(user, password):
             self.setcookie(user)
             return user

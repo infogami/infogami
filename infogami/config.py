@@ -12,7 +12,7 @@ db_printing = False
 db_kind = 'SQL'
 
 db_parameters = None
-infobase_host = "0.0.0.0:9000"
+infobase_host = None
 site = None
 
 plugins = ['links', 'wikitemplates', 'i18n', 'pages']

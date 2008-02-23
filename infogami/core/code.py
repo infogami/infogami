@@ -258,25 +258,41 @@ class logout(delegate.page):
 class forgot_password(delegate.page):
     path = "/account/forgot_password"
 
-    def GET(self, site):
+    def GET(self):
         f = forms.forgot_password()
         return render.forgot_password(f)
         
-    def POST(self, site):
+    def POST(self):
         i = web.input()
         f = forms.forgot_password()
         if not f.validates(i):
             return render.forgot_password(f)
-        else:    
-            user = db.get_user_by_email(site, i.email)
-            username = web.lstrips(user.name, 'user/')
-            web.config.smtp_server = config.smtp_server
-            password = auth.random_password()
-            auth.set_password(user, password)
-            msg = render.password_mailer(username, password)
+        else:
+            delegate.admin_login()
+            d = web.ctx.site.get_reset_code(i.email)            
+            msg = render.password_mailer(web.ctx.home, d.username, d.code)            
             web.sendmail(config.from_address, i.email, msg.subject.strip(), str(msg))
             return render.passwordsent(i.email)
 
+class reset_password(delegate.page):
+    path = "/account/reset_password"
+    def GET(self):
+        f = forms.reset_password()
+        return render.reset_password(f)
+        
+    def POST(self):
+        i = web.input("code", "username")
+        f = forms.reset_password()
+        if not f.validates(i):
+            return render.reset_password(f)
+        else:
+            try:
+                web.ctx.site.reset_password(i.username, i.code, i.password)
+                web.ctx.site.login(i.username, i.password, False)
+                web.seeother('/')
+            except Exception, e:
+                return "Failed to reset password.<br/><br/> Reason: "  + str(e)
+        
 _preferences = web.storage()
 def register_preferences(name, handler):
     _preferences[name] = handler

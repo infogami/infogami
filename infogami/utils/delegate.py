@@ -57,6 +57,7 @@ def initialize_context():
     context.stylesheets = []
     context.javascripts = []
     context.user = web.ctx.site.get_user()
+    context.site = config.site
     
     i = web.input(_method='GET', rescue="false")
     context.rescue_mode = (i.rescue.lower() == 'true')
@@ -67,13 +68,13 @@ def create_site():
 
 def fakeload():
     from infogami.core import db
-
     web.load()
     web.ctx.ip = None
     context.load()
     context.error = None
     context.stylesheets = []
     context.javascripts = []
+    context.site = config.site
     
     # hack to disable permissions
     web.ctx.infobase_bootstrap = True
@@ -194,3 +195,9 @@ def _load():
         macro.load_macros(plugin.path)
         i18n.load_strings(plugin.path)
         __import__(plugin.module + '.code', globals(), locals(), ['plugins'])
+
+def admin_login():
+    web.ctx.admin_mode = True
+    web.ctx.ip = '127.0.0.1'
+    web.ctx.site.login('admin', config.admin_password)
+    

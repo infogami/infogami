@@ -1,4 +1,4 @@
-"""Write query to create initial type system.
+"""Write query to create initial system objects including type system.
 """
 
 # primitive types
@@ -284,11 +284,19 @@ groups_and_permissions = [
     {
         'key': 'usergroup/everyone',
         'type': 'type/usergroup',
+        'description': 'Group of all users including anonymous users.',
+        'members': []        
+    },
+    {
+        'key': 'usergroup/allusers',
+        'type': 'type/usergroup',
+        'description': 'Group of all registred users.',
         'members': []        
     },
     {
         'key': 'usergroup/admin',
         'type': 'type/usergroup',
+        'description': 'Group of admin users.',
         'members': []
     },
     {
@@ -337,7 +345,16 @@ b =  [
     groups_and_permissions
 ]
 
-types = a + b
+objects = a + b
+
+def bootstrap(site, admin_password):
+    import account
+    import web
+    web.ctx.infobase_bootstrap = True
+    site.write(objects)
+    a = account.AccountManager(site)
+    a.register(username="admin", displayname="Administrator", email="admin@example.com", password=admin_password)
+    a.register(username="useradmin", displayname="User Administrator", email="useradmin@example.com", password=admin_password)
 
 if __name__ == "__main__":
     import web

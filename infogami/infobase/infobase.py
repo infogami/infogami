@@ -82,14 +82,20 @@ class Infobase:
         else:
             raise SiteNotFound(name)
 
-    def create_site(self, name):
-        secret_key = self.randomkey()
-        id = web.insert('site', name=name, secret_key=secret_key)
-        site = Infosite(id, name, secret_key)
+    def create_site(self, name, admin_password):
         import bootstrap
-        web.ctx.infobase_bootstrap = True
-        site.write(bootstrap.types)
-        return site
+        secret_key = self.randomkey()
+        try:
+            web.transact()
+            id = web.insert('site', name=name, secret_key=secret_key)
+            site = Infosite(id, name, secret_key)
+            bootstrap.bootstrap(site, admin_password)
+        except:
+            web.rollback()
+            raise
+        else:
+            web.commit()
+            return site
 
     def randomkey(self):
         import string, random
@@ -292,7 +298,7 @@ class Infosite:
         what = 'thing.key'
         revision = query.pop('revision', MAX_REVISION)
         
-        where = '1 = 1'
+        where = web.reparam('thing.site_id = $self.id', locals())
         
         offset = query.pop('offset', None)
         limit = query.pop('limit', None)
@@ -366,10 +372,14 @@ class Infosite:
 
     @transactify
     def write(self, query, comment=None):
-        import writequery, account
-        a = account.AccountManager(self)
+        import writequery
+        a = self.get_account_manager()
         ctx = writequery.Context(self, comment, author=a.get_user(), ip=web.ctx.get('ip'))
         return ctx.execute(query)
+        
+    def get_account_manager(self):
+        import account
+        return account.AccountManager(self)
         
 if __name__ == "__main__":
     import sys

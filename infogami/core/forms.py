@@ -49,5 +49,13 @@ login_preferences = Form(
 validemail = Validator(_.get("account/forgot_password", "email_not_registered"), 
                         lambda email: db.get_user_by_email(context.site, email))
 forgot_password = Form(
-    Textbox('email', notnull, vemail, validemail, description=_.get("account/forgot_password", "email")),
+    Textbox('email', notnull, vemail, description=_.get("account/forgot_password", "email")),
+)
+
+reset_password = Form(
+    Password('password', notnull, vpass, description=_.get('account/register', 'password')),
+    Password('password2', notnull, description=_.get('account/register', 'confirm_password')),
+    BetterButton("save", label=_.get('account/preferences', 'save')),
+    validators = [
+        Validator(_.get('account/register', 'passwords_did_not_match'), lambda i: i.password == i.password2)]
 )

@@ -9,9 +9,7 @@ urls = (
     "/([^/]*)/things", "things",
     "/([^/]*)/versions", "versions",
     "/([^/]*)/write", "write",
-    "/([^/]*)/account/register", "register",
-    "/([^/]*)/account/login", "login",
-    "/([^/]*)/account/get_user", "get_user",
+    "/([^/]*)/account/(.*)", "account",
 )
 
 def jsonify(f):
@@ -33,7 +31,7 @@ def jsonify(f):
         if web.ctx.get('infobase_localmode'):
             return result
         else:
-            print result
+            web.ctx.output = result
     return g
     
 def input(*a, **kw):
@@ -85,44 +83,71 @@ class versions:
         q = simplejson.loads(i.query)
         return site.versions(q)
         
-class login:
+class account:
+    """Code for handling /account/.*"""
+    def get_method(self):
+        if web.ctx.get('infobase_localmode'):
+            return web.ctx.infobase_method
+        else:
+            return web.ctx.method
+        
     @jsonify
-    def POST(self, sitename):
+    def delegate(self, sitename, method):
         site = get_site(sitename)
+        methodname = "%s_%s" % (self.get_method(), method)
+        
+        m = getattr(self, methodname, None)
+        if m:
+            return m(site)
+        else:
+            web.notfound()
+            raise StopIteration
+        
+    GET = POST = delegate
+
+    def POST_login(self, site):
         i = input('username', 'password')
-        import account
-        a = account.AccountManager(site)
+        a = site.get_account_manager()
         user = a.login(i.username, i.password)
         if user:
             return user._get_data()
         else:
             raise infobase.InfobaseException('Invalid username or password')
 
-class register:
-    @jsonify
-    def POST(self, sitename):
-        site = get_site(sitename)
+    def POST_register(self, site):
         i = input('username', 'password', 'displayname', 'email')
-        import account
-        a = account.AccountManager(site)
+        a = site.get_account_manager()
         a.register(username=i.username, displayname=i.displayname, email=i.email, password=i.password)
         return ""
 
-class get_user:
-    @jsonify
-    def GET(self, sitename):
-        import account
-        site = get_site(sitename)
-        a = account.AccountManager(site)
+    def GET_get_user(self, site):
+        a = site.get_account_manager()
         user = a.get_user()
         return user and user._get_data()
 
+    def GET_get_reset_code(self, site):
+        i = input('email')
+        a = site.get_account_manager()
+        username, code = a.get_user_code(i.email)
+        return dict(username=username, code=code)
+
+    def POST_reset_password(self, site):
+        i = input('username', 'code', 'password')
+        a = site.get_account_manager()
+        return a.reset_password(i.username, i.code, i.password)
+    
+    def POST_update_user(self, site):
+        i = input('old_password', 'new_password', 'email')
+        a = site.get_account_manager()
+        return a.update_user(i.old_password, i.new_password, i.email)
+        
 def request(path, method, data):
     """Fakes the web request.
     Useful when infobase is not run as a separate process.
     """
     web.ctx.infobase_localmode = True
     web.ctx.infobase_input = data or {}
+    web.ctx.infobase_method = method
     for pattern, classname in web.group(urls, 2):
         m = web.re_compile(pattern).match(path)
         if m:
@@ -131,6 +156,9 @@ def request(path, method, data):
             tocall = getattr(cls(), method)
             return tocall(*args)
 
+def run():
+    web.run(urls, globals())
+    
 if __name__ == "__main__":
     web.config.db_parameters = dict(dbn='postgres', db='infobase', user='anand', pw='')
     web.config.db_printing = True

@@ -239,10 +239,10 @@ class Context:
         for group in get_groups(permission):
             if group.key == 'permission/everyone':
                 return True
-            else:
-                if self.author in group.members:
+            elif self.author is not None:    
+                if group.key == 'permission/allusers' or self.author in group.members:
                     return True
-        
+                        
         return False
     
     def can_write(self, key):

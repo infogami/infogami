@@ -28,6 +28,7 @@ class Client:
     def __init__(self, host, sitename):
         self.host = host
         self.sitename = sitename
+        self.cookie = None
         
     def request(self, path, method='GET', data=None):
         """Sends request to the server.
@@ -44,8 +45,9 @@ class Client:
             conn = httplib.HTTPConnection(self.host)
             env = web.ctx.get('env') or {}
             
-            if 'HTTP_COOKIE' in env:
-                headers = {'Cookie': env['HTTP_COOKIE']}
+            cookie = self.cookie or env.get('HTTP_COOKIE')
+            if cookie:
+                headers = {'Cookie': cookie}
             else:
                 headers = {}
             
@@ -53,7 +55,10 @@ class Client:
             response = conn.getresponse()
             
             cookie = response.getheader('Set-Cookie')
-            if cookie:
+            self.cookie = cookie
+            # forgot password is executed in as admin user. 
+            # So, the cookie for the admin user should not be sent to the requested user.
+            if cookie and not web.ctx.get('admin_mode'):
                 web.header('Set-Cookie', cookie)
             
             if response.status == 200:
@@ -183,7 +188,17 @@ class Site:
     def register(self, username, displayname, email, password):
         return self._client.request('/account/register', 'POST', 
             dict(username=username, displayname=displayname, email=email, password=password))
-
+            
+    def get_reset_code(self, email):
+        """Returns the reset code for user specified by the email.
+        This called to send forgot password email. 
+        This should be called after logging in as admin.
+        """
+        return self._client.request('/account/get_reset_code', 'GET', dict(email=email))['result']
+        
+    def reset_password(self, username, code, password):
+        return self._client.request('/account/reset_password', 'POST', dict(username=username, code=code, password=password))
+        
     def get_user(self):
         data = self._client.request('/account/get_user')['result']
         user = data and Thing(self, data['key'], data)

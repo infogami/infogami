@@ -50,11 +50,32 @@ class edit (delegate.mode):
                 p.type = type 
 
         return render.editpage(p)
-    
+        
+    def make_query(self, i):
+        """Make infobase write query from post data."""
+        if not isinstance(i, dict):
+            return i
+            
+        for key, value in i.items():
+            if key in ['key', 'connect', 'create']: # key is never changed
+                continue
+            if isinstance(value, dict):
+                value['connect'] = 'update'
+            elif isinstance(value, list):
+                value = dict(
+                    connect='update_list', 
+                    value=[self.make_query(v) for v in value])
+            else:
+                value = dict(connect='update', value=value)
+            i[key] = value
+            
+        return i
+        
     def POST(self, path):
         i = web.input(_method='post')
         i = web.storage(helpers.unflatten(i))
         i.key = path
+        i.create = 'unless_exists'
         
         _ = web.storage((k, i.pop(k)) for k in i.keys() if k.startswith('_'))
         action = self.get_action(_)
@@ -88,14 +109,16 @@ class edit (delegate.mode):
                 return d.strip()
                    
         i = trim(i)
-        hack(i)  
+        hack(i)
+        from copy import deepcopy
+        q = self.make_query(deepcopy(i))
         
         if action == 'preview':
             p = self.process(i)
             return render.editpage(p, preview=True)
         elif action == 'save':
             try:
-                web.ctx.site.write(i, comment)
+                web.ctx.site.write(q, comment)
                 return web.seeother(web.changequery(query={}))
             except ClientException, e:
                 utils.view.set_error(str(e))
@@ -145,11 +168,17 @@ class permission(delegate.mode):
         if not p:
             return web.seeother('/' + path)
             
-        i = web.input('permission', 'child_permission')
+        i = web.input('permission.key', 'child_permission.key')
         q = {
             'key': path,
-            'permission': i.permission or None,
-            'child_permission': i.child_permission or None,
+            'permission': {
+                'connect': 'update',
+                'key': i['permission.key'] or None,
+            },
+            'child_permission': {
+                'connect': 'update',
+                'key': i['child_permission.key'] or None,
+            }
         }
         
         try:

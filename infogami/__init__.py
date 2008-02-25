@@ -72,6 +72,7 @@ def help(name=None):
 @action
 def install():
     """Setup everything."""
+    from infogami.utils import delegate
     delegate.admin_login()
     for a in _install_hooks:
         print >> web.debug, a.__name__

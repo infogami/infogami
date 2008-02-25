@@ -115,7 +115,8 @@ class ThingList(list):
     def _get_value(self):
         return [t._get_value() for t in self]
 
-class Datum:
+class Datum(object):
+    __slots__ = ['value', 'datatype']
     def __init__(self, value, datatype):
         self.value = value
         self.datatype = datatype
@@ -126,38 +127,6 @@ class Datum:
     def _get_datatype(self):
         return self.datatype
         
-    def coerce(self, ctx, expected_type):
-        if isinstance(expected_type, Thing):
-            expected_type = expected_type.key
-
-        def makesure(condition):
-            if not condition:
-                raise Exception, "%s: expected %s but found %s" % (self.value, expected_type, self.type)
-
-        if self.type is not None:
-            makesure(self.type == expected_type)
-        else:
-            if expected_type not in infobase.TYPES:
-                thing = ctx.site.withKey(self.value)
-                self.type = expected_type
-                self.datatype = infobase.DATATYPE_REFERENCE
-            elif expected_type == 'type/int':
-                makesure(isinstance(value, int))
-                self.datatype = infobase.TYPES['type/int']
-            elif expected_type == 'type/boolean':
-                makesure(isinstance(value, boolean))
-                self.datatype = infobase.TYPES['type/boolean']
-                self.value = int(self.value)
-            elif expected_type == 'type/float':
-                makesure(isinstance(value, (int, float)))
-                self.datatype = infobase.TYPES['type/float']
-                self.value = float(value)
-            else: # one of 'type/string', 'type/text', 'type/key', 'type/uri', 'type/datetime'
-                self.type = expected_type
-                self.datatype = infobase.TYPES[expected_type]
-                # validate for type/key, type/uri and type/datetime 
-                # (database will anyway do it, but we can give better error messages).
-
     def __repr__(self):
         return repr(self.value)
     __str__ = __repr__
@@ -190,10 +159,11 @@ class Thing:
         def unthingify(thing):
             if isinstance(thing, list):
                 return [unthingify(x) for x in thing]
-            elif isinstance(thing, Thing):
-                return {'key': thing.key}
             elif isinstance(thing, Datum):
-                return thing._get_value()
+                if thing.datatype == DATATYPE_REFERENCE:
+                    return {'key': self._site.withID(thing.value).key}
+                else:
+                    return thing._get_value()
             else:
                 return thing
         
@@ -216,7 +186,21 @@ class Thing:
     def __getitem__(self, key):
         if self._d is None:
             self._load()
-        return self._d[key]
+        value = self._d[key]
+        
+        def process(value):
+            """Return Thing when datatype is reference, Datum object otherwise.
+            Properties of a thing are always stored as Datum objects, 
+            so that it will not keep reference to any thing, which may interfere with caching.
+            """
+            if isinstance(value, list):
+                return [process(v) for v in value]
+            elif value.datatype == DATATYPE_REFERENCE:
+                return self._site.withID(value.value)
+            else:
+                return value
+                
+        return process(value)
         
     def __getattr__(self, key):
         if key.startswith('__'):
@@ -230,11 +214,9 @@ class Thing:
     def _parse_data(self, data):
         d = web.storage()
         for r in data:
-            if r.datatype == DATATYPE_REFERENCE:
-                value = self._site.withID(int(r.value))
-            elif r.datatype in (TYPES['type/string'], TYPES['type/key'], TYPES['type/uri'], TYPES['type/text']):
+            if r.datatype in (TYPES['type/string'], TYPES['type/key'], TYPES['type/uri'], TYPES['type/text']):
                 value = Datum(r.value, r.datatype)
-            elif r.datatype == TYPES['type/int']:
+            elif r.datatype == TYPES['type/int'] or r.datatype == DATATYPE_REFERENCE:
                 value = Datum(int(r.value), r.datatype)
             elif r.datatype == TYPES['type/float']:
                 value = Datum(float(r.value), r.datatype)
@@ -268,9 +250,12 @@ class Infosite:
         self.name = name
         self.secret_key = secret_key
         
-    def get_object(self, key):
-        d = web.select('thing', where='site_id = $self.id AND key = $key', vars=locals())
-        obj = d and d[0] or None
+    def get(self, key):
+        """Same as withKey, but returns None instead of raising exception when object is not found."""
+        try:
+            return self.withKey(key)
+        except NotFound:
+            return None
 
     def withKey(self, key, revision=None, lazy=False):
         try:
@@ -333,7 +318,6 @@ class Infosite:
         
         query = web.storage(query)
         
-        
         if order and order.startswith('-'):
             order = order[1:]
             desc = " desc"
@@ -370,12 +354,24 @@ class Infosite:
             out.append(dict(r))
         return out
 
-    @transactify
     def write(self, query, comment=None):
-        import writequery
-        a = self.get_account_manager()
-        ctx = writequery.Context(self, comment, author=a.get_user(), ip=web.ctx.get('ip'))
-        return ctx.execute(query)
+        web.transact()
+        try:
+            import writequery2 as writequery
+            a = self.get_account_manager()
+            ctx = writequery.Context(self, comment, author=a.get_user(), ip=web.ctx.get('ip'))
+            result =  ctx.execute(query)
+            self.invalidate(result['created'] + result['updated'])
+        except:
+            web.rollback()
+            raise
+        else:
+            web.commit()
+        return result
+    
+    def invalidate(self, keys):
+        """Invalidate the given keys from cache."""
+        pass
         
     def get_account_manager(self):
         import account

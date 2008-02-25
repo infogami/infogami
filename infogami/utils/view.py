@@ -223,6 +223,7 @@ def move(dir, extension, recursive=False, readfunc=None):
                 type = readfunc(open(f).read())
                 pages.append(type)
 
+    delegate.admin_login()
     result = web.ctx.site.write(pages, "install")
     for key in result.created:
         print 'created', key

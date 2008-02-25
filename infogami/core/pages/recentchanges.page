@@ -1,4 +1,5 @@
 {
+    'create': 'unless_exists',
     'key': 'recentchanges', 
     'type': 'type/page', 
     'title': 'Recent Changes', 

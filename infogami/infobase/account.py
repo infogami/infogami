@@ -8,15 +8,18 @@ def make_query(username, displayname):
     group = username + '/usergroup'
     permission = username + '/permission'
     return [{
+        'create': 'unless_exists',
         'key': username,
         'displayname': displayname,
         'type': 'type/user'
     }, {
+        'create': 'unless_exists',
         'key': group,
         'type': 'type/usergroup',
         'members': [username]
     },
     {
+        'create': 'unless_exists',
         'key': permission,
         'type': 'type/permission',
         'readers': ['usergroup/everyone'],
@@ -25,7 +28,10 @@ def make_query(username, displayname):
     },
     {
         'key': username,
-        'permission': permission
+        'permission': {
+            'connect': 'update',
+            'key': permission
+        }
     }]
     
 def admin_only(f):
@@ -40,18 +46,12 @@ def admin_only(f):
 class AccountManager:
     def __init__(self, site):
         self.site = site
-        
-    def get(self, key):
-        try:
-            return self.site.withKey(key)
-        except infobase.NotFound:
-            return None
-
+    
     def register(self, username, displayname, email, password):
         username = 'user/' + username
         web.ctx.infobase_bootstrap = True
 
-        if self.get(username):
+        if self.site.get(username):
             raise infobase.InfobaseException('Username is already used')
 
         if self.has_user(email):
@@ -100,7 +100,7 @@ class AccountManager:
         def _update_email(user, email):
             web.update('user', where='thing_id=$user.id', email=email, vars=locals())
         
-        user = self.get_user()
+        user = self.site.get_user()
         if user is None:
             raise NotFound("Not logged in")
 
@@ -152,7 +152,7 @@ class AccountManager:
             raise infobase.InfobaseException('Password Reset code expired')
             
         username = 'user/' + username
-        user = self.get(username)
+        user = self.site.get(username)
         
         d = web.select('account', where='thing_id=$user.id', vars=locals())
         text = d[0].password + '$' + timestamp
@@ -167,7 +167,7 @@ class AccountManager:
             self.assert_trusted_machine()
             
         username = 'user/' + username
-        user = self.get(username)
+        user = self.site.get(username)
         if user and self.checkpassword(user, password):
             self.setcookie(user)
             return user

@@ -1,4 +1,5 @@
 {
+    'create': 'unless_exists',
     'key': 'templates', 
     'type': 'type/page',
     'title': 'Templates', 

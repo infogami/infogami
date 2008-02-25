@@ -15,7 +15,7 @@ db_parameters = None
 infobase_host = None
 site = None
 
-plugins = ['links', 'wikitemplates', 'i18n', 'pages']
+plugins = ['links', 'wikitemplates']
 
 plugin_path = ['infogami.plugins']
 

@@ -2,8 +2,11 @@
 """
 import web
 import infobase
+import multiple_insert
 
 MAX_INT = 2 ** 31 - 1 
+
+error = infobase.InfobaseException
 
 class Value:
     """Datastucture to store value and its type. 
@@ -55,7 +58,7 @@ class Value:
             makesure(self.type == expected_type)
         else:
             if expected_type not in infobase.TYPES:
-                thing = ctx.site.withKey(self.value)
+                thing = ctx.withKey(self.value)
                 self.type = expected_type
                 self.value = thing.id
                 self.datatype = infobase.DATATYPE_REFERENCE
@@ -79,11 +82,13 @@ class Value:
     __repr__ = __str__
 
 class Query:
-    def __init__(self, ctx, d, path):
+    def __init__(self, ctx, d, path, create=None, connect=None):
         self.ctx = ctx
         self.d = d
         self.path = path
         self.value = None
+        self._create = create
+        self._connect = connect
 
     def get_expected_type(self, type, name):
         if name == 'key':
@@ -93,26 +98,22 @@ class Query:
         elif name in ['permission', 'child_permission']:
             return 'type/permission', True
         else:
-            for p in type._get('properties', []):
+            properties = type._get('properties', [])
+            for p in properties:
                 if p.key.split('/')[-1] == name:
                     return p.expected_type, p.unique.value
         return None, None
-
-    def update(self, thing, key, value):
-        assert isinstance(key, basestring)
-        assert isinstance(value, (Value, list))
-        assert isinstance(thing, infobase.Thing)
-
-        old = thing._get(key, None)
-
+        
+    def assert_expected_type(self, thing, key, value):
+        """Make sure the value has the type as expected."""
         expected_type, unique = self.get_expected_type(thing.type, key)
         if expected_type:
             if unique:
                 if isinstance(value, list):
-                    raise Exception, '%s: expected unique value but found list.' % value
+                    raise error('%s: expected unique value but found list.' % value)
             else:
                 if not isinstance(value, list):
-                    raise Exception, '%s: expected list but found unique value.' % value.value
+                    raise error('%s: expected list but found unique value.' % value.value)
 
             if isinstance(value, list):
                 for v in value:
@@ -120,83 +121,151 @@ class Query:
             else:
                 value.coerce(self.ctx, expected_type)
 
-        def datum2value(d):
-            if isinstance(d, list):
-                return [datum2value(x) for x in d]
-            elif isinstance(d, infobase.Thing):
-                return Value(d, d.type.key)
-            elif isinstance(d, infobase.Datum):
-                def get_type(datatype):
-                    for k, v in infobase.TYPES.items():
-                        if v == datatype: 
-                            return k
-                type = get_type(d._get_datatype())
-                return Value(d.value, type)
-
-        if datum2value(old) == value:
-            return
-        
-        if key == 'permission' and not self.ctx.can_admin(thing.key):
-            raise PermissionDenied('Permission denied to change permission of ' + repr(thing.key))
-        
-        max_rev = MAX_INT
-        revision = self.ctx.get_revision(thing)
-        web.update('datum', 
-            where='thing_id=$thing.id AND key=$key AND end_revision=$max_rev', 
-            end_revision=revision, vars=locals())
-
-        if value:
-            if isinstance(value, list):
-                for i, v in enumerate(value):
-                    web.insert('datum', False, thing_id=thing.id, key=key, value=v.value, datatype=v.get_datatype(), begin_revision=revision, ordering=i)
-            else:
-                web.insert('datum', False, thing_id=thing.id, key=key, value=value.value, datatype=value.get_datatype(), begin_revision=revision)
+    def datum2value(self, d):
+        """Converts Datum/Thing object got from thing.foo to Value."""
+        if isinstance(d, list):
+            return [self.datum2value(x) for x in d]
+        elif isinstance(d, infobase.Thing):
+            return Value(d, d.type.key)
+        elif isinstance(d, infobase.Datum):
+            def get_type(datatype):
+                for k, v in infobase.TYPES.items():
+                    if v == datatype: 
+                        return k
+            type = get_type(d._get_datatype())
+            return Value(d.value, type)
+        else:
+            raise Exception, 'huh?'
 
     def execute(self):
         if self.value:
             return self.value
-        
-        def get(key):
-            try: 
-                return self.ctx.site.withKey(key)
-            except infobase.NotFound: 
-                return None
-
+            
         if isinstance(self.d, list):
             self.value = [q.execute() for q in self.d]
         elif isinstance(self.d, dict):
-            if 'value' in self.d: # primitive type
-                assert 'type' in self.d
+            if self._connect == 'update_list':
+                assert 'value' in self.d
+                assert isinstance(self.d['value'].d, list)
+                self.value = self.d['value'].execute()
+            elif 'value' in self.d: # primitive type
                 value = self.d['value'].execute().value
-                type = self.d['type'].execute().value
+                type = self.d.get('type')
+                type = type and type.execute().value
                 assert isinstance(value, (basestring, int, float, bool))
-                assert isinstance(type, basestring)
+                assert type is None or isinstance(type, basestring)
                 self.value = Value(value, type)
             else:
                 assert 'key' in self.d
                 key = self.d['key'].execute().value
                 assert isinstance(key, basestring)
                 
-                if not self.ctx.can_write(key):
-                    raise infobase.PermissionDenied('Permission denied to modify: ' + repr(key))
-                
-                thing = get(key)
-                
-                if not thing:
-                    assert 'type' in self.d
-                    web.insert('thing', site_id=self.ctx.site.id, key=key)
-                    thing = get(key)
-                    type = self.d['type'].execute()
-                    type.coerce(self.ctx, 'type/type')
-                    thing.type = self.ctx.site.withID(type.value)
-                    
-                for k, v in self.d.items():
-                    v = v.execute()
-                    self.update(thing, k, v)
+                thing = self.ctx.get(key)
+                if thing:
+                    for k, v in self.d.items():
+                        self.connect(thing, k, v)
+                else:
+                    if self._create == 'unless_exists':
+                        if not self.ctx.can_write(key):
+                            raise infobase.PermissionDenied('Permission denied to modify: ' + repr(key))
+
+                        assert 'type' in self.d
+                        thing = self.ctx.create(key)
+                        type = self.d['type'].execute()
+                        type.coerce(self.ctx, 'type/type')
+                        thing._d['type'] = infobase.Datum(type.value, 0)
+                        self.insert_all(thing, self.d)
+                        self._create = 'created'
+                    else:
+                        raise infobase.InfobaseException('Not found: ' + key)
+                        
                 self.value = Value(thing, thing.type.key)
         else:
             self.value = Value(self.d, None)
         return self.value
+        
+    def get_connect(self):
+        if self._connect:
+            return self._connect
+        elif self._create == 'created':
+            return 'update'    
+        return None
+        
+    def connect(self, thing, key, query):
+        if isinstance(query.d, list):
+            for q in query.d:
+                self.connect(thing, key, q)
+            return
+                
+        assert isinstance(key, basestring)
+        #assert isinstance(value, (Value, list))
+        assert isinstance(thing, infobase.Thing)
+            
+        connect = query.get_connect()
+        
+        if connect:
+            if not self.ctx.can_write(thing.key):
+                raise infobase.PermissionDenied('Permission denied to modify: ' + repr(thing.key))        
+            value = query.execute()
+            if connect == 'update': 
+                query._connect = self.update(thing, key, value)
+            elif connect == 'update_list': 
+                query._connect = self.update_list(thing, key, value)
+            elif connect == 'insert':
+                query._connect = self.insert(thing, key, value)
+            elif connect == 'delete':
+                query._connect = self.delete(thing, key, value)
+        
+    def update(self, thing, key, value):
+        self.assert_expected_type(thing, key, value)        
+        assert not isinstance(value, list)
+        old = thing._get(key, None)
+        present = old and self.datum2value(old) == value
+        
+        if present:
+            return "present"
+        else:
+            self.ctx.update(thing, key, value)        
+            return "updated"
+        
+    def update_list(self, thing, key, value):
+        self.assert_expected_type(thing, key, value)        
+        assert isinstance(value, list)
+        self.ctx.update_list(thing, key, value)
+        return 'updated'
+
+    def insert(self, thing, key, value):
+        """Inserts a new value to elements of thing[key] if it is not already inserted."""
+        old = thing._get(key, None)
+        present = old and value in self.datum2value(old)
+        
+        if present:
+            return "present"
+        else:
+            self.ctx.insert(thing, key, value)        
+            return "inserted"
+            
+    def delete(self, thing, key, value):
+        """Deletes value to elements of thing[key]."""
+        old = thing._get(key, None)
+        present = old and value in self.datum2value(old)
+        
+        if present:
+            self.ctx.delete(thing, key, value)
+            return "deleted"
+        else:
+            return "absent"
+        
+    def insert_all(self, thing, d):
+        """Inserts all values of a new thing."""        
+        values = {}
+        for key, value in self.d.items():
+            value = value.execute()
+            self.assert_expected_type(thing, key, value)
+            values[key] = value
+            
+        self.ctx.insert_all(thing, values)
+        #multiple_insert.multiple_insert('datum', data, seqname=False)
 
     def primitive_value(self, value):
         if isinstance(value, int):
@@ -213,7 +282,9 @@ class Query:
     __repr__ = __str__
     
 class Context:
-    """Query execution context for bookkeeping."""
+    """Query execution context for bookkeeping.
+    This also isolates the query execution from interacting with infobase cache.
+    """
     def __init__(self, site, comment, author=None, ip=None):
         self.site = site
         self.comment = comment
@@ -223,16 +294,15 @@ class Context:
         self.revisions = {}
         self.updated = set()
         self.created = set()
+        self.key2id = {}
+        self.cache = {}
         
     def has_permission(self, key, get_groups):
         if web.ctx.get('infobase_bootstrap'):
             return True
             
-        #@@ as of now, only logged-in user can write
-        if not self.author:
-            return False
-            
         permission = self.get_permission(key)
+        
         if permission is None:
             return True
         
@@ -240,7 +310,7 @@ class Context:
             if group.key == 'permission/everyone':
                 return True
             elif self.author is not None:    
-                if group.key == 'permission/allusers' or self.author in group.members:
+                if group.key == 'permission/allusers' or self.author in group._get('members', []):
                     return True
                         
         return False
@@ -260,7 +330,7 @@ class Context:
             return None
         
         try:
-            thing = self.site.withKey(key)
+            thing = self.withKey(key)
         except infobase.NotFound:
             thing = None
         
@@ -283,8 +353,10 @@ class Context:
         if isinstance(q, list):
             return Query(self, [self.make_query(x, "%s/%d" % (path, i)) for i, x in enumerate(q)], path)
         elif isinstance(q, dict):
+            create = q.pop('create', None)
+            connect = q.pop('connect', None)
             d = dict((k, self.make_query(v, path + "/" + k)) for k, v in q.items())
-            return Query(self, d, path)
+            return Query(self, d, path, create, connect)
         else:
             return Query(self, q, path)
 
@@ -292,27 +364,108 @@ class Context:
         query = self.make_query(query)
         query.execute()
         return dict(created=list(self.created), updated=list(self.updated))
-
-if __name__ == "__main__":
-    import config
-    import web
-    q = [{
-        'key': 'pagelist',
-        'type': {'key': 'type/page'},
-        'title': 'Page List',
-        'body': '{{PageList("")}}'
-    },
-    {
-        'key': 'recentchanges',
-        'type': {'key': 'type/page'},
-        'title': 'Recent Changes',
-        'body': '{{RecentChanges("")}}'
-    }]
-
-    q = {
-        'key': 'type/type',
-        'type': 'type/type',
-    }
     
-    ctx = Context(config.site)
-    print ctx.execute([q, q])
+    def process(self, thing):
+        if thing:
+            thing = thing.copy()
+            thing._load()
+            thing._site = self.site
+            self.cache[thing.id] = thing
+            self.key2id[thing.key] = thing.id
+        return thing
+        
+    def withID(self, id):
+        if id in self.cache:
+            return self.cache[id]
+        else:
+            thing = self.site.withID(id)
+            return self.process(thing)
+
+    def withKey(self, key):
+        if key in self.key2id:
+            return self.withID(self.key2id[key])
+        else:
+            thing = self.site.withKey(key)
+            return self.process(thing)
+        
+    def get(self, key):
+        if key in self.key2id:
+            return self.withID(self.key2id[key])
+        else:
+            thing = self.site.get(key)
+            return self.process(thing)
+
+    def create(self, key):
+        """Creates a new thing with the specified key."""
+        id = web.insert('thing', site_id=self.site.id, key=key)
+        thing = infobase.Thing(self, id, key)
+        thing._d = web.storage(key=key)
+        self.key2id[key] = id
+        self.cache[id] = thing
+        return thing
+
+    def insert_all(self, thing, values):
+        # this is called after calling create
+        data = []
+        def insert(thing_id, revision, key, value, ordering=None):
+            if isinstance(value, list):
+                return [insert(thing_id, revision, key, v, i) for i, v in enumerate(value)]
+            else:
+                datatype = value.get_datatype()
+                value = value.value
+                data.append(dict(thing_id=thing_id, begin_revision=revision, 
+                    key=key, value=value, datatype=datatype, ordering=ordering))
+                return infobase.Datum(value, datatype)
+
+        revision = self.get_revision(thing)
+        for key, value in values.items():
+            thing._d[key] = insert(thing.id, revision, key, value)
+        multiple_insert.multiple_insert('datum', data, seqname=False)
+        
+    def update(self, thing, key, value):
+        max_rev = MAX_INT
+        revision = self.get_revision(thing)
+        datatype = value.get_datatype()
+        value = value.value
+        web.update('datum', 
+            where='thing_id=$thing.id AND key=$key AND value=$value AND datatype=$datatype AND end_revision=$max_rev',
+            end_revision=revision, vars=locals())
+
+        web.insert('datum', False, thing_id=thing.id, key=key, value=value, datatype=datatype, begin_revision=revision)
+        thing._d[key] = infobase.Datum(value, datatype)
+        
+    def update_list(self, thing, key, value):
+        max_rev = MAX_INT
+        revision = self.get_revision(thing)
+        web.update('datum', 
+            where='thing_id=$thing.id AND key=$key AND end_revision=$max_rev', 
+            end_revision=revision, vars=locals())
+
+        new_value = []
+        #@@ use multi_insert
+        for i, v in enumerate(value):
+            web.insert('datum', False, thing_id=thing.id, key=key, value=v.value, datatype=v.get_datatype(), begin_revision=revision, ordering=i)
+            new_value.append(infobase.Datum(v.value, v.get_datatype()))
+        thing._d[key] = new_value
+        
+    def insert(self, thing, key, value):
+        datatype = value.get_datatype()
+        value = value.value
+        revision = self.get_revision(thing)
+        web.insert('datum', False, 
+            thing_id=thing.id, begin_revision=revision,
+            key=key, value=value, datatype=datatype, ordering=0)
+        value = infobase.Datum(value, datatype)
+        thing._d[key].append(value)
+        
+    def delete(self, thing, key, value):
+        datatype = value.get_datatype()
+        value = value.value
+        max_rev = MAX_INT            
+        revision = self.get_revision(thing)
+        web.update('datum', 
+            where='thing_id=$thing.id AND end_revision=$max_rev AND key=$key AND value=$value AND datatype=$datatype',
+            end_revision=revision,
+            vars=locals())
+        value = infobase.Datum(value, datatype)
+        thing._d[key].remove(value)

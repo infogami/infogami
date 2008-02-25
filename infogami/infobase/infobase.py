@@ -141,6 +141,12 @@ class Thing:
         self.last_modified = last_modified and last_modified.isoformat()
         self.latest_revision = latest_revision
         self._d = None # data is loaded lazily on demand
+        
+    def copy(self):
+        thing = Thing(self._site, self.id, self.key, None, self.latest_revision, self.revision)
+        thing.last_modified = self.last_modified
+        thing._d = self._d and self._d.copy()
+        return thing
 
     def _get_value(self):
         return self.id
@@ -267,7 +273,7 @@ class Infosite:
         
     def withID(self, id, revision=None):
         try:
-            d = web.select('thing', where='site_id = $self.id AND id = $id', vars=locals())[0]        
+            d = web.select('thing', where='site_id=$self.id AND id=$id', vars=locals())[0]        
         except IndexError:
             raise NotFound, id
         return Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision)
@@ -357,7 +363,7 @@ class Infosite:
     def write(self, query, comment=None):
         web.transact()
         try:
-            import writequery2 as writequery
+            import writequery
             a = self.get_account_manager()
             ctx = writequery.Context(self, comment, author=a.get_user(), ip=web.ctx.get('ip'))
             result =  ctx.execute(query)
@@ -371,7 +377,8 @@ class Infosite:
     
     def invalidate(self, keys):
         """Invalidate the given keys from cache."""
-        pass
+        for key in keys:
+            pass
         
     def get_account_manager(self):
         import account

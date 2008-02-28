@@ -1,7 +1,6 @@
+"""Infobase cache.
 """
-LRU Dictionary.
-"""
-
+                    
 class Node(object):
     """Queue Node."""
     __slots__ = ["key", "value", "next", "prev"]
@@ -128,8 +127,7 @@ class LRU:
     """
     def __init__(self, capacity, d=None):
         self.capacity = capacity
-        if d is None: d = {}
-        self.d = d
+        self.d = d or {}
         self.queue = Queue()
 
     def getnode(self, key, touch=True):
@@ -195,6 +193,49 @@ def lrumemoize(n):
         return g
     return decorator
 
+class ThingCache(LRU):
+    """LRU Cache for storing things. Key can be either id or (site_id, key)."""
+    def __init__(self, capacity):
+        LRU.__init__(self, capacity)
+        self.key2id = {}
+
+    def __contains__(self, key):
+        if isinstance(key, tuple):
+            return key in self.key2id
+        else:
+            return LRU.__contains__(self, key)
+
+    def __getitem__(self, key):
+        if isinstance(key, tuple):
+            key = self.key2id[key]
+        return LRU.__getitem__(self, key)
+
+    def get(self, key, default=None):
+        if key in self:
+            return self[key]
+        else:
+            return None
+
+    def __setitem__(self, key, value):
+        key = value.id
+        LRU.__setitem__(self, key, value)
+        # key2id mapping must be updated whenever a thing is added to the cache
+        self.key2id[value._site.id, value.key] = value.id
+        
+    def __delitem__(self, key):
+        if isinstance(key, tuple):
+            key = self.key2id[key]
+        return LRU.__delitem__(self, key)
+
+    def remove_node(self, node=None):
+        node = LRU.remove_node(self, node)
+        thing = node.value
+        # when a node is removed, its corresponding entry 
+        # from the key2id map must also be removed 
+        del self.key2id[thing._site.id, thing.key]
+        return node
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+    

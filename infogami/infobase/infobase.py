@@ -6,6 +6,9 @@ Each object has a key, that is unique to the site it belongs.
 """
 import web
 from multiple_insert import multiple_insert
+from cache import ThingCache
+
+thingcache = ThingCache(10000)
 
 KEYWORDS = ["id", 
     "action", "create", "update", "insert", "delete", 
@@ -74,13 +77,18 @@ def transactify(f):
     return g
 
 class Infobase:
+    def __init__(self):
+        self.sitecache = {}
+
     def get_site(self, name):
-        d = web.select('site', where='name=$name', vars=locals())
-        if d:
-            s = d[0]
-            return Infosite(s.id, s.name, s.secret_key)
-        else:
-            raise SiteNotFound(name)
+        if name not in self.sitecache:
+            d = web.select('site', where='name=$name', vars=locals())
+            if d:
+                s = d[0]
+                self.sitecache[name] = Infosite(s.id, s.name, s.secret_key)
+            else:
+                raise SiteNotFound(name)
+        return self.sitecache[name]
 
     def create_site(self, name, admin_password):
         import bootstrap
@@ -262,21 +270,31 @@ class Infosite:
             return self.withKey(key)
         except NotFound:
             return None
+            
+    def cachify(self, thing):
+        thingcache[thing.id] = thing
+        return thing
 
     def withKey(self, key, revision=None, lazy=False):
+        if (self.id, key) in thingcache:
+            return thingcache[self.id, key]
+            
         try:
             d = web.select('thing', where='site_id = $self.id AND key = $key', vars=locals())[0]
         except IndexError:
             raise NotFound, key
             
-        return Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision)
+        return self.cachify(Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision))
         
     def withID(self, id, revision=None):
+        if id in thingcache:
+            return thingcache[id]
+    
         try:
             d = web.select('thing', where='site_id=$self.id AND id=$id', vars=locals())[0]        
         except IndexError:
             raise NotFound, id
-        return Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision)
+        return self.cachify(Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision))
 
     def things(self, query):
         assert isinstance(query, dict)
@@ -378,25 +396,10 @@ class Infosite:
     def invalidate(self, keys):
         """Invalidate the given keys from cache."""
         for key in keys:
-            pass
+            if (self.id, key) in thingcache:
+                del thingcache[self.id, key]
         
     def get_account_manager(self):
         import account
         return account.AccountManager(self)
         
-if __name__ == "__main__":
-    import sys
-    import os
-
-    web.config.db_parameters = dict(dbn='postgres', db='infobase', user='anand', pw='') 
-    web.config.db_printing = True
-    web.load()
-    infobase = Infobase()
-    
-    if '--create' in sys.argv:
-        os.system('dropdb infobase; createdb infobase; createlang plpgsql infobase; psql infobase < schema.sql')
-        site = infobase.create_site('infogami.org')
-
-    site = infobase.get_site('infogami.org')
-    for v in  site.versions({'sort': '-created', 'limit':10}):
-        print v

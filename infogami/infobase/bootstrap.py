@@ -89,12 +89,15 @@ def update_metatype():
     return {
         'key': 'type/type',
         'type': 'type/type',
-        'properties': [
-            p('name', 'type/string', True, 0),
-            p('description', 'type/text', True, 1),
-            p('properties', 'type/property', False, 2),
-            p('backreferences', 'type/backreference', False, 3),
-        ]
+        'properties': {
+            'connect': 'update_list',
+            'value': [
+                p('name', 'type/string', True, 0),
+                p('description', 'type/text', True, 1),
+                p('properties', 'type/property', False, 2),
+                p('backreferences', 'type/backreference', False, 3),
+            ]
+        }
     }
 
 def type_user_etal():

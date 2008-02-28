@@ -27,7 +27,7 @@ class view (delegate.mode):
     def GET(self, path):
         i = web.input(v=None)
         p = db.get_version(path, i.v)
-        
+
         if p is None:
             return notfound()
         elif p.deleted:
@@ -112,7 +112,6 @@ class edit (delegate.mode):
         hack(i)
         from copy import deepcopy
         q = self.make_query(deepcopy(i))
-        
         if action == 'preview':
             p = self.process(i)
             return render.editpage(p, preview=True)

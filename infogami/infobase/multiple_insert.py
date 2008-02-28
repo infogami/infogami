@@ -11,7 +11,7 @@ def join(items, sep):
 
 def multiple_insert(tablename, values, seqname=None, _test=False):
     if not values:
-        return
+        return []
 
     keys = values[0].keys()
 

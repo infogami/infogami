@@ -3,7 +3,9 @@ $def with (p, name)
 <table>
     <tr>
         <td>Name</td>
-        <td>$:thinginput("type/string", name + ".name", p.name)</td>        
+        <td>$:thinginput("type/string", name + ".name", p.name)
+            <input type='hidden' name='${name}.type' value='type/property'/>
+        </td>        
     </tr>
     <tr>
         <td>Type</td>

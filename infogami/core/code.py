@@ -51,16 +51,34 @@ class edit (delegate.mode):
 
         return render.editpage(p)
         
-    def make_query(self, i):
+    def make_query(self, value, connect=False):
         """Make infobase write query from post data."""
-        if not isinstance(i, dict):
-            return i
+        if isinstance(value, dict):
+            d = dict()
+            for k, v in value.items():
+                if k in ['key', 'connect', 'create']: # key is never changed
+                    d[k] = v
+                    continue
+                d['create'] = 'unless_exists'
+                d[k] = self.make_query(v)
+                
+            if connect and 'create' not in d:
+                d['connect'] = 'update'
+            return d
+        elif isinstance(value, list):
+            return dict(connect='update_list', value=[self.make_query(v, False) for v in value])
+        else:
+            return dict(connect='update', value=value)
             
         for key, value in i.items():
             if key in ['key', 'connect', 'create']: # key is never changed
                 continue
+                
+            i['create'] = 'unless_exists'
             if isinstance(value, dict):
-                value['connect'] = 'update'
+                value = self.make_query(value)
+                if 'create' not in value:
+                    value['connect'] = 'update'
             elif isinstance(value, list):
                 value = dict(
                     connect='update_list', 
@@ -132,7 +150,7 @@ class edit (delegate.mode):
         def new_version(data):
             thing = db.get_version(data['key'])
             if not thing:
-                thing = web.ctx.site.new(data['key'], {'type': self.process(data['type'])})
+                thing = web.ctx.site.new(data['key'], data)
             return thing
                 
         if isinstance(data, dict):

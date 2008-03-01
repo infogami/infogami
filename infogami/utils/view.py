@@ -204,7 +204,19 @@ def movefiles():
 
 @infogami.install_hook
 def movetypes():
-    move("types", ".type", recursive=False)
+    def property(type, name, expected_type, unique):
+        return {
+            'create': 'unless_exists',
+            'key': type + '/' + name,
+            'name': name,
+            'type': 'type/property',
+            'expected_type': expected_type,
+            'unique': unique
+        }
+        
+    def readfunc(text):
+        return eval(text, {'property': property})
+    move("types", ".type", recursive=False, readfunc=readfunc)
 
 @infogami.install_hook
 def movepages():

@@ -3,7 +3,7 @@
 import re
 import storage
 
-default_type = 'type/page'
+default_type = '/type/page'
 type_patterns = storage.OrderedDict()
 
 def register_type(pattern, typename):

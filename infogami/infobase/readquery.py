@@ -79,12 +79,12 @@ def join(site, type, table, key, value, revision):
 
 def get_datatype(type, key):
     if key == 'key':
-        return infobase.TYPES['type/key']
+        return infobase.TYPES['/type/key']
     elif key == 'type':
         return DATATYPE_REFERENCE
         
     if type == None:
-        return 'type/string'
+        return '/type/string'
         
     key = type.key + '/' + key
     p = None
@@ -99,5 +99,5 @@ def get_datatype(type, key):
         else:
             return DATATYPE_REFERENCE
     else:
-        return infobase.TYPES['type/string']
+        return infobase.TYPES['/type/string']
 

@@ -9,7 +9,7 @@ import i18n
 from context import context
 
 urls = (
-  '/(.*)', 'item'
+  '(/.*)', 'item'
 )
 
 modes = {}
@@ -89,18 +89,16 @@ def delegate(path):
     
     initialize_context()
     
-    pathx = '/' + path
-
     # redirect /foo/ to /foo
-    if pathx != '/' and pathx.endswith('/'):
-        return web.seeother(pathx[:-1])
+    if path != '/' and path.endswith('/'):
+        return web.seeother(path[:-1])
         
-    npath = os.path.normpath(pathx)
-    if npath != pathx:
+    npath = os.path.normpath(path)
+    if npath != path:
         web.seeother(npath)
 
-    if pathx in pages:
-        cls = pages[pathx]            
+    if path in pages:
+        cls = pages[path]            
         if not hasattr(cls, method):
             return web.nomethod(method)
         out = getattr(cls(), method)()

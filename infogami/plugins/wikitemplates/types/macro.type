@@ -1,21 +1,21 @@
 {
     'create': 'unless_exists',
-    'key': 'type/macro',
-    'type': 'type/type',
+    'key': '/type/macro',
+    'type': '/type/type',
     'name': 'Macro',
     'properties': [{
         'create': 'unless_exists',
-        'key': 'type/macro/macro',
+        'key': '/type/macro/macro',
         'name': 'macro',
-        'type': 'type/property',
-        'expected_type': 'type/text',
+        'type': '/type/property',
+        'expected_type': '/type/text',
         'unique': True
     }, {
         'create': 'unless_exists',
-        'key': 'type/macro/description',
+        'key': '/type/macro/description',
         'name': 'description',
-        'type': 'type/property',
-        'expected_type': 'type/string',
+        'type': '/type/property',
+        'expected_type': '/type/string',
         'unique': True
     }]
 }

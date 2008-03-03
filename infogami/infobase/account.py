@@ -11,18 +11,18 @@ def make_query(username, displayname):
         'create': 'unless_exists',
         'key': username,
         'displayname': displayname,
-        'type': 'type/user'
+        'type': '/type/user'
     }, {
         'create': 'unless_exists',
         'key': group,
-        'type': 'type/usergroup',
+        'type': '/type/usergroup',
         'members': [username]
     },
     {
         'create': 'unless_exists',
         'key': permission,
-        'type': 'type/permission',
-        'readers': ['usergroup/everyone'],
+        'type': '/type/permission',
+        'readers': ['/usergroup/everyone'],
         'writers': [group],
         'admins': [group]
     },
@@ -38,7 +38,7 @@ def admin_only(f):
     """Decorator to limit a function to admin user only."""
     def g(self, *a, **kw):
         user = self.get_user()
-        if user is None or user.key != 'user/admin':
+        if user is None or user.key != '/user/admin':
             raise infobase.InfobaseException('Permission denied')
         return f(self, *a, **kw)
     return g
@@ -48,7 +48,7 @@ class AccountManager:
         self.site = site
     
     def register(self, username, displayname, email, password):
-        username = 'user/' + username
+        username = '/user/' + username
         web.ctx.infobase_bootstrap = True
 
         if self.site.get(username):
@@ -140,7 +140,7 @@ class AccountManager:
 
         timestamp = str(int(time.time()))
         text = d.password + '$' + timestamp
-        username = web.lstrips(user.key, 'user/')
+        username = web.lstrips(user.key, '/user/')
         return username, timestamp + '$' + self._generate_salted_hash(self.site.secret_key, text)
         
     def reset_password(self, username, code, password):
@@ -151,7 +151,7 @@ class AccountManager:
         if int(timestamp) + SEC_PER_WEEK < int(time.time()):
             raise infobase.InfobaseException('Password Reset code expired')
             
-        username = 'user/' + username
+        username = '/user/' + username
         user = self.site.get(username)
         
         d = web.select('account', where='thing_id=$user.id', vars=locals())
@@ -166,7 +166,7 @@ class AccountManager:
         if username == 'admin':
             self.assert_trusted_machine()
             
-        username = 'user/' + username
+        username = '/user/' + username
         user = self.site.get(username)
         if user and self.checkpassword(user, password):
             self.setcookie(user)

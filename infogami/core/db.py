@@ -22,19 +22,19 @@ class ValidationException(Exception): pass
 def get_user(site, userid):
     try:
         u = tdb.withID(userid)
-        if u.type == get_type(site, 'type/user'):
+        if u.type == get_type(site, '/type/user'):
             return u
     except tdb.NotFound:
         return None
         
 def get_user_by_name(site, username):
     try:
-        return tdb.withName('user/' + username, site)
+        return tdb.withName('/user/' + username, site)
     except tdb.NotFound:
         return None
 
 def get_user_by_email(site, email):
-    result = tdb.Things(parent=site, type=get_type(site, 'type/user'), email=email).list()
+    result = tdb.Things(parent=site, type=get_type(site, '/type/user'), email=email).list()
     if result:
         return result[0]
     
@@ -42,7 +42,7 @@ def new_user(site, username, displayname, email, password):
     tdb.transact()
     try:
         d = dict(displayname=displayname, email=email)
-        user = tdb.new('user/' + username, site, get_type(site, "type/user"), d)
+        user = tdb.new('/user/' + username, site, get_type(site, "/type/user"), d)
         user.save()
     
         import auth
@@ -92,8 +92,8 @@ def list_pages(path):
     return _list_pages(path, limit=100)
     
 def _list_pages(path, limit=None):
-    if path == "":
-        pattern = '*'
+    if path == "/":
+        pattern = '/*'
     else:
         pattern = path + '/*'
     
@@ -102,7 +102,7 @@ def _list_pages(path, limit=None):
         'sort': 'key'
     }
     if limit:
-        q['limit'] = limit    
+        q['limit'] = limit
     return [web.ctx.site.get(key, lazy=True) for key in web.ctx.site.things(q)]    
                    
 def get_things(typename, prefix, limit):

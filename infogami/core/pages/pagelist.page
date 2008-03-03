@@ -1,8 +1,8 @@
 {
     'create': 'unless_exists',
-    'key': 'pagelist', 
-    'type': 'type/page',
+    'key': '/pagelist', 
+    'type': '/type/page',
     'title': 'Page List', 
-    'body': '{{PageList()}}'
+    'body': '{{PageList("/")}}'
 }
 

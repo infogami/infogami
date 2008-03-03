@@ -22,8 +22,8 @@ class Value:
 
         if self.type == None:
             if isinstance(value, bool):
-                self.type = type = 'type/boolean'
-                self.datatype = infobase.TYPES['type/boolean']
+                self.type = type = '/type/boolean'
+                self.datatype = infobase.TYPES['/type/boolean']
 
         if self.datatype == infobase.DATATYPE_REFERENCE:
             self.value = value.id
@@ -31,7 +31,7 @@ class Value:
         else:
             self.value = value
             self.key = None
-            if type == "type/boolean":
+            if type == '/type/boolean':
                 self.value = int(value)
 
     def __eq__(self, other):
@@ -39,7 +39,7 @@ class Value:
 
     def get_datatype(self):
         if self.datatype is None:
-            return infobase.TYPES['type/string']
+            return infobase.TYPES['/type/string']
         else:
             return self.datatype
 
@@ -62,17 +62,17 @@ class Value:
                 self.type = expected_type
                 self.value = thing.id
                 self.datatype = infobase.DATATYPE_REFERENCE
-            elif expected_type == 'type/int':
+            elif expected_type == '/type/int':
                 makesure(isinstance(self.value, int))
-                self.datatype = infobase.TYPES['type/int']
-            elif expected_type == 'type/boolean':
-                self.datatype = infobase.TYPES['type/boolean']
+                self.datatype = infobase.TYPES['/type/int']
+            elif expected_type == '/type/boolean':
+                self.datatype = infobase.TYPES['/type/boolean']
                 self.value = int(bool(self.value))
-            elif expected_type == 'type/float':
+            elif expected_type == '/type/float':
                 makesure(isinstance(self.value, (int, float)))
-                self.datatype = infobase.TYPES['type/float']
+                self.datatype = infobase.TYPES['/type/float']
                 self.value = float(self.value)
-            else: # one of 'type/string', 'type/text', 'type/key', 'type/uri', 'type/datetime'
+            else: # one of '/type/string', '/type/text', '/type/key', '/type/uri', '/type/datetime'
                 self.type = expected_type
                 self.datatype = infobase.TYPES[expected_type]
                 # validate for type/key, type/uri and type/datetime 
@@ -92,11 +92,11 @@ class Query:
 
     def get_expected_type(self, type, name):
         if name == 'key':
-            return 'type/key', True
+            return '/type/key', True
         elif name == 'type':
-            return 'type/type', True
+            return '/type/type', True
         elif name in ['permission', 'child_permission']:
-            return 'type/permission', True
+            return '/type/permission', True
         else:
             properties = type._get('properties', [])
             for p in properties:
@@ -172,7 +172,7 @@ class Query:
                         assert 'type' in self.d
                         thing = self.ctx.create(key)
                         type = self.d['type'].execute()
-                        type.coerce(self.ctx, 'type/type')
+                        type.coerce(self.ctx, '/type/type')
                         thing._d['type'] = infobase.Datum(type.value, 0)
                         self.insert_all(thing, self.d)
                         self._create = 'created'
@@ -269,13 +269,13 @@ class Query:
 
     def primitive_value(self, value):
         if isinstance(value, int):
-            return Value(value, 'type/int')
+            return Value(value, '/type/int')
         elif isinstance(value, bool):
-            return Value(int(value), 'type/boolean')
+            return Value(int(value), '/type/boolean')
         elif isinstance(value, float):
-            return Value(value, 'type/float')
+            return Value(value, '/type/float')
         else:
-            return Value(value, 'type/string')
+            return Value(value, '/type/string')
 
     def __str__(self):
         return "<query: %s>" % repr(self.d)
@@ -397,6 +397,8 @@ class Context:
 
     def create(self, key):
         """Creates a new thing with the specified key."""
+        import re
+        assert re.match('^/[^\s]*', key), "bad key: " + repr(key)
         id = web.insert('thing', site_id=self.site.id, key=key)
         thing = infobase.Thing(self, id, key)
         thing._d = web.storage(key=key)

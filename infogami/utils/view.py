@@ -146,7 +146,7 @@ def thingify(type, value):
         from infogami.core import db
         type = db.get_version(type)
     
-    PRIMITIVE_TYPES = "type/key", "type/string", "type/text", "type/int", "type/float", "type/boolean"    
+    PRIMITIVE_TYPES = "/type/key", "/type/string", "/type/text", "/type/int", "/type/float", "/type/boolean"    
     from infogami.infobase import client
     
     if type.key not in PRIMITIVE_TYPES and isinstance(value, basestring) and not value.strip():
@@ -209,7 +209,7 @@ def movetypes():
             'create': 'unless_exists',
             'key': type + '/' + name,
             'name': name,
-            'type': 'type/property',
+            'type': '/type/property',
             'expected_type': expected_type,
             'unique': unique
         }
@@ -222,7 +222,7 @@ def movetypes():
             'create': 'unless_exists',
             'key': type + '/' + name,
             'name': name,
-            'type': 'type/backreference',
+            'type': '/type/backreference',
             'expected_type': expected_type
         }
         

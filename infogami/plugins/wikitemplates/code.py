@@ -26,6 +26,8 @@ class WikiSource(DictMixin):
         return ""
         
     def __getitem__(self, key):
+        if not key.startswith('/'):
+            key = '/' + key
         key = self.process_key(key)
         root = self.getroot()
         if root is None or context.get('rescue_mode'):
@@ -36,20 +38,20 @@ class WikiSource(DictMixin):
         return [self.unprocess_key(k) for k in self.templates.keys()]
         
     def process_key(self, key):
-        return 'templates/%s.tmpl' % key
+        return '/templates%s.tmpl' % key
             
     def unprocess_key(self, key):
-        key = web.lstrips(key, 'templates/')
+        key = web.lstrips(key, '/templates')
         key = web.rstrips(key, '.tmpl')
         return key
     
 class MacroSource(WikiSource):
     def process_key(self, key):
         # macro foo is availble at path macros/foo
-        return 'macros/' + key
+        return '/macros' + key
         
     def unprocess_key(self, key):
-        return web.lstrips(key, 'macros/')
+        return web.lstrips(key, '/macros')
 
 def get_user_root():
     from infogami.core import db
@@ -84,11 +86,11 @@ macro.macrostore.add_dict(MacroSource(wikimacros))
 class hooks(client.hook):
     def on_new_version(self, page):
         """Updates the template/macro cache, when a new version is saved or deleted."""
-        if page.type.key == 'type/template':
+        if page.type.key == '/type/template':
             _load_template(page)            
-        elif page.type.key == 'type/macro':
+        elif page.type.key == '/type/macro':
             _load_macro(page)
-        elif page.type.key == 'type/delete':
+        elif page.type.key == '/type/delete':
             if page.name in wikitemplates:
                 del wikitemplates[page.key]
             if page.name in wikimacros:
@@ -96,12 +98,20 @@ class hooks(client.hook):
                 
     def before_new_version(self, page):
         """Validates template/macro, before it is saved, by compiling it."""
-        if page.type.key == 'type/template':
+        if page.type.key == '/type/template':
             _compile_template(page.key, page.body)
-        elif page.type.key == 'type/macro':
+        elif page.type.key == '/type/macro':
             _compile_template(page.key, page.macro)
 
 def _compile_template(name, text):
+    def stringify(value):
+        if isinstance(value, dict):
+            return value['value']
+        else:
+            return value
+            
+    text = stringify(text)
+            
     try:
         return web.template.Template(text, filter=web.websafe, filename=name)
     except web.template.ParseError, e:
@@ -135,17 +145,17 @@ def setup():
         load_templates(site)
         
     from infogami.utils import types
-    types.register_type('templates/[^/]*.tmpl$', 'type/template')
-    types.register_type('type/[^/]*/[^/]*.tmpl$', 'type/template')
-    types.register_type('^type/[^/]*$', 'type/type')
-    types.register_type('macros/[^/]*$', 'type/macro')
+    types.register_type('/templates/[^/]*.tmpl$', '/type/template')
+    types.register_type('/type/[^/]*/[^/]*.tmpl$', '/type/template')
+    types.register_type('^/type/[^/]*$', '/type/type')
+    types.register_type('/macros/[^/]*$', '/type/macro')
     
 @infogami.install_hook
 @infogami.action
 def movetemplates(prefix_pattern=None):
     """Move templates to wiki."""
     def get_title(name):
-        if name.startswith('type/'):
+        if name.startswith('/type/'):
             type, name = name.rsplit('/', 1)
             title = '%s template for %s' % (name, type)
         else:
@@ -155,12 +165,12 @@ def movetemplates(prefix_pattern=None):
     templates = []
     
     for name, t in template.disktemplates.items():
-        prefix = 'templates/'
+        prefix = '/templates/'
         wikipath = _wikiname(name, prefix, '.tmpl')
         if prefix_pattern is None or wikipath.startswith(prefix_pattern):
             title = get_title(name)
             body = open(t.filepath).read()
-            d = web.storage(create='unless_exists', key=wikipath, type='type/template', title=title, body=body)
+            d = web.storage(create='unless_exists', key=wikipath, type='/type/template', title=title, body=body)
             templates.append(d)
             
     delegate.admin_login()
@@ -176,9 +186,9 @@ def movemacros():
     """Move macros to wiki."""
     macros = []
     for name, m in macro.diskmacros.items():
-        key = _wikiname(name, 'macros/', '')
+        key = _wikiname(name, '/macros/', '')
         body = open(m.filepath).read()
-        d = web.storage(create='unless_exists', key=key, type='type/macro', description='', macro=body)
+        d = web.storage(create='unless_exists', key=key, type='/type/macro', description='', macro=body)
         macros.append(d)
     delegate.admin_login()
     result = web.ctx.site.write(macros)

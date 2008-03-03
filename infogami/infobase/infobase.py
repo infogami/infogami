@@ -18,14 +18,14 @@ KEYWORDS = ["id",
 ]
     
 TYPES = {}
-TYPES['type/key'] = 1
-TYPES['type/string'] = 2
-TYPES['type/text'] = 3
-TYPES['type/uri'] = 4
-TYPES['type/boolean'] = 5
-TYPES['type/int'] = 6
-TYPES['type/float'] = 7
-TYPES['type/datetime'] = 8
+TYPES['/type/key'] = 1
+TYPES['/type/string'] = 2
+TYPES['/type/text'] = 3
+TYPES['/type/uri'] = 4
+TYPES['/type/boolean'] = 5
+TYPES['/type/int'] = 6
+TYPES['/type/float'] = 7
+TYPES['/type/datetime'] = 8
 
 DATATYPE_REFERENCE = 0
 TYPE_REFERENCE = 0
@@ -228,13 +228,13 @@ class Thing:
     def _parse_data(self, data):
         d = web.storage()
         for r in data:
-            if r.datatype in (TYPES['type/string'], TYPES['type/key'], TYPES['type/uri'], TYPES['type/text']):
+            if r.datatype in (TYPES['/type/string'], TYPES['/type/key'], TYPES['/type/uri'], TYPES['/type/text']):
                 value = Datum(r.value, r.datatype)
-            elif r.datatype == TYPES['type/int'] or r.datatype == DATATYPE_REFERENCE:
+            elif r.datatype == TYPES['/type/int'] or r.datatype == DATATYPE_REFERENCE:
                 value = Datum(int(r.value), r.datatype)
-            elif r.datatype == TYPES['type/float']:
+            elif r.datatype == TYPES['/type/float']:
                 value = Datum(float(r.value), r.datatype)
-            elif r.datatype == TYPES['type/boolean']:
+            elif r.datatype == TYPES['/type/boolean']:
                 value = Datum(bool(int(r.value)), r.datatype)
             else:
                 raise Exception, "unknown datatype: %s" % r.datatype

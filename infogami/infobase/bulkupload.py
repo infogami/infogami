@@ -5,6 +5,7 @@ All the inserts are merged to give better performance.
 import web
 from infobase import TYPES, DATATYPE_REFERENCE
 import datetime
+import re
 
 def sqlin(name, values):
     """
@@ -28,6 +29,7 @@ def sqlin(name, values):
         return name + ' IN ('+ sqljoin(values, ", ") + ')'
         
 def multiple_insert(table, values, seqname=None):
+    """Inserts multiple rows into a table using sql copy."""
     def get_table_columns(table):
         # Postgres query to get all column names. 
         # Got by runing sqlalchemy with echo=True.
@@ -73,7 +75,7 @@ def multiple_insert(table, values, seqname=None):
         
     def write(path, data):
         f = open(path, 'w')
-        f.write(data)
+        f.write(web.utf8(data))
         f.close()
         
     if not values:
@@ -147,9 +149,11 @@ class BulkUpload:
             result = []
         if isinstance(query, list):
             for q in query: 
-                self.find_creates(q, result)
+                self.find_keys(q, result)
         elif isinstance(query, dict) and 'key' in query:
+            assert re.match('^/[^ \t\n]*$', query['key']), 'Bad key: ' + repr(query['key'])
             result.append(query['key'])
+            
         return result
     
     def find_creates(self, query, result=None):
@@ -206,13 +210,13 @@ class BulkUpload:
                             append(thing_id, key, _value, datatype, None)
                 return (thing_id, DATATYPE_REFERENCE)
         elif isinstance(query, basestring):
-            return (query, TYPES['type/string'])
+            return (query, TYPES['/type/string'])
         elif isinstance(query, int):
-            return (query, TYPES['type/int'])
+            return (query, TYPES['/type/int'])
         elif isinstance(query, float):
-            return (query, TYPES['type/float'])
+            return (query, TYPES['/type/float'])
         elif isinstance(query, bool):
-            return (query, TYPES['type/boolean'])
+            return (query, TYPES['/type/boolean'])
         else:
             raise Exception, '%s: invalid value: %s' (path, repr(query))
 
@@ -228,11 +232,11 @@ if __name__ == "__main__":
     def book(i):
         return {
             'create': 'unless_exists',
-            'key': 'b/b%d' % i,
+            'key': u'/b/b%d' % i,
             'title': "title-%d" % i,
-            'description': {'type': 'type/text', 'value': 'description-%d' % i},
-            'author': {'create': 'unless_exists', 'key': 'a/a%d' % i, 'name': 'author %d' % i},
-            'publisher': {'create': 'unless_exists', 'key': 'p/%d' % i, 'name': 'publisher %d' % i},
+            'description': {'type': '/type/text', 'value': 'description-%d' % i},
+            'author': {'create': 'unless_exists', 'key': '/a/a%d' % i, 'name': 'author %d' % i},
+            'publisher': {'create': 'unless_exists', 'key': '/p/%d' % i, 'name': 'publisher %d' % i},
         }
         
     if len(sys.argv) > 1:

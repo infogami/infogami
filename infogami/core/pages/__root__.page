@@ -1,7 +1,7 @@
 {
     'create': 'unless_exists',
-    'key': '',
-    'type': 'type/page',
+    'key': '/',
+    'type': '/type/page',
     'title': 'Welcome', 
     'body': 'Infogami is a free, easy-to-use, structured wiki.\n'
             'Visit [Infogami Developer Site](http://infogami.org/dev/) for more details.\n\n'

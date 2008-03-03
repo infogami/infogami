@@ -3,8 +3,8 @@ bulkupload script to upload multiple objects at once.
 All the inserts are merged to give better performance.
 """
 import web
-from multiple_insert import multiple_insert
 from infobase import TYPES, DATATYPE_REFERENCE
+import datetime
 
 def sqlin(name, values):
     """
@@ -26,11 +26,88 @@ def sqlin(name, values):
     else:
         values = [web.reparam('$v', locals()) for v in values]
         return name + ' IN ('+ sqljoin(values, ", ") + ')'
-
+        
+def multiple_insert(table, values, seqname=None):
+    def get_table_columns(table):
+        # Postgres query to get all column names. 
+        # Got by runing sqlalchemy with echo=True.
+        q = """
+        SELECT a.attname,
+          pg_catalog.format_type(a.atttypid, a.atttypmod),
+          (SELECT substring(d.adsrc for 128) FROM pg_catalog.pg_attrdef d
+           WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef)
+          AS DEFAULT,
+          a.attnotnull, a.attnum, a.attrelid as table_oid
+        FROM pg_catalog.pg_attribute a
+        WHERE a.attrelid = (
+            SELECT c.oid
+            FROM pg_catalog.pg_class c
+                 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+                 WHERE (pg_catalog.pg_table_is_visible(c.oid))
+                 AND c.relname = $table AND c.relkind in ('r','v')
+        ) AND a.attnum > 0 AND NOT a.attisdropped
+        ORDER BY a.attnum;
+        """ 
+        return [r.attname for r in web.query(q, locals())]
+    
+    def escape(value):
+        if value is None:
+            return "\N"
+        elif isinstance(value, basestring): 
+            value = value.replace('\\', r'\\') # this must be the first one
+            value = value.replace('\t', r'\t')
+            value = value.replace('\r', r'\r')
+            value = value.replace('\n', r'\n')
+            return value
+        elif isinstance(value, bool):
+            return value and 't' or 'f'
+        else:
+            return str(value)
+            
+    def increment_sequence(seqname, n):
+        """Increments a sequence by the given amount."""
+        d = web.query(
+            "SELECT setval('%s', $n + (SELECT last_value FROM %s), true) + 1 - $n AS START" % (seqname, seqname), 
+            locals())
+        return d[0].start
+        
+    def write(path, data):
+        f = open(path, 'w')
+        f.write(data)
+        f.close()
+        
+    if not values:
+        return []
+        
+    if seqname is None:
+        seqname = table + "_id_seq"
+        
+    #print "inserting %d rows into %s" % (len(values), table)
+        
+    columns = get_table_columns(table)
+    if seqname:
+        n = len(values)
+        start = increment_sequence(seqname, n)
+        ids = range(start, start+n)
+        for v, id in zip(values, ids):
+            v['id'] = id
+    else:
+        ids = None
+        
+    data = []
+    for v in values:
+        assert set(v.keys()) == set(columns)
+        data.append("\t".join([escape(v[c]) for c in columns]))
+    write("/tmp/data.copy", "\n".join(data))
+    web.query("COPY %s FROM '/tmp/data.copy'" % table)
+    return ids
+        
 class BulkUpload:
     def __init__(self, site):
         self.site = site
         self.key2id = {}
+        self.created = []
+        self.now = datetime.datetime.utcnow().isoformat()
         
     def upload(self, query):
         """Inserts"""
@@ -44,7 +121,7 @@ class BulkUpload:
             raise
         else:
             web.commit()
-            
+                
     def process_creates(self, query):
         keys = set(self.find_keys(query))
         tobe_created = set(self.find_creates(query))
@@ -52,12 +129,18 @@ class BulkUpload:
         result = web.select('thing', what='id, key', where=sqlin('key', keys))
         for r in result:
             self.key2id[r.key] = r.id
+    
+        d = dict(site_id=self.site.id, created=self.now, last_modified=self.now, latest_revision=1, deleted=False)
         
-        values = [dict(key=k, site_id=self.site.id) for k in tobe_created if k not in self.key2id]
+        tobe_created = [k for k in tobe_created if k not in self.key2id] 
+        values = [dict(d, key=k) for k in tobe_created if k not in self.key2id]
         ids = multiple_insert('thing', values)
         for v, id in zip(values, ids):
             self.key2id[v['key']] = id
-        multiple_insert('version', [dict(thing_id=id) for id in ids])
+        
+        d = dict(created=self.now, revision=1, author_id=None, ip=None, comment=None)    
+        multiple_insert('version', [dict(d, thing_id=id) for id in ids])
+        self.created = tobe_created
     
     def find_keys(self, query, result=None):
         if result is None:
@@ -90,14 +173,16 @@ class BulkUpload:
             self.prepare_datum(q, values)
         multiple_insert('datum', values, seqname=False)
         
-    def prepare_datum(self, query, result):
+    def prepare_datum(self, query, result, path=""):
         """This is a funtion with side effect. 
         It append values to be inserted to datum table into result and return (value, datatype) for that query.
         """
+        max_rev = 2 ** 31 - 1
         def append(thing_id, key, value, datatype, ordering):
             result.append(dict(
                 thing_id=thing_id, 
-                begin_revision=1, 
+                begin_revision=1,
+                end_revision = max_rev, 
                 key=key, 
                 value=value, 
                 datatype=datatype, 
@@ -108,16 +193,17 @@ class BulkUpload:
                 return (query['value'], TYPES[query['type']])
             else:
                 thing_id = self.key2id[query['key']]
-                for key, value in query.items():
-                    if 'key' == 'create': 
-                        continue
-                    if isinstance(value, list):
-                        for i, v in enumerate(value):
-                            _value, datatype = self.prepare_datum(v, result)
-                            append(thing_id, key, _value, datatype, i)
-                    else:
-                        _value, datatype = self.prepare_datum(value, result)
-                        append(thing_id, key, _value, datatype, None)
+                if query['key'] in self.created:
+                    for key, value in query.items():
+                        if key == 'create': 
+                            continue
+                        if isinstance(value, list):
+                            for i, v in enumerate(value):
+                                _value, datatype = self.prepare_datum(v, result, "%s/%s#%d" % (path, key, i))
+                                append(thing_id, key, _value, datatype, i)
+                        else:
+                            _value, datatype = self.prepare_datum(value, result, "%s/%s" % (path, key))
+                            append(thing_id, key, _value, datatype, None)
                 return (thing_id, DATATYPE_REFERENCE)
         elif isinstance(query, basestring):
             return (query, TYPES['type/string'])
@@ -128,9 +214,11 @@ class BulkUpload:
         elif isinstance(query, bool):
             return (query, TYPES['type/boolean'])
         else:
-            raise Exception, 'invalid value: ' + repr(value)    
+            raise Exception, '%s: invalid value: %s' (path, repr(query))
 
 if __name__ == "__main__":
+    import sys
+    
     web.config.db_parameters = dict(dbn='postgres', db='infobase', user='anand', pw='') 
     #web.config.db_printing = True
     web.load()
@@ -146,9 +234,27 @@ if __name__ == "__main__":
             'author': {'create': 'unless_exists', 'key': 'a/a%d' % i, 'name': 'author %d' % i},
             'publisher': {'create': 'unless_exists', 'key': 'p/%d' % i, 'name': 'publisher %d' % i},
         }
+        
+    if len(sys.argv) > 1:
+        n = int(sys.argv[1])
+    else:
+        n = 100
 
-    web.transact()
-    for j in range(200):
-        q = [book(j * 100 + i) for i in range(100)]
+    if len(sys.argv) > 2:
+        times = int(sys.argv[2])
+    else:
+        times = 10
+        
+    start = web.query('select last_value from thing_id_seq')[0].last_value
+    print "database has %d things" % start
+        
+    import time
+
+    for i in range(times):
+        t1 = time.time()
+        q = [book(start+i) for i in range(n)]
+        start += n
         BulkUpload(site).upload(q)
-    web.rollback()
+        t2 = time.time()
+        t = t2 - t1
+        print "inserting %d records took %f seconds (%f records/sec)" % (n, t, n/t)

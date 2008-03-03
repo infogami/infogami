@@ -39,7 +39,7 @@ CREATE TABLE datum (
     value text,
     datatype int, --- 0: reference, 1: key, 2: string, 3: text, 4: uri, 5: boolean, 6: int, 7: float, 8: datatime
     ordering int default null,
-    CHECK(key ~ '^[a-z][a-z/_]*$')
+    CHECK(key ~ '^[a-z][a-z0-9/_]*$')
 );
 
 CREATE TABLE account (

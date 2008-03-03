@@ -204,8 +204,8 @@ def movefiles():
 
 @infogami.install_hook
 def movetypes():
-    def property(type, name, expected_type, unique):
-        return {
+    def property(type, name, expected_type, unique, rendering_hint=None):
+        q = {
             'create': 'unless_exists',
             'key': type + '/' + name,
             'name': name,
@@ -213,9 +213,21 @@ def movetypes():
             'expected_type': expected_type,
             'unique': unique
         }
+        if rendering_hint:
+            q['rendering_hint'] = rendering_hint
+        return q
+        
+    def backreference(type, name, expected_type):
+        return {
+            'create': 'unless_exists',
+            'key': type + '/' + name,
+            'name': name,
+            'type': 'type/backreference',
+            'expected_type': expected_type
+        }
         
     def readfunc(text):
-        return eval(text, {'property': property})
+        return eval(text, {'property': property, 'backreference': backreference})
     move("types", ".type", recursive=False, readfunc=readfunc)
 
 @infogami.install_hook

@@ -242,7 +242,7 @@ class Query:
         if present:
             return "present"
         else:
-            self.ctx.insert(thing, key, value)        
+            self.ctx.insert(thing, key, value)
             return "inserted"
             
     def delete(self, thing, key, value):
@@ -428,9 +428,8 @@ class Context:
         datatype = value.get_datatype()
         value = value.value
         web.update('datum', 
-            where='thing_id=$thing.id AND key=$key AND value=$value AND datatype=$datatype AND end_revision=$max_rev',
+            where='thing_id=$thing.id AND key=$key AND datatype=$datatype AND end_revision=$max_rev',
             end_revision=revision, vars=locals())
-
         web.insert('datum', False, thing_id=thing.id, key=key, value=value, datatype=datatype, begin_revision=revision)
         thing._d[key] = infobase.Datum(value, datatype)
         

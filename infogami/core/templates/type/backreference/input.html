@@ -3,15 +3,15 @@ $def with (p, name)
 <table>
 <tr>
     <td>Name</td>
-    <td>$:thinginput("type/string", name + ".name", p.name)</td>        
+    <td>$:thinginput("/type/string", name + ".name", p.name)</td>        
 </tr>
 <tr>
     <td>Type</td>
-    <td>$:thinginput("type/type", name + ".type", p.d.get('type'))</td>
+    <td>$:thinginput("/type/type", name + ".type", p.d.get('type'))</td>
 </tr>
 <tr>
     <td>Property Name</td>
-    <td>$:thinginput("type/string", name + ".property_name", p.d.get('property_name'))</td>
+    <td>$:thinginput("/type/string", name + ".property_name", p.d.get('property_name'))</td>
 </tr>
 </table>
 <br/>

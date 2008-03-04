@@ -2,5 +2,5 @@ $def with (path="")
 
 <ul>
 $for p in list_pages(path):
-    <li><a href="$homepath()/$p.key">$p.key</a></li>
+    <li><a href="$homepath()$p.key">$p.key</a></li>
 </ul>

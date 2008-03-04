@@ -216,7 +216,7 @@ class BulkUpload:
         elif isinstance(query, float):
             return (query, TYPES['/type/float'])
         elif isinstance(query, bool):
-            return (query, TYPES['/type/boolean'])
+            return (int(query), TYPES['/type/boolean'])
         else:
             raise Exception, '%s: invalid value: %s' (path, repr(query))
 

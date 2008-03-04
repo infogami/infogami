@@ -26,8 +26,6 @@ class WikiSource(DictMixin):
         return ""
         
     def __getitem__(self, key):
-        if not key.startswith('/'):
-            key = '/' + key
         key = self.process_key(key)
         root = self.getroot()
         if root is None or context.get('rescue_mode'):
@@ -38,20 +36,20 @@ class WikiSource(DictMixin):
         return [self.unprocess_key(k) for k in self.templates.keys()]
         
     def process_key(self, key):
-        return '/templates%s.tmpl' % key
+        return '/templates/%s.tmpl' % key
             
     def unprocess_key(self, key):
-        key = web.lstrips(key, '/templates')
+        key = web.lstrips(key, '/templates/')
         key = web.rstrips(key, '.tmpl')
         return key
     
 class MacroSource(WikiSource):
     def process_key(self, key):
         # macro foo is availble at path macros/foo
-        return '/macros' + key
+        return '/macros/' + key
         
     def unprocess_key(self, key):
-        return web.lstrips(key, '/macros')
+        return web.lstrips(key, '/macros/')
 
 def get_user_root():
     from infogami.core import db

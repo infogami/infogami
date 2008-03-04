@@ -276,7 +276,7 @@ class Infosite:
         return thing
 
     def withKey(self, key, revision=None, lazy=False):
-        if (self.id, key) in thingcache:
+        if revision is None and (self.id, key) in thingcache:
             return thingcache[self.id, key]
             
         try:
@@ -287,7 +287,7 @@ class Infosite:
         return self.cachify(Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision))
         
     def withID(self, id, revision=None):
-        if id in thingcache:
+        if revision is None and id in thingcache:
             return thingcache[id]
     
         try:

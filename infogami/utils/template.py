@@ -105,7 +105,7 @@ def typetemplate(name):
     """explain later"""
     def template(page, *a, **kw):
         default_template = getattr(render, 'default_' + name)
-        key = page.type.key + '/' + name
+        key = page.type.key[1:] + '/' + name
         t = getattr(render, key, default_template)
         return t(page, *a, **kw)
     return template

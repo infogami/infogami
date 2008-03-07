@@ -99,6 +99,8 @@ class Infobase:
             site = Infosite(id, name, secret_key)
             bootstrap.bootstrap(site, admin_password)
         except:
+	    import traceback
+	    traceback.print_exc()
             web.rollback()
             raise
         else:

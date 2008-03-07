@@ -5,7 +5,7 @@ import infobase
 import simplejson
 
 urls = (
-    "/([^/]*)/get/(.*)", "withkey",
+    "/([^/]*)/get(/.*)", "withkey",
     "/([^/]*)/things", "things",
     "/([^/]*)/versions", "versions",
     "/([^/]*)/write", "write",
@@ -17,7 +17,7 @@ def jsonify(f):
         d = {'status': 'ok'}
         try:
             d['result'] = f(self, *a, **kw)
-        except infobase.InfobaseException, e:
+        except (infobase.InfobaseException, AssertionError), e:
             import traceback
             traceback.print_exc()
             d['status'] = 'fail'

@@ -41,6 +41,8 @@ class edit (delegate.mode):
         
         p = db.get_version(path, i.v) or db.new_version(path, types.guess_type(path))
         
+        print >> web.debug, 'edit', p.key, p.type, p._getdata(), types.guess_type(path)
+                
         if i.t:
             try:
                 type = db.get_type(i.t)

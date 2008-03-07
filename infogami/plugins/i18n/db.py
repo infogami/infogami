@@ -1,8 +1,15 @@
-from infogami.core import db
-from infogami import tdb
+import web
+from infogami.infobase import client
 
 def get_all_strings(site):
+    t = site.get('/type/i18n')
+    if t is None:
+        return []
+    else:
+        q = {'type': '/type/i18n'}
+        return [site.get(key) for key in site.things(q)]
+    
     return tdb.Things(type=db.get_type(site, 'type/i18n'), parent=site)
 
 def get_all_sites():
-    return [t for t in tdb.Things(type=tdb.root, parent=tdb.root) if t.id != 1]
+    return [web.ctx.site]

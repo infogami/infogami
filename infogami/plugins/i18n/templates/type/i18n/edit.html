@@ -1,6 +1,6 @@
 $def with (page)
 
-$var title: $_.get('mode/edit', 'edit_title')(page.name)
+$var title: $_.get('/mode/edit', 'edit_title')(page.key)
 
 <form name="edit" method="POST">
 
@@ -8,9 +8,9 @@ $:macros.TypeChanger(page.type)
 
 <table id="strings_table">
 $ lang = page.name.split('.')[-1]
-$ namespace = find_i18n_namespace(page.name)
+$ namespace = find_i18n_namespace(page.key)
 $for key in _.getkeys(namespace, lang):
-    <tr><td>$key</td><td><input type="text" name="$key" value="$page.d.get(key, '')"/></td>
+    <tr><td>$key</td><td><input type="text" name="$key" value="$page.get('strings_' + key, '')"/></td>
 </table>
 
 <script>
@@ -27,7 +27,7 @@ function add_key() {
 </script>
 
 <p>
-$_.get('type/i18n', 'add_new_key') <input type="text" name="_newkey" id="newkey"/> <input type="button" onclick="add_key()" name="_addkey" value="$_.get('type/i18n', 'add')"/>
+$_.get('/type/i18n', 'add_new_key') <input type="text" name="_newkey" id="newkey"/> <input type="button" onclick="add_key()" name="_addkey" value="$_.get('type/i18n', 'add')"/>
 </p>
 
 <p>

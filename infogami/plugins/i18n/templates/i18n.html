@@ -25,7 +25,7 @@ $for ns in _.get_namespaces():
 </td>
 <td style="vertical-align: top">
 $if page:
-	<b>$page.name</b>
+	<b>$page.key</b>
     <div><a href="$homepath()/$page.name?m=edit">edit</a></div>
     $:thingview(page)
 $else:

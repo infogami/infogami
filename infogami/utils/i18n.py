@@ -9,13 +9,13 @@ DEFAULT_LANG = 'en'
 def find_i18n_namespace(path):
     """Finds i18n namespace from the path.
     
-        >>> find_i18n_namespace('i18n/type/type/strings.en')
-        'type/type'
-        >>> find_i18n_namespace('i18n/strings.en')
-        ''
+        >>> find_i18n_namespace('/i18n/type/type/strings.en')
+        '/type/type'
+        >>> find_i18n_namespace('/i18n/strings.en')
+        '/'
     """
     import os.path
-    return os.path.dirname(web.lstrips(path, 'i18n/'))
+    return os.path.dirname(web.lstrips(path, '/i18n'))
 
 class i18n:
     def __init__(self):
@@ -30,12 +30,7 @@ class i18n:
     def get_count(self, namespace, lang=None):
         lang = lang or DEFAULT_LANG
         return len(self._data.get((namespace, lang)) or {})
-        
-    def set_namespace(self, namespace):
-        """Set default namespace for this context."""
-        web.ctx.i18n_namespace = namespace
-        doom
-        
+                
     def get_namespace(self, namespace):
         return i18n_namespace(self, namespace)
         
@@ -72,7 +67,7 @@ class i18n:
             raise AttributeError, key
             
     def __getitem__(self, key):
-        namespace = web.ctx.get('i18n_namespace', '')
+        namespace = web.ctx.get('i18n_namespace', '/')
         key = web.utf8(key)
         return i18n_string(self, namespace, key)
         
@@ -159,7 +154,7 @@ def load_strings(plugin_path):
         """Find namespace and lang from path."""
         namespace = os.path.dirname(path)
         _, extn = os.path.splitext(p)
-        return namespace, extn[1:] # strip dot
+        return '/' + namespace, extn[1:] # strip dot
         
     def read_strings(path):
         env = {}

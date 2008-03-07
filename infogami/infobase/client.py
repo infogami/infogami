@@ -89,7 +89,7 @@ class Site:
             data = {'revision': revision}
         else:
             data = None
-        result = self._client.request('/get/' + key, data=data)['result']
+        result = self._client.request('/get' + key, data=data)['result']
         if result is None:
             raise NotFound, key
         else:
@@ -278,6 +278,9 @@ class Thing:
         
     def __iter__(self):
         return iter(self._data)
+        
+    def get(self, key, default=None):
+        return self._getdata().get(key, default)
         
     def dict(self):
         def unthingify(thing):

@@ -399,6 +399,7 @@ class Context:
         """Creates a new thing with the specified key."""
         import re
         assert re.match('^/[^\s]*', key), "bad key: " + repr(key)
+        assert '//' not in key, "bad key: " + repr(key)
         id = web.insert('thing', site_id=self.site.id, key=key)
         thing = infobase.Thing(self, id, key)
         thing._d = web.storage(key=key)

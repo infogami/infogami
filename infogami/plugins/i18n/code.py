@@ -12,73 +12,94 @@ from infogami.utils.view import public
 from infogami.utils.template import render
 import db
 
-re_i18n = web.re_compile(r'^i18n(/.*)?/strings\.([^/]*)$')
+re_i18n = web.re_compile(r'^/i18n(/.*)?/strings\.([^/]*)$')
 
 class hook(tdb.hook):
     def on_new_version(self, page):
         """Update i18n strings when a i18n wiki page is changed."""
-        if page.type.name == 'type/i18n':
-            path = page.name
-            result = re_i18n.match(path)
-            if result:
-                namespace, lang = result.groups()
-                namespace = namespace and namespace[1:] or ''
-                i18n.strings._set_strings(namespace, lang, page.d)
+        if page.type.key == 'type/i18n':
+            load(page.key, page._getdata())
 
 def load_strings(site):
     """Load strings from wiki."""
     pages = db.get_all_strings(site)
     for page in pages:
-        result = re_i18n.match(page.name)
-        if result:
-            namespace, lang = result.groups()
-            namespace = namespace and namespace[1:] or ''
-            i18n.strings._set_strings(namespace, lang, page.d)
+        load(page.key, page._getdata())
+            
+def load(key, data):
+    result = re_i18n.match(key)
+    if result:
+        namespace, lang = result.groups()
+        namespace = namespace or '/'
+        i18n.strings._set_strings(namespace, lang, unstringify(data))
 
 class i18n_page(delegate.page):
     path = '/i18n'
-    def GET(self, site):
-        from infogami.core import db
-        from infogami import tdb 
-        
+    def GET(self):        
         i = web.input(lang='en', ns='')
         
         if i.lang not in i18n.strings.get_languages():
             web.changequery(lang='en')
             raise StopIteration
             
-        path = pathjoin('i18n', i.ns, 'strings.' + i.lang)
-        try:
-            page = db.get_version(site, path)
-        except tdb.NotFound:
-            page = None
+        if i.ns == '/':
+            i.ns = ''
+            
+        path = pathjoin('/i18n', i.ns, '/strings.' + i.lang)
+        page = web.ctx.site.get(path)
         return render.i18n(i.ns, i.lang, page)
     
 def setup():
     delegate.fakeload()    
     from infogami.utils import types
-    types.register_type('i18n(/.*)?/strings.[^/]*', 'type/i18n')
+    types.register_type('/i18n(/.*)?/strings.[^/]*', '/type/i18n')
     
     for site in db.get_all_sites():
         load_strings(site)
+        
+def stringify(d):
+    """Prefix string_ for every key in a dictionary.
     
-@infogami.install_hook
-def createtype():
-    from infogami.core import db
-    db.new_type(context.site, 'type/i18n', [])
+        >>> stringify({'a': 1, 'b': 2})
+        {'string_a': 1, 'string_b': 2}
+    """
+    return dict([('string_' + k, v) for k, v in d.items()])
     
-def pathjoin(*p):
-    return "/".join([a for a in p if a])
+def unstringify(d):
+    """Removes string_ prefix from every key in a dictionary.
+    
+        >>> unstringify({'string_a': 1, 'string_b': 2})
+        {'a': 1, 'b': 2}    
+    """
+    return dict([(web.lstrips(k, 'string_'), v) for k, v in d.items() if k.startswith('string_')])
+
+def pathjoin(a, *p):
+    """Join two or more pathname components, inserting '/' as needed.
+    
+        >>> pathjoin('/i18n', '/type/type', 'strings.en')
+        '/i18n/type/type/strings.en'
+    """
+    path = a
+    for b in p:
+        if b.startswith('/'):
+            b = b[1:] # strip /
+        if path == '' or path.endswith('/'):
+            path +=  b
+        else:
+            path += '/' + b
+    return path
     
 @infogami.install_hook
 @infogami.action
 def movestrings():
     """Moves i18n strings to wiki."""
-    from infogami.core import db
-    type = db.get_type(context.site, 'type/i18n')
-    
+    query = []
     for (namespace, lang), d in i18n.strings._data.iteritems():
-        wikipath = pathjoin('i18n', namespace, 'strings.' + lang)
-        db.new_version(context.site, wikipath, type, d).save()
+        q = stringify(d)
+        q['create'] = 'unless_exists'
+        q['key'] = pathjoin('/i18n', namespace, '/strings.' + lang)
+        q['type'] = '/type/i18n'
+        query.append(q)
+    web.ctx.site.write(query)
 
 setup()

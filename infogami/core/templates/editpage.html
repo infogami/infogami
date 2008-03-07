@@ -1,12 +1,11 @@
 $def with (page, preview=False)
 
-$ _ = _.get_namespace('mode/edit')
+$ _ = _.get_namespace('/mode/edit')
 
 <div id="dateline">
     <a href="$url(m='view')" accesskey="v">$_.view</a>
     <a href="$url(m='history')" accesskey="h">$_.history</a>
 </div>
-
 
 $if preview:
     <div id="preview">

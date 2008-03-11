@@ -110,10 +110,10 @@ class Query:
         if expected_type:
             if unique:
                 if isinstance(value, list):
-                    raise error('%s: expected unique value but found list.' % value)
+                    raise error('%s: expected unique value but found list for %s.%s' % (value, thing.type.key, key))
             else:
                 if not isinstance(value, list):
-                    raise error('%s: expected list but found unique value.' % value.value)
+                    raise error('%s: expected list but found unique value for %s.%s.' % (value.value, thing.thing.key, key))
 
             if isinstance(value, list):
                 for v in value:
@@ -285,12 +285,15 @@ class Context:
     """Query execution context for bookkeeping.
     This also isolates the query execution from interacting with infobase cache.
     """
-    def __init__(self, site, comment, author=None, ip=None):
+    def __init__(self, site, author=None, ip=None, comment=None, machine_comment=None):
         self.site = site
-        self.comment = comment
+        
         self.author = author
         self.author_id = author and author.id
         self.ip = ip
+        self.comment = comment
+        self.machine_comment = machine_comment
+        
         self.revisions = {}
         self.updated = set()
         self.created = set()
@@ -339,7 +342,9 @@ class Context:
 
     def get_revision(self, thing):
         if thing.id not in self.revisions:
-            id = web.insert('version', thing_id=thing.id, comment=self.comment, author_id=self.author_id, ip=self.ip)
+            id = web.insert('version', thing_id=thing.id, 
+                comment=self.comment, machine_comment=self.machine_comment, 
+                author_id=self.author_id, ip=self.ip)
             version = web.select('version', where='id=$id', vars=locals())[0]
             self.revisions[thing.id] = version.revision
             if version.revision == 1:

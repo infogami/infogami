@@ -355,7 +355,7 @@ class Infosite:
             assert order in keys
             order = order + desc
         
-        what = 'thing.key, version.revision, version.author_id, version.comment, version.comment, version.ip, version.created'
+        what = 'thing.key, version.revision, version.author_id, version.comment, version.comment, version.machine_comment, version.ip, version.created'
         where = 'thing.id = version.thing_id'
                         
         if 'key' in query:
@@ -368,7 +368,11 @@ class Infosite:
             author = self.withKey(key)
             where += ' AND author_id=$author.id'
         if 'created' in query:
-            where += 'AND created = $created'
+            where += ' AND created = $query.created'
+        if 'comment' in query:
+            where += ' AND comment = $query.comment'
+        if 'machine_comment' in query:
+            where += ' AND machine_comment = $query.machine_comment'
             
         result = web.select(['version', 'thing'], what=what, where=where, offset=offset, limit=limit, order=order, vars=locals())
         out = []
@@ -380,12 +384,14 @@ class Infosite:
             out.append(dict(r))
         return out
 
-    def write(self, query, comment=None):
+    def write(self, query, comment=None, machine_comment=None):
         web.transact()
         try:
             import writequery
             a = self.get_account_manager()
-            ctx = writequery.Context(self, comment, author=a.get_user(), ip=web.ctx.get('ip'))
+            ctx = writequery.Context(self, 
+                author=a.get_user(), ip=web.ctx.get('ip'), 
+                comment=comment, machine_comment=machine_comment)
             result =  ctx.execute(query)
             self.invalidate(result['created'] + result['updated'])
         except:

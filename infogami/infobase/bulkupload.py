@@ -105,8 +105,11 @@ def multiple_insert(table, values, seqname=None):
     return ids
         
 class BulkUpload:
-    def __init__(self, site):
+    def __init__(self, site, author=None, comment=None, machine_comment=None):
         self.site = site
+        self.author_id = author and author.id
+        self.comment = comment
+        self.machine_comment = machine_comment
         self.key2id = {}
         self.created = []
         self.now = datetime.datetime.utcnow().isoformat()
@@ -140,7 +143,7 @@ class BulkUpload:
         for v, id in zip(values, ids):
             self.key2id[v['key']] = id
         
-        d = dict(created=self.now, revision=1, author_id=None, ip=None, comment=None)    
+        d = dict(created=self.now, revision=1, author_id=self.author_id, ip=None, comment=self.comment, machine_comment=self.machine_comment)    
         multiple_insert('version', [dict(d, thing_id=id) for id in ids])
         self.created = tobe_created
     

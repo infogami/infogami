@@ -138,6 +138,7 @@ class Site:
             data[p.name] = self.things(q)
             
     def get(self, key, revision=None, lazy=False):
+        assert key.startswith('/')
         try:
             thing = Thing(self, key, data=None, revision=revision)
             if not lazy:

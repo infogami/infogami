@@ -51,9 +51,9 @@ class write:
     @jsonify
     def POST(self, sitename):
         site = get_site(sitename)
-        i = input('query', comment=None)
+        i = input('query', comment=None, machine_comment=None)
         query = simplejson.loads(i.query)
-        result = site.write(query, i.comment)
+        result = site.write(query, i.comment, i.machine_comment)
         return result
 
 class withkey:

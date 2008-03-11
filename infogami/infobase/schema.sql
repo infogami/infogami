@@ -26,7 +26,8 @@ CREATE TABLE version (
     revision int,
     author_id int references thing,
     ip inet,
-    comment text,
+    comment varchar(1024),
+    machine_comment varchar(1024),
     created timestamp default (current_timestamp at time zone 'utc'),
     unique (thing_id, revision)
 );
@@ -51,6 +52,8 @@ CREATE TABLE account (
 --- index ---
 
 CREATE INDEX version_created_idx ON version (created);
+CREATE INDEX version_comment_idx ON version (comment);
+CREATE INDEX version_machine_comment_idx ON version (machine_comment);
 
 CREATE FUNCTION text2timestap(text) RETURNS timestamp AS $$
     SELECT CAST($1 AS TIMESTAMP);

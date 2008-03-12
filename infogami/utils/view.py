@@ -128,12 +128,15 @@ def render_site(url, page):
 def thingrepr(value, type=None):
     if isinstance(value, list):
         return ','.join(thingrepr(t, type) for t in value)
-
-    # primitive values
-    if not hasattr(value, 'key'):
-        value = web.storage(value=value, is_primitive=True, type=type)
         
-    return render.repr(value)
+    from infogami.infobase import client        
+    if type is None and value is client.nothing:
+        return ""
+    
+    if isinstance(value, client.Thing):
+        type = value.type
+        
+    return render.repr(thingify(type, value))
         
 @public
 def thinginput(type, name, value, **attrs):
@@ -148,7 +151,7 @@ def thingify(type, value):
     
     PRIMITIVE_TYPES = "/type/key", "/type/string", "/type/text", "/type/int", "/type/float", "/type/boolean"    
     from infogami.infobase import client
-    
+        
     if type.key not in PRIMITIVE_TYPES and isinstance(value, basestring) and not value.strip():
         value = web.ctx.site.new('', {'type': type})
 
@@ -158,7 +161,7 @@ def thingify(type, value):
     # primitive values
     if not isinstance(value, client.Thing):
         value = web.storage(value=value, is_primitive=True, type=type)
-    
+        
     return value
 
 @public
@@ -217,13 +220,14 @@ def movetypes():
             q['rendering_hint'] = rendering_hint
         return q
         
-    def backreference(type, name, expected_type):
+    def backreference(type, name, expected_type, property_name):
         return {
             'create': 'unless_exists',
             'key': type + '/' + name,
             'name': name,
             'type': '/type/backreference',
-            'expected_type': expected_type
+            'expected_type': expected_type,
+            'property_name': property_name
         }
         
     def readfunc(text):

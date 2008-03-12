@@ -6,7 +6,7 @@ $var title: $page.displayname
 
 <br clear="all" />
 
-<b>$_.get('type/user', 'users_activity')(page.displayname):<b>
+<b>$_.get('/type/user', 'users_activity')(page.displayname):<b>
 <p>
 $:macros.RecentChanges(author=page, limit=10)
 </p>

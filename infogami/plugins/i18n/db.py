@@ -8,8 +8,6 @@ def get_all_strings(site):
     else:
         q = {'type': '/type/i18n'}
         return [site.get(key) for key in site.things(q)]
-    
-    return tdb.Things(type=db.get_type(site, 'type/i18n'), parent=site)
 
 def get_all_sites():
     return [web.ctx.site]

@@ -93,6 +93,12 @@ def saferender(templates, *a, **kw):
             web.header('Content-Type', content_type, unique=True)
             return result
         except Exception, e:
+            # help to debug template errors.
+            # when called with safe=false, the debug error is displayed.
+            i = web.input(_method='GET', safe="true")
+            if i.safe.lower() == "false":
+                raise
+            
             print >> web.debug, str(e)
             import traceback
             traceback.print_exc()
@@ -106,7 +112,7 @@ def typetemplate(name):
     def template(page, *a, **kw):
         default_template = getattr(render, 'default_' + name)
         key = page.type.key[1:] + '/' + name
-        t = getattr(render, key, default_template)
+        t = getattr(render, web.utf8(key), default_template)
         return t(page, *a, **kw)
     return template
     

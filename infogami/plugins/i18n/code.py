@@ -17,7 +17,7 @@ re_i18n = web.re_compile(r'^/i18n(/.*)?/strings\.([^/]*)$')
 class hook(tdb.hook):
     def on_new_version(self, page):
         """Update i18n strings when a i18n wiki page is changed."""
-        if page.type.key == 'type/i18n':
+        if page.type.key == '/type/i18n':
             load(page.key, page._getdata())
 
 def load_strings(site):

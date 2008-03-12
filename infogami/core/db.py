@@ -56,24 +56,8 @@ def new_user(site, username, displayname, email, password):
         return user
 
 def get_user_preferences(user):
-    try:
-        return tdb.withName('preferences', user)
-    except tdb.NotFound:
-        site = user.parent
-        type = get_type(site, 'type/thing')
-        return tdb.new('preferences', user, type)
+    return get_version(user.key + '/preferences')
     
-def new_type(site, name, data):
-    try:
-        return get_type(site, name)
-    except tdb.NotFound:
-        t = tdb.new(name, site, get_type(site, 'type/type'), data)
-        t.save()
-        return t
-
-def get_site(name):
-    return tdb.withName(name, tdb.root)
-
 @public
 def get_recent_changes(key=None, author=None, limit=None):
     q = {'sort': '-created'}
@@ -116,14 +100,3 @@ def get_things(typename, prefix, limit):
     }
     return [web.ctx.site.get(key, lazy=True) for key in web.ctx.site.things(q)]    
     
-def get_site_permissions(site):
-    if hasattr(site, 'permissions'):
-        return pickle.loads(str(site.permissions))
-    else:
-        return [
-            ('/(user/[^/]*)(/.*)?', [('$1', 'view,edit'), ('everyone', 'view')]),
-            ('/.*', [('everyone', 'view,edit')])]
-    
-def set_site_permissions(site, permissions):
-    site.permissions = pickle.dumps(permissions)
-    site.save()

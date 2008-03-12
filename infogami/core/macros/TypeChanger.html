@@ -1,4 +1,6 @@
-$def with (type)
+$def with (type, usetable=0)
+
+$ _ = _.get_namespace('/mode/edit')
 
 <script>
 function changeTemplate() {
@@ -7,5 +9,13 @@ function changeTemplate() {
 }
 </script>
 
-<strong>$_.PAGETYPE</strong>  $:thinginput("/type/type", "type", type)
-<input type="button" onclick="changeTemplate()" value="$_.CHANGE"/><br /><br />
+$if usetable:
+    <tr>
+        <td>$_.page_type</td>
+        <td>$:thinginput("/type/type", "type", type)</td>
+        <td><input type="button" onclick="changeTemplate()" value="$_.change"/></td>
+    </tr>
+$else:
+    <strong>$_.page_type</strong>  $:thinginput("/type/type", "type", type)
+    <input type="button" onclick="changeTemplate()" value="$_.change"/><br /><br />
+    

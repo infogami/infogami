@@ -27,13 +27,13 @@ function add_key() {
 </script>
 
 <p>
-$_.get('/type/i18n', 'add_new_key') <input type="text" name="_newkey" id="newkey"/> <input type="button" onclick="add_key()" name="_addkey" value="$_.get('type/i18n', 'add')"/>
+$_.get('/type/i18n', 'add_new_key') <input type="text" name="_newkey" id="newkey"/> <input type="button" onclick="add_key()" name="_addkey" value="$_.get('/type/i18n', 'add')"/>
 </p>
 
 <p>
-<input type="submit" name='_save' value="$_.get('mode/edit', 'save')" />
-<input type="submit" name='_preview' value="$_.get('mode/edit', 'preview')" />
-<input type="submit" name='_delete' value="$_.get('mode/edit', 'delete')" />
+<input type="submit" name='_save' value="$_.get('/mode/edit', 'save')" />
+<input type="submit" name='_preview' value="$_.get('/mode/edit', 'preview')" />
+<input type="submit" name='_delete' value="$_.get('/mode/edit', 'delete')" />
 </p>
 </form>
 

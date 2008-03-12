@@ -135,7 +135,7 @@ class Site:
                 'offset': offset,
                 'limit': page_size
             }
-            data[p.name] = self.things(q)
+            data[p.name] = [self.get(key, lazy=True) for key in self.things(q)]
             
     def get(self, key, revision=None, lazy=False):
         assert key.startswith('/')

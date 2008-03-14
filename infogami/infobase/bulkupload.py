@@ -131,7 +131,8 @@ class BulkUpload:
         keys = set(self.find_keys(query))
         tobe_created = set(self.find_creates(query))
         
-        result = web.select('thing', what='id, key', where=sqlin('key', keys))
+        where = web.reparam('site_id=$self.site.id', locals()) + ' AND ' + sqlin('key', keys)
+        result = web.select('thing', what='id, key', where=where)
         for r in result:
             self.key2id[r.key] = r.id
     
@@ -150,12 +151,15 @@ class BulkUpload:
     def find_keys(self, query, result=None):
         if result is None:
             result = []
+            
         if isinstance(query, list):
             for q in query: 
                 self.find_keys(q, result)
         elif isinstance(query, dict) and 'key' in query:
             assert re.match('^/[^ \t\n]*$', query['key']), 'Bad key: ' + repr(query['key'])
             result.append(query['key'])
+            for k, v in query.items():
+                self.find_keys(v, result)
             
         return result
     
@@ -227,7 +231,7 @@ if __name__ == "__main__":
     import sys
     
     web.config.db_parameters = dict(dbn='postgres', db='infobase', user='anand', pw='') 
-    #web.config.db_printing = True
+    web.config.db_printing = True
     web.load()
     from infobase import Infobase
     site = Infobase().get_site('infogami.org')
@@ -235,10 +239,11 @@ if __name__ == "__main__":
     def book(i):
         return {
             'create': 'unless_exists',
+            'type': '/type/book',
             'key': u'/b/b%d' % i,
             'title': "title-%d" % i,
             'description': {'type': '/type/text', 'value': 'description-%d' % i},
-            'author': {'create': 'unless_exists', 'key': '/a/a%d' % i, 'name': 'author %d' % i},
+            'author': {'create': 'unless_exists', 'type': {'key': '/type/author'}, 'key': '/a/a%d' % i, 'name': 'author %d' % i},
             'publisher': {'create': 'unless_exists', 'key': '/p/%d' % i, 'name': 'publisher %d' % i},
         }
         
@@ -251,6 +256,9 @@ if __name__ == "__main__":
         times = int(sys.argv[2])
     else:
         times = 10
+        
+    site.write({'create': 'unless_exists', 'key': '/type/book', 'type': '/type/type'})
+    site.write({'create': 'unless_exists', 'key': '/type/author', 'type': '/type/type'})
         
     start = web.query('select last_value from thing_id_seq')[0].last_value
     print "database has %d things" % start

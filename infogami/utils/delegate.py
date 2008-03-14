@@ -82,6 +82,12 @@ def fakeload():
     context.user = None
     web.ctx.site = create_site()
     
+
+def normpath(path):
+    path = os.path.normpath(path) # correct multiple /'s and trailing /
+    path = path.replace(' ', '_') # replace space with underscore
+    return path
+    
 def delegate(path):
     method = web.ctx.method
     if method == 'HEAD': 
@@ -89,13 +95,12 @@ def delegate(path):
     
     initialize_context()
     
-    # redirect /foo/ to /foo
-    if path != '/' and path.endswith('/'):
-        return web.seeother(path[:-1])
-        
-    npath = os.path.normpath(path)
-    if npath != path:
-        web.seeother(npath)
+    normalized = normpath(path)
+    if path != normalized:
+        if method == 'GET':
+            return web.seeother(_changepath(normalized))
+        elif method == 'POST':
+            return web.notfound()
 
     if path in pages:
         cls = pages[path]            
@@ -103,21 +108,13 @@ def delegate(path):
             return web.nomethod(method)
         out = getattr(cls(), method)()
     else: # mode
-        normalized = _keyencode(path)
-        if path != normalized:
-            if method == 'GET':
-                return web.seeother(_changepath('/' + normalized))
-            elif method == 'POST':
-                return web.notfound()
-
         what = web.input(_method='GET').get('m', 'view')
         
         #@@ move this to some better place
         from infogami.core import auth
         
         if what not in modes:
-            web.seeother(web.changequery(m=None))
-            return
+            return web.seeother(web.changequery(m=None))
         
         if what not in ("view", "edit") or True: #or auth.has_permission(context.site, context.user, path, what):
             cls = modes[what]            

@@ -15,7 +15,8 @@ def get_type(path):
 def new_version(path, type):
     if isinstance(type, basestring):
         type = get_type(type)
-        
+    
+    assert type is not None    
     return web.ctx.site.new(path, {'key': path, 'type': type})
 
 class ValidationException(Exception): pass

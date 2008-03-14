@@ -41,8 +41,6 @@ class edit (delegate.mode):
         
         p = db.get_version(path, i.v) or db.new_version(path, types.guess_type(path))
         
-        print >> web.debug, 'edit', p.key, p.type, p._getdata(), types.guess_type(path)
-                
         if i.t:
             try:
                 type = db.get_type(i.t)
@@ -62,7 +60,7 @@ class edit (delegate.mode):
                     d[k] = v
                     continue
                 d['create'] = 'unless_exists'
-                d[k] = self.make_query(v)
+                d[k] = self.make_query(v, connect=True)
                 
             if connect and 'create' not in d:
                 d['connect'] = 'update'
@@ -117,7 +115,7 @@ class edit (delegate.mode):
 
         def trim(d):
             if isinstance(d, list):
-                return non_empty([trim(x) for x in d])
+                return non_empty([trim(x) for x in d if x])
             elif isinstance(d, dict):
                 for k, v in d.items():
                     d[k] = trim(v)
@@ -211,13 +209,11 @@ class permission(delegate.mode):
             
 class history (delegate.mode):
     def GET(self, path):
-        try:
-            history = db.get_recent_changes(key=path, limit=20)
-            if not history:
-                return web.seeother('/' + path)
-            return render.history(history)
-        except tdb.NotFound:
-            return web.seeother('/' + path)
+        page = web.ctx.site.get(path)
+        if not page:
+            return web.seeother(path)
+        history = db.get_recent_changes(key=path, limit=20)
+        return render.history(page, history)
                 
 class diff (delegate.mode):
     def GET(self, path):  
@@ -246,7 +242,7 @@ class diff (delegate.mode):
         except:
             raise
             return web.badrequest()
-        
+            
         return render.diff(a, b)
 
 class random(delegate.page):

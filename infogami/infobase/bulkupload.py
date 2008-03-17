@@ -27,31 +27,32 @@ def sqlin(name, values):
     else:
         values = [web.reparam('$v', locals()) for v in values]
         return name + ' IN ('+ sqljoin(values, ", ") + ')'
-        
+
+@web.memoize        
+def get_table_columns(table):
+    # Postgres query to get all column names. 
+    # Got by runing sqlalchemy with echo=True.
+    q = """
+    SELECT a.attname,
+      pg_catalog.format_type(a.atttypid, a.atttypmod),
+      (SELECT substring(d.adsrc for 128) FROM pg_catalog.pg_attrdef d
+       WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef)
+      AS DEFAULT,
+      a.attnotnull, a.attnum, a.attrelid as table_oid
+    FROM pg_catalog.pg_attribute a
+    WHERE a.attrelid = (
+        SELECT c.oid
+        FROM pg_catalog.pg_class c
+             LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
+             WHERE (pg_catalog.pg_table_is_visible(c.oid))
+             AND c.relname = $table AND c.relkind in ('r','v')
+    ) AND a.attnum > 0 AND NOT a.attisdropped
+    ORDER BY a.attnum;
+    """ 
+    return [r.attname for r in web.query(q, locals())]
+    
 def multiple_insert(table, values, seqname=None):
     """Inserts multiple rows into a table using sql copy."""
-    def get_table_columns(table):
-        # Postgres query to get all column names. 
-        # Got by runing sqlalchemy with echo=True.
-        q = """
-        SELECT a.attname,
-          pg_catalog.format_type(a.atttypid, a.atttypmod),
-          (SELECT substring(d.adsrc for 128) FROM pg_catalog.pg_attrdef d
-           WHERE d.adrelid = a.attrelid AND d.adnum = a.attnum AND a.atthasdef)
-          AS DEFAULT,
-          a.attnotnull, a.attnum, a.attrelid as table_oid
-        FROM pg_catalog.pg_attribute a
-        WHERE a.attrelid = (
-            SELECT c.oid
-            FROM pg_catalog.pg_class c
-                 LEFT JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
-                 WHERE (pg_catalog.pg_table_is_visible(c.oid))
-                 AND c.relname = $table AND c.relkind in ('r','v')
-        ) AND a.attnum > 0 AND NOT a.attisdropped
-        ORDER BY a.attnum;
-        """ 
-        return [r.attname for r in web.query(q, locals())]
-    
     def escape(value):
         if value is None:
             return "\N"
@@ -103,16 +104,36 @@ def multiple_insert(table, values, seqname=None):
     write("/tmp/data.copy", "\n".join(data))
     web.query("COPY %s FROM '/tmp/data.copy'" % table)
     return ids
+    
+def get_key2id():
+    """Return key to id mapping for all things in the database."""
+    key2id = {}
+    offset = 0
+    limit = 100000
+    while True:
+        result = web.query('SELECT id, key FROM thing ORDER BY id LIMIT $limit OFFSET $offset', vars=locals())
+        if not result:
+            break
+        for row in result:
+            key2id[row.key] = row.id
+        offset = len(key2id)
+        
+    return key2id
+
+key2id = None
         
 class BulkUpload:
     def __init__(self, site, author=None, comment=None, machine_comment=None):
         self.site = site
         self.author_id = author and author.id
-        self.comment = comment
-        self.machine_comment = machine_comment
-        self.key2id = {}
+        self.comment = {}
+        self.machine_comment = {}
         self.created = []
         self.now = datetime.datetime.utcnow().isoformat()
+
+        # initialize key2id, if it is not initialzed already.
+        global key2id
+        key2id = key2id or get_key2id()
         
     def upload(self, query):
         """Inserts"""
@@ -126,28 +147,27 @@ class BulkUpload:
             raise
         else:
             web.commit()
-                
+            
     def process_creates(self, query):
         keys = set(self.find_keys(query))
         tobe_created = set(self.find_creates(query))
+        tobe_created = [k for k in tobe_created if k not in key2id] 
         
-        where = web.reparam('site_id=$self.site.id', locals()) + ' AND ' + sqlin('key', keys)
-        result = web.select('thing', what='id, key', where=where)
-        for r in result:
-            self.key2id[r.key] = r.id
+        assert '/type/author' in keys        
+        assert '/type/author' in key2id
     
+        # insert things
         d = dict(site_id=self.site.id, created=self.now, last_modified=self.now, latest_revision=1, deleted=False)
-        
-        tobe_created = [k for k in tobe_created if k not in self.key2id] 
-        values = [dict(d, key=k) for k in tobe_created if k not in self.key2id]
+        values = [dict(d, key=k) for k in tobe_created]
         ids = multiple_insert('thing', values)
         for v, id in zip(values, ids):
-            self.key2id[v['key']] = id
+            key2id[v['key']] = id
         
+        # insert versions
         d = dict(created=self.now, revision=1, author_id=self.author_id, ip=None, comment=self.comment, machine_comment=self.machine_comment)    
-        multiple_insert('version', [dict(d, thing_id=id) for id in ids])
+        multiple_insert('version', [dict(d, thing_id=key2id[k], comment=self.comment[k], machine_comment=self.machine_comment[k]) for k in tobe_created])
         self.created = tobe_created
-    
+        
     def find_keys(self, query, result=None):
         if result is None:
             result = []
@@ -160,7 +180,6 @@ class BulkUpload:
             result.append(query['key'])
             for k, v in query.items():
                 self.find_keys(v, result)
-            
         return result
     
     def find_creates(self, query, result=None):
@@ -176,6 +195,9 @@ class BulkUpload:
             if 'create' in query:
                 result.append(query['key'])
                 self.find_creates(query.values(), result)
+                #@@ side-effect
+                self.comment[query['key']] = query.pop('comment', None)
+                self.machine_comment[query['key']] = query.pop('machine_comment', None) 
         return result
         
     def process_inserts(self, query):
@@ -203,7 +225,7 @@ class BulkUpload:
             if 'value' in query:
                 return (query['value'], TYPES[query['type']])
             else:
-                thing_id = self.key2id[query['key']]
+                thing_id = key2id[query['key']]
                 if query['key'] in self.created:
                     for key, value in query.items():
                         if key == 'create': 
@@ -245,6 +267,8 @@ if __name__ == "__main__":
             'description': {'type': '/type/text', 'value': 'description-%d' % i},
             'author': {'create': 'unless_exists', 'type': {'key': '/type/author'}, 'key': '/a/a%d' % i, 'name': 'author %d' % i},
             'publisher': {'create': 'unless_exists', 'key': '/p/%d' % i, 'name': 'publisher %d' % i},
+            'comment': 'comment for book#%d' % i,
+            'machine_comment': 'machine_comment for book#%d' % i,            
         }
         
     if len(sys.argv) > 1:
@@ -259,7 +283,7 @@ if __name__ == "__main__":
         
     site.write({'create': 'unless_exists', 'key': '/type/book', 'type': '/type/type'})
     site.write({'create': 'unless_exists', 'key': '/type/author', 'type': '/type/type'})
-        
+            
     start = web.query('select last_value from thing_id_seq')[0].last_value
     print "database has %d things" % start
         

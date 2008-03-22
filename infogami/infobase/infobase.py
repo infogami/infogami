@@ -6,9 +6,12 @@ Each object has a key, that is unique to the site it belongs.
 """
 import web
 from multiple_insert import multiple_insert
-from cache import ThingCache
+from cache import LRU, ThingCache
 
 thingcache = ThingCache(10000)
+querycache_things = LRU(1000)
+querycache_versions = LRU(1000)
+stats = web.storage(o_hits=0, o_misses=0, t_hits=0, t_misses=0, v_hits=0, v_misses=0)
 
 KEYWORDS = ["id", 
     "action", "create", "update", "insert", "delete", 
@@ -99,8 +102,8 @@ class Infobase:
             site = Infosite(id, name, secret_key)
             bootstrap.bootstrap(site, admin_password)
         except:
-	    import traceback
-	    traceback.print_exc()
+            import traceback
+            traceback.print_exc()
             web.rollback()
             raise
         else:
@@ -244,6 +247,7 @@ class Thing:
             if r.ordering is not None:
                 d.setdefault(r.key, []).append(value)
             else:
+                assert r.key not in d
                 d[r.key] = value
 
         return d
@@ -278,6 +282,8 @@ class Infosite:
         return thing
 
     def withKey(self, key, revision=None, lazy=False):
+        assert key.startswith('/'), 'Bad key: ' + repr(key)
+        
         if revision is None and (self.id, key) in thingcache:
             return thingcache[self.id, key]
             
@@ -301,88 +307,33 @@ class Infosite:
     def things(self, query):
         assert isinstance(query, dict)
         
-        type = query.get('type')
-        type = type and self.withKey(type)
+        from readquery import Things
+        query = Things(self, query)
         
-        #@@ make sure all keys are valid.
-        tables = ['thing']
-        what = 'thing.key'
-        revision = query.pop('revision', MAX_REVISION)
-        
-        where = web.reparam('thing.site_id = $self.id', locals())
-        
-        offset = query.pop('offset', None)
-        limit = query.pop('limit', None)
-        order = query.pop('sort', None)
-
-        from readquery import join, get_datatype
-
-        if order:
-            if order.startswith('-'):
-                order = order[1:]
-                desc = " desc"
-            else:
-                desc = ""
-            datatype = get_datatype(type, order)            
-            tables.append('datum as ds')
-            where += web.reparam(" AND ds.thing_id = thing.id"
-                + " AND ds.begin_revision <= $revision AND ds.end_revision > $revision"
-                + " AND ds.key = $order AND ds.datatype = $datatype", locals())
-            order = "ds.value" + desc
+        if query not in querycache_things:
+            result = query.execute()
+            querycache_things[query] = result
+            stats.t_misses += 1
+        else:
+            stats.t_hits += 1
+            result = querycache_things[query]
             
-        for i, (k, v) in enumerate(query.items()):
-            d = 'd%d' % i
-            tables.append('datum as ' + d)
-            where  += ' AND ' + join(self, type, d, k, v, revision)
-                
-        return [r.key for r in web.select(tables, what=what, where=where, offset=offset, limit=limit, order=order)]
+        return result
         
     def versions(self, query):
-        offset = query.pop('offset', None)
-        limit = query.pop('limit', None)
-        order = query.pop('sort', None)
+        assert isinstance(query, dict)
         
-        query = web.storage(query)
+        from readquery import Versions
+        query = Versions(self, query)
         
-        if order and order.startswith('-'):
-            order = order[1:]
-            desc = " desc"
+        if query not in querycache_versions:
+            result = query.execute()
+            querycache_versions[query] = result
+            stats.v_misses += 1
         else:
-            desc = ""
-        
-        keys = ["key", "revision", "author", "comment", "created"]
-        if order:
-            assert order in keys
-            order = order + desc
-        
-        what = 'thing.key, version.revision, version.author_id, version.comment, version.comment, version.machine_comment, version.ip, version.created'
-        where = 'thing.id = version.thing_id'
-                        
-        if 'key' in query:
-            key = query['key']
-            where += ' AND key=$key'
-        if 'revision' in query:
-            where += ' AND revision=query.revision'
-        if 'author' in query:
-            key = query['author']
-            author = self.withKey(key)
-            where += ' AND author_id=$author.id'
-        if 'created' in query:
-            where += ' AND created = $query.created'
-        if 'comment' in query:
-            where += ' AND comment = $query.comment'
-        if 'machine_comment' in query:
-            where += ' AND machine_comment = $query.machine_comment'
-            
-        result = web.select(['version', 'thing'], what=what, where=where, offset=offset, limit=limit, order=order, vars=locals())
-        out = []
-
-        for r in result:
-            r.created = r.created.isoformat()
-            r.author = r.author_id and self.withID(r.author_id).key
-            del r.author_id
-            out.append(dict(r))
-        return out
+            stats.v_hits += 1
+            result = querycache_versions[query]
+        return result
 
     def write(self, query, comment=None, machine_comment=None):
         web.transact()
@@ -393,7 +344,9 @@ class Infosite:
                 author=a.get_user(), ip=web.ctx.get('ip'), 
                 comment=comment, machine_comment=machine_comment)
             result =  ctx.execute(query)
-            self.invalidate(result['created'] + result['updated'])
+            
+            modified = ctx.modified_objects()
+            self.invalidate(modified, ctx.versions.values())
         except:
             web.rollback()
             raise
@@ -401,11 +354,23 @@ class Infosite:
             web.commit()
         return result
     
-    def invalidate(self, keys):
+    def invalidate(self, objects, versions):
         """Invalidate the given keys from cache."""
-        for key in keys:
-            if (self.id, key) in thingcache:
-                del thingcache[self.id, key]
+        for o in objects:
+            if (self.id, o.key) in thingcache:
+                del thingcache[self.id, o.key]
+                
+        for q in querycache_things.keys():
+            for o in objects:
+                if q in querycache_things and q.matches(o):
+                    del querycache_things[q]
+                elif o.key in querycache_things[q]:
+                    del querycache_things[q]
+                    
+        for q in querycache_versions.keys():
+            for v in versions:
+                if q in querycache_versions and q.matches(v):
+                    del querycache_versions[q]
         
     def get_account_manager(self):
         import account

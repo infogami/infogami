@@ -166,6 +166,9 @@ class LRU:
         node = self.getnode(key, touch=False)
         self.remove_node(node)
         
+    def keys(self):
+        return self.d.keys()
+        
     def items(self):
         return [(k, node.value) for k, node in self.d.items()]
         
@@ -234,6 +237,10 @@ class ThingCache(LRU):
         # from the key2id map must also be removed 
         del self.key2id[thing._site.id, thing.key]
         return node
+        
+    def clear(self):
+        LRU.clear(self)
+        self.key2id.clear()
 
 if __name__ == "__main__":
     import doctest

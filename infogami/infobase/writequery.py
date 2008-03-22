@@ -294,11 +294,14 @@ class Context:
         self.comment = comment
         self.machine_comment = machine_comment
         
-        self.revisions = {}
+        self.versions = {}
         self.updated = set()
         self.created = set()
         self.key2id = {}
         self.cache = {}
+        
+    def modified_objects(self):
+        return [self.get(k) for k in list(self.updated) + list(self.created)]
         
     def has_permission(self, key, get_groups):
         if web.ctx.get('infobase_bootstrap'):
@@ -326,10 +329,9 @@ class Context:
             
     def get_permission(self, key):
         def parent(key):
-            if '/' in key:
-                return key.rsplit('/', 1)[0]
+            return key.rsplit('/', 1)[0] or None
         
-        if key == None:
+        if key is None:
             return None
         
         try:
@@ -341,17 +343,17 @@ class Context:
         return permission or self.get_permission(parent(key))
 
     def get_revision(self, thing):
-        if thing.id not in self.revisions:
+        if thing.id not in self.versions:
             id = web.insert('version', thing_id=thing.id, 
                 comment=self.comment, machine_comment=self.machine_comment, 
                 author_id=self.author_id, ip=self.ip)
             version = web.select('version', where='id=$id', vars=locals())[0]
-            self.revisions[thing.id] = version.revision
+            self.versions[thing.id] = version
             if version.revision == 1:
                 self.created.add(thing.key)
             else:
                 self.updated.add(thing.key)
-        return self.revisions[thing.id]
+        return self.versions[thing.id].revision
 
     def make_query(self, q, path=""):
         """Takes nested dictionary as input and returns nested query object."""
@@ -436,7 +438,7 @@ class Context:
         datatype = value.get_datatype()
         value = value.value
         web.update('datum', 
-            where='thing_id=$thing.id AND key=$key AND datatype=$datatype AND end_revision=$max_rev',
+            where='thing_id=$thing.id AND key=$key AND end_revision=$max_rev',
             end_revision=revision, vars=locals())
         web.insert('datum', False, thing_id=thing.id, key=key, value=value, datatype=datatype, begin_revision=revision)
         thing._d[key] = infobase.Datum(value, datatype)

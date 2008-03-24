@@ -319,7 +319,7 @@ class Versions:
 
         for r in result:
             r.created = r.created.isoformat()
-            r.author = r.author_id and self.withID(r.author_id).key
+            r.author = r.author_id and self.site.withID(r.author_id).key
             del r.author_id
             out.append(dict(r))
         return out

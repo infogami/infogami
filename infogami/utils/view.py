@@ -74,6 +74,19 @@ def public(f):
     web.template.Template.globals[f.__name__] = f
     return f
 
+@public    
+def safeint(value):
+    """Convers the value to integer. Returns 0, if the conversion fails."""
+    try:
+        return int(value)
+    except Exception:
+        return 0
+
+@public
+def query_param(name, default=None):
+    i = web.input(_m='GET')
+    return i.get(name, default)
+    
 @public
 def format(text):
     html, macros = _format(text)

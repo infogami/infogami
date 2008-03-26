@@ -1,6 +1,8 @@
 $def with (author=None, limit=50)
 
-$ changes = get_recent_changes(author=author, limit=limit)
+$ page = safeint(query_param('rc_page', '0'))
+$ changes = get_recent_changes(author=author, limit=limit, offset=page * limit)
+<br/>
 
 $var title: $_.RECENT_CHANGES
 
@@ -29,3 +31,12 @@ $for v in changes:
     </td>
     </tr>
 </table>
+
+<div>
+$if page != 0:
+    <a href="$:changequery(rc_page=page - 1)">Newer</a>
+
+$if changes:
+    <a href="$:changequery(rc_page=page + 1)">Older</a>
+<div>
+    

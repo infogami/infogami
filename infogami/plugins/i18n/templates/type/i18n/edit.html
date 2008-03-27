@@ -6,11 +6,12 @@ $var title: $_.get('/mode/edit', 'edit_title')(page.key)
 
 $:macros.TypeChanger(page.type)
 
+
 <table id="strings_table">
-$ lang = page.name.split('.')[-1]
+$ lang = page.key.split('.')[-1]
 $ namespace = find_i18n_namespace(page.key)
 $for key in _.getkeys(namespace, lang):
-    <tr><td>$key</td><td><input type="text" name="$key" value="$page.get('strings_' + key, '')"/></td>
+    <tr><td>$key</td><td><input type="text" name="$key" value="$page.get('string_' + key, '')"/></td>
 </table>
 
 <script>

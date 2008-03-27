@@ -26,7 +26,7 @@ $for ns in _.get_namespaces():
 <td style="vertical-align: top">
 $if page:
 	<b>$page.key</b>
-    <div><a href="$homepath()/$page.name?m=edit">edit</a></div>
+    <div><a href="$homepath()$page.key?m=edit">edit</a></div>
     $:thingview(page)
 $else:
     $ name = homepath() + "/i18n/" + namespace + "/strings." + lang

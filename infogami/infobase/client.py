@@ -227,10 +227,7 @@ class Nothing:
             return self
 
     def __getitem__(self, name):
-        try:
-            return getattr(self, name)
-        except AttributeError:
-            raise KeyError, name
+        return self
 
     def __call__(self, *a, **kw):
         return self

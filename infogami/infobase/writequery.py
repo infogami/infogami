@@ -63,8 +63,9 @@ class Value:
                 self.value = thing.id
                 self.datatype = infobase.DATATYPE_REFERENCE
             elif expected_type == '/type/int':
-                makesure(isinstance(self.value, int))
+                makesure(isinstance(self.value, (int, basestring)))
                 self.datatype = infobase.TYPES['/type/int']
+                self.value = int(self.value)
             elif expected_type == '/type/boolean':
                 self.datatype = infobase.TYPES['/type/boolean']
                 self.value = int(bool(self.value))
@@ -152,7 +153,7 @@ class Query:
                 value = self.d['value'].execute().value
                 type = self.d.get('type')
                 type = type and type.execute().value
-                assert isinstance(value, (basestring, int, float, bool))
+                assert value is None or isinstance(value, (basestring, int, float, bool))
                 assert type is None or isinstance(type, basestring)
                 self.value = Value(value, type)
             else:
@@ -440,7 +441,9 @@ class Context:
         web.update('datum', 
             where='thing_id=$thing.id AND key=$key AND end_revision=$max_rev',
             end_revision=revision, vars=locals())
-        web.insert('datum', False, thing_id=thing.id, key=key, value=value, datatype=datatype, begin_revision=revision)
+        
+        if value is not None:
+            web.insert('datum', False, thing_id=thing.id, key=key, value=value, datatype=datatype, begin_revision=revision)
         thing._d[key] = infobase.Datum(value, datatype)
         
     def update_list(self, thing, key, value):

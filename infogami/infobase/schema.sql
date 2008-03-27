@@ -54,6 +54,7 @@ CREATE TABLE account (
 CREATE INDEX version_created_idx ON version (created);
 CREATE INDEX version_comment_idx ON version (comment);
 CREATE INDEX version_machine_comment_idx ON version (machine_comment);
+CREATE INDEX version_author_id_idx ON version (author_id);
 
 CREATE FUNCTION text2timestap(text) RETURNS timestamp AS $$
     SELECT CAST($1 AS TIMESTAMP);
@@ -62,6 +63,8 @@ $$ LANGUAGE SQL IMMUTABLE;
 CREATE FUNCTION dirname(text) RETURNS text AS $$
     SELECT ltrim(regexp_replace('/' || $1, '[^/]*$', ''), '/');
 $$ LANGUAGE SQL IMMUTABLE;
+
+CREATE INDEX datum_thing_id_revision_idx ON datum (thing_id, end_revision, begin_revision);
 
 --- index for keys, strings and uris 
 CREATE INDEX datum_key_val_str_idx ON datum (key, value, datatype, begin_revision, end_revision) WHERE datatype=1 OR datatype=2 OR datatype = 4;
@@ -77,6 +80,8 @@ CREATE INDEX datum_key_val_float_idx ON datum (key, CAST(value AS float), dataty
 
 --- index for timestamps
 CREATE INDEX datum_key_val_timestamp_idx ON datum (key, text2timestap(value), datatype, begin_revision, end_revision) WHERE datatype=8;
+
+CREATE INDEX account_email_idx ON account (email);
 
 ----------------
 --- triggers ---

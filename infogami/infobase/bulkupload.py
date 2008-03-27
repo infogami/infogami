@@ -110,20 +110,24 @@ def get_key2id():
     key2id = {}
     offset = 0
     limit = 100000
+    web.transact()
+    # declare a cursor to read all the keys
+    web.query("DECLARE key2id CURSOR FOR SELECT id, key FROM thing")
     while True:
-        result = web.query('SELECT id, key FROM thing ORDER BY id LIMIT $limit OFFSET $offset', vars=locals())
+        result = web.query('FETCH FORWARD $limit FROM key2id', vars=locals())
         if not result:
             break
         for row in result:
             key2id[row.key] = row.id
-        offset = len(key2id)
-        
+
+    web.query("CLOSE key2id");
+    web.rollback();
     return key2id
 
 key2id = None
         
 class BulkUpload:
-    def __init__(self, site, author=None, comment=None, machine_comment=None):
+    def __init__(self, site, author=None):
         self.site = site
         self.author_id = author and author.id
         self.comment = {}
@@ -252,48 +256,9 @@ class BulkUpload:
 if __name__ == "__main__":
     import sys
     
-    web.config.db_parameters = dict(dbn='postgres', db='infobase', user='anand', pw='') 
+    web.config.db_parameters = dict(dbn='postgres', host='pharosdb', db='infobase_data2', user='anand', pw='') 
     web.config.db_printing = True
     web.load()
     from infobase import Infobase
     site = Infobase().get_site('infogami.org')
-    
-    def book(i):
-        return {
-            'create': 'unless_exists',
-            'type': '/type/book',
-            'key': u'/b/b%d' % i,
-            'title': "title-%d" % i,
-            'description': {'type': '/type/text', 'value': 'description-%d' % i},
-            'author': {'create': 'unless_exists', 'type': {'key': '/type/author'}, 'key': '/a/a%d' % i, 'name': 'author %d' % i},
-            'publisher': {'create': 'unless_exists', 'key': '/p/%d' % i, 'name': 'publisher %d' % i},
-            'comment': 'comment for book#%d' % i,
-            'machine_comment': 'machine_comment for book#%d' % i,            
-        }
-        
-    if len(sys.argv) > 1:
-        n = int(sys.argv[1])
-    else:
-        n = 100
-
-    if len(sys.argv) > 2:
-        times = int(sys.argv[2])
-    else:
-        times = 10
-        
-    site.write({'create': 'unless_exists', 'key': '/type/book', 'type': '/type/type'})
-    site.write({'create': 'unless_exists', 'key': '/type/author', 'type': '/type/type'})
-            
-    start = web.query('select last_value from thing_id_seq')[0].last_value
-    print "database has %d things" % start
-        
-    import time
-
-    for i in range(times):
-        t1 = time.time()
-        q = [book(start+i) for i in range(n)]
-        start += n
-        BulkUpload(site).upload(q)
-        t2 = time.time()
-        t = t2 - t1
-        print "inserting %d records took %f seconds (%f records/sec)" % (n, t, n/t)
+    BulkUpload(site)

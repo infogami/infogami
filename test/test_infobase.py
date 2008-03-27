@@ -1,5 +1,5 @@
 import webtest
-from infogami.infobase import infobase
+from infogami.infobase import infobase, client
 import web
 
 class InfobaseTestCase(webtest.TestCase):
@@ -20,15 +20,19 @@ class InfobaseTestCase(webtest.TestCase):
     def setUp(self):
         self.site = self.get_site("test")
         # don't let the cache state of one test interfere with another.
-        infobase.thingcache.clear()
-        infobase.querycache_things.clear()
-        infobase.querycache_versions.clear()
+        self.clear_cache()
+
         # reset stats
         for k in infobase.stats:
             infobase.stats[k] = 0
         
         # run every test in a transaction, so that we can rollback later in tearDown
         web.transact()
+
+    def clear_cache(self):
+        infobase.thingcache.clear()
+        infobase.querycache_things.clear()
+        infobase.querycache_versions.clear()
         
     def tearDown(self):
         web.rollback()
@@ -169,6 +173,14 @@ class InfobaseTest(InfobaseTestCase):
         self.new('/foo2', '/type/page', title='foo')
         #@@ need to specify sort order?
         self.assertEquals(self.things(type='/type/page', title='foo', sort='key'), ['/foo', '/foo2'])
+
+class WriteTest(InfobaseTestCase):
+    def test_write_with_none(self):
+        self.new('/foo', '/type/page', title='foo', a=2)
+        foo = self.site.get('/foo')
+        self.assertEquals(foo.a.value, 2)
+        
+        self.update('/foo', a=None)
     
 class VersionsTest(InfobaseTestCase):
     def test_versions(self):
@@ -211,6 +223,37 @@ class VersionsTest(InfobaseTestCase):
 
         changes = self.versions(sort='-created')
         self.assertEquals((s.v_hits, s.v_misses), (1, 1))
+
+class UnicodeTest(InfobaseTestCase):
+    def testUnicode(self):
+        u = u'/\u1234'
+        self.new(u, '/type/page', title=u)
+
+        t = self.site.withKey(u)
+        self.assertEquals(t.key, u)
+        self.assertEquals(t.title.value, u)
+
+        self.clear_cache()
+        t = self.site.withKey(u)
+        self.assertEquals(t.key, u)
+        self.assertEquals(t.title.value, u)
+
+class ClientTest(InfobaseTestCase):
+    def testWrite(self):
+        site = client.Site(client.Client(None, 'test'))
+        site.write(dict(create='unless_exists', key='/foo', type='/type/page', title='foo'))
+        foo = site.get('/foo')
+        self.assertEquals(foo.key, '/foo')
+        self.assertEquals(foo.title, 'foo')
+        import web
+
+        x = u'/\iu1234'
+        u = web.utf8(x)
+        
+        site.write(dict(create='unless_exists', key=u, type='/type/page', title=u))
+        foo = site.get(x)
+        self.assertEquals(foo.key, x)
+        self.assertEquals(foo.title, x)
                         
 if __name__ == "__main__":
     webtest.main()

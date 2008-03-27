@@ -60,7 +60,7 @@ def get_user_preferences(user):
     return get_version(user.key + '/preferences')
     
 @public
-def get_recent_changes(key=None, author=None, limit=None):
+def get_recent_changes(key=None, author=None, limit=None, offset=None):
     q = {'sort': '-created'}
     if key is not None:
         q['key'] = key
@@ -68,8 +68,8 @@ def get_recent_changes(key=None, author=None, limit=None):
     if author:
         q['author'] = author.key
     
-    if limit:
-        q['limit'] = limit or 100
+    q['limit'] = limit or 100
+    q['offset'] = offset or 0
     return web.ctx.site.versions(q)
 
 @public

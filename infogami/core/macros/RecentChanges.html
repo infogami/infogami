@@ -36,7 +36,7 @@ $for v in changes:
 $if page != 0:
     <a href="$:changequery(rc_page=page - 1)">Newer</a>
 
-$if changes:
+$if len(changes) == limit:
     <a href="$:changequery(rc_page=page + 1)">Older</a>
 <div>
     

@@ -68,7 +68,7 @@ class edit (delegate.mode):
         elif isinstance(value, list):
             return dict(connect='update_list', value=[self.make_query(v, False) for v in value])
         else:
-            return dict(connect='update', value=value)
+            return dict(connect='update', value=value or None)
             
         for key, value in i.items():
             if key in ['key', 'connect', 'create']: # key is never changed
@@ -432,3 +432,7 @@ class sitepreferences(delegate.page):
             
         return values
 
+class favicon(delegate.page):
+    path = "/favicon.ico"
+    def GET(self):
+        return web.redirect('/static/favicon.ico')

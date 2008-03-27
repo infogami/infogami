@@ -99,7 +99,6 @@ def saferender(templates, *a, **kw):
             if i.safe.lower() == "false":
                 raise
             
-            print >> web.debug, str(e)
             import traceback
             traceback.print_exc()
             from view import set_error

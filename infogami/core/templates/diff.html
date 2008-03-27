@@ -23,7 +23,6 @@ $var title: $_.diff_title(a.name)
        <tbody>
 	
 $for p in a.type.properties:
-	<!-- $p.expected_type, $p.name, $a[p.name], $b[p.name] -->
     $ label = _t[p.name]
     $:thingdiff(p.expected_type, label, a[p.name], b[p.name])
 

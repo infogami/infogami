@@ -14,16 +14,17 @@ infogami.config.admin_password = "admin123"
 #infogami.config.plugin_path += ['plugins']
 #infogami.config.plugins += ['search']
 
-## incase you want to generate tdb log
-#import infogami.tdb.tdb
-#infogami.tdb.logger.set_logfile(open("tdb.log", "a"))
-
-@infogami.install_hook
-@infogami.action
 def createsite():
-    from infogami.infobase import Infobase
+    import web
+    from infogami.infobase.infobase import Infobase
+    web.config.db_parameters = infogami.config.db_parameters
+    web.config.db_printing = True
     web.load()
-    Infobase().create_site(infobase.config.site, infobase.config.admin_password)
+    Infobase().create_site(infogami.config.site, infogami.config.admin_password)
 
 if __name__ == "__main__":
-    infogami.run()
+    import sys
+    if '--createsite' in sys.argv:
+        createsite()
+    else:
+        infogami.run()

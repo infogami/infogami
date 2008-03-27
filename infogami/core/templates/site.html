@@ -20,13 +20,13 @@ $for jsurl in ctx.javascripts:
 $if ctx.user:
     <form name='logout' action="$homepath()/account/logout" method='POST'></form>
     
-    $:_.welcome_user(homepath() + '/' + ctx.user.name, ctx.user.displayname)
+    $:_.welcome_user(homepath() + ctx.user.key, ctx.user.displayname)
     | <a href="$homepath()/account/preferences">$_.preferences</a>
     | <a href="#" onclick="document.forms['logout'].submit()">$_.logout</a>
 $else:
     <a href="/account/login">$_.login</a>
 
-        </div>
+</div>
 
         <div id="title"><a href="/">$_.site_title</a></div>
         <!--

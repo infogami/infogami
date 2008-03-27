@@ -27,7 +27,7 @@ $for v in h:
       <td><input type="radio" id="b$v.revision" name="b" value="$v.revision"></td>
       <td><a href="$url(m='edit', v=v.revision)">$_.edit</a></td>
       $if v.author:
-          <td class="history"><a href="$homepath()/$v.author.key">$v.author.displayname</a></td>
+          <td class="history"><a href="$homepath()$v.author.key">$v.author.displayname</a></td>
       $else:
           <td class="history">$v.ip</td>
       <td>$v.comment</td>

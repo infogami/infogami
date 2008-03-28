@@ -145,7 +145,10 @@ class ThingItem:
             raise Exception, '%s is not allowed for %s' % (self.op.op, self.datatype)
         
     def matches(self, thing):
-        return self.op.compare(self.value, self.coerce(self.datatype, thing._get(self.key)))
+        value = thing._get(self.key)
+        if not isinstance(value, list):
+            value = [value]
+        return any(self.op.compare(self.value, self.coerce(self.datatype, v)) for v in value)
         
     def coerce(self, datatype, value):
         if isinstance(value, infobase.Datum):
@@ -158,7 +161,7 @@ class ThingItem:
                 elif isinstance(value, infobase.Thing):
                     value = value.id
                 else:
-                    raise Exception, 'Bad data: %s' % repr(value)
+                    raise Exception, 'Bad data: %s %s' % (repr(value), value.__class__)
             elif datatype == TYPE_BOOLEAN:
                 value = int(value)
         elif datatype == TYPE_FLOAT:

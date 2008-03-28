@@ -86,6 +86,11 @@ def safeint(value):
 def query_param(name, default=None):
     i = web.input(_m='GET')
     return i.get(name, default)
+
+@public
+def join(sep, *items):
+    items = [str(item) for item in items]
+    return "".join(items)
     
 @public
 def format(text):
@@ -158,10 +163,13 @@ def thinginput(type, name, value, **attrs):
     
 def thingify(type, value):
     # if type is given as string then get the type from db
+    if type is None:
+        type = '/type/string'
+        
     if isinstance(type, basestring):
         from infogami.core import db
         type = db.get_version(type)
-    
+        
     PRIMITIVE_TYPES = "/type/key", "/type/string", "/type/text", "/type/int", "/type/float", "/type/boolean"    
     from infogami.infobase import client
         
@@ -271,3 +279,8 @@ def move(dir, extension, recursive=False, readfunc=None):
     for key in result.updated:
         print 'updated', key
 
+@infogami.action
+def write(filename):
+    q = open(filename).read()
+    print web.ctx.site.write(q)
+    

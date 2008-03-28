@@ -73,11 +73,11 @@ def get_recent_changes(key=None, author=None, limit=None, offset=None):
     return web.ctx.site.versions(q)
 
 @public
-def list_pages(path):
+def list_pages(path, limit=100, offset=0):
     """Lists all pages with name path/*"""
-    return _list_pages(path, limit=100)
+    return _list_pages(path, limit=limit, offset=offset)
     
-def _list_pages(path, limit=None):
+def _list_pages(path, limit, offset):
     if path == "/":
         pattern = '/*'
     else:
@@ -87,9 +87,9 @@ def _list_pages(path, limit=None):
         'key~': pattern,
         'sort': 'key'
     }
-    if limit:
-        q['limit'] = limit
-    return [web.ctx.site.get(key, lazy=True) for key in web.ctx.site.things(q)]    
+    q['limit'] = limit
+    q['offset'] = offset
+    return [web.ctx.site.get(key, lazy=True) for key in web.ctx.site.things(q)]
                    
 def get_things(typename, prefix, limit):
     """Lists all things whose names start with typename"""	

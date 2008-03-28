@@ -88,6 +88,8 @@ $for p in page.type.properties:
             <td></td>
             <td></td>
         </tr>
+        </tbody>
+        <tbody>
         $for x in page[key]:
             <tr repeat="$i">
                 <td colspan="2" style="padding-left:1.0em"> $:thinginput(p.expected_type, key + "#" + str(i), value=x)</td>

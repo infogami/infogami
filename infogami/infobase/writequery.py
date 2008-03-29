@@ -68,7 +68,10 @@ class Value:
                 self.value = int(self.value)
             elif expected_type == '/type/boolean':
                 self.datatype = infobase.TYPES['/type/boolean']
-                self.value = int(bool(self.value))
+                if str(self.value).lower() == "false":
+                    self.value = 0
+                else:
+                    self.value = int(bool(self.value))
             elif expected_type == '/type/float':
                 makesure(isinstance(self.value, (int, float)))
                 self.datatype = infobase.TYPES['/type/float']

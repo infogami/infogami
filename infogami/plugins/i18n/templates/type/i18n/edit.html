@@ -11,7 +11,7 @@ $:macros.TypeChanger(page.type)
 $ lang = page.key.split('.')[-1]
 $ namespace = find_i18n_namespace(page.key)
 $for key in _.getkeys(namespace, lang):
-    <tr><td>$key</td><td><input type="text" name="$key" value="$page.get('string_' + key, '')"/></td>
+    <tr><td>$key</td><td><input type="text" name="string_$key" value="$page.get('string_' + key, '')"/></td>
 </table>
 
 <script>
@@ -22,7 +22,7 @@ function add_key() {
 	var cell1 = row.insertCell(0);
 	var cell2 = row.insertCell(1);
 	cell1.innerHTML = key;
-    cell2.innerHTML = '<input type="text" name="' + key + '" value=""/>';
+    cell2.innerHTML = '<input type="text" name="string_' + key + '" value=""/>';
 	return false;
 }
 </script>

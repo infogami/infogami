@@ -5,20 +5,25 @@ i18n: allow keeping i18n strings in wiki
 import web
 
 import infogami
-from infogami import config, tdb
+from infogami import config
 from infogami.utils import delegate, i18n
 from infogami.utils.context import context
 from infogami.utils.view import public
 from infogami.utils.template import render
+from infogami.infobase import client
 import db
 
 re_i18n = web.re_compile(r'^/i18n(/.*)?/strings\.([^/]*)$')
 
-class hook(tdb.hook):
+class hook(client.hook):
     def on_new_version(self, page):
         """Update i18n strings when a i18n wiki page is changed."""
         if page.type.key == '/type/i18n':
-            load(page.key, page._getdata())
+            data = page._getdata()
+            for k, v in data.items():
+                if isinstance(v, dict):
+                    data[k]  = v['value']
+            load(page.key, data)
 
 def load_strings(site):
     """Load strings from wiki."""

@@ -88,9 +88,9 @@ def query_param(name, default=None):
     return i.get(name, default)
 
 @public
-def join(sep, *items):
-    items = [str(item) for item in items]
-    return "".join(items)
+def join(sep, items):
+    items = [web.utf8(item or "") for item in items]
+    return web.utf8(sep).join(items)
     
 @public
 def format(text):

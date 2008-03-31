@@ -360,7 +360,13 @@ class Infosite:
     def run_hooks(self, objects):
         for h in hooks:
             for o in objects:
-                h(o)
+                try:
+                    h(o)
+                except:
+                    # ignore the exceptions in hooks
+                    # but print traceback because "Errors should never pass silently."
+                    import traceback
+                    traceback.print_exc()
     
     def invalidate(self, objects, versions):
         """Invalidate the given keys from cache."""

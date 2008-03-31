@@ -19,6 +19,8 @@ KEYWORDS = ["id",
     "revision", "version", "history", 
     "value", "metadata"
 ]
+
+hooks = []
     
 TYPES = {}
 TYPES['/type/key'] = 1
@@ -347,12 +349,18 @@ class Infosite:
             
             modified = ctx.modified_objects()
             self.invalidate(modified, ctx.versions.values())
+            self.run_hooks(modified)
         except:
             web.rollback()
             raise
         else:
             web.commit()
         return result
+        
+    def run_hooks(self, objects):
+        for h in hooks:
+            for o in objects:
+                h(o)
     
     def invalidate(self, objects, versions):
         """Invalidate the given keys from cache."""

@@ -1,0 +1,8 @@
+{
+    'create': 'unless_exists',
+    'key': '/macros', 
+    'type': '/type/page',
+    'title': 'Macros', 
+    'body': '{{PageList("/macros")}}'
+}
+

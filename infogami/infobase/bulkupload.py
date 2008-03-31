@@ -240,6 +240,8 @@ class BulkUpload:
                                 append(thing_id, key, _value, datatype, i)
                         else:
                             _value, datatype = self.prepare_datum(value, result, "%s/%s" % (path, key))
+                            if key == 'key':
+                                datatype = 1
                             append(thing_id, key, _value, datatype, None)
                 return (thing_id, DATATYPE_REFERENCE)
         elif isinstance(query, basestring):

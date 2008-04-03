@@ -119,7 +119,7 @@ class Things:
             datatype = get_datatype(type, order)
             tables.append('datum as ds')
             where += web.reparam(" AND ds.thing_id = thing.id"
-                + " AND ds.begin_revision <= $self.revision AND ds.end_revision > $self.revision"
+                + " AND ds.end_revision = 2147483647"
                 + " AND ds.key = $order AND ds.datatype = $datatype", locals())
             order = "ds.value" + desc
             
@@ -176,8 +176,7 @@ class ThingItem:
         datatype = self.datatype
         value = self.op.process(self.value)
         q = ['%(table)s.thing_id = thing.id',
-            '%(table)s.begin_revision <= $revision',
-            '%(table)s.end_revision > $revision',
+            '%(table)s.end_revision = 2147483647',
             '%(table)s.key = $key',
             self.op.query(self.cast(table + '.value')),
             '%(table)s.datatype = $datatype']
@@ -295,6 +294,7 @@ class Versions:
         
     def get_order(self):
         order = self.sort
+
         if order:
             if order.startswith('-'):
                 order = order[1:]

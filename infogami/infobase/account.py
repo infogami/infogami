@@ -84,6 +84,9 @@ class AccountManager:
         """Returns the current user from the session."""
         if not web.ctx.get('env'):
             return None
+        
+        if web.ctx.get('current_user'):
+            return web.ctx.current_user
             
         #@@ TODO: call assert_trusted_machine when user is admin.
         session = web.cookies(infobase_session=None).infobase_session
@@ -175,6 +178,7 @@ class AccountManager:
             return None
 
     def setcookie(self, user, remember=False):
+        web.ctx.current_user = user
         import datetime, time
         t = datetime.datetime(*time.gmtime()[:6]).isoformat()
         text = "%d,%s" % (user.id, t)
@@ -195,7 +199,7 @@ class AccountManager:
     def checkpassword(self, user, raw_password):
         d = web.select('account', where='thing_id=$user.id', vars=locals())
         return self._check_salted_hash(self.site.secret_key, raw_password, d[0].password)
-
+        
 if __name__ == "__main__":
     web.transact()
     from infobase import Infobase

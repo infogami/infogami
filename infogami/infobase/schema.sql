@@ -52,9 +52,9 @@ CREATE TABLE account (
 --- index ---
 
 CREATE INDEX version_created_idx ON version (created);
-CREATE INDEX version_comment_idx ON version (comment);
+CREATE INDEX version_comment_idx ON version (comment) where comment is not NULL;
 CREATE INDEX version_machine_comment_idx ON version (machine_comment);
-CREATE INDEX version_author_id_idx ON version (author_id);
+CREATE INDEX version_author_id_idx ON version (author_id) where author_id is not NULL;
 
 CREATE FUNCTION text2timestap(text) RETURNS timestamp AS $$
     SELECT CAST($1 AS TIMESTAMP);
@@ -66,20 +66,18 @@ $$ LANGUAGE SQL IMMUTABLE;
 
 CREATE INDEX datum_thing_id_revision_idx ON datum (thing_id, end_revision, begin_revision);
 
---- index for keys, strings and uris 
-CREATE INDEX datum_key_val_str_idx ON datum (key, value, datatype, begin_revision, end_revision) WHERE datatype=1 OR datatype=2 OR datatype = 4;
 
 -- index dirname(key) for datatype key
 CREATE INDEX datum_key_val_dirname_idx ON datum (key, dirname(value), datatype, begin_revision, end_revision) WHERE datatype=1;
 
---- index for integers and references
-CREATE INDEX datum_key_val_int_idx ON datum (key, cast(value as integer), datatype, begin_revision, end_revision) WHERE datatype=0 OR datatype = 5 OR datatype = 6;
-
---- index for floats
-CREATE INDEX datum_key_val_float_idx ON datum (key, CAST(value AS float), datatype, begin_revision, end_revision) WHERE datatype=7;
-
---- index for timestamps
-CREATE INDEX datum_key_val_timestamp_idx ON datum (key, text2timestap(value), datatype, begin_revision, end_revision) WHERE datatype=8;
+CREATE INDEX datum_key_val_key_idx ON datum (key, value, thing_id) WHERE datatype=1 AND end_revision=2147483647;
+CREATE INDEX datum_key_val_str_idx ON datum (key, value, thing_id) WHERE datatype=2 AND end_revision=2147483647;
+CREATE INDEX datum_key_val_uri_idx ON datum (key, value, thing_id) WHERE datatype=4 AND end_revision = 2147483647;
+CREATE INDEX datum_key_val_ref_idx ON datum (key, cast(value as integer), thing_id) WHERE datatype=0 AND end_revision=2147483647;
+CREATE INDEX datum_key_val_bool_idx ON datum (key, cast(value as integer), thing_id) WHERE datatype=5 AND end_revision=2147483647;
+CREATE INDEX datum_key_val_int_idx ON datum (key, cast(value as integer), thing_id) WHERE datatype=6 AND end_revision=2147483647;
+CREATE INDEX datum_key_val_float_idx ON datum (key, cast(value as float), thing_id) WHERE datatype=7 AND end_revision=2147483647;
+CREATE INDEX datum_key_val_timestamp_idx ON datum (key, text2timestap(value), thing_id) WHERE datatype=8 AND end_revision=2147483647;
 
 CREATE INDEX account_email_idx ON account (email);
 

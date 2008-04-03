@@ -95,12 +95,12 @@ class AccountManager:
     def update_user(self, old_password, new_password, email):
         def _update_password(user, password):
             password = self._generate_salted_hash(self.site.secret_key, password)            
-            web.update('user', where='thing_id=$user.id', password=password, vars=locals())
+            web.update('account', where='thing_id=$user.id', password=password, vars=locals())
             
         def _update_email(user, email):
-            web.update('user', where='thing_id=$user.id', email=email, vars=locals())
+            web.update('account', where='thing_id=$user.id', email=email, vars=locals())
         
-        user = self.site.get_user()
+        user = self.get_user()
         if user is None:
             raise NotFound("Not logged in")
 

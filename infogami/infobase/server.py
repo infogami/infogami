@@ -137,7 +137,7 @@ class account:
         return a.reset_password(i.username, i.code, i.password)
     
     def POST_update_user(self, site):
-        i = input('old_password', 'new_password', 'email')
+        i = input('old_password', new_password=None, email=None)
         a = site.get_account_manager()
         return a.update_user(i.old_password, i.new_password, i.email)
         

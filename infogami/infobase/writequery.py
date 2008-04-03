@@ -117,7 +117,7 @@ class Query:
                     raise error('%s: expected unique value but found list for %s.%s' % (value, thing.type.key, key))
             else:
                 if not isinstance(value, list):
-                    raise error('%s: expected list but found unique value for %s.%s.' % (value.value, thing.thing.key, key))
+                    raise error('%s: expected list but found unique value for %s.%s.' % (value.value, thing.type.key, key))
 
             if isinstance(value, list):
                 for v in value:

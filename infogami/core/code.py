@@ -6,9 +6,9 @@ from infogami import utils, tdb, config
 from infogami.utils import delegate, types
 from infogami.utils.context import context
 from infogami.utils.template import render
+from infogami.utils.view import login_redirect, require_login
 
 import db
-import auth
 import forms
 import thingutil
 import helpers
@@ -344,34 +344,33 @@ def register_preferences(name, handler):
 class preferences(delegate.page):
     path = "/account/preferences"
     
-    @auth.require_login    
-    def GET(self, site):
-        d = dict((name, p.GET(site)) for name, p in _preferences.iteritems())
+    @require_login    
+    def GET(self):
+        d = dict((name, p.GET()) for name, p in _preferences.iteritems())
         return render.preferences(d.values())
 
-    @auth.require_login
-    def POST(self, site):
+    @require_login
+    def POST(self):
         i = web.input("_action")
-        result = _preferences[i._action].POST(site)
-        d = dict((name, p.GET(site)) for name, p in _preferences.iteritems())
+        result = _preferences[i._action].POST()
+        d = dict((name, p.GET()) for name, p in _preferences.iteritems())
         if result:
             d[i._action] = result
         return render.preferences(d.values())
 
 class login_preferences:
-    def GET(self, site):
+    def GET(self):
         f = forms.login_preferences()
         return render.login_preferences(f)
         
-    def POST(self, site):
+    def POST(self):
         i = web.input("oldpassword", "password", "password2")
         f = forms.login_preferences()
         if not f.validates(i):
             return render.login_preferences(f)
         else:
-            user = auth.get_user(site)
-            auth.set_password(user, i.password)
-            return self.GET(site)
+            user = web.ctx.site.update_user(i.oldpassword, i.password, None)
+            return self.GET()
 
 register_preferences("login_preferences", login_preferences())
 
@@ -387,51 +386,6 @@ class getthings(delegate.page):
         things = web.ctx.site.things(q)
         print "\n".join(things)
     
-class sitepreferences(delegate.page):
-    path = "/admin/sitepreferences"
-    
-    def GET(self, site):
-        if not auth.has_permission(context.site, context.user, "admin/sitepreferences", "view"):
-            return auth.login_redirect()
-            
-        perms = db.get_site_permissions(site)
-        return render.sitepreferences(perms)
-        
-    def POST(self, site):
-        if not auth.has_permission(context.site, context.user, "admin/sitepreferences", "view"):
-            return auth.login_redirect()
-            
-        perms = self.input()
-        db.set_site_permissions(site, perms)
-        return render.sitepreferences(perms)
-    
-    def input(self):
-        i = web.input(order=[])
-        re_who = web.re_compile("who(\d+)_path\d+")
-        re_what = web.re_compile("what(\d+)_path\d+")
-        
-        values = []
-        for o in i.order:
-            key = 'path' + o
-            path = i[key].strip()
-            if path == "":
-                continue
-                
-            who_keys = [re_who.sub(r'\1', k) for k in i
-                            if k.endswith(key) and k.startswith('who')]            
-            what_keys = [re_what.sub(r'\1', k) for k in i
-                            if k.endswith(key) and k.startswith('what')]
-            x = sorted(who_keys)
-            y = sorted(what_keys)
-            assert x == y
-            whos = [i["who%s_%s" % (k, key)].strip() for k in x]
-            whats = [i["what%s_%s" % (k, key)].strip() for k in x]
-            
-            perms = [(a, b) for a, b in zip(whos, whats) if a != ""]
-            values.append((path, perms))
-            
-        return values
-
 class favicon(delegate.page):
     path = "/favicon.ico"
     def GET(self):

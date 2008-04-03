@@ -48,7 +48,6 @@ def _changepath(new_path):
     return new_path + web.ctx.query
 
 def initialize_context():
-    from infogami.core import auth
     from infogami.core import db
 
     web.ctx.site = create_site()
@@ -111,11 +110,6 @@ def delegate(path):
         what = web.input(_method='GET').get('m', 'view')
         
         #@@ move this to some better place
-        from infogami.core import auth
-        
-        if what not in modes:
-            return web.seeother(web.changequery(m=None))
-        
         if what not in ("view", "edit") or True: #or auth.has_permission(context.site, context.user, path, what):
             cls = modes[what]            
             if not hasattr(cls, method):
@@ -123,7 +117,7 @@ def delegate(path):
             out = getattr(cls(), method)(path)
         else:
             #context.error = 'You do not have permission to do that.'
-            return auth.login_redirect()
+            return view.login_redirect()
 
     if out is not None:
         if isinstance(out, str):

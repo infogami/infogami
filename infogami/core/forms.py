@@ -1,5 +1,5 @@
 from web.form import *
-import db, auth
+import db
 from infogami.utils import i18n
 from infogami.utils.context import context
 
@@ -46,7 +46,6 @@ login_preferences = Form(
     Password("password2", notnull, description=_.confirm_password),
     BetterButton("save", label=_.save),
     validators = [
-        Validator(_.incorrect_password, lambda i: auth.check_password(context.user, i.oldpassword)),
         Validator(_.passwords_did_not_match, lambda i: i.password == i.password2)]
 )
 

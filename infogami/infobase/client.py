@@ -114,7 +114,7 @@ class Site:
             self._cache[key, revision] = data
             # it is important to call _fill_backreferences after updating the cache.
             # otherwise, _fill_backreferences is called recursively for type/type.
-            self._fill_backreferences(key, data)
+            #self._fill_backreferences(key, data)
         return self._cache[key, revision]
         
     def _fill_backreferences(self, key, data):
@@ -128,7 +128,7 @@ class Site:
             i = web.storage()
         page_size = 20
         for p in data.type.backreferences:
-            offset = page_size * safeint(i.get(p.name + '.page') or '0')
+            offset = page_size * safeint(i.get(p.name + '_page') or '0')
             q = {
                 'type': p.expected_type.key, 
                 p.property_name: key, 
@@ -189,6 +189,10 @@ class Site:
     def register(self, username, displayname, email, password):
         return self._client.request('/account/register', 'POST', 
             dict(username=username, displayname=displayname, email=email, password=password))
+            
+    def update_user(self, old_password, new_password, email):
+        return self._client.request('/account/update_user', 'POST', 
+            dict(old_password=old_password, new_password=new_password, email=email))
             
     def get_reset_code(self, email):
         """Returns the reset code for user specified by the email.

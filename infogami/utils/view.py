@@ -284,3 +284,21 @@ def write(filename):
     q = open(filename).read()
     print web.ctx.site.write(q)
     
+
+# this is not really the right place to move this, but couldn't find a better place than this.     
+def require_login(f):
+    def g(*a, **kw):
+        if not web.ctx.site.get_user():
+            return login_redirect()
+        return f(*a, **kw)
+
+    return g
+
+def login_redirect(path=None):
+    import urllib
+    if path is None:
+        path = web.ctx.fullpath
+
+    query = urllib.urlencode({"redirect":path})
+    web.seeother("/account/login?" + query)
+    raise StopIteration

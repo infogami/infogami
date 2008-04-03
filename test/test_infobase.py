@@ -29,6 +29,9 @@ class InfobaseTestCase(webtest.TestCase):
         # run every test in a transaction, so that we can rollback later in tearDown
         web.transact()
 
+        # clear env
+        web.ctx.env = web.storage()
+
     def clear_cache(self):
         infobase.thingcache.clear()
         infobase.querycache_things.clear()
@@ -254,6 +257,19 @@ class ClientTest(InfobaseTestCase):
         foo = site.get(x)
         self.assertEquals(foo.key, x)
         self.assertEquals(foo.title, x)
+
+class AccountTest(InfobaseTestCase):
+    def testAccount(self):
+        site = client.Site(client.Client(None, 'test'))
+        site.register('test', 'Test', 'test@example.com', 'test123')
+        site.login('test', 'test123')        
+        self.save_cookie()
+        site.update_user('test123', 'test321', 'test@test.com')
+        site.login('test', 'test321')
+        
+    def save_cookie(self):
+        cookie = web.ctx.headers[0][1].split(';')[0]        
+        web.ctx.env = web.storage(HTTP_COOKIE=cookie)        
                         
 if __name__ == "__main__":
     webtest.main()

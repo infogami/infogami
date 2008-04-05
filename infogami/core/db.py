@@ -80,7 +80,8 @@ def list_pages(path, limit=100, offset=0):
 def _list_pages(path, limit, offset):
     q = {}
     if path != '/':
-        q['key'] = path + '/*'
+        q['key~'] = path + '/*'
+    q['sort'] = 'key'
     q['limit'] = limit
     q['offset'] = offset
     # queries are very slow with != conditions

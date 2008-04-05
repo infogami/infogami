@@ -78,18 +78,13 @@ def list_pages(path, limit=100, offset=0):
     return _list_pages(path, limit=limit, offset=offset)
     
 def _list_pages(path, limit, offset):
-    if path == "/":
-        pattern = '/*'
-    else:
-        pattern = path + '/*'
-    
-    q = {
-        'key~': pattern,
-        'sort': 'key',
-        'type!=': '/type/delete'
-    }
+    q = {}
+    if path != '/':
+        q['key'] = path + '/*'
     q['limit'] = limit
     q['offset'] = offset
+    # queries are very slow with != conditions
+    # q['type'] != '/type/delete'
     return [web.ctx.site.get(key, lazy=True) for key in web.ctx.site.things(q)]
                    
 def get_things(typename, prefix, limit):

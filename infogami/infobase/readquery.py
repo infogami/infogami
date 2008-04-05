@@ -239,7 +239,7 @@ def get_datatype(type, key, value=None):
     # "key" and "type" always have the same type
     if key == 'key':
         return infobase.TYPES['/type/key']
-    elif key == 'type':
+    elif key in ['type', 'permission', 'child_permission']:
         return DATATYPE_REFERENCE
         
     # see of you infer the datatype from the type of the object

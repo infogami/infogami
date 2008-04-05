@@ -114,7 +114,7 @@ class Site:
             self._cache[key, revision] = data
             # it is important to call _fill_backreferences after updating the cache.
             # otherwise, _fill_backreferences is called recursively for type/type.
-            #self._fill_backreferences(key, data)
+            self._fill_backreferences(key, data)
         return self._cache[key, revision]
         
     def _fill_backreferences(self, key, data):
@@ -130,11 +130,12 @@ class Site:
         for p in data.type.backreferences:
             offset = page_size * safeint(i.get(p.name + '_page') or '0')
             q = {
-                'type': p.expected_type.key, 
                 p.property_name: key, 
                 'offset': offset,
                 'limit': page_size
             }
+            if p.expected_type:
+                q['type'] = p.expected_type.key
             data[p.name] = [self.get(key, lazy=True) for key in self.things(q)]
             
     def get(self, key, revision=None, lazy=False):

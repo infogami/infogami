@@ -152,9 +152,9 @@ class Thing:
         self._site = site
         self.id = id
         self.key = key
-        self.revision = revision
         self.last_modified = last_modified and last_modified.isoformat()
         self.latest_revision = latest_revision
+        self.revision = revision or latest_revision
         self._d = None # data is loaded lazily on demand
         
     def copy(self):

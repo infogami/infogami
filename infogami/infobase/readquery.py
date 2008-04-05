@@ -79,7 +79,13 @@ class Things:
         self.items = self.process_query(query)
         
     def matches(self, thing):
-        return all(item.matches(thing) for item in self.items)
+        try:
+            return all(item.matches(thing) for item in self.items)
+        except:
+            import traceback
+            traceback.print_exc()
+            # if there is any error then in matching better remove it from cache
+            return True
     
     def __eq__(self, other):
         return isinstance(other, Things) \
@@ -154,6 +160,9 @@ class ThingItem:
         if isinstance(value, infobase.Datum):
             value = value.value
             
+        if value is None:
+            return None
+
         if datatype in [TYPE_BOOLEAN, TYPE_INT, DATATYPE_REFERENCE]:
             if datatype == DATATYPE_REFERENCE:
                 if isinstance(value, basestring):
@@ -328,8 +337,14 @@ class Versions:
         return out
         
     def matches(self, version):
-        return all(self.query[k] == version[k] for k in self.query)
-
+        try:
+            return all(self.query[k] == version[k] for k in self.query)
+        except:
+            import traceback
+            traceback.print_exc()
+            # if there is any error then in matching better remove it from cache
+            return True
+    
     def __hash__(self):
         d = (self.offset, self.limit, self.sort, tuple(self.query.items()))
         return hash(d)

@@ -311,6 +311,10 @@ class forgot_password(delegate.page):
             except ClientException, e:
                 f.note = str(e)
                 return render.forgot_password(f)
+            finally:
+                # clear the cookie set by delegate.admin_login
+                # Otherwise user will be able to work as admin user.
+                web.ctx.headers = []
                 
             msg = render.password_mailer(web.ctx.home, d.username, d.code)            
             web.sendmail(config.from_address, i.email, msg.subject.strip(), str(msg))

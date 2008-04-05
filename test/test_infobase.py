@@ -26,11 +26,11 @@ class InfobaseTestCase(webtest.TestCase):
         for k in infobase.stats:
             infobase.stats[k] = 0
         
+        # clear env
+        web.load()
+        
         # run every test in a transaction, so that we can rollback later in tearDown
         web.transact()
-
-        # clear env
-        web.ctx.env = web.storage()
 
     def clear_cache(self):
         infobase.thingcache.clear()
@@ -165,7 +165,7 @@ class InfobaseTest(InfobaseTestCase):
         self.new('/foo', '/type/page', title='foo')
         self.things(type='/type/page', title='foo') # populate cache
                 
-        self.update('/foo', title='foofoo')        
+        self.update('/foo', title='foofoo')
         self.assertEquals(self.things(type='/type/page', title='foo'), [])
 
     def test_things_cache_with_new(self):
@@ -188,7 +188,7 @@ class WriteTest(InfobaseTestCase):
 class VersionsTest(InfobaseTestCase):
     def test_versions(self):
         # new object should have only one version
-        self.new('/foo', '/type/page', title='foo')        
+        self.new('/foo', '/type/page', title='foo') 
         versions = self.versions(key='/foo')
         self.assertEquals(len(versions), 1)
         
@@ -203,9 +203,6 @@ class VersionsTest(InfobaseTestCase):
         self.assertEquals(len(versions), 2)
         
     def test_versions_cache_with_new(self):
-        import datetime
-        timestamp = datetime.datetime.utcnow()
-
         changes = self.versions(sort='-created')
         
         self.new('/foo', '/type/page', title='foo')
@@ -287,5 +284,13 @@ class CacheTest(InfobaseTestCase):
         self.assertEquals(foo2.title.value, 'foo2')
         self.assertEquals(foo2.revision, 2)
         
+    def test_update_with_none(self):
+        # create an object with a permission
+        self.site.write(dict(create='unless_exists', key='/foo', type='/type/page', permission='/permission/open'))
+        # query for all objects controlled by that permission (to poplulate cache)
+        things = self.things(permission='/permission/open')
+        # try to update permission to None
+        self.site.write(dict(key='/foo', permission=dict(connect='update', key=None)))
+
 if __name__ == "__main__":
     webtest.main()

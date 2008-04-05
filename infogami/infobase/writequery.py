@@ -311,18 +311,17 @@ class Context:
         if web.ctx.get('infobase_bootstrap'):
             return True
             
-        permission = self.get_permission(key)
-        
+        permission = self.get_permission(key)        
         if permission is None:
             return True
         
         for group in get_groups(permission):
-            if group.key == 'permission/everyone':
+            if group.key == '/usergroup/everyone':
                 return True
             elif self.author is not None:    
-                if group.key == 'permission/allusers' or self.author in group._get('members', []):
+                if group.key == '/usergroup/allusers' or self.author in group._get('members', []):
                     return True
-                        
+                    
         return False
     
     def can_write(self, key):

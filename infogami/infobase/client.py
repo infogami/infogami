@@ -167,6 +167,10 @@ class Site:
         result = self._client.request('/write', 'POST', dict(query=_query, comment=comment))['result']
         self._run_hooks('on_new_version', query)
         return result
+        
+    def can_write(self, key):
+        perms = self._client.request('/permission', 'GET', dict(key=key))['result']
+        return perms['write']
 
     def _run_hooks(self, name, query):
         if isinstance(query, dict):

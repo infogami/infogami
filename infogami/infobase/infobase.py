@@ -356,6 +356,12 @@ class Infosite:
         else:
             web.commit()
         return result
+    
+    def get_permissions(self, key):
+        import writequery
+        a = self.get_account_manager()
+        ctx = writequery.Context(self, author=a.get_user())
+        return dict(write=ctx.can_write(key), admin=ctx.can_admin(key))
         
     def run_hooks(self, objects):
         for h in hooks:

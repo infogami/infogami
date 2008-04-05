@@ -269,7 +269,23 @@ class AccountTest(InfobaseTestCase):
         
     def save_cookie(self):
         cookie = web.ctx.headers[0][1].split(';')[0]        
-        web.ctx.env = web.storage(HTTP_COOKIE=cookie)        
-                        
+        web.ctx.env = web.storage(HTTP_COOKIE=cookie) 
+        
+class CacheTest(InfobaseTestCase):
+    def testThingCache(self):
+        self.new('/foo', '/type/page', title='foo', body='bar')
+
+        # foo must be available in cache, once we request it
+        foo = self.site.withKey('/foo')
+        assert foo.id in infobase.thingcache
+
+        # foo must be removed from cache after updated it
+        self.update('/foo', title='foo2')
+        assert foo.id not in infobase.thingcache
+        
+        foo2 = self.site.withKey('/foo')
+        self.assertEquals(foo2.title.value, 'foo2')
+        self.assertEquals(foo2.revision, 2)
+        
 if __name__ == "__main__":
     webtest.main()

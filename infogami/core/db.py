@@ -85,7 +85,8 @@ def _list_pages(path, limit, offset):
     
     q = {
         'key~': pattern,
-        'sort': 'key'
+        'sort': 'key',
+        'type!=': '/type/delete'
     }
     q['limit'] = limit
     q['offset'] = offset

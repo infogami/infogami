@@ -109,6 +109,9 @@ def delegate(path):
     else: # mode
         what = web.input(_method='GET').get('m', 'view')
         
+        if what == 'edit' and not web.ctx.site.can_write(path):
+            view.login_redirect()
+        
         #@@ move this to some better place
         if what not in ("view", "edit") or True: #or auth.has_permission(context.site, context.user, path, what):
             cls = modes[what]            
@@ -120,7 +123,7 @@ def delegate(path):
             return view.login_redirect()
 
     if out is not None:
-        if isinstance(out, str):
+        if isinstance(out, basestring):
             out = web.template.Stowage(_str=out, title=path)
             
         if hasattr(out, 'rawtext'):

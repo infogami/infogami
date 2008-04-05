@@ -104,7 +104,7 @@ def saferender(templates, *a, **kw):
             from view import set_error
             set_error(str(t.filename) + ': error in processing template: ' + e.__class__.__name__ + ': ' + str(e) + ' (falling back to default template)')
 
-    return "Unable to render this page."         
+    return web.template.Stowage(_str="Unable to render this page.", title='Error')
 
 def typetemplate(name):
     """explain later"""

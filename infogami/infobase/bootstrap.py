@@ -45,6 +45,9 @@ def primitive_types():
         q('/type/float', 'Floating Point Number', 'Type to store 32-bit floating point numbers'),
         q('/type/uri', 'URI', 'Type to store URIs.'),
         q('/type/datetime', 'Datetime', 'Type to store datetimes from 4713 BC to 5874897 AD with 1 millisecond resolution.'),
+        
+        # this is not a primitive type, but it is easier to add here than anywhere else.
+        q('/type/delete', 'Delete', 'Type to make a page as deleted.'),
     ]
 
 def _property(key, property_name, expected_type, unique):

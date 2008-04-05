@@ -19,10 +19,6 @@ def notfound():
     web.ctx.status = '404 Not Found'
     return render.notfound()
 
-def deleted():
-    web.ctx.status = '404 Not Found'
-    return render.deleted()
-
 class view (delegate.mode):
     def GET(self, path):
         i = web.input(v=None)
@@ -30,8 +26,6 @@ class view (delegate.mode):
 
         if p is None:
             return notfound()
-        elif p.deleted:
-            return deleted()
         else:
             return render.viewpage(p)
 
@@ -136,13 +130,14 @@ class edit (delegate.mode):
         elif action == 'save':
             try:
                 web.ctx.site.write(q, comment)
-                return web.seeother(web.changequery(query={}))
+                return web.seeother(web.changequery(m=None))
             except ClientException, e:
                 utils.view.set_error(str(e))
                 p = self.process(i)
                 return render.editpage(p)
         elif action == 'delete':
-            # delete is not yet implemented
+            q = dict(key=q['key'], type=dict(connect='update', key='/type/delete'))
+            web.ctx.site.write(q, comment)
             return web.seeother(web.changequery(query={}))
 
     def process(self, data):
@@ -175,10 +170,7 @@ class permission(delegate.mode):
         p = db.get_version(path)
         if not p:
             return web.seeother('/' + path)
-            
-        i = web.input(edit="")
-            
-        return render.permission(p, i.edit)
+        return render.permission(p)
         
     def POST(self, path):
         p = db.get_version(path)
@@ -312,8 +304,14 @@ class forgot_password(delegate.page):
         if not f.validates(i):
             return render.forgot_password(f)
         else:
-            delegate.admin_login()
-            d = web.ctx.site.get_reset_code(i.email)            
+            from infogami.infobase.client import ClientException
+            try:
+                delegate.admin_login()
+                d = web.ctx.site.get_reset_code(i.email)
+            except ClientException, e:
+                f.note = str(e)
+                return render.forgot_password(f)
+                
             msg = render.password_mailer(web.ctx.home, d.username, d.code)            
             web.sendmail(config.from_address, i.email, msg.subject.strip(), str(msg))
             return render.passwordsent(i.email)

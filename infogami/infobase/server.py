@@ -10,6 +10,7 @@ urls = (
     "/([^/]*)/versions", "versions",
     "/([^/]*)/write", "write",
     "/([^/]*)/account/(.*)", "account",
+    "/([^/]*)/permission", "permission",
 )
 
 def jsonify(f):
@@ -82,6 +83,13 @@ class versions:
         i = input('query')
         q = simplejson.loads(i.query)
         return site.versions(q)
+        
+class permission:
+    @jsonify
+    def GET(self, sitename):
+        site = get_site(sitename)
+        i = input('key')
+        return site.get_permissions(i.key)
         
 class account:
     """Code for handling /account/.*"""

@@ -162,13 +162,13 @@ class Query:
             else:
                 assert 'key' in self.d
                 key = self.d['key'].execute().value
-                assert isinstance(key, basestring)
+                assert key is None or isinstance(key, basestring)
                 
-                thing = self.ctx.get(key)
+                thing = key and self.ctx.get(key)
                 if thing:
                     for k, v in self.d.items():
                         self.connect(thing, k, v)
-                else:
+                elif key is not None:
                     if self._create == 'unless_exists':
                         if not self.ctx.can_write(key):
                             raise infobase.PermissionDenied('Permission denied to modify: ' + repr(key))
@@ -183,7 +183,7 @@ class Query:
                     else:
                         raise infobase.InfobaseException('Not found: ' + key)
                         
-                self.value = Value(thing, thing.type.key)
+                self.value = Value(thing, thing and thing.type.key)
         else:
             self.value = Value(self.d, None)
         return self.value

@@ -88,6 +88,13 @@ def query_param(name, default=None):
     return i.get(name, default)
 
 @public
+def http_status(status):
+    """Function to set http status from templates. 
+    Useful to implement notfound and redirect.
+    """
+    web.ctx.status = status
+    
+@public
 def join(sep, items):
     items = [web.utf8(item or "") for item in items]
     return web.utf8(sep).join(items)

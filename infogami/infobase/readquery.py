@@ -122,12 +122,17 @@ class Things:
                 desc = " desc"
             else:
                 desc = ""
-            datatype = get_datatype(type, order)
-            tables.append('datum as ds')
-            where += web.reparam(" AND ds.thing_id = thing.id"
-                + " AND ds.end_revision = 2147483647"
-                + " AND ds.key = $order AND ds.datatype = $datatype", locals())
-            order = "ds.value" + desc
+                
+            # allow sort based on thing columns
+            if order in ['id', 'created', 'last_modified', 'key']:
+                order = 'thing.' + order + desc
+            else:
+                datatype = get_datatype(type, order)
+                tables.append('datum as ds')
+                where += web.reparam(" AND ds.thing_id = thing.id"
+                    + " AND ds.end_revision = 2147483647"
+                    + " AND ds.key = $order AND ds.datatype = $datatype", locals())
+                order = "ds.value" + desc
             
         for i, item in enumerate(self.items):
             d = 'd%d' % i

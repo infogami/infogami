@@ -291,6 +291,13 @@ class CacheTest(InfobaseTestCase):
         things = self.things(permission='/permission/open')
         # try to update permission to None
         self.site.write(dict(key='/foo', permission=dict(connect='update', key=None)))
+        
+    def test_withKey_revision(self):
+        self.new('/foo', '/type/page', title='foo', body='foo')
+        self.update('/foo', body='bar')
+        foo = self.site.withKey('/foo', revision=1)
+        foo2 = self.site.withKey('/foo')
+        self.assertEquals(foo2.body.value, 'bar')
 
 if __name__ == "__main__":
     webtest.main()

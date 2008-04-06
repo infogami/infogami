@@ -51,6 +51,9 @@ CREATE TABLE account (
 
 --- index ---
 
+CREATE INDEX thing_created_idx ON thing(created);
+CREATE INDEX thing_last_modified_idx ON thing(last_modified);
+
 CREATE INDEX version_created_idx ON version (created);
 CREATE INDEX version_comment_idx ON version (comment) where comment is not NULL;
 CREATE INDEX version_machine_comment_idx ON version (machine_comment);

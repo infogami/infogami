@@ -279,8 +279,9 @@ class Infosite:
         except NotFound:
             return None
             
-    def cachify(self, thing):
-        thingcache[thing.id] = thing
+    def cachify(self, thing, revision):
+        if revision is None:
+            thingcache[thing.id] = thing
         return thing
 
     def withKey(self, key, revision=None, lazy=False):
@@ -294,7 +295,8 @@ class Infosite:
         except IndexError:
             raise NotFound, key
             
-        return self.cachify(Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision))
+        thing = Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision)
+        return self.cachify(thing, revision)
         
     def withID(self, id, revision=None):
         if revision is None and id in thingcache:
@@ -304,7 +306,7 @@ class Infosite:
             d = web.select('thing', where='site_id=$self.id AND id=$id', vars=locals())[0]        
         except IndexError:
             raise NotFound, id
-        return self.cachify(Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision))
+        return self.cachify(Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision), revision)
 
     def things(self, query):
         assert isinstance(query, dict)

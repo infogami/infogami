@@ -54,11 +54,14 @@ class InfobaseTestCase(webtest.TestCase):
         q = dict(key=key)
 
         for k, v in values.items():
-            q[k] = dict(connect='update', value=v)
-            if isinstance(v, int):
-                q[k]['type'] = '/type/int'
-            elif isinstance(v, float):
-                q[k]['type'] = '/type/float'
+            if isinstance(v, list):
+                q[k] = dict(connect='update_list', value=v)
+            else:
+                q[k] = dict(connect='update', value=v)
+                if isinstance(v, int):
+                    q[k]['type'] = '/type/int'
+                elif isinstance(v, float):
+                    q[k]['type'] = '/type/float'
 
         self.site.write(q)
 
@@ -68,6 +71,14 @@ class InfobaseTestCase(webtest.TestCase):
         
     def versions(self, **query):
         return self.site.versions(query)
+        
+    def assertRevision(self, key, revision):
+        self.assertEquals(self.site.get(key).revision, revision)
+        
+    def assertValue(self, key, property_name, value):
+        thing = self.site.get(key)
+        value2 = thing._get(property_name, None)
+        self.assertEquals(value2, value)
         
 class WriteTest(InfobaseTestCase):
     def test_new(self):
@@ -95,7 +106,31 @@ class WriteTest(InfobaseTestCase):
         
         foo = self.site.get('/foo')
         self.assertEquals(foo.title.value, 5)
+
+    def test_write_with_none(self):
+        self.new('/foo', '/type/page', title='foo', a=2)
+        foo = self.site.get('/foo')
+        self.assertEquals(foo.a.value, 2)
+
+        self.update('/foo', title=None)
+        self.assertEquals(foo.revision, 2)
         
+        self.update('/foo', title=None)
+        self.assertEquals(foo.revision, 2)
+        
+    def test_update_with_nochange(self):
+        self.new('/foo', '/type/page', title='foo', a=["x", "y"])
+        self.update('/foo', title='foo')
+        self.assertRevision('/foo', 1)
+
+        self.update('/foo', title=None)
+        self.assertValue('/foo', 'title', None)
+        self.assertRevision('/foo', 2)
+
+        self.update('/foo', title=None)
+        self.assertValue('/foo', 'title', None)
+        self.assertRevision('/foo', 2)
+                
 class InfobaseTest(InfobaseTestCase):        
     def test_get(self):
         t = self.site.get('/type/type')
@@ -176,14 +211,11 @@ class InfobaseTest(InfobaseTestCase):
         self.new('/foo2', '/type/page', title='foo')
         #@@ need to specify sort order?
         self.assertEquals(self.things(type='/type/page', title='foo', sort='key'), ['/foo', '/foo2'])
-
-class WriteTest(InfobaseTestCase):
-    def test_write_with_none(self):
-        self.new('/foo', '/type/page', title='foo', a=2)
-        foo = self.site.get('/foo')
-        self.assertEquals(foo.a.value, 2)
         
-        self.update('/foo', a=None)
+    def test_things_without_type(self):
+        self.new('/foo', '/type/page', title='foo', a='foo')
+        # things is failing when sort is spefified and type is not specified
+        self.site.things({'a~': 'f*', 'sort': 'a'})
     
 class VersionsTest(InfobaseTestCase):
     def test_versions(self):

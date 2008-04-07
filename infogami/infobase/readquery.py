@@ -127,7 +127,7 @@ class Things:
             if order in ['id', 'created', 'last_modified', 'key']:
                 order = 'thing.' + order + desc
             else:
-                datatype = get_datatype(type, order)
+                datatype = get_datatype(self.type, order)
                 tables.append('datum as ds')
                 where += web.reparam(" AND ds.thing_id = thing.id"
                     + " AND ds.end_revision = 2147483647"

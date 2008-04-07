@@ -1,4 +1,5 @@
 import os.path
+import re
 import web
 from infogami import config
 
@@ -101,11 +102,14 @@ def delegate(path):
         elif method == 'POST':
             return web.notfound()
 
-    if path in pages:
-        cls = pages[path]            
-        if not hasattr(cls, method):
-            return web.nomethod(method)
-        out = getattr(cls(), method)()
+    for p in pages:
+        m = re.match('^' + p + '$', path)
+        if m:
+            cls = pages[p]
+            if not hasattr(cls, method):
+                return web.nomethod(method)
+            out = getattr(cls(), method)(*m.groups())
+            break
     else: # mode
         what = web.input(_method='GET').get('m', 'view')
         

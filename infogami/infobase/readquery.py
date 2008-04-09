@@ -135,9 +135,13 @@ class Things:
                 order = "ds.value" + desc
             
         for i, item in enumerate(self.items):
-            d = 'd%d' % i
-            tables.append('datum as ' + d)
-            where += ' AND ' + item.query(d, self.revision)
+	    if item.key == 'key':
+		q = item.query('thing', self.revision)
+	    else:
+		d = 'd%d' % i
+		tables.append('datum as ' + d)
+		q = item.query(d, self.revision)
+            where += ' AND ' + q
             
         return [r.key for r in web.select(tables, what=what, where=where, offset=self.offset, limit=self.limit, order=order)]
     
@@ -181,7 +185,7 @@ class ThingItem:
         elif datatype == TYPE_FLOAT:
             value = float(value)
         else:
-            value = str(value)
+            value = web.utf8(value)
         
         return value
         
@@ -189,12 +193,16 @@ class ThingItem:
         key = self.key
         datatype = self.datatype
         value = self.op.process(self.value)
-        q = ['%(table)s.thing_id = thing.id',
-            '%(table)s.end_revision = 2147483647',
-            '%(table)s.key = $key',
-            self.op.query(self.cast(table + '.value')),
-            '%(table)s.datatype = $datatype']
-        q = ' AND '.join(q) % locals()
+
+	if table == 'thing' and key == 'key':
+	    q = [self.op.query('thing.key')]
+	else: 
+	    q = ['%(table)s.thing_id = thing.id',
+		'%(table)s.end_revision = 2147483647',
+		'%(table)s.key = $key',
+		self.op.query(self.cast(table + '.value')),
+		'%(table)s.datatype = $datatype']
+	q = ' AND '.join(q) % locals()
         return web.reparam(q, locals())
         
     def cast(self, column):
@@ -213,41 +221,6 @@ def parse_key(key):
             key = key[:-len(op.op)]
             return key, op
     return key, EQ
-
-def join(site, type, table, key, value, revision):
-    """Creates join query to join on condition specified by key and value."""
-    key, op = parse_key(key)
-    if not web.re_compile('[a-zA-Z][a-zA-Z_]*').match(key):
-        raise Exception, "invalid key: %s" % key
-            
-    datatype = get_datatype(type, key)
-    if datatype not in op.allowed_datatypes:
-        raise Exception, '%s is not allowed for %s' % (op.op, infobase.TYPES.get(datatype, 'references'))
-        
-    if datatype in [TYPE_BOOLEAN, TYPE_INT, DATATYPE_REFERENCE]:
-        value_column = 'cast(%s.value as int)' % table
-        
-        if datatype == DATATYPE_REFERENCE:
-            value = site.withKey(value).id
-        elif datatype == TYPE_BOOLEAN:
-            value = int(value)
-    elif datatype == TYPE_FLOAT:
-        value_column = 'cast(%s.value as float)' % table
-        value = float(value)
-    else:
-        value_column = '%s.value' % table
-        value = str(value)
-    
-    value = op.process(value)
-    q = ['%(table)s.thing_id = thing.id',
-        '%(table)s.begin_revision <= $revision',
-        '%(table)s.end_revision > $revision',
-        '%(table)s.key = $key',
-        op.query(value_column),
-        '%(table)s.datatype = $datatype']
-        
-    q = ' AND '.join(q) % locals()
-    return web.reparam(q, locals())
 
 def get_datatype(type, key, value=None):
     # "key" and "type" always have the same type

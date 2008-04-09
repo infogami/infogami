@@ -330,6 +330,19 @@ class CacheTest(InfobaseTestCase):
         foo = self.site.withKey('/foo', revision=1)
         foo2 = self.site.withKey('/foo')
         self.assertEquals(foo2.body.value, 'bar')
+        
+    def test_cache_bug(self):
+        # create 2 objects
+        self.new('/foo', '/type/page', title='foo')
+        self.new('/foo2', '/type/page', title='foo')
+        
+        # run  a query which selects these 2 and puts the result in the cache
+        self.things(type='/type/page', title='foo')
+        
+        # update those 2 objects to make it not match the query
+        def q(key):
+            return dict(key=key, title=dict(connect='update', value='bar'))    
+        self.site.write([q('/foo'), q('/foo2')])
 
 if __name__ == "__main__":
     webtest.main()

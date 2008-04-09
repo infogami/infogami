@@ -384,9 +384,7 @@ class Infosite:
                 
         for q in querycache_things.keys():
             for o in objects:
-                if q in querycache_things and q.matches(o):
-                    del querycache_things[q]
-                elif o.key in querycache_things[q]:
+                if q in querycache_things and (q.matches(o) or o.key in querycache_things[q]):
                     del querycache_things[q]
                     
         for q in querycache_versions.keys():

@@ -21,6 +21,9 @@ class i18n:
     def __init__(self):
         self._data = {}
         
+    def get_locale(self):
+        return web.ctx.lang
+        
     def get_namespaces(self):
         return sorted(set(k[0] for k in self._data))
         

@@ -41,6 +41,8 @@ def load(key, data):
         namespace = namespace or '/'
         i18n.strings._set_strings(namespace, lang, unstringify(data))
 
+#@@ disabled /i18n
+"""
 class i18n_page(delegate.page):
     path = '/i18n'
     def GET(self):        
@@ -56,7 +58,8 @@ class i18n_page(delegate.page):
         path = pathjoin('/i18n', i.ns, '/strings.' + i.lang)
         page = web.ctx.site.get(path)
         return render.i18n(i.ns, i.lang, page)
-    
+"""
+
 def setup():
     delegate.fakeload()    
     from infogami.utils import types

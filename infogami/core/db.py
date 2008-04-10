@@ -16,8 +16,14 @@ def new_version(path, type):
     if isinstance(type, basestring):
         type = get_type(type)
     
-    assert type is not None    
+    assert type is not None
     return web.ctx.site.new(path, {'key': path, 'type': type})
+    
+@public
+def get_i18n_page(page):
+    def get(lang):
+       return lang and get_version(page.key + '.' + lang)
+    return get(web.ctx.lang) or get('en') or None
 
 class ValidationException(Exception): pass
 

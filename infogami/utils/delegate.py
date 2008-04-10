@@ -58,6 +58,7 @@ def initialize_context():
     context.javascripts = []
     context.user = web.ctx.site.get_user()
     context.site = config.site
+    context.path = web.ctx.path
     
     i = web.input(_method='GET', rescue="false")
     context.rescue_mode = (i.rescue.lower() == 'true')
@@ -75,6 +76,7 @@ def fakeload():
     context.stylesheets = []
     context.javascripts = []
     context.site = config.site
+    context.path = '/'
     
     # hack to disable permissions
     web.ctx.infobase_bootstrap = True
@@ -112,6 +114,9 @@ def delegate(path):
             break
     else: # mode
         what = web.input(_method='GET').get('m', 'view')
+        
+        if what not in modes:
+            return web.seeother(web.changequery(m=None))
         
         if what == 'edit' and not web.ctx.site.can_write(path):
             view.login_redirect()

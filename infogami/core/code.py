@@ -6,7 +6,7 @@ from infogami import utils, tdb, config
 from infogami.utils import delegate, types
 from infogami.utils.context import context
 from infogami.utils.template import render
-from infogami.utils.view import login_redirect, require_login
+from infogami.utils.view import login_redirect, require_login, safeint
 
 import db
 import forms
@@ -15,24 +15,34 @@ import helpers
 
 from infogami.infobase.client import ClientException
 
-def notfound():
+def notfound(path):
     web.ctx.status = '404 Not Found'
-    return render.notfound()
+    return render.notfound(path)
 
 class view (delegate.mode):
     def GET(self, path):
         i = web.input(v=None)
+
+        if i.v is not None and safeint(i.v, None) is None:
+            return web.seeother(web.changequery(v=None))
+		
         p = db.get_version(path, i.v)
 
         if p is None:
-            return notfound()
+            return notfound(path)
+        elif p.type.key == '/type/delete':
+            web.ctx.status = '404 Not Found'
+            return render.viewpage(p)
         else:
             return render.viewpage(p)
 
 class edit (delegate.mode):
     def GET(self, path):
         i = web.input(v=None, t=None)
-        
+
+        if i.v is not None and safeint(i.v, None) is None:
+            return web.seeother(web.changequery(v=None))
+		        
         p = db.get_version(path, i.v) or db.new_version(path, types.guess_type(path))
         
         if i.t:
@@ -130,7 +140,7 @@ class edit (delegate.mode):
         elif action == 'save':
             try:
                 web.ctx.site.write(q, comment)
-                return web.seeother(web.changequery(m=None))
+                return web.seeother(web.changequery(query={}))
             except ClientException, e:
                 utils.view.set_error(str(e))
                 p = self.process(i)
@@ -204,7 +214,10 @@ class history (delegate.mode):
         page = web.ctx.site.get(path)
         if not page:
             return web.seeother(path)
-        history = db.get_recent_changes(key=path, limit=20)
+        i = web.input(page=0)
+        offset = 20 * safeint(i.page)
+        limit = 20
+        history = db.get_recent_changes(key=path, limit=limit, offset=offset)
         return render.history(page, history)
                 
 class diff (delegate.mode):

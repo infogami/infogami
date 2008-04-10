@@ -62,6 +62,7 @@ web.template.Template.globals.update(dict(
   isinstance=isinstance,
   enumerate=enumerate,
   hasattr = hasattr,
+  utf8=web.utf8,
   Dropdown = web.form.Dropdown,
   slice = slice,
   debug = web.debug,
@@ -75,12 +76,19 @@ def public(f):
     return f
 
 @public    
-def safeint(value):
+def safeint(value, default=0):
     """Convers the value to integer. Returns 0, if the conversion fails."""
     try:
         return int(value)
     except Exception:
-        return 0
+        return default
+
+@public
+def safeadd(*items):
+    s = ''
+    for i in items:
+        s += (i and web.utf8(i)) or ''
+    return s
 
 @public
 def query_param(name, default=None):
@@ -189,6 +197,8 @@ def thingify(type, value):
     # primitive values
     if not isinstance(value, client.Thing):
         value = web.storage(value=value, is_primitive=True, type=type)
+    else:
+        value.type = type # valye.type might be string, make it Thing object
         
     return value
 

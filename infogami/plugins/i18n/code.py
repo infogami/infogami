@@ -23,6 +23,9 @@ class hook(client.hook):
             for k, v in data.items():
                 if isinstance(v, dict):
                     data[k]  = v['value']
+                if not data[k]:
+                    data.pop(k)
+            
             load(page.key, data)
 
 def load_strings(site):

@@ -38,7 +38,6 @@ def get_doc(text):
 web.template.Template.globals.update(dict(
   changequery = web.changequery,
   url = web.url,
-  datestr = web.datestr,
   numify = web.numify,
   ctx = context,
   _ = i18n.strings,
@@ -291,9 +290,9 @@ def move(dir, extension, recursive=False, readfunc=None):
 
     delegate.admin_login()
     result = web.ctx.site.write(pages, "install")
-    for key in result.created:
+    for key in sorted(result.created):
         print 'created', key
-    for key in result.updated:
+    for key in sorted(result.updated):
         print 'updated', key
 
 @infogami.action
@@ -319,3 +318,29 @@ def login_redirect(path=None):
     query = urllib.urlencode({"redirect":path})
     web.seeother("/account/login?" + query)
     raise StopIteration
+
+@public
+def datestr(then, now=None):
+    """Internationalized version of web.datestr"""
+    
+    # Examples:
+    # 2 seconds from now
+    # 2 microseconds ago
+    # 2 milliseconds ago
+    # 2 seconds ago
+    # 2 minutes ago
+    # 2 hours ago
+    # 2 days ago
+    # January 21
+    # Jaunary 21, 2003
+    
+    result = web.datestr(then, now)
+    _ = i18n.strings.get_namespace('/utils/date')
+    
+    import string
+    if result[0] in string.digits: # eg: 2 milliseconds ago
+        t, unit, ago = result.split(' ', 2)
+        return "%s %s %s" % (t, _[unit], _[ago.replace(' ', '_')])
+    else:
+        month, rest = result.split(' ', 1)
+        return "%s %s" % (_[month.lower()], rest)

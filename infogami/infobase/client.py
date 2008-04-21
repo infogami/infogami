@@ -76,6 +76,24 @@ class Client:
         else:
             return out
             
+class LazyObject:
+    """LazyObject which creates the required object on demand.
+        >>> o = LazyObject(lambda: [1, 2, 3])
+        >>> o
+        [1, 2, 3]
+    """
+    def __init__(self, creator):
+        self.__dict__['_creator'] = creator
+        self.__dict__['_o'] = None
+        
+    def _get(self):
+        if self._o is None:
+            self._o = self._creator()
+        return self._o
+        
+    def __getattr__(self, key):
+        return getattr(self._get(), key)
+            
 class Site:
     def __init__(self, client):
         self._client = client
@@ -136,7 +154,7 @@ class Site:
             }
             if p.expected_type:
                 q['type'] = p.expected_type.key
-            data[p.name] = [self.get(key, lazy=True) for key in self.things(q)]
+            data[p.name] = LazyObject(lambda: [self.get(key, lazy=True) for key in self.things(q)])
             
     def get(self, key, revision=None, lazy=False):
         assert key.startswith('/')
@@ -337,9 +355,5 @@ def _run_hooks(name, thing):
             m(thing)
 
 if __name__ == "__main__":
-    import web
-    web.config.db_parameters = dict(dbn='postgres', db='infobase', user='anand', pw='') 
-    web.config.db_printing = True
-    web.load()
-    site = Site(Client(None, 'infogami.org'))
-    print site.get('', 2)
+    import doctest
+    doctest.testmod()

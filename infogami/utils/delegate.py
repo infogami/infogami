@@ -96,13 +96,13 @@ def delegate(path):
         method = 'GET'
     
     initialize_context()
-    
-    normalized = normpath(path)
-    if path != normalized:
-        if method == 'GET':
-            return web.seeother(_changepath(normalized))
-        elif method == 'POST':
-            return web.notfound()
+    if not path.startswith('/api'):
+        normalized = normpath(path)
+        if path != normalized:
+            if method == 'GET':
+                return web.seeother(_changepath(normalized))
+            elif method == 'POST':
+                return web.notfound()
 
     for p in pages:
         m = re.match('^' + p + '$', path)

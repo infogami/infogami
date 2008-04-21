@@ -157,12 +157,13 @@ def request(path, method, data):
     web.ctx.infobase_input = data or {}
     web.ctx.infobase_method = method
     for pattern, classname in web.group(urls, 2):
-        m = web.re_compile(pattern).match(path)
+        m = web.re_compile('^' + pattern + '$').match(path)
         if m:
             args = m.groups()
             cls = globals()[classname]
             tocall = getattr(cls(), method)
             return tocall(*args)
+    return web.notfound()
 
 def run():
     web.run(urls, globals())

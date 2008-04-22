@@ -28,7 +28,12 @@ def jsonify(f):
             traceback.print_exc()
             d['status'] = 'fail'
             d['message'] = 'InternalError: %s' % str(e)
-        result = simplejson.dumps(d)
+        
+        i = input(prettyprint=None)
+        if i.prettyprint:
+            result = simplejson.dumps(d, indent=4)
+        else:
+            result = simplejson.dumps(d)
         if web.ctx.get('infobase_localmode'):
             return result
         else:
@@ -61,10 +66,10 @@ class withkey:
     @jsonify
     def GET(self, sitename, key):
         try:
-            i = input(revision=None)
+            i = input(revision=None, expand=False)
             site = get_site(sitename)
             thing = site.withKey(key, revision=i.revision)
-            return thing._get_data()
+            return thing._get_data(expand=i.expand)
         except infobase.NotFound:
             return None
             

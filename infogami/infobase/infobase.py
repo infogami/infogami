@@ -176,13 +176,16 @@ class Thing:
             d = self._parse_data(d)
             self._d = d
         
-    def _get_data(self):
+    def _get_data(self, expand=False):
         def unthingify(thing):
             if isinstance(thing, list):
                 return [unthingify(x) for x in thing]
             elif isinstance(thing, Datum):
                 if thing.datatype == DATATYPE_REFERENCE:
-                    return {'key': self._site.withID(thing.value).key}
+                    if expand:
+                        return self._site.withID(thing.value)._get_data()
+                    else:
+                        return {'key': self._site.withID(thing.value).key}
                 else:
                     return thing._get_value()
             else:

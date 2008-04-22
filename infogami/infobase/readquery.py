@@ -40,9 +40,19 @@ LT = operator("<", [TYPE_INT, TYPE_FLOAT], compare=lambda x, y: x < y)
 LE = operator("<=", [TYPE_INT, TYPE_FLOAT], compare=lambda x, y: x <= y)
 GT = operator(">", [TYPE_INT, TYPE_FLOAT], compare=lambda x, y: x > y)
 GE = operator(">=", [TYPE_INT, TYPE_FLOAT], compare=lambda x, y: x >= y)
+
+def like_processor(value):
+    if value.index('*') != len(value) - 1:
+        raise infobase.InfobaseException("* is permitted only at the end of the string due to performance reasons.")
+    return value.replace('%', r'\%').replace('*', '%')
+    
+def like_compare(x, y):
+    x = re.escape(x).replace(r'\*', '.*')
+    return bool(re.match('^' + x + '$', y))
+
 LIKE = operator("~", [TYPE_KEY, TYPE_STRING, TYPE_URI], 'LIKE', 
-        lambda value: value.replace('*', '%'), 
-        compare=lambda x, y: bool(re.match('^' + x.replace('*', '.*') + '$', y)))
+        like_processor, 
+        like_compare)
         
 operators = [LT, LE, GT, GE, LIKE, NE, EQ] # EQ must be at the end
 
@@ -70,6 +80,13 @@ class Things:
         self.offset = query.pop('offset', None)
         self.limit = query.pop('limit', None)
         self.sort = query.pop('sort', None)
+
+        # make sure limit is not more than 100
+        trusted_machines = web.config.get('trusted_machines', []) + ['127.0.0.1']
+        if web.ctx.ip not in trusted_machines: 
+            self.limit = self.limit or 100
+            if self.limit > 100:
+                raise infobase.InfobaseException("limit is not permitted to be more than 100 due to performance reasons.")
         
         self.type = query.get('type')
         self.type = self.type and self.site.withKey(self.type)
@@ -265,6 +282,13 @@ class Versions:
         self.limit = query.pop('limit', None)
         self.sort = query.pop('sort', None)
         
+        # make sure limit is not more than 100
+        trusted_machines = web.config.get('trusted_machines', []) + ['127.0.0.1']
+        if web.ctx.ip not in trusted_machines: 
+            self.limit = self.limit or 100
+            if self.limit > 100:
+                raise infobase.InfobaseException("limit is not permitted to be more than 100 due to performance reasons.")
+                
         self.query = web.storage(query)
         
         author = self.query.pop('author', None)

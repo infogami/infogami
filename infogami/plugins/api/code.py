@@ -15,6 +15,13 @@ class api(delegate.page):
         path = "/%s/%s" % (sitename, path)
         method = web.ctx.method
         
+        # Have an option of setting content-type to text/plain
+        i = web.input(_method='GET', text="false")
+        if i.text.lower() == "false":
+            web.header('Content-type', 'application/json')
+        else:
+            web.header('Content-type', 'text/plain')
+            
         if host:
             if method == 'GET':
                 path += '?' + web.ctx.env['QUERY_STRING']

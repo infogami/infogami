@@ -323,8 +323,7 @@ class Infosite:
             stats.t_misses += 1
         else:
             stats.t_hits += 1
-            result = querycache_things[query]
-            
+            result = querycache_things[query]            
         return result
         
     def versions(self, query):
@@ -350,7 +349,7 @@ class Infosite:
             ctx = writequery.Context(self, 
                 author=a.get_user(), ip=web.ctx.get('ip'), 
                 comment=comment, machine_comment=machine_comment)
-            result =  ctx.execute(query)
+            result = ctx.execute(query)
             
             modified = ctx.modified_objects()
             self.invalidate(modified, ctx.versions.values())

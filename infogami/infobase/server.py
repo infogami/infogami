@@ -5,7 +5,7 @@ import infobase
 import simplejson
 
 urls = (
-    "/([^/]*)/get(/.*)", "withkey",
+    "/([^/]*)/get", "withkey",
     "/([^/]*)/things", "things",
     "/([^/]*)/versions", "versions",
     "/([^/]*)/write", "write",
@@ -64,11 +64,11 @@ class write:
 
 class withkey:
     @jsonify
-    def GET(self, sitename, key):
+    def GET(self, sitename):
         try:
-            i = input(revision=None, expand=False)
+            i = input("key", revision=None, expand=False)
             site = get_site(sitename)
-            thing = site.withKey(key, revision=i.revision)
+            thing = site.withKey(i.key, revision=i.revision)
             return thing._get_data(expand=i.expand)
         except infobase.NotFound:
             return None

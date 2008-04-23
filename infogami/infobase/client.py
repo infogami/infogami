@@ -30,11 +30,7 @@ class Client:
         self.sitename = sitename
         self.cookie = None
         
-    def request(self, path, method='GET', data=None):
-        """Sends request to the server.
-        data should be a dictonary. For GET request, it is passed as query string
-        and for POST requests, it is passed as POST data.
-        """
+    def do_request(self, path, method='GET', data=None):
         path = "/%s%s" % (self.sitename, path)
         if self.host:
             data = data and urllib.urlencode(data)
@@ -68,7 +64,14 @@ class Client:
         else:
             import server
             out = server.request(path, method, data)
+        return out
         
+    def request(self, path, method='GET', data=None):
+        """Sends request to the server.
+        data should be a dictonary. For GET request, it is passed as query string
+        and for POST requests, it is passed as POST data.
+        """
+        out = self.do_request(path, method, data)
         out = simplejson.loads(out)
         out = storify(out)
         if out.status == 'fail':
@@ -103,11 +106,8 @@ class Site:
         
     def _get(self, key, revision=None):
         """Returns properties of the thing with the specified key."""
-        if revision: 
-            data = {'revision': revision}
-        else:
-            data = None
-        result = self._client.request('/get' + key, data=data)['result']
+        data = dict(key=key, revision=revision)
+        result = self._client.request('/get', data=data)['result']
         if result is None:
             raise NotFound, key
         else:

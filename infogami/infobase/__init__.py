@@ -38,3 +38,9 @@ def run():
         
     return commands[action](*sys.argv[2:])
     
+if __name__ == "__main__":
+    import os
+    dbname = os.environ.get('INFOBASE_DB', 'infobase')
+    web.config.db_printing = True
+    web.config.db_parameters = dict(dbn='postgres', db=dbname)
+    run()

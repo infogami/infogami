@@ -3,6 +3,8 @@ import httplib, urllib
 import simplejson
 import web
 
+DEBUG = False
+
 def storify(d):
     if isinstance(d, dict):
         for k, v in d.items():
@@ -33,6 +35,11 @@ class Client:
     def do_request(self, path, method='GET', data=None):
         path = "/%s%s" % (self.sitename, path)
         if self.host:
+            # don't send nulls
+            for k in data.keys():
+                if data[k] is None: del data[k]
+            
+            if DEBUG: print >>web.debug, path, data
             data = data and urllib.urlencode(data)
             if data and method == 'GET':
                 path += '?' + data
@@ -232,7 +239,7 @@ class Site:
         user = data and Thing(self, data['key'], data)
         return user
 
-    def new(self, key, data):
+    def new(self, key, data=False):
         """Creates a new thing in memory.
         """
         return Thing(self, key, data)
@@ -286,7 +293,10 @@ class Thing:
     def __init__(self, site, key, data=None, revision=None):
         self._site = site
         self.key = key
-        self._data = data
+        if data is False:
+            self._data = {}
+        else:
+            self._data = data
         self.revision = revision
         
     def _getdata(self):
@@ -300,12 +310,30 @@ class Thing:
         
     def __setitem__(self, key, value):
         self._data[key] = value
+    
+    def __setattr__(self, key, value):
+        if key in ['key', 'revision'] or key.startswith('_'):
+            self.__dict__[key] = value
+        else:
+            self._data[key] = value
         
     def __iter__(self):
         return iter(self._data)
         
     def get(self, key, default=None):
         return self._getdata().get(key, default)
+    
+    def save(self, comment=None):
+        d = self.dict()
+        d['create'] = 'unless_exists'
+        d['key'] = self.key
+        result = self._site.write(d, comment)
+        if self.key in result.created:
+            return 'created'
+        elif self.key in result.updated:
+            return 'updated'
+        else:
+            return result
         
     def dict(self):
         def unthingify(thing):

@@ -63,7 +63,7 @@ class AccountManager:
             self.site.write(q)
             user = self.site.withKey(username)
             password = self._generate_salted_hash(self.site.secret_key, password)
-            web.insert('account', False, thing_id=user.id, email=email, password=password)
+            web.insert('account', False, thing_id=user.id, email=email, password=password)    
         except:
             import traceback
             traceback.print_exc()
@@ -71,6 +71,7 @@ class AccountManager:
             raise
         else:
             web.commit()
+            self.site.logger.on_account_change("newuser", user.key, dict(email=email, password=password))
             self.setcookie(user)
             return user
             
@@ -99,9 +100,11 @@ class AccountManager:
         def _update_password(user, password):
             password = self._generate_salted_hash(self.site.secret_key, password)            
             web.update('account', where='thing_id=$user.id', password=password, vars=locals())
+            self.site.logger.on_account_change("password", user.key, dict(password=password))
             
         def _update_email(user, email):
             web.update('account', where='thing_id=$user.id', email=email, vars=locals())
+            self.site.logger.on_account_change("email", user.key, dict(email=email))
         
         user = self.get_user()
         if user is None:
@@ -162,6 +165,7 @@ class AccountManager:
         if self._check_salted_hash(self.site.secret_key, text, code):
             password = self._generate_salted_hash(self.site.secret_key, password)
             web.update('account', where='thing_id=$user.id', password=password, vars=locals())
+            self.site.logger.on_account_change("password", user.key, dict(password=password))            
         else:
             raise infobase.InfobaseException('Invalid password reset code')
         

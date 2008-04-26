@@ -7,6 +7,7 @@ Each object has a key, that is unique to the site it belongs.
 import web
 from multiple_insert import multiple_insert
 from cache import LRU, ThingCache
+import logger
 
 thingcache = ThingCache(10000)
 querycache_things = LRU(1000)
@@ -274,6 +275,8 @@ class Infosite:
         self.id = id
         self.name = name
         self.secret_key = secret_key
+        logroot = web.config.get('infobase_logroot', None)
+        self.logger = logroot and logger.Logger(self, logroot)
         
     def get(self, key):
         """Same as withKey, but returns None instead of raising exception when object is not found."""
@@ -353,6 +356,7 @@ class Infosite:
             
             modified = ctx.modified_objects()
             self.invalidate(modified, ctx.versions.values())
+            self.logger and self.logger.on_write(result)
             self.run_hooks(modified)
         except:
             web.rollback()

@@ -3,6 +3,7 @@
 import web
 import infobase
 import simplejson
+import time
 
 urls = (
     "/([^/]*)/get", "withkey",
@@ -15,6 +16,8 @@ urls = (
 
 def jsonify(f):
     def g(self, *a, **kw):
+        t1 = time.time()
+        
         d = {'status': 'ok'}
         try:
             d['result'] = f(self, *a, **kw)
@@ -29,11 +32,18 @@ def jsonify(f):
             d['status'] = 'fail'
             d['message'] = 'InternalError: %s' % str(e)
         
-        i = input(prettyprint=None)
+        t2 = time.time()
+        i = input(prettyprint=None, stats=None)
+        
+        if i.stats:
+            d['stats'] = dict(time_taken=t2-t1)
+
         if i.prettyprint:
             result = simplejson.dumps(d, indent=4)
         else:
             result = simplejson.dumps(d)
+        
+            
         if web.ctx.get('infobase_localmode'):
             return result
         else:

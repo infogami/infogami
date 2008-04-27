@@ -309,13 +309,13 @@ class Thing:
         return self._getdata().get(key, nothing)
         
     def __setitem__(self, key, value):
-        self._data[key] = value
+        self._getdata()[key] = value
     
     def __setattr__(self, key, value):
         if key in ['key', 'revision'] or key.startswith('_'):
             self.__dict__[key] = value
         else:
-            self._data[key] = value
+            self._getdata()[key] = value
         
     def __iter__(self):
         return iter(self._data)

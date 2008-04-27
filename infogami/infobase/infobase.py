@@ -276,7 +276,10 @@ class Infosite:
         self.name = name
         self.secret_key = secret_key
         logroot = web.config.get('infobase_logroot', None)
-        self.logger = logroot and logger.Logger(self, logroot)
+        if logroot:
+            self.logger = logger.Logger(self, logroot)
+        else:
+            self.logger = logger.DummyLogger()
         
     def get(self, key):
         """Same as withKey, but returns None instead of raising exception when object is not found."""
@@ -356,7 +359,7 @@ class Infosite:
             
             modified = ctx.modified_objects()
             self.invalidate(modified, ctx.versions.values())
-            self.logger and self.logger.on_write(result)
+            self.logger.on_write(result, comment, machine_comment, a and a.get_user(), web.ctx.get('ip'))
             self.run_hooks(modified)
         except:
             web.rollback()

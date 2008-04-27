@@ -71,7 +71,7 @@ class AccountManager:
             raise
         else:
             web.commit()
-            self.site.logger.on_account_change("newuser", user.key, dict(email=email, password=password))
+            self.site.logger.on_new_account(user.key, email=email, password=password)
             self.setcookie(user)
             return user
             
@@ -100,11 +100,11 @@ class AccountManager:
         def _update_password(user, password):
             password = self._generate_salted_hash(self.site.secret_key, password)            
             web.update('account', where='thing_id=$user.id', password=password, vars=locals())
-            self.site.logger.on_account_change("password", user.key, dict(password=password))
+            self.site.logger.on_update_account(user.key, email=None, password=password)
             
         def _update_email(user, email):
             web.update('account', where='thing_id=$user.id', email=email, vars=locals())
-            self.site.logger.on_account_change("email", user.key, dict(email=email))
+            self.site.logger.on_update_account(user.key, email=email, password=None)
         
         user = self.get_user()
         if user is None:
@@ -165,7 +165,7 @@ class AccountManager:
         if self._check_salted_hash(self.site.secret_key, text, code):
             password = self._generate_salted_hash(self.site.secret_key, password)
             web.update('account', where='thing_id=$user.id', password=password, vars=locals())
-            self.site.logger.on_account_change("password", user.key, dict(password=password))            
+            self.site.logger.on_update_account(user.key, email=None, password=password)
         else:
             raise infobase.InfobaseException('Invalid password reset code')
         

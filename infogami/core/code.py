@@ -392,14 +392,14 @@ register_preferences("login_preferences", login_preferences())
 class getthings(delegate.page):
     """Lists all pages with name path/*"""
     def GET(self):
-        i = web.input()
+        i = web.input("type", property="key")
         q = {
-            'key~': i.q + '*',
+            i.property + '~': i.q + '*',
             'type': i.type,
-            'limit': i.limit
+            'limit': int(i.limit)
         }
-        things = web.ctx.site.things(q)
-        print "\n".join(things)
+        things = [web.ctx.site.get(t, lazy=True) for t in web.ctx.site.things(q)]
+        print "\n".join("%s|%s" % (t[i.property], t.key) for t in things)
     
 class favicon(delegate.page):
     path = "/favicon.ico"

@@ -12,6 +12,7 @@ from infogami.core.db import ValidationException
 from infogami.utils import delegate, macro, template, storage, view
 from infogami.utils.context import context
 from infogami.utils.template import render
+from infogami.utils.view import require_login
 
 from infogami.infobase import client
 
@@ -23,11 +24,11 @@ class WikiSource(DictMixin):
         self.templates = templates
         
     def getroot(self):
-        return ""
+        return "/"
         
     def __getitem__(self, key):
         key = self.process_key(key)
-        root = self.getroot()
+        root = web.rstrips(self.getroot() or "", "/")
         if root is None or context.get('rescue_mode'):
             raise KeyError, key
         return self.templates[root+key]
@@ -54,13 +55,9 @@ class MacroSource(WikiSource):
 def get_user_root():
     from infogami.core import db
     if context.user:
-        preferences = db.get_user_preferences(context.user)
-        root = getattr(preferences, 'wikitemplates.template_root', None)
-        if root is not None and root.strip() != "":
-            if not root.endswith('/'):
-                root += '/'
-            return root
-            
+        preferences = web.ctx.site.get(context.user.key + "/preferences")
+        root = preferences and preferences.get("template_root", None)
+        return root
     return None
     
 class UserSource(WikiSource):
@@ -75,11 +72,11 @@ class UserMacroSource(MacroSource):
 
 wikitemplates = storage.SiteLocalDict()
 template.render.add_source(WikiSource(wikitemplates))
-#template.render.add_source(UserSource(wikitemplates))
+template.render.add_source(UserSource(wikitemplates))
 
 wikimacros = storage.SiteLocalDict()
 macro.macrostore.add_dict(MacroSource(wikimacros))
-#macro.macrostore.add_dict(UserMacroSource(wikimacros))
+macro.macrostore.add_dict(UserMacroSource(wikimacros))
 
 class hooks(client.hook):
     def on_new_version(self, page):
@@ -168,7 +165,7 @@ def movetemplates(prefix_pattern=None):
         if prefix_pattern is None or wikipath.startswith(prefix_pattern):
             title = get_title(name)
             body = open(t.filepath).read()
-            d = web.storage(create='unless_exists', key=wikipath, type='/type/template', title=title, body=body)
+            d = web.storage(create='unless_exists', key=wikipath, type='/type/template', title=title, body=dict(connect='update', value=body))
             templates.append(d)
             
     delegate.admin_login()
@@ -204,24 +201,37 @@ def _new_version(name, typename, d):
     type = db.get_type(context.site, typename)
     db.new_version(context.site, name, type, d).save()
 
-class template_preferences:
+class template_preferences(delegate.page):
     """Preferences to choose template root."""
-    def GET(self, site):
+    path = "/account/preferences/template_preferences"
+    title = "Change Template Root"
+    
+    @require_login
+    def GET(self):
         import forms
-        prefs = core.db.get_user_preferences(context.user)
-        path = prefs.get('wikitemplates.template_root', "")
+        prefs = web.ctx.site.get(context.user.key + "/preferences")
+        path = (prefs and prefs.get('template_root')) or "/"
         f = forms.template_preferences()
         f.fill(dict(path=path))
         return render.template_preferences(f)
 
-    def POST(self, site):
+    @require_login
+    def POST(self):
         i = web.input()
-        prefs = core.db.get_user_preferences(context.user)
-        prefs['wikitemplates.template_root'] = i.path
-        prefs.save()
+        q = {
+            "create": "unless_exists",
+            "type": "/type/object",
+            "key": context.user.key + "/preferences",
+            "template_root": {
+                "connect": "update",
+                "value": i.path
+            }
+        }
+        web.ctx.site.write(q)
+        web.seeother('/account/preferences')
 
-#from infogami.core.code import register_preferences
-#register_preferences("template_preferences", template_preferences())
+from infogami.core.code import register_preferences
+register_preferences(template_preferences)
 
 # load templates and macros from all sites.
 setup()

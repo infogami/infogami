@@ -352,32 +352,27 @@ class reset_password(delegate.page):
             except Exception, e:
                 return "Failed to reset password.<br/><br/> Reason: "  + str(e)
         
-_preferences = web.storage()
-def register_preferences(name, handler):
-    _preferences[name] = handler
+_preferences = []
+def register_preferences(cls):
+    _preferences.append((cls.title, cls.path))
 
 class preferences(delegate.page):
     path = "/account/preferences"
     
     @require_login    
     def GET(self):
-        d = dict((name, p.GET()) for name, p in _preferences.iteritems())
-        return render.preferences(d.values())
+        return render.preferences(_preferences)
 
+class change_password(delegate.page):
+    path = "/account/preferences/change_password"
+    title = "Change Password"
+    
     @require_login
-    def POST(self):
-        i = web.input("_action")
-        result = _preferences[i._action].POST()
-        d = dict((name, p.GET()) for name, p in _preferences.iteritems())
-        if result:
-            d[i._action] = result
-        return render.preferences(d.values())
-
-class login_preferences:
     def GET(self):
         f = forms.login_preferences()
         return render.login_preferences(f)
         
+    @require_login
     def POST(self):
         i = web.input("oldpassword", "password", "password2")
         f = forms.login_preferences()
@@ -385,9 +380,9 @@ class login_preferences:
             return render.login_preferences(f)
         else:
             user = web.ctx.site.update_user(i.oldpassword, i.password, None)
-            return self.GET()
+            web.seeother("/account/preferences")
 
-register_preferences("login_preferences", login_preferences())
+register_preferences(change_password)
 
 class getthings(delegate.page):
     """Lists all pages with name path/*"""

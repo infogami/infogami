@@ -380,7 +380,11 @@ class change_password(delegate.page):
         if not f.validates(i):
             return render.login_preferences(f)
         else:
-            user = web.ctx.site.update_user(i.oldpassword, i.password, None)
+            try:
+                user = web.ctx.site.update_user(i.oldpassword, i.password, None)
+            except ClientException, e:
+                f.note = str(e)
+                return render.login_preferences(f)
             web.seeother("/account/preferences")
 
 register_preferences(change_password)

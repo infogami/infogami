@@ -140,7 +140,7 @@ class Site:
             # it is important to call _fill_backreferences after updating the cache.
             # otherwise, _fill_backreferences is called recursively for type/type.
             self._fill_backreferences(key, data)
-        return self._cache[key, revision]
+        return self._cache[key, revision].copy()
         
     def _fill_backreferences(self, key, data):
         def safeint(x):
@@ -283,6 +283,12 @@ class Nothing:
         
     def __bool__(self):
         return False
+        
+    def __eq__(self, other):
+        return isinstance(other, Nothing)
+    
+    def __ne__(self, other):
+        return not (self == other)
 
     def __str__(self): return ""
     def __repr__(self): return ""
@@ -302,8 +308,11 @@ class Thing:
     def _getdata(self):
         if self._data is None:
             self._data = self._site._load(self.key, self.revision)
-            self.revision = self._data['revision']
+            self.revision = self._data.pop('revision')
         return self._data
+        
+    def keys(self):
+        return self._getdata().keys()
         
     def __getitem__(self, key):
         return self._getdata().get(key, nothing)
@@ -356,6 +365,12 @@ class Thing:
             raise AttributeError, key
 
         return self[key]
+    
+    def __eq__(self, other):
+        return isinstance(other, Thing) and other.key == self.key
+        
+    def __ne__(self, other):
+        return not self.__eq__(other)
     
     def __str__(self):
         return self.key

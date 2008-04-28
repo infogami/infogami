@@ -12,6 +12,14 @@ def get_version(path, revision=None):
 def get_type(path):
     return get_version(path)
     
+@public
+def get_expected_type(page, property_name):
+    """Returns the expected type of a property."""
+    for p in page.type.properties:
+        if p.name == property_name:
+            return p.expected_type
+    return "/type/string"
+    
 def new_version(path, type):
     if isinstance(type, basestring):
         type = get_type(type)

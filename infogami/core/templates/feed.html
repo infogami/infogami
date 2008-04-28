@@ -1,0 +1,24 @@
+$def with (site, changes)
+<?xml version="1.0" encoding="utf-8"?>
+<?xml-stylesheet type="text/css" href="$site/static/css/diff.css"?>
+<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <channel>
+        <title>Infogami - Recent changes </title>
+        <link>$site</link>
+        <description>Track the most recent changes to the wiki in this feed.</description>
+		<lastBuildDate>$changes[0].created</lastBuildDate>
+        <generator>infogami</generator>
+        $for v in changes:
+            <item>
+                <title>$v.key</title>
+                <link>$site$v.key?m=diff&b=$v.revision</link>
+                <description>$v.diff</description>
+                <pubDate>$v.created</pubDate>
+                $if v.author:
+                    <author>$v.author.displayname</author>
+                $else:
+                    <author>$v.ip</author>
+                <comments>$v.comment</comments>
+            </item>
+    </channel>
+</rss>

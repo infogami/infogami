@@ -401,3 +401,29 @@ class favicon(delegate.page):
     path = "/favicon.ico"
     def GET(self):
         return web.redirect('/static/favicon.ico')
+
+class feed(delegate.page):
+    def GET(self):
+        i = web.input(key=None)
+        changes = db.get_recent_changes(key=i.key)
+        site =  web.ctx.home
+
+        def diff(key, revision):
+            b = db.get_version(key, revision)
+
+            rev_a = revision -1
+            if rev_a is 0:
+                a = web.ctx.site.new(key, {})
+                a.revision = 0
+            else: 
+                a = db.get_version(key, revision=rev_a)
+                
+            diff = render.diff(a, b)
+            #@@ dirty hack to extract diff table from diff
+            import re
+            rx = re.compile(r"^.*(<table.*<\/table>).*$", re.S)
+            return rx.sub(r'\1', str(diff))
+
+        for c in changes:
+            c.diff = diff(c.key, c.revision)
+        print render.feed(site, changes)

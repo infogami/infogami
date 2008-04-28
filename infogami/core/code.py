@@ -140,7 +140,8 @@ class edit (delegate.mode):
         elif action == 'save':
             try:
                 web.ctx.site.write(q, comment)
-                return web.seeother(web.changequery(query={}))
+                path = web.input(_method='GET', redirect=None).redirect or web.changequery(query={})
+                return web.seeother(path)
             except ClientException, e:
                 utils.view.set_error(str(e))
                 p = self.process(i)

@@ -27,7 +27,7 @@ class Value:
 
         if self.datatype == infobase.DATATYPE_REFERENCE:
             self.value = value.id
-            self.key = value
+            self.key = value.key
         else:
             self.value = value
             self.key = None
@@ -166,6 +166,14 @@ class Query:
                 
                 thing = key and self.ctx.get(key)
                 if thing:
+                    thing = thing.copy()
+                    
+                    #@@ when query is trying to change the type, 
+                    #@@ the new type should be used to find the expected types.
+                    if 'type' in self.d:
+                        k = self.d['type'].execute().key
+                        thing.type = self.ctx.get(self.d['type'].execute().key)
+                        
                     for k, v in self.d.items():
                         self.connect(thing, k, v)
                 elif key is not None:

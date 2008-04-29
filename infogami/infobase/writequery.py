@@ -62,6 +62,7 @@ class Value:
                 self.type = expected_type
                 self.value = thing.id
                 self.datatype = infobase.DATATYPE_REFERENCE
+                self.key = thing.key
             elif expected_type == '/type/int':
                 makesure(isinstance(self.value, (int, basestring)))
                 self.datatype = infobase.TYPES['/type/int']
@@ -171,8 +172,9 @@ class Query:
                     #@@ when query is trying to change the type, 
                     #@@ the new type should be used to find the expected types.
                     if 'type' in self.d:
-                        k = self.d['type'].execute().key
-                        thing.type = self.ctx.get(self.d['type'].execute().key)
+                        result = self.d['type'].execute()
+                        result.coerce(self.ctx, '/type/type')
+                        thing.type = self.ctx.get(result.key)
                         
                     for k, v in self.d.items():
                         self.connect(thing, k, v)

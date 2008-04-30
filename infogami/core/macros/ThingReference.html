@@ -6,8 +6,13 @@ $add_javascript('/static/js/jquery/jquery.dimensions.pack.js')
 $add_javascript('/static/js/jquery/jquery.autocomplete.js')
 $add_javascript('/static/js/autocomplete.js')
 
-<input type="text" id="input_$name" name="_${name}.$property" value="$value[property]" ac_name="$name" ac_type="$type" ac_property="$property" ac_limit="$limit" ac_enabled="true" style="width: 100%"/>
-<input type="hidden" id="result_$name" name="${name}.key" value="$value.key" />
+$add_stylesheet('/static/jquery.autocomplete.css')
+
+$if property == "key":
+    <input type="text" id="input_$name" name="${name}.$property" value="$value[property]" ac_name="$name" ac_type="$type" ac_property="$property" ac_limit="$limit" ac_enabled="true"/>
+$else:
+    <input type="text" id="input_$name" name="_${name}.$property" value="$value[property]" ac_name="$name" ac_type="$type" ac_property="$property" ac_limit="$limit" ac_enabled="true"/>
+    <input type="hidden" id="result_$name" name="${name}.key" value="$value.key" />
 
 <script>
 <!--

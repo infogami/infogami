@@ -23,12 +23,13 @@ function setup_autocomplete(e) {
     })
     .result(function(event, data, formatted) {
         var name = $(this).attr('ac_name');
-        $(document.getElementById('result_' + name)).val(data[1])
+        if ($(this).attr("ac_property") != "key")
+            $(document.getElementById('result_' + name)).val(data[1])
     })
     .change(function() {
         // When user selects empty string, set the result to empty
         var name = $(this).attr('ac_name');
-        if ($.trim($(this).val()) == "")
+        if ($(this).attr("ac_property") != "key")
             $(document.getElementById("result_" + name)).val("");
     });
 }

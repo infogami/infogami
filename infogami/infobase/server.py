@@ -26,11 +26,13 @@ def jsonify(f):
             traceback.print_exc()
             d['status'] = 'fail'
             d['message'] = str(e)
+            d['traceback'] = traceback.format_exc()
         except Exception, e:
             import traceback
             traceback.print_exc()
             d['status'] = 'fail'
             d['message'] = 'InternalError: %s' % str(e)
+            d['traceback'] = traceback.format_exc()
         
         t2 = time.time()
         i = input(prettyprint=None, stats=None)

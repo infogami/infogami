@@ -6,6 +6,7 @@ import web
 from infobase import TYPES, DATATYPE_REFERENCE
 import datetime
 import re
+import tempfile
 
 def sqlin(name, values):
     """
@@ -101,8 +102,10 @@ def multiple_insert(table, values, seqname=None):
     for v in values:
         assert set(v.keys()) == set(columns)
         data.append("\t".join([escape(v[c]) for c in columns]))
-    write("/tmp/data.copy", "\n".join(data))
-    web.query("COPY %s FROM '/tmp/data.copy'" % table)
+        
+    filename = tempfile.mktemp(suffix='.copy', prefix=table)
+    write(filename, "\n".join(data))
+    web.query("COPY %s FROM '%s'" % (table, filename))
     return ids
     
 def get_key2id():
@@ -157,9 +160,6 @@ class BulkUpload:
         tobe_created = set(self.find_creates(query))
         tobe_created = [k for k in tobe_created if k not in key2id] 
         
-        assert '/type/author' in keys        
-        assert '/type/author' in key2id
-    
         # insert things
         d = dict(site_id=self.site.id, created=self.now, last_modified=self.now, latest_revision=1, deleted=False)
         values = [dict(d, key=k) for k in tobe_created]
@@ -170,7 +170,7 @@ class BulkUpload:
         # insert versions
         d = dict(created=self.now, revision=1, author_id=self.author_id, ip=None, comment=self.comment, machine_comment=self.machine_comment)    
         multiple_insert('version', [dict(d, thing_id=key2id[k], comment=self.comment[k], machine_comment=self.machine_comment[k]) for k in tobe_created])
-        self.created = tobe_created
+        self.created = set(tobe_created)
         
     def find_keys(self, query, result=None):
         if result is None:
@@ -231,6 +231,7 @@ class BulkUpload:
             else:
                 thing_id = key2id[query['key']]
                 if query['key'] in self.created:
+                    self.created.remove(query['key'])
                     for key, value in query.items():
                         if key == 'create': 
                             continue

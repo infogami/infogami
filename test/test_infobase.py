@@ -28,9 +28,48 @@ class InfobaseTestCase(webtest.TestCase):
         
         # clear env
         web.load()
+        web.ctx.ip = '127.0.0.1'
         
         # run every test in a transaction, so that we can rollback later in tearDown
         web.transact()
+
+    def create_book_author_types(self):
+        def property(type, name, expected_type):
+            return dict(
+                create='unless_exists', 
+                type='/type/property', 
+                key=type + '/' + name, 
+                name=name, 
+                expected_type=expected_type, 
+                unique=True)
+
+        def backreference(type, name, expected_type, property_name):
+            return dict(
+                create='unless_exists', 
+                type='/type/backreference', 
+                key=type + '/' + name, 
+                name=name, 
+                expected_type=expected_type, 
+                property_name=property_name)
+            
+        q = {
+            'create': 'unless_exists',
+            'key': '/type/book',
+            'type': '/type/type',
+            'properties': [
+                property('/type/book', 'title', '/type/string'),
+                property('/type/book', 'authors', {
+                    'create': 'unless_exists',
+                    'key': '/type/author',
+                    'type': '/type/type',
+                    'properties': [
+                        property('/type/author', 'name', '/type/string'),
+                    ],
+                })
+            ]         
+        }
+        
+        self.site.write(q)
 
     def clear_cache(self):
         infobase.thingcache.clear()
@@ -343,6 +382,36 @@ class CacheTest(InfobaseTestCase):
         def q(key):
             return dict(key=key, title=dict(connect='update', value='bar'))    
         self.site.write([q('/foo'), q('/foo2')])
+    
+    def test_cache_backreferences_bug(self):
+        self.create_book_author_types()
+        a1 = self.new('/a1', '/type/author', name='a1')
+        print  self.site.things(dict(type='/type/book', author='/a1'))
+
+        b1 = self.new('/b1', '/type/book', title='b1', author='/a1')
+        print  self.site.things(dict(type='/type/book', author='/a1'))
+
+        b2 = self.new('/b2', '/type/book', title='b2', author='/a1')
+        print  self.site.things(dict(type='/type/book', author='/a1'))
+
+
+class BulkUploadTest(InfobaseTestCase):
+    def test_bulkupload(self):
+        # bulkuploading 2 books with same author was failing. Test to catch that.
+        self.create_book_author_types()
+        from infogami.infobase import bulkupload
+        bulk = bulkupload.BulkUpload(self.site)
+
+        def f(name):
+            return {
+                'create': 'unless_exists',
+                'key': '/b/' + name,
+                'author': {'create': 'unless_exists', 'key': '/a/foo'}
+            }
+        
+        q = [f('b1'), f('b2')]
+        bulk.upload(q)
+        self.site.get('/a/foo')._get_data()
 
 if __name__ == "__main__":
     webtest.main()

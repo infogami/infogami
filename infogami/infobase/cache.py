@@ -155,6 +155,12 @@ class LRU:
     @synchronized
     def __getitem__(self, key):
         return self.getnode(key).value
+        
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
 
     @synchronized
     def __setitem__(self, key, value):

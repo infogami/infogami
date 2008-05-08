@@ -1,5 +1,6 @@
 import web
 import re
+import config
 
 import infobase
 from infobase import TYPE_KEY, TYPE_STRING, TYPE_INT, TYPE_FLOAT, TYPE_BOOLEAN, TYPE_URI, TYPE_DATETIME, DATATYPE_REFERENCE, MAX_REVISION
@@ -82,8 +83,7 @@ class Things:
         self.sort = query.pop('sort', None)
 
         # make sure limit is not more than 100
-        trusted_machines = web.config.get('trusted_machines', []) + ['127.0.0.1']
-        if web.ctx.ip not in trusted_machines: 
+        if web.ctx.ip not in config.trusted_machines: 
             self.limit = self.limit or 100
             if self.limit > 100:
                 raise infobase.InfobaseException("limit is not permitted to be more than 100 due to performance reasons.")
@@ -283,8 +283,7 @@ class Versions:
         self.sort = query.pop('sort', None)
         
         # make sure limit is not more than 100
-        trusted_machines = web.config.get('trusted_machines', []) + ['127.0.0.1']
-        if web.ctx.ip not in trusted_machines: 
+        if web.ctx.ip not in config.trusted_machines: 
             self.limit = self.limit or 100
             if self.limit > 100:
                 raise infobase.InfobaseException("limit is not permitted to be more than 100 due to performance reasons.")

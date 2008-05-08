@@ -8,6 +8,7 @@ import web
 from multiple_insert import multiple_insert
 from cache import LRU
 import logger
+import config
 
 KEYWORDS = ["id", 
     "action", "create", "update", "insert", "delete", 
@@ -128,7 +129,7 @@ class LRUCache(BaseCache):
         
     def get_cache(self, tag):
         if tag not in self.cache:
-            size = web.config.get('infobase_%s_cache_size' % tag) or web.config.get('infobase_default_cache_size') or 1000
+            size = getattr(config, '%s_cache_size' % tag, None) or config.default_cache_size
             self.cache[tag] = LRU(size)
         return self.cache[tag]
         
@@ -343,9 +344,8 @@ class Infosite:
         self.id = id
         self.name = name
         self.secret_key = secret_key
-        logroot = web.config.get('infobase_logroot', None)
-        if logroot:
-            self.logger = logger.Logger(self, logroot)
+        if config.logroot:
+            self.logger = logger.Logger(self, config.logroot)
         else:
             self.logger = logger.DummyLogger()
         

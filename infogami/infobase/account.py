@@ -1,8 +1,10 @@
 import hmac
-import web
-import infobase
 import random
 import time
+import web
+
+import infobase
+import config
 
 def make_query(username, displayname):
     group = username + '/usergroup'
@@ -128,8 +130,7 @@ class AccountManager:
         pass
 
     def assert_trusted_machine(self):
-        trusted_machines = web.config.get('trusted_machines', []) + ['127.0.0.1']
-        if web.ctx.ip not in trusted_machines:
+        if web.ctx.ip not in config.trusted_machines:
             raise infobase.InfobaseException('Permission denied to login as admin from ' + web.ctx.ip)
 
     @admin_only

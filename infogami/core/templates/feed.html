@@ -1,24 +1,30 @@
 $def with (site, changes)
 <?xml version="1.0" encoding="utf-8"?>
 <?xml-stylesheet type="text/css" href="$site/static/css/diff.css"?>
-<rss version="2.0" xmlns:dc="http://purl.org/dc/elements/1.1/">
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
     <channel>
         <title>Infogami - Recent changes </title>
         <link>$site</link>
-        <description>Track the most recent changes to the wiki in this feed.</description>
-		<lastBuildDate>$changes[0].created</lastBuildDate>
+        <atom:link href="$site/feed" rel="self" type="application/rss+xml" />
+        <description>Track the most recent changes to $site in this feed.</description>
+        <lastBuildDate>$changes[0].created</lastBuildDate>
         <generator>infogami</generator>
         $for v in changes:
             <item>
                 <title>$v.key</title>
-                <link>$site$v.key?m=diff&b=$v.revision</link>
-                <description>$v.diff</description>
+                <link>$site$v.key?m=diff&amp;b=$v.revision</link>
+                <guid>$site$v.key?m=diff&amp;b=$v.revision</guid>
+                <description>
+                    Path: $v.key &lt;br/&gt;
+                    Comment: $v.comment &lt;br/&gt;
+                    $if v.author:
+                        Author: $v.author.displayname
+                    $else:
+                        Author: $v.ip
+                    &lt;br/&gt;
+                    $v.diff
+                </description>
                 <pubDate>$v.created</pubDate>
-                $if v.author:
-                    <author>$v.author.displayname</author>
-                $else:
-                    <author>$v.ip</author>
-                <comments>$v.comment</comments>
             </item>
     </channel>
 </rss>

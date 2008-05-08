@@ -401,9 +401,29 @@ class favicon(delegate.page):
         return web.redirect('/static/favicon.ico')
 
 class feed(delegate.page):
+    def _format_date(self, dt):
+        """convert a datetime into an RFC 822 formatted date
+        Input date must be in GMT.
+        
+        Source: PyRSS2Gen.py
+        """
+        # Looks like:
+        #   Sat, 07 Sep 2002 00:00:01 GMT
+        # Can't use strftime because that's locale dependent
+        #
+        # Isn't there a standard way to do this for Python?  The
+        # rfc822 and email.Utils modules assume a timestamp.  The
+        # following is based on the rfc822 module.
+        return "%s, %02d %s %04d %02d:%02d:%02d GMT" % (
+                ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][dt.weekday()],
+                dt.day,
+                ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.month-1],
+                dt.year, dt.hour, dt.minute, dt.second)
+    
     def GET(self):
         i = web.input(key=None)
-        changes = db.get_recent_changes(key=i.key)
+        changes = db.get_recent_changes(key=i.key, limit=50)
         site =  web.ctx.home
 
         def diff(key, revision):
@@ -421,7 +441,10 @@ class feed(delegate.page):
             import re
             rx = re.compile(r"^.*(<table.*<\/table>).*$", re.S)
             return rx.sub(r'\1', str(diff))
+            
+        web.header('Content-Type', 'application/rss+xml')
 
         for c in changes:
             c.diff = diff(c.key, c.revision)
+            c.created = self._format_date(c.created)
         print render.feed(site, changes)

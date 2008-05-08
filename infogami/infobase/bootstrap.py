@@ -46,6 +46,7 @@ def primitive_types():
         q('/type/uri', 'URI', 'Type to store URIs.'),
         q('/type/datetime', 'Datetime', 'Type to store datetimes from 4713 BC to 5874897 AD with 1 millisecond resolution.'),
         
+        q('/type/object', 'Object', 'Placeholder type for storing arbitrary dictionaries.'),
         # this is not a primitive type, but it is easier to add here than anywhere else.
         q('/type/delete', 'Delete', 'Type to make a page as deleted.'),
     ]

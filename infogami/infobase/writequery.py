@@ -3,6 +3,7 @@
 import web
 import infobase
 import multiple_insert
+import datetime
 
 MAX_INT = 2 ** 31 - 1 
 
@@ -299,7 +300,7 @@ class Context:
     """Query execution context for bookkeeping.
     This also isolates the query execution from interacting with infobase cache.
     """
-    def __init__(self, site, author=None, ip=None, comment=None, machine_comment=None):
+    def __init__(self, site, author=None, ip=None, comment=None, machine_comment=None, timestamp=None):
         self.site = site
         
         self.author = author
@@ -307,7 +308,7 @@ class Context:
         self.ip = ip
         self.comment = comment
         self.machine_comment = machine_comment
-        
+        self.timestamp = timestamp or datetime.datetime.utcnow()
         self.versions = {}
         self.updated = set()
         self.created = set()
@@ -357,9 +358,9 @@ class Context:
 
     def get_revision(self, thing):
         if thing.id not in self.versions:
-            id = web.insert('version', thing_id=thing.id, 
+            id = web.insert('version', thing_id=thing.id,
                 comment=self.comment, machine_comment=self.machine_comment, 
-                author_id=self.author_id, ip=self.ip)
+                author_id=self.author_id, ip=self.ip, created=self.timestamp)
             version = web.select('version', where='id=$id', vars=locals())[0]
             self.versions[thing.id] = version
             if version.revision == 1:
@@ -420,7 +421,7 @@ class Context:
         import re
         assert re.match('^/[^\s]*', key), "bad key: " + repr(key)
         assert '//' not in key, "bad key: " + repr(key)
-        id = web.insert('thing', site_id=self.site.id, key=key)
+        id = web.insert('thing', site_id=self.site.id, key=key, created=self.timestamp)
         thing = infobase.Thing(self, id, key)
         thing._d = web.storage(key=key)
         self.key2id[key] = id

@@ -223,38 +223,32 @@ class history (delegate.mode):
                 
 class diff (delegate.mode):
     def GET(self, path):  
-        i = web.input("b", a=None)
-
-        try:
-            rev_b = int(i.b)
-            if i.a:
-                rev_a = int(i.a)
+        i = web.input(b=None, a=None)
+        # default value of b is latest revision and default value of a is b-1
+        
+        def get(path, revision):
+            if revision == 0:
+                page = web.ctx.site.new(path, {})
+                page.revision = 0
             else:
-                rev_a = rev_b - 1
-        except ValueError:
-            raise
-            return web.badrequest()
+                page = web.ctx.site.get(path, revision)
+            return page
+        
+        def is_int(n):
+            return n is None or safeint(n, None) is not None
             
-        try:
-            b = db.get_version(path, revision=rev_b)
-            if not b:
-                return web.seeother('/' + path)
-            
-            if i.a == 0: 
-                a = web.ctx.site.new(path, {})
-                a.revision = i.a
-            else: 
-                a = db.get_version(path, revision=rev_a)
-        except:
-            raise
-            return web.badrequest()
-            
-        return render.diff(a, b)
+        # if either or i.a or i.b is bad, then redirect to latest diff
+        if not is_int(i.b) or not is_int(i.a):
+            return web.redirect(web.changequery(b=None, a=None))
 
-class random(delegate.page):
-    def GET(self, site):
-        p = db.get_random_page(site)
-        return web.seeother(p.path)
+        b = get(path, safeint(i.b, None))
+
+        # if the page is not there go to view page
+        if b is None:
+            return web.seeother(web.changequery(query={}))
+        
+        a = get(path, safeint(i.a, b.revision-1))            
+        return render.diff(a, b)
 
 class login(delegate.page):
     path = "/account/login"

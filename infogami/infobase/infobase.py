@@ -355,38 +355,41 @@ class Infosite:
             return self.withKey(key)
         except NotFound:
             return None
+    
+    def _with(self, where, vars, revision):
+        assert revision is None or isinstance(revision, int), "revision must be integer"
+        try:
+            d = web.select('thing', where=where, vars=vars)[0]
+        except IndexError:
+            raise NotFound, key
             
-    def cachify(self, thing, revision):
+        #@@ is this the right thing to do here?
+        #@@ may be there should be error codes and this should raise no_such_revision error
+        if revision is not None and revision > d.latest_revision:
+            revision = None
+        
+        thing = Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision)        
+        self.cache['key', thing.key] = thing.id
+        self.cache['thing', (thing.id, revision)] = thing
         if revision is None:
-            self.cache['key', thing.id] = thing.key
-            self.cache['thing', thing.id] = thing
+            self.cache['thing', (thing.id, thing.latest_revision)] = thing
         return thing
 
     def withKey(self, key, revision=None, lazy=False):
         assert key.startswith('/'), 'Bad key: ' + repr(key)
-        
+
         # if id is known for that key, redirect to withID
         if ('key', key) in self.cache:
-            id = self.cache[key]
+            id = self.cache['key', key]
             return self.withID(id, revision)
-                    
-        try:
-            d = web.select('thing', where='site_id = $self.id AND key = $key', vars=locals())[0]
-        except IndexError:
-            raise NotFound, key
-            
-        thing = Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision)
-        return self.cachify(thing, revision)
+
+        return self._with(where='site_id=$self.id AND key=$key', vars=locals(), revision=revision)
         
     def withID(self, id, revision=None):
-        if revision is None and ('thing', id) in self.cache:
-            return self.cache['thing', id]
-    
-        try:
-            d = web.select('thing', where='site_id=$self.id AND id=$id', vars=locals())[0]        
-        except IndexError:
-            raise NotFound, id
-        return self.cachify(Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision), revision)
+        if ('thing', (id, revision)) in self.cache:
+            return self.cache['thing', (id, revision)]
+            
+        return self._with(where='site_id=$self.id AND id=$id', vars=locals(), revision=revision)
         
     def _run_query(self, tag, query):
         if (tag, query) not in self.cache:
@@ -449,8 +452,8 @@ class Infosite:
     def invalidate(self, objects, versions):
         """Invalidate the given keys from cache."""
         for o in objects:
-            if ('thing', o.id) in self.cache:
-                del self.cache['thing', o.id]
+            if ('thing', (o.id, None)) in self.cache:
+                del self.cache['thing', (o.id, None)]
                 
         for q in self.cache.keys('things'):
             for o in objects:

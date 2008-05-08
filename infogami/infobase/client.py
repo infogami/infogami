@@ -113,6 +113,7 @@ class Site:
         
     def _get(self, key, revision=None):
         """Returns properties of the thing with the specified key."""
+        revision = revision and int(revision)
         data = dict(key=key, revision=revision)
         result = self._client.request('/get', data=data)['result']
         if result is None:

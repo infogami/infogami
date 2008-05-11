@@ -80,7 +80,8 @@ class withkey:
         try:
             i = input("key", revision=None, expand=False)
             site = get_site(sitename)
-            thing = site.withKey(i.key, revision=i.revision)
+            revision = i.revision and int(i.revision)
+            thing = site.withKey(i.key, revision=revision)
             return thing._get_data(expand=i.expand)
         except infobase.NotFound:
             return None

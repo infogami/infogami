@@ -356,12 +356,8 @@ class Infosite:
         except NotFound:
             return None
     
-    def _with(self, where, vars, revision):
+    def _with(self, d, revision):
         assert revision is None or isinstance(revision, int), "revision must be integer"
-        try:
-            d = web.select('thing', where=where, vars=vars)[0]
-        except IndexError:
-            raise NotFound, key
             
         #@@ is this the right thing to do here?
         #@@ may be there should be error codes and this should raise no_such_revision error
@@ -383,13 +379,23 @@ class Infosite:
             id = self.cache['key', key]
             return self.withID(id, revision)
 
-        return self._with(where='site_id=$self.id AND key=$key', vars=locals(), revision=revision)
+        try:
+            d = web.select('thing', where="site_id=$self.id AND key=$key", vars=locals())[0]
+        except IndexError:
+            raise NotFound, key
+
+        return self._with(d, revision=revision)
         
     def withID(self, id, revision=None):
         if ('thing', (id, revision)) in self.cache:
             return self.cache['thing', (id, revision)]
             
-        return self._with(where='site_id=$self.id AND id=$id', vars=locals(), revision=revision)
+        try:
+            d = web.select('thing', where="site_id=$self.id AND id=$id", vars=locals())[0]
+        except IndexError:
+            raise NotFound, id
+
+        return self._with(d, revision=revision)
         
     def _run_query(self, tag, query):
         if (tag, query) not in self.cache:

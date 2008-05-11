@@ -36,8 +36,9 @@ class Client:
         path = "/%s%s" % (self.sitename, path)
         if self.host:
             # don't send nulls
-            for k in data.keys():
-                if data[k] is None: del data[k]
+            if data:
+                for k in data.keys():
+                    if data[k] is None: del data[k]
             
             if DEBUG: print >>web.debug, path, data
             data = data and urllib.urlencode(data)

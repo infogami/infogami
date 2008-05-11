@@ -162,7 +162,18 @@ def groups_and_permissions():
         permission('/permission/restricted', ['/usergroup/everyone'], ['/usergroup/admin'], ['/usergroup/admin']),
         permission('/permission/secret', ['/usergroup/admin'], ['/usergroup/admin'], ['/usergroup/admin']),
     ]
-
+    
+def type_redirect():
+    return {
+        'create': 'unless_exists',
+        'key': '/type/redirect',
+        'name': 'Redirect',
+        'type': '/type/type',
+        'properties': [
+            _property('/type/property', 'location', '/type/string', True),
+        ],
+    }
+    
 def make_query():
     return [
         metatype(),
@@ -170,7 +181,8 @@ def make_query():
         type_property_and_backreference(),
         update_metatype(),
         type_user_etal(),
-        groups_and_permissions()
+        groups_and_permissions(),
+        type_redirect(),
     ]
 
 def bootstrap(site, admin_password):

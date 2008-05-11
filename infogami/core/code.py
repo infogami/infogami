@@ -33,6 +33,8 @@ class view (delegate.mode):
         elif p.type.key == '/type/delete':
             web.ctx.status = '404 Not Found'
             return render.viewpage(p)
+        elif p.type.key == "/type/redirect":
+            web.redirect(p.location)
         else:
             return render.viewpage(p)
 

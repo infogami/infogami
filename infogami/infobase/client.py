@@ -1,6 +1,6 @@
 """Infobase client."""
 import httplib, urllib
-import simplejson
+import _json as simplejson
 import web
 
 DEBUG = False

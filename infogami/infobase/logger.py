@@ -11,7 +11,7 @@ Log files are circulated on daily basis. Default log file format is $logroot/yyy
 """
 
 import datetime, time
-import simplejson
+import _json as simplejson
 import os
 import threading
 

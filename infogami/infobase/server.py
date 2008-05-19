@@ -2,7 +2,7 @@
 """
 import web
 import infobase
-import simplejson
+import _json as simplejson
 import time
 
 urls = (

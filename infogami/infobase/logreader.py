@@ -1,7 +1,7 @@
 """
 Log file reader.
 """
-import simplejson
+import _json as simplejson
 
 def readlog(logfile):
     """Returns an iterator over all the elements of the given log file."""

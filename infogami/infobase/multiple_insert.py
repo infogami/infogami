@@ -9,7 +9,26 @@ def join(items, sep):
         q += item
     return q
 
+_pg_version = None
+
+def get_postgres_version():    
+    global _pg_version
+    if _pg_version is None:
+        version = web.query('SELECT version();')[0].version
+        # convert "PostgreSQL 8.2.4 on ..." in to (8, 2, 4)
+        tokens = version.split()[1].split('.')
+        _pg_version = [int(t) for t in tokens]
+    return _pg_version
+
 def multiple_insert(tablename, values, seqname=None, _test=False):
+    # multiple inserts are supported only in version 8.2+
+    if get_postgres_version() < (8, 2):
+        result = [web.insert(tablename, seqname=seqname, **v) for v in values]
+        if seqname:
+            return result
+        else:
+            return None
+        
     if not values:
         return []
 

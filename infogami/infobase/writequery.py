@@ -340,22 +340,34 @@ class Context:
     
     def can_admin(self, key):
         return self.has_permission(key, lambda p: p._get('admins', []))
-            
+        
     def get_permission(self, key):
+        """Returns permission for the specified key."""
         def parent(key):
-            return key.rsplit('/', 1)[0] or None
-        
-        if key is None:
-            return None
-        
-        try:
-            thing = self.withKey(key)
-        except infobase.NotFound:
-            thing = None
-        
-        permission = thing and thing._get('permission')
-        return permission or self.get_permission(parent(key))
+            if key == "/":
+                return None
+            else:
+                return key.rsplit('/', 1)[0] or "/"
+                
+        def get(key):
+            try:
+                return self.withKey(key)
+            except infobase.NotFound:
+                return None
+    
+        def _get_permission(key, child_permission=False):
+            if key is None:
+                return None
 
+            thing = get(key)
+            if child_permission:
+                permission = thing and (thing._get("child_permission") or thing._get("permission"))
+            else:
+                permission = thing and thing._get("permission")
+            return permission or _get_permission(parent(key), child_permission=True)
+        
+        return _get_permission(key)
+        
     def get_revision(self, thing):
         if thing.id not in self.versions:
             id = web.insert('version', thing_id=thing.id,

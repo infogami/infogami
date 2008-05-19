@@ -320,8 +320,9 @@ class forgot_password(delegate.page):
                 d = web.ctx.site.get_reset_code(i.email)
             except ClientException, e:
                 f.note = str(e)
+                web.ctx.headers = []
                 return render.forgot_password(f)
-            finally:
+            else:
                 # clear the cookie set by delegate.admin_login
                 # Otherwise user will be able to work as admin user.
                 web.ctx.headers = []

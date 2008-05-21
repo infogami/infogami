@@ -32,7 +32,7 @@ class InfobaseTestCase(webtest.TestCase):
         web.transact()
         
     def clear_cache(self):
-        self.site.cache.clear()
+        self.site.cache_store.clear()
 
     def create_book_author_types(self):
         def property(type, name, expected_type):
@@ -341,11 +341,11 @@ class CacheTest(InfobaseTestCase):
 
         # foo must be available in cache, once we request it
         foo = self.site.withKey('/foo')
-        assert ('thing', foo.id) in self.site.cache
+        assert (foo.id, None) in self.site.thing_cache
 
         # foo must be removed from cache after updated it
         self.update('/foo', title='foo2')
-        assert ('thing', foo.id) not in self.site.cache
+        assert (foo.id, None) not in self.site.thing_cache
         
         foo2 = self.site.withKey('/foo')
         self.assertEquals(foo2.title.value, 'foo2')

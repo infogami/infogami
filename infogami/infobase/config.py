@@ -15,3 +15,6 @@ versions_cache_size = None
 
 # set this to log dir to enable logging
 logroot = None
+
+# query_timeout in milli seconds.
+query_timeout = None

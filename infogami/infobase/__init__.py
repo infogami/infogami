@@ -3,6 +3,7 @@ Infobase.
 """
 import sys
 import web
+import config
 
 commands = {}
 def command(f):

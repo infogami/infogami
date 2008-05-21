@@ -59,9 +59,8 @@ class PermissionDenied(InfobaseException):
     pass
     
 def loadhook():
-    ctx = web.storage()
-    ctx.dirty = []
-    web.ctx.infobase_ctx = ctx
+    if config.query_timeout:
+        web.query("SELECT set_config('statement_timeout', $query_timeout, false)", dict(query_timeout=config.query_timeout))
             
 web.loadhooks['infobase_hook'] = loadhook
 
@@ -77,91 +76,51 @@ def transactify(f):
             web.commit()
         return result
     return g
+        
+class CacheStore(object):
+    """Store for managing different caches for Infobase. 
+    Each site in infobase maintains multiple caches (key, thing, things and versions).
     
-class BaseCache:
-    """Base class for Infobase cache.
-    Different kind of values can be stored in the cache. The kind of the value is specified by the tag.
-    The cache implementation can choose to have individual storage for each tag or a unified storage.
-    """
-    def get(self, tag, key, default=None):
-        """Returns a value with the specified tag and key. Returns default, if key is not found.
-        """
-        raise NotImplementedError
-        
-    def set(self, tag, key, value):
-        """Sets a value of a new entry.
-        """
-        raise NotImplementedError
-        
-    def remove(self, tag, key):
-        """Removes an element from the cache."""
-        raise NotImplementedError
-        
-    def keys(self, tag):
-        """Return keys for all the values in the cache with the specified tag."""
-        raise NotImplementedError
-        
-    def clear(self):
-        """Clears the cache."""
-        raise NotImplementedError
-        
-    def __getitem__(self, key):
-        tag, key = key
-        return self.get(tag, key)
-        
-    def __setitem__(self, key, value):
-        tag, key = key
-        self.set(tag, key, value)
-    
-    def __delitem__(self, key):
-        tag, key = key
-        self.remove(tag, key)
-        
-    def __contains__(self, key):
-        tag, key = key
-        return self.get(tag, key) is not None
-        
-class LRUCache(BaseCache):
-    """An LRU implementation of cache, which uses a separate LRU cache for every tag.
+        >>> store = CacheStore()
+        >>> store.get_cache(1, "key").keys()
+        []
+        >>> things_cache = store.get_cache(1, 'things')
+        >>> things_cache['x'] = 1
+        >>> things_cache['things']['x']
+        1
+        >>> things_cache.keys()
+        ['x']
     """
     def __init__(self):
-        self.cache = {}
+        self.store = {}
         
-    def get_cache(self, tag):
-        if tag not in self.cache:
-            size = getattr(config, '%s_cache_size' % tag, None) or config.default_cache_size
-            self.cache[tag] = LRU(size)
-        return self.cache[tag]
+    def get_cache(self, site_id, name):
+        """Returns cache for specified site_id and name."""
+        if (site_id, name) not in self.store:
+            self.store[site_id, name] = self.create_cache(name)
+        return self.store[site_id, name]
         
     def clear(self):
-        self.cache = {}
+        self.store = {}
         
-    def get(self, tag, key, default=None):
-        return self.get_cache(tag).get(key, default)
-        
-    def set(self, tag, key, value):
-        self.get_cache(tag)[key] = value
-        
-    def remove(self, tag, key):
-        del self.get_cache(tag)[key]
-        
-    def keys(self, tag):
-        return self.get_cache(tag).keys()
-    
+    def create_cache(self, name):
+        size = getattr(config, '%s_cache_size' % name, None) or config.default_cache_size
+        return LRU(size)
+                                
 class Infobase:
     def __init__(self):
-        self.cache = LRUCache()        
+        self.cache = {}
 
     def get_site(self, name):
-        if ('site', name) not in self.cache:
+        if name not in self.cache:
             d = web.select('site', where='name=$name', vars=locals())
             if d:
                 s = d[0]
-                self.cache['site', name] = Infosite(s.id, s.name, s.secret_key)
+                self.cache[name] = Infosite(s.id, s.name, s.secret_key)
             else:
                 raise SiteNotFound(name)
         
-        return self.cache['site', name]
+        return self.cache[name]
 
     def create_site(self, name, admin_password):
         import bootstrap
@@ -337,10 +296,25 @@ class Thing:
     def __ne__(self, other):
         return not (self == other)
 
-class Infosite:
+class Infosite(object):
+    _class = None
+    
+    def __new__(cls, *a, **kw):
+        """Overiding __new__ to allow creating a subclass of Infosite instead of Infosite when Infosite(..) is called.
+        To install a new class set `Infosite._class = NewInfosite` before the system initialization.
+        """
+        if cls is Infosite:
+            cls = Infosite._class or Infosite
+        return object.__new__(cls, *a, **kw)
+            
     def __init__(self, id, name, secret_key):
-        #@@ what is I want to use unified cache for all sites?
-        self.cache = LRUCache() 
+        self.cache_store = CacheStore()
+        
+        self.key_cache = self.cache_store.get_cache(id, 'key')
+        self.thing_cache = self.cache_store.get_cache(id, 'thing')
+        self.things_cache = self.cache_store.get_cache(id, 'things')
+        self.versions_cache = self.cache_store.get_cache(id, 'versions')
+        
         self.id = id
         self.name = name
         self.secret_key = secret_key
@@ -348,7 +322,7 @@ class Infosite:
             self.logger = logger.Logger(self, config.logroot)
         else:
             self.logger = logger.DummyLogger()
-        
+                    
     def get(self, key):
         """Same as withKey, but returns None instead of raising exception when object is not found."""
         try:
@@ -364,19 +338,20 @@ class Infosite:
         if revision is not None and revision > d.latest_revision:
             revision = None
         
-        thing = Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision)        
-        self.cache['key', thing.key] = thing.id
-        self.cache['thing', (thing.id, revision)] = thing
+        thing = Thing(self, d.id, d.key, d.last_modified, d.latest_revision, revision=revision)
+                
+        self.key_cache[thing.key] = thing.id
+        self.thing_cache[thing.id, revision] = thing
         if revision is None:
-            self.cache['thing', (thing.id, thing.latest_revision)] = thing
+            self.thing_cache[thing.id, thing.latest_revision] = thing
         return thing
 
     def withKey(self, key, revision=None, lazy=False):
         assert key.startswith('/'), 'Bad key: ' + repr(key)
 
         # if id is known for that key, redirect to withID
-        if ('key', key) in self.cache:
-            id = self.cache['key', key]
+        if key in self.key_cache:
+            id = self.key_cache[key]
             return self.withID(id, revision)
 
         try:
@@ -387,8 +362,8 @@ class Infosite:
         return self._with(d, revision=revision)
         
     def withID(self, id, revision=None):
-        if ('thing', (id, revision)) in self.cache:
-            return self.cache['thing', (id, revision)]
+        if (id, revision) in self.thing_cache:
+            return self.thing_cache[id, revision]
             
         try:
             d = web.select('thing', where="site_id=$self.id AND id=$id", vars=locals())[0]
@@ -397,25 +372,25 @@ class Infosite:
 
         return self._with(d, revision=revision)
         
-    def _run_query(self, tag, query):
-        if (tag, query) not in self.cache:
+    def _run_query(self, cache, query):
+        if query not in cache:
             result = query.execute()
-            self.cache[tag, query] = result
+            cache[query] = result
         else:
-            result = self.cache[tag, query]
+            result = cache[query]
         return result
 
     def things(self, query):
         assert isinstance(query, dict)
         from readquery import Things
         query = Things(self, query)
-        return self._run_query('things', query)
+        return self._run_query(self.things_cache, query)
         
     def versions(self, query):
-        assert isinstance(query, dict)        
+        assert isinstance(query, dict)
         from readquery import Versions
         query = Versions(self, query)
-        return self._run_query('versions', query)
+        return self._run_query(self.versions_cache, query)
 
     def write(self, query, comment=None, machine_comment=None):
         web.transact()
@@ -458,18 +433,18 @@ class Infosite:
     def invalidate(self, objects, versions):
         """Invalidate the given keys from cache."""
         for o in objects:
-            if ('thing', (o.id, None)) in self.cache:
-                del self.cache['thing', (o.id, None)]
+            if (o.id, None) in self.thing_cache:
+                del self.thing_cache[o.id, None]
                 
-        for q in self.cache.keys('things'):
+        for q in self.things_cache.keys():
             for o in objects:
-                if ('things', q) in self.cache and (q.matches(o) or o.key in self.cache['things', q]):
-                    del self.cache['things', q]
+                if q in self.things_cache and (q.matches(o) or o.key in self.things_cache[q]):
+                    del self.things_cache[q]
                     
-        for q in self.cache.keys('versions'):
+        for q in self.versions_cache.keys():
             for v in versions:
-                if ('versions', q) in self.cache and q.matches(v):
-                    del self.cache['versions', q]
+                if q in self.versions_cache and q.matches(v):
+                    del self.versions_cache[q]
         
     def get_account_manager(self):
         import account

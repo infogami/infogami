@@ -386,6 +386,7 @@ class Context:
         if isinstance(q, list):
             return Query(self, [self.make_query(x, "%s/%d" % (path, i)) for i, x in enumerate(q)], path)
         elif isinstance(q, dict):
+            q = dict(q) # make a copy before modifying
             create = q.pop('create', None)
             connect = q.pop('connect', None)
             d = dict((k, self.make_query(v, path + "/" + k)) for k, v in q.items())

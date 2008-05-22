@@ -1,5 +1,6 @@
 import hmac
 import random
+import datetime
 import time
 import web
 
@@ -49,7 +50,7 @@ class AccountManager:
     def __init__(self, site):
         self.site = site
     
-    def register(self, username, displayname, email, password):
+    def register(self, username, displayname, email, password, password_encrypted=False, timestamp=None):
         username = '/user/' + username
         web.ctx.infobase_bootstrap = True
 
@@ -62,9 +63,10 @@ class AccountManager:
         web.transact()
         try:
             q = make_query(username, displayname)
-            self.site.write(q)
+            self.site._write(q, timestamp=timestamp, ip=web.ctx.get('ip'), log=False)
             user = self.site.withKey(username)
-            password = self._generate_salted_hash(self.site.secret_key, password)
+            if not password_encrypted:
+                password = self._generate_salted_hash(self.site.secret_key, password)
             web.insert('account', False, thing_id=user.id, email=email, password=password)    
         except:
             import traceback
@@ -73,7 +75,8 @@ class AccountManager:
             raise
         else:
             web.commit()
-            self.site.logger.on_new_account(user.key, email=email, password=password)
+            timestamp = timestamp or datetime.datetime.utcnow()
+            self.site.logger.on_new_account(self.site, timestamp, user.key, email=email, password=password)
             self.setcookie(user)
             return user
             
@@ -98,30 +101,36 @@ class AccountManager:
             if self._check_salted_hash(self.site.secret_key, user_id + "," + login_time, digest):
                 return self.site.withID(user_id)
                 
-    def update_user(self, old_password, new_password, email):
-        def _update_password(user, password):
-            password = self._generate_salted_hash(self.site.secret_key, password)            
-            web.update('account', where='thing_id=$user.id', password=password, vars=locals())
-            self.site.logger.on_update_account(user.key, email=None, password=password)
-            
-        def _update_email(user, email):
-            web.update('account', where='thing_id=$user.id', email=email, vars=locals())
-            self.site.logger.on_update_account(user.key, email=email, password=None)
-        
+    def update_user(self, old_password, new_password, email, password_encrypted=False, timestamp=None):
         user = self.get_user()
         if user is None:
             raise NotFound("Not logged in")
 
         if not self.checkpassword(user, old_password):
             raise infobase.InfobaseException('Invalid Password')
+            
+        new_password and self.assert_password(new_password)
+        email and self.assert_email(email)
         
-        if new_password:
-            self.assert_password(new_password)
-            _update_password(user, new_password)
+        password = new_password and self._generate_salted_hash(self.site.secret_key, new_password) 
+        self._update_user(user, password, email)
+    
+    def _update_user(self, user, encrypted_password, email, timestamp=None):
+        timestamp = timestamp or datetime.datetime.utcnow()
+        def _update_password(user, password):
+            web.update('account', where='thing_id=$user.id', password=password, vars=locals())
+            self.site.logger.on_update_account(self.site, timestamp, user.key, email=None, password=password)
+            
+        def _update_email(user, email):
+            web.update('account', where='thing_id=$user.id', email=email, vars=locals())
+            self.site.logger.on_update_account(self.site, timestamp, user.key, email=email, password=None)
+        
+        if encrypted_password:
+            _update_password(user, encrypted_password)
             
         if email:
-            self.assert_email(email)
             _update_email(user, email)
+        
             
     def assert_password(self, password):
         pass
@@ -184,7 +193,6 @@ class AccountManager:
 
     def setcookie(self, user, remember=False):
         web.ctx.current_user = user
-        import datetime, time
         t = datetime.datetime(*time.gmtime()[:6]).isoformat()
         text = "%d,%s" % (user.id, t)
         text += "," + self._generate_salted_hash(self.site.secret_key, text)

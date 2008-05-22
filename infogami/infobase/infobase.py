@@ -9,6 +9,7 @@ from multiple_insert import multiple_insert
 from cache import LRU
 import logger
 import config
+import datetime
 
 KEYWORDS = ["id", 
     "action", "create", "update", "insert", "delete", 
@@ -110,13 +111,18 @@ class CacheStore(object):
 class Infobase:
     def __init__(self):
         self.cache = {}
-
+        
+        if config.logroot:
+            self.logger = logger.Logger(config.logroot, compress=config.compress_log)
+        else:
+            self.logger = logger.DummyLogger()
+                    
     def get_site(self, name):
         if name not in self.cache:
             d = web.select('site', where='name=$name', vars=locals())
             if d:
                 s = d[0]
-                self.cache[name] = Infosite(s.id, s.name, s.secret_key)
+                self.cache[name] = Infosite(self, s.id, s.name, s.secret_key)
             else:
                 raise SiteNotFound(name)
         
@@ -128,7 +134,7 @@ class Infobase:
         try:
             web.transact()
             id = web.insert('site', name=name, secret_key=secret_key)
-            site = Infosite(id, name, secret_key)
+            site = Infosite(self, id, name, secret_key)
             bootstrap.bootstrap(site, admin_password)
         except:
             import traceback
@@ -307,7 +313,7 @@ class Infosite(object):
             cls = Infosite._class or Infosite
         return object.__new__(cls, *a, **kw)
             
-    def __init__(self, id, name, secret_key):
+    def __init__(self, infobase, id, name, secret_key):
         self.cache_store = CacheStore()
         
         self.key_cache = self.cache_store.get_cache(id, 'key')
@@ -318,11 +324,8 @@ class Infosite(object):
         self.id = id
         self.name = name
         self.secret_key = secret_key
-        if config.logroot:
-            self.logger = logger.Logger(self, config.logroot)
-        else:
-            self.logger = logger.DummyLogger()
-                    
+        self.logger = infobase.logger
+        
     def get(self, key):
         """Same as withKey, but returns None instead of raising exception when object is not found."""
         try:
@@ -392,19 +395,24 @@ class Infosite(object):
         query = Versions(self, query)
         return self._run_query(self.versions_cache, query)
 
-    def write(self, query, comment=None, machine_comment=None):
+    def write(self, query, comment=None, machine_comment=None, timestamp=None):
+        a = self.get_account_manager()
+        return self._write(query, comment, machine_comment, a.get_user(), web.ctx.get("ip"), timestamp)
+        
+    def _write(self, query, comment=None, machine_comment=None, author=None, ip=None, timestamp=None, log=True):
         web.transact()
         try:
             import writequery
-            a = self.get_account_manager()
+            timestamp = timestamp or datetime.datetime.utcnow()
             ctx = writequery.Context(self, 
-                author=a.get_user(), ip=web.ctx.get('ip'), 
-                comment=comment, machine_comment=machine_comment)
+                author=author, ip=ip, 
+                comment=comment, machine_comment=machine_comment,
+                timestamp=timestamp)
             result = ctx.execute(query)
             
             modified = ctx.modified_objects()
             self.invalidate(modified, ctx.versions.values())
-            self.logger.on_write(result, comment, machine_comment, a and a.get_user(), web.ctx.get('ip'))
+            log and self.logger.on_write(self, timestamp, query, result, comment, machine_comment, author, web.ctx.get('ip'))
             self.run_hooks(modified)
         except:
             web.rollback()

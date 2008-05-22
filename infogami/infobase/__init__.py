@@ -3,7 +3,8 @@ Infobase.
 """
 import sys
 import web
-import config
+
+import config, infobase, logger, logreader
 
 commands = {}
 def command(f):

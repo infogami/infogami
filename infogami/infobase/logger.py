@@ -1,11 +1,11 @@
 """
 Infobase Logger module.
 
-The following are logged:
-    * new_object
-    * update_object
-    * new_account
-    * update_account
+Infogami log file is a stream of events where each event is a dictionary represented in JSON format having keys [`action`, `site`, `data`].
+
+   * action: Name of action being logged. Possible values are write, new_account and update_object.
+   * site: Name of site
+   * data: data associated with the event. This data is used for replaying that action.
 
 Log files are circulated on daily basis. Default log file format is $logroot/yyyy/mm/dd.log.
 """
@@ -29,9 +29,19 @@ def synchronize(f):
             
     return f
 
-def to_date(iso_date_string):
-    date = iso_date_string.split('T')[0]
-    return datetime.datetime(*(time.strptime(date, "%Y-%m-%d")[0:6]))    
+def to_timestamp(iso_date_string):
+    """
+        >>> t = '2008-01-01T01:01:01.010101'
+        >>> to_timestamp(t).isoformat()
+        '2008-01-01T01:01:01.010101'
+    """
+    #@@ python datetime module is ugly. 
+    #@@ It takes so much of work to create datetime from isoformat.
+    date, time = iso_date_string.split('T', 1)
+    y, m, d = date.split('-')
+    H, M, S = time.split(':')
+    S, ms = S.split('.')
+    return datetime.datetime(*map(int, [y, m, d, H, M, S, ms]))
             
 class DummyLogger:
     def __init__(self, *a, **kw):
@@ -47,55 +57,51 @@ class DummyLogger:
         pass
     
 class Logger:
-    def __init__(self, site, root):
-        self.site = site
+    def __init__(self, root, compress=False):
         self.root = root
+        if compress:
+            import gzip
+            self.extn = ".log.gz"
+            self._open = gzip.open
+        else:
+            self.extn = ".log"
+            self._open = open
         
     def get_path(self, timestamp=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         date = timestamp.date()
-        return os.path.join(self.root, "%02d" % date.year, "%02d" % date.month, "%02d.log" % date.day)
+        return os.path.join(self.root, "%02d" % date.year, "%02d" % date.month, "%02d" % date.day) + self.extn
+    
+    def on_write(self, site, timestamp, query, result, comment, machine_comment, author, ip):
+        d = dict(query=query, comment=comment, machine_comment=machine_comment, author=author and author.key, ip=ip)
+        self.write('write', site.name, timestamp, d)
     
     @synchronize
-    def on_write(self, result, comment, machine_comment, author, ip):
-        modified = result['created'] + result['updated']
-        if not modified:
-            return
-            
-        d = dict(action='new_object', comment=comment, machine_comment=machine_comment, author=author and author.key, ip=ip)
-        for key in result['created']:
-            object = self.site.get(key)
-            self.write(dict(d, object=object._get_data()), timestamp=object.last_modified)
-        
-        d['action'] = 'update_object'
-        for key in result['updated']:
-            object = self.site.get(key)
-            self.write(dict(d, object=object._get_data()), timestamp=object.last_modified)
-                
-    def write(self, data, timestamp=None):
-        timestamp = timestamp and to_date(timestamp)
+    def write(self, action, sitename, timestamp, data):
         path = self.get_path(timestamp)
         dir = os.path.dirname(path)
         if not os.path.exists(dir):
             os.makedirs(dir)
-        f = open(path, 'a')
-        f.write(simplejson.dumps(data))
+        f = self._open(path, 'a')
+        f.write(simplejson.dumps(dict(action=action, site=sitename, timestamp=timestamp.isoformat(), data=data)))
         f.write('\n')
         f.flush()
         #@@ optimize: call fsync after all modifications are written instead of calling for every modification
         os.fsync(f.fileno())
         f.close()
     
-    @synchronize    
-    def on_new_account(self, username, email, password):
-        self.write(dict(action='new_account', username=username, email=email, password=password))
+    def on_new_account(self, site, timestamp, username, email, password):
+        self.write('new_account', site.name, timestamp, data=dict(username=username, email=email, password=password))
         
-    @synchronize
-    def on_update_account(self, username, email, password):
+    def on_update_account(self, site, timestamp, username, email, password):
         # email will be be None when password is updated and password is None when email is updated.
-        d = dict(action='update_account', username=username)
+        d = dict(username=username)
         if email:
             d['email'] = email
         if password:
             d['password'] = password
-        self.write(d)
+        self.write('update_account', site.name, timestamp, d)
+        
+if __name__ == '__main__':
+    import doctest
+    doctest.testmod()

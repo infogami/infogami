@@ -141,7 +141,7 @@ class Things:
                 desc = ""
                 
             # allow sort based on thing columns
-            if order in ['id', 'created', 'last_modified', 'key']:
+            if order in ['id', 'created', 'last_modified', 'key', 'type']:
                 order = 'thing.' + order + desc
             else:
                 datatype = get_datatype(self.type, order)
@@ -152,12 +152,12 @@ class Things:
                 order = "ds.value" + desc
             
         for i, item in enumerate(self.items):
-	    if item.key == 'key':
-		q = item.query('thing', self.revision)
-	    else:
-		d = 'd%d' % i
-		tables.append('datum as ' + d)
-		q = item.query(d, self.revision)
+            if item.key in ['key', 'type']:
+                q = item.query('thing', self.revision)
+            else:
+                d = 'd%d' % i
+                tables.append('datum as ' + d)
+                q = item.query(d, self.revision)
             where += ' AND ' + q
             
         return [r.key for r in web.select(tables, what=what, where=where, offset=self.offset, limit=self.limit, order=order)]
@@ -211,15 +211,15 @@ class ThingItem:
         datatype = self.datatype
         value = self.op.process(self.value)
 
-	if table == 'thing' and key == 'key':
-	    q = [self.op.query('thing.key')]
-	else: 
-	    q = ['%(table)s.thing_id = thing.id',
-		'%(table)s.end_revision = 2147483647',
-		'%(table)s.key = $key',
-		self.op.query(self.cast(table + '.value')),
-		'%(table)s.datatype = $datatype']
-	q = ' AND '.join(q) % locals()
+        if table == 'thing':
+            q = [self.op.query('thing.' + key)]
+        else: 
+            q = ['%(table)s.thing_id = thing.id',
+                '%(table)s.end_revision = 2147483647',
+                '%(table)s.key = $key',
+                self.op.query(self.cast(table + '.value')),
+                '%(table)s.datatype = $datatype']
+        q = ' AND '.join(q) % locals()
         return web.reparam(q, locals())
         
     def cast(self, column):

@@ -13,6 +13,7 @@ CREATE TABLE thing (
     id serial primary key,
     site_id int references site,
     key varchar(4096),
+    type int references thing,
     latest_revision int,
     deleted boolean DEFAULT false,
     created timestamp default (current_timestamp at time zone 'utc'),
@@ -53,6 +54,7 @@ CREATE TABLE account (
 
 CREATE INDEX thing_created_idx ON thing(created);
 CREATE INDEX thing_last_modified_idx ON thing(last_modified);
+CREATE INDEX thing_type_idx ON thing(type);
 
 CREATE INDEX version_created_idx ON version (created);
 CREATE INDEX version_comment_idx ON version (comment) where comment is not NULL;
@@ -121,6 +123,8 @@ CREATE FUNCTION on_datum_insert() RETURNS TRIGGER AS $$
 BEGIN
     IF NEW.key = 'key' THEN
         UPDATE thing SET key=NEW.VALUE WHERE thing.id = NEW.thing_id;
+    ELSIF NEW.key = 'type' THEN
+        UPDATE thing SET type=cast(NEW.VALUE as int) WHERE thing.id = NEW.thing_id;
     END IF;
 
     -- make sure length of string is limited for datatypes key, string and uri

@@ -184,7 +184,7 @@ def thingify(type, value):
         from infogami.core import db
         type = db.get_version(type)
         
-    PRIMITIVE_TYPES = "/type/key", "/type/string", "/type/text", "/type/int", "/type/float", "/type/boolean"    
+    PRIMITIVE_TYPES = "/type/key", "/type/string", "/type/text", "/type/int", "/type/float", "/type/boolean", "/type/uri"    
     from infogami.infobase import client
         
     if type.key not in PRIMITIVE_TYPES and isinstance(value, basestring) and not value.strip():
@@ -203,6 +203,13 @@ def thingify(type, value):
 
 @public
 def thingdiff(type, name, v1, v2):
+    if isinstance(v1, list) or isinstance(v2, list):
+        v1 = v1 or []
+        v2 = v2 or []
+        v1 += [""] * (len(v2) - len(v1))
+        v2 += [""] * (len(v1) - len(v2))
+        return "".join(thingdiff(type, name, a, b) for a, b in zip(v1, v2))
+    
     if v1 == v2:
         return ""
     else:

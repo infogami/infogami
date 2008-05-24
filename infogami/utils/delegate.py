@@ -119,18 +119,12 @@ def delegate(path):
             return web.seeother(web.changequery(m=None))
         
         if what == 'edit' and not web.ctx.site.can_write(path):
-            view.login_redirect()
-        
-        #@@ move this to some better place
-        if what not in ("view", "edit") or True: #or auth.has_permission(context.site, context.user, path, what):
+            out = view.permission_denied(error="You don't have permission to edit " + path + ".")
+        else:
             cls = modes[what]            
             if not hasattr(cls, method):
                 return web.nomethod(method)
             out = getattr(cls(), method)(path)
-        else:
-            #context.error = 'You do not have permission to do that.'
-            return view.login_redirect()
-
     if out is not None:
         if isinstance(out, basestring):
             out = web.template.Stowage(_str=out, title=path)

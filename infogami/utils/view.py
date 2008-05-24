@@ -1,6 +1,7 @@
 
 import web
 import os
+import urllib
 
 import infogami
 from infogami import tdb
@@ -64,6 +65,7 @@ web.template.Template.globals.update(dict(
   utf8=web.utf8,
   Dropdown = web.form.Dropdown,
   slice = slice,
+  urlencode = urllib.urlencode,
   debug = web.debug,
 ))
 
@@ -307,7 +309,6 @@ def write(filename):
     q = open(filename).read()
     print web.ctx.site.write(q)
     
-
 # this is not really the right place to move this, but couldn't find a better place than this.     
 def require_login(f):
     def g(*a, **kw):
@@ -318,7 +319,6 @@ def require_login(f):
     return g
 
 def login_redirect(path=None):
-    import urllib
     if path is None:
         path = web.ctx.fullpath
 
@@ -326,6 +326,9 @@ def login_redirect(path=None):
     web.seeother("/account/login?" + query)
     raise StopIteration
 
+def permission_denied(error):
+    return render.permission_denied(web.ctx.fullpath, error)
+    
 @public
 def datestr(then, now=None):
     """Internationalized version of web.datestr"""

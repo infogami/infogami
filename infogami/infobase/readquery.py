@@ -128,10 +128,15 @@ class Things:
         
     def execute(self):        
         #@@ make sure all keys are valid.
-        tables = ['thing']
         what = 'thing.key'
         where = web.reparam('thing.site_id = $self.site.id', locals())
         
+        _tables = {}
+        def get_table(key):
+            if key not in _tables:
+                _tables[key] = 'd%d' % len(_tables)
+            return _tables[key]
+                
         order = self.sort
         if order:
             if order.startswith('-'):
@@ -145,21 +150,22 @@ class Things:
                 order = 'thing.' + order + desc
             else:
                 datatype = get_datatype(self.type, order)
-                tables.append('datum as ds')
-                where += web.reparam(" AND ds.thing_id = thing.id"
-                    + " AND ds.end_revision = 2147483647"
-                    + " AND ds.key = $order AND ds.datatype = $datatype", locals())
-                order = "ds.value" + desc
+                t = get_table(order)
+                
+                q = ' AND XX.thing_id = thing_id AND XX.end_revision = 2147483647 AND XX.key = $order AND XX.datatype = $datatype'
+                q = q.replace('XX', t)
+                wherer = web.reparam(q, locals())
+                order = t + ".value" + desc
             
         for i, item in enumerate(self.items):
             if item.key in ['key', 'type']:
                 q = item.query('thing', self.revision)
             else:
-                d = 'd%d' % i
-                tables.append('datum as ' + d)
+                d = get_table(item.key)
                 q = item.query(d, self.revision)
             where += ' AND ' + q
             
+        tables = ['thing'] + ['datum as ' + t for t in _tables.values()]
         return [r.key for r in web.select(tables, what=what, where=where, offset=self.offset, limit=self.limit, order=order)]
     
 class ThingItem:

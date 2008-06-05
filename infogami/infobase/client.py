@@ -375,7 +375,7 @@ class Thing:
         return not self.__eq__(other)
     
     def __str__(self):
-        return self.key
+        return web.utf8(self.key)
     
     def __repr__(self):
         return "<Thing: %s>" % repr(self.key)

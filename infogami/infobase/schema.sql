@@ -1,5 +1,7 @@
 --- infobase schema ---
 
+CREATE LANGUAGE plpgsql; -- required for  triggers
+
 --- tables ---
 
 CREATE TABLE site (

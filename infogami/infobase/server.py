@@ -149,7 +149,10 @@ class account:
     def GET_get_user(self, site):
         a = site.get_account_manager()
         user = a.get_user()
-        return user and user._get_data()
+        if user:
+            d = user._get_data()
+            d['email'] = a.get_email(user)
+            return d
 
     def GET_get_reset_code(self, site):
         i = input('email')

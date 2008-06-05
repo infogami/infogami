@@ -86,6 +86,10 @@ class AccountManager:
             + ' WHERE thing.site_id=$self.site.id AND account.email=$email', vars=locals())
         return bool(d)
         
+    def get_email(self, user):
+        d = web.query('SELECT email FROM account WHERE thing_id=$user.id', vars=locals())
+        return d and d[0].email
+        
     def get_user(self):
         """Returns the current user from the session."""
         if not web.ctx.get('env'):

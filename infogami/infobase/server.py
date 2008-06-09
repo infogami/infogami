@@ -21,7 +21,7 @@ def jsonify(f):
         if not web.ctx.get('infobase_localmode'):
             cookies = web.cookies(infobase_auth_token=None)
             web.ctx.infobase_auth_token = cookies.infobase_auth_token
-        
+                
         d = {'status': 'ok'}
         try:
             d['result'] = f(self, *a, **kw)
@@ -165,6 +165,12 @@ class account:
         a = site.get_account_manager()
         username, code = a.get_user_code(i.email)
         return dict(username=username, code=code)
+        
+    def GET_get_user_email(self, site):
+        i = input('username')
+        a = site.get_account_manager()
+        email = a.get_user_email(i.username)
+        return dict(email=email)
 
     def POST_reset_password(self, site):
         i = input('username', 'code', 'password')

@@ -56,8 +56,7 @@ class LocalConnection(Connection):
     def request(self, sitename, path, method='GET', data=None):
         import server
         path = "/" + sitename + path
-        if self.get_auth_token():
-            web.ctx.infobase_auth_token = self.get_auth_token()
+        web.ctx.infobase_auth_token = self.get_auth_token()
         out = server.request(path, method, data)
         if 'infobase_auth_token' in web.ctx:
             self.set_auth_token(web.ctx.infobase_auth_token)
@@ -270,6 +269,9 @@ class Site:
         This should be called after logging in as admin.
         """
         return self._conn.request(self.name, '/account/get_reset_code', 'GET', dict(email=email))['result']
+        
+    def get_user_email(self, username):
+        return self._conn.request(self.name, '/account/get_user_email', 'GET', dict(username=username))['result']
         
     def reset_password(self, username, code, password):
         return self._conn.request(self.name, '/account/reset_password', 'POST', dict(username=username, code=code, password=password))

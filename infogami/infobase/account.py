@@ -92,9 +92,6 @@ class AccountManager:
         
     def get_user(self):
         """Returns the current user from the session."""
-        if web.ctx.get('current_user'):
-            return web.ctx.current_user
-            
         #@@ TODO: call assert_trusted_machine when user is admin.
         auth_token = web.ctx.get('infobase_auth_token')
         if auth_token:
@@ -160,6 +157,16 @@ class AccountManager:
         username = web.lstrips(user.key, '/user/')
         return username, timestamp + '$' + self._generate_salted_hash(self.site.secret_key, text)
         
+    @admin_only
+    def get_user_email(self, username):
+        d = web.query("SELECT * FROM account" +
+            " JOIN thing ON account.thing_id = thing.id" +
+            " WHERE thing.site_id=$self.site.id AND thing.key=$username", vars=locals())
+        if not d:
+            raise infobase.InfobaseException('No user registered with username: ' + username)
+        else:
+            return d[0].email
+        
     def reset_password(self, username, code, password):
         SEC_PER_WEEK = 7 * 24 * 3600
         timestamp, code = code.split('$', 1)
@@ -193,7 +200,6 @@ class AccountManager:
             return None
 
     def set_auth_token(self, user):
-        web.ctx.current_user = user
         t = datetime.datetime(*time.gmtime()[:6]).isoformat()
         text = "%d,%s" % (user.id, t)
         text += "," + self._generate_salted_hash(self.site.secret_key, text)

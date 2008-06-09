@@ -24,62 +24,44 @@ class NotFound(ClientException):
 class HTTPError(ClientException):
     pass
     
-class Client:
-    """Client to connect to infobase server. 
+def connect(type, **params):
+    """Connect to infobase server using the given params.
     """
-    def __init__(self, host, sitename):
-        self.host = host
-        self.sitename = sitename
-        self.cookie = None
+    if type == 'local':
+        return LocalConnection(**params)
+    elif type == 'remote':
+        return RemoteConnection(**params)
+    else:
+        raise Exception('Invalid connection type: ' + type)
         
-    def do_request(self, path, method='GET', data=None):
-        path = "/%s%s" % (self.sitename, path)
-        if self.host:
-            # don't send nulls
-            if data:
-                for k in data.keys():
-                    if data[k] is None: del data[k]
-            
-            if DEBUG: print >>web.debug, path, data
-            data = data and urllib.urlencode(data)
-            if data and method == 'GET':
-                path += '?' + data
-                data = None
-            
-            conn = httplib.HTTPConnection(self.host)
-            env = web.ctx.get('env') or {}
-            
-            cookie = self.cookie or env.get('HTTP_COOKIE')
-            if cookie:
-                headers = {'Cookie': cookie}
-            else:
-                headers = {}
-            
-            conn.request(method, path, data, headers=headers)
-            response = conn.getresponse()
-            
-            cookie = response.getheader('Set-Cookie')
-            self.cookie = cookie
-            # forgot password is executed in as admin user. 
-            # So, the cookie for the admin user should not be sent to the requested user.
-            if cookie and not web.ctx.get('admin_mode'):
-                web.header('Set-Cookie', cookie)
-            
-            if response.status == 200:
-                out = response.read()
-            else:
-                raise HTTPError("%d: %s" % (response.status, response.reason))
-        else:
-            import server
-            out = server.request(path, method, data)
-        return out
+class Connection:
+    def __init__(self):
+        self.auth_token = None
         
+    def set_auth_token(self, token):
+        self.auth_token = token
+
+    def get_auth_token(self):
+        return self.auth_token
+
     def request(self, path, method='GET', data=None):
-        """Sends request to the server.
-        data should be a dictonary. For GET request, it is passed as query string
-        and for POST requests, it is passed as POST data.
-        """
-        out = self.do_request(path, method, data)
+        raise NotImplementedError
+        
+class LocalConnection(Connection):
+    """LocalConnection assumes that db_parameters are set in web.config."""
+    def __init__(self, **params):
+        Connection.__init__(self)
+        pass
+        
+    def request(self, sitename, path, method='GET', data=None):
+        import server
+        path = "/" + sitename + path
+        if self.get_auth_token():
+            web.ctx.infobase_auth_token = self.get_auth_token()
+        out = server.request(path, method, data)
+        if 'infobase_auth_token' in web.ctx:
+            self.set_auth_token(web.ctx.infobase_auth_token)
+            
         out = simplejson.loads(out)
         out = storify(out)
         if out.status == 'fail':
@@ -87,6 +69,62 @@ class Client:
         else:
             return out
             
+        return out
+        
+class RemoteConnection(Connection):
+    """Connection to remote Infobase server."""
+    def __init__(self, base_url):
+        Connection.__init__(self)
+        self.base_url = base_url
+
+    def request(self, sitename, path, method='GET', data=None):
+        url = self.base_url + '/' + sitename + path
+        if data:
+            for k in data.keys():
+                if data[k] is None: del data[k]
+        
+        if DEBUG: 
+            print >>web.debug, path, data
+        
+        data = data and urllib.urlencode(data)
+        if data and method == 'GET':
+            path += '?' + data
+            data = None
+        
+        conn = httplib.HTTPConnection(self.host)
+        env = web.ctx.get('env') or {}
+        
+        if self.auth_token:
+            import Cookie
+            c = Cookie.SimpleCookie()
+            c['infobase_auth_token'] = self.auth_token
+            cookie = c.output(header='').strip()
+            headers = {'Cookie': cookie}
+        else:
+            headers = {}
+        
+        conn.request(method, path, data, headers=headers)
+        response = conn.getresponse()
+        
+        cookie = response.getheader('Set-Cookie')
+        if cookie:
+            import Cookie
+            c = Cookie.SimpleCookie()
+            c.load(cookie)
+            if 'infobase_auth_token' in c:
+                self.set_auth_token(c['infobase_auth_token'].value)                
+        if response.status == 200:
+            out = response.read()
+        else:
+            raise HTTPError("%d: %s" % (response.status, response.reason))
+            
+        out = simplejson.loads(out)
+        out = storify(out)
+        if out.status == 'fail':
+            raise ClientException(out['message'])
+        else:
+            return out
+    
 class LazyObject:
     """LazyObject which creates the required object on demand.
         >>> o = LazyObject(lambda: [1, 2, 3])
@@ -106,9 +144,9 @@ class LazyObject:
         return getattr(self._get(), key)
             
 class Site:
-    def __init__(self, client):
-        self._client = client
-        self.name = client.sitename
+    def __init__(self, conn, sitename):
+        self._conn = conn
+        self.name = sitename
         # cache for storing pages requested in this HTTP request
         self._cache = {}
         
@@ -116,7 +154,7 @@ class Site:
         """Returns properties of the thing with the specified key."""
         revision = revision and int(revision)
         data = dict(key=key, revision=revision)
-        result = self._client.request('/get', data=data)['result']
+        result = self._conn.request(self.name, '/get', data=data)['result']
         if result is None:
             raise NotFound, key
         else:
@@ -177,7 +215,7 @@ class Site:
 
     def things(self, query):
         query = simplejson.dumps(query)
-        return self._client.request('/things', 'GET', {'query': query})['result']
+        return self._conn.request(self.name, '/things', 'GET', {'query': query})['result']
                 
     def versions(self, query):
         def process(v):
@@ -186,18 +224,18 @@ class Site:
             v.author = v.author and self.get(v.author, lazy=True)
             return v
         query = simplejson.dumps(query)
-        versions =  self._client.request('/versions', 'GET', {'query': query})['result']
+        versions =  self._conn.request(self.name, '/versions', 'GET', {'query': query})['result']
         return [process(v) for v in versions]
 
     def write(self, query, comment=None):
         self._run_hooks('before_new_version', query)
         _query = simplejson.dumps(query)
-        result = self._client.request('/write', 'POST', dict(query=_query, comment=comment))['result']
+        result = self._conn.request(self.name, '/write', 'POST', dict(query=_query, comment=comment))['result']
         self._run_hooks('on_new_version', query)
         return result
         
     def can_write(self, key):
-        perms = self._client.request('/permission', 'GET', dict(key=key))['result']
+        perms = self._conn.request(self.name, '/permission', 'GET', dict(key=key))['result']
         return perms['write']
 
     def _run_hooks(self, name, query):
@@ -216,14 +254,14 @@ class Site:
                 _run_hooks(name, t)
         
     def login(self, username, password, remember=False):
-        return self._client.request('/account/login', 'POST', dict(username=username, password=password))
+        return self._conn.request(self.name, '/account/login', 'POST', dict(username=username, password=password))
         
     def register(self, username, displayname, email, password):
-        return self._client.request('/account/register', 'POST', 
+        return self._conn.request(self.name, '/account/register', 'POST', 
             dict(username=username, displayname=displayname, email=email, password=password))
             
     def update_user(self, old_password, new_password, email):
-        return self._client.request('/account/update_user', 'POST', 
+        return self._conn.request(self.name, '/account/update_user', 'POST', 
             dict(old_password=old_password, new_password=new_password, email=email))
             
     def get_reset_code(self, email):
@@ -231,13 +269,13 @@ class Site:
         This called to send forgot password email. 
         This should be called after logging in as admin.
         """
-        return self._client.request('/account/get_reset_code', 'GET', dict(email=email))['result']
+        return self._conn.request(self.name, '/account/get_reset_code', 'GET', dict(email=email))['result']
         
     def reset_password(self, username, code, password):
-        return self._client.request('/account/reset_password', 'POST', dict(username=username, code=code, password=password))
+        return self._conn.request(self.name, '/account/reset_password', 'POST', dict(username=username, code=code, password=password))
         
     def get_user(self):
-        data = self._client.request('/account/get_user')['result']
+        data = self._conn.request(self.name, '/account/get_user')['result']
         user = data and Thing(self, data['key'], data)
         return user
 

@@ -30,8 +30,8 @@ def find_action(name):
             return a
         
 def _setup():
-    if config.db_parameters is None:
-        raise Exception('infogami.config.db_parameters is not specified')
+    #if config.db_parameters is None:
+    #    raise Exception('infogami.config.db_parameters is not specified')
 
     if config.site is None:
         raise Exception('infogami.config.site is not specified')

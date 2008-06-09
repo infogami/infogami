@@ -77,7 +77,7 @@ class AccountManager:
             web.commit()
             timestamp = timestamp or datetime.datetime.utcnow()
             self.site.logger.on_new_account(self.site, timestamp, user.key, email=email, password=password)
-            self.setcookie(user)
+            self.set_auth_token(user)
             return user
             
     def has_user(self, email):
@@ -92,23 +92,20 @@ class AccountManager:
         
     def get_user(self):
         """Returns the current user from the session."""
-        if not web.ctx.get('env'):
-            return None
-        
         if web.ctx.get('current_user'):
             return web.ctx.current_user
             
         #@@ TODO: call assert_trusted_machine when user is admin.
-        session = web.cookies(infobase_session=None).infobase_session
-        if session:
-            user_id, login_time, digest = session.split(',')
+        auth_token = web.ctx.get('infobase_auth_token')
+        if auth_token:
+            user_id, login_time, digest = auth_token.split(',')
             if self._check_salted_hash(self.site.secret_key, user_id + "," + login_time, digest):
                 return self.site.withID(user_id)
                 
     def update_user(self, old_password, new_password, email, password_encrypted=False, timestamp=None):
         user = self.get_user()
         if user is None:
-            raise NotFound("Not logged in")
+            raise infobase.InfobaseException("Not logged in")
 
         if not self.checkpassword(user, old_password):
             raise infobase.InfobaseException('Invalid Password')
@@ -190,19 +187,17 @@ class AccountManager:
         username = '/user/' + username
         user = self.site.get(username)
         if user and self.checkpassword(user, password):
-            self.setcookie(user)
+            self.set_auth_token(user)
             return user
         else:
             return None
 
-    def setcookie(self, user, remember=False):
+    def set_auth_token(self, user):
         web.ctx.current_user = user
         t = datetime.datetime(*time.gmtime()[:6]).isoformat()
         text = "%d,%s" % (user.id, t)
         text += "," + self._generate_salted_hash(self.site.secret_key, text)
-
-        expires = (remember and 3600*24*7) or ""
-        web.setcookie("infobase_session", text, expires=expires)
+        web.ctx.infobase_auth_token = text
 
     def _generate_salted_hash(self, key, text, salt=None):
         salt = salt or hmac.HMAC(key, str(random.random())).hexdigest()[:5]

@@ -271,6 +271,12 @@ class login(delegate.page):
             f.fill(i)
             f.note = str(e)
             return render.login(f)
+
+        if i.redirect == "/account/login" or i.redirect == "":
+            i.redirect = "/"
+
+        expires = (i.remember and 3600*24*7) or ""
+        web.setcookie('infogami_session', web.ctx.conn.get_auth_token(), expires=expires)
         web.seeother(i.redirect)
         
 class register(delegate.page):
@@ -291,13 +297,14 @@ class register(delegate.page):
             except ClientException, e:
                 f.note = str(e)
                 return render.register(f)
+            web.seecookie('infogami_session', web.ctx.conn.get_auth_token())
             web.seeother(i.redirect)
 
 class logout(delegate.page):
     path = "/account/logout"
     
     def POST(self):
-        web.setcookie("infobase_session", "", expires=-1)
+        web.setcookie("infogami_session", "", expires=-1)
         referer = web.ctx.env.get('HTTP_REFERER', '/')
         web.seeother(referer)
 
@@ -357,7 +364,7 @@ def register_preferences(cls):
 class preferences(delegate.page):
     path = "/account/preferences"
     
-    @require_login    
+    @require_login
     def GET(self):
         return render.preferences(_preferences)
 

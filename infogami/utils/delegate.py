@@ -65,7 +65,20 @@ def initialize_context():
     
 def create_site():
     from infogami.infobase import client
-    return client.Site(client.Client(config.infobase_host, config.site))
+    
+    if config.site is None:
+        site = web.ctx.host.split(':')[0] # strip port
+    else:
+        site = config.site
+    
+    web.ctx.conn = client.connect(**config.infobase_parameters)
+    
+    # set auto token in the connection
+    if web.ctx.get('env'): # do this only if web.load is already called
+        auth_token = web.cookies(infogami_session=None).infogami_session
+        web.ctx.conn.set_auth_token(auth_token)
+    
+    return client.Site(web.ctx.conn, site)
 
 def fakeload():
     from infogami.core import db
@@ -84,7 +97,6 @@ def fakeload():
     context.user = None
     web.ctx.site = create_site()
     
-
 def normpath(path):
     path = os.path.normpath(path) # correct multiple /'s and trailing /
     path = path.replace(' ', '_') # replace space with underscore
@@ -133,7 +145,7 @@ def delegate(path):
             print out.rawtext
         else:
             print view.render_site(config.site, out)
-
+            
 class item:
     GET = POST = lambda self, path: delegate(path)
 
@@ -191,7 +203,8 @@ def _load():
         i18n.load_strings(plugin.path)
         __import__(plugin.module + '.code', globals(), locals(), ['plugins'])
 
-def admin_login():
+def admin_login(site=None):
+    site = site or web.ctx.site
     web.ctx.admin_mode = True
     web.ctx.ip = '127.0.0.1'
     web.ctx.site.login('admin', config.admin_password)

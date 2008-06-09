@@ -304,10 +304,14 @@ class UnicodeTest(InfobaseTestCase):
         t = self.site.withKey(u)
         self.assertEquals(t.key, u)
         self.assertEquals(t.title.value, u)
-
+        
 class ClientTest(InfobaseTestCase):
+    def create_site(self, name='test'):
+        conn = client.connect(type='local')
+        return client.Site(conn, 'test')
+
     def testWrite(self):
-        site = client.Site(client.Client(None, 'test'))
+        site = self.create_site('test')
         site.write(dict(create='unless_exists', key='/foo', type='/type/page', title='foo'))
         foo = site.get('/foo')
         self.assertEquals(foo.key, '/foo')
@@ -322,12 +326,11 @@ class ClientTest(InfobaseTestCase):
         self.assertEquals(foo.key, x)
         self.assertEquals(foo.title, x)
 
-class AccountTest(InfobaseTestCase):
     def testAccount(self):
-        site = client.Site(client.Client(None, 'test'))
+        site = self.create_site('test')
         site.register('test', 'Test', 'test@example.com', 'test123')
-        site.login('test', 'test123')        
-        self.save_cookie()
+        site.login('test', 'test123')
+        #self.save_cookie()
         site.update_user('test123', 'test321', 'test@test.com')
         site.login('test', 'test321')
         

@@ -18,6 +18,10 @@ def jsonify(f):
     def g(self, *a, **kw):
         t1 = time.time()
         
+        if not web.ctx.get('infobase_localmode'):
+            cookies = web.cookies(infobase_auth_token=None)
+            web.ctx.infobase_auth_token = cookies.infobase_auth_token
+        
         d = {'status': 'ok'}
         try:
             d['result'] = f(self, *a, **kw)
@@ -44,11 +48,13 @@ def jsonify(f):
             result = simplejson.dumps(d, indent=4)
         else:
             result = simplejson.dumps(d)
-        
-            
+
         if web.ctx.get('infobase_localmode'):
             return result
         else:
+            # set auth-token as cookie for remote connection.
+            if web.ctx.get('infobase_auth_token'):
+                web.setcookie('infobase_auth_token', web.ctx.infobase_auth_token)
             web.ctx.output = result
     return g
     

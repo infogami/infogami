@@ -97,7 +97,7 @@ class AccountManager:
         if auth_token:
             user_id, login_time, digest = auth_token.split(',')
             if self._check_salted_hash(self.site.secret_key, user_id + "," + login_time, digest):
-                return self.site.withID(user_id)
+                return self.site.withID(int(user_id))
                 
     def update_user(self, old_password, new_password, email, password_encrypted=False, timestamp=None):
         user = self.get_user()

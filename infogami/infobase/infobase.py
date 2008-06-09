@@ -355,11 +355,15 @@ class Infosite(object):
         # if id is known for that key, redirect to withID
         if key in self.key_cache:
             id = self.key_cache[key]
-            return self.withID(id, revision)
+            if id is not None:
+                return self.withID(id, revision)
+            else:
+                raise NotFound, key
 
         try:
             d = web.select('thing', where="site_id=$self.id AND key=$key", vars=locals())[0]
         except IndexError:
+            self.key_cache[key] = None
             raise NotFound, key
 
         return self._with(d, revision=revision)
@@ -441,6 +445,7 @@ class Infosite(object):
     def invalidate(self, objects, versions):
         """Invalidate the given keys from cache."""
         for o in objects:
+            self.key_cache[o.key] = o.id
             if (o.id, None) in self.thing_cache:
                 del self.thing_cache[o.id, None]
                 

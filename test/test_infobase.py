@@ -333,6 +333,20 @@ class ClientTest(InfobaseTestCase):
         #self.save_cookie()
         site.update_user('test123', 'test321', 'test@test.com')
         site.login('test', 'test321')
+
+        # admin should be able to get email of every user
+        site = self.create_site('test')
+        site.login('admin', 'admin123')
+        self.assertEquals(site.get_user_email('/user/test').email, 'test@test.com')
+        
+        # any user should not have to email of some other user
+        site = self.create_site('test')
+        try:
+            self.assertEquals(site.get_user_email('/user/test').email, 'test@test.com')        
+        except client.ClientException:
+            pass
+        else:
+            assert 'Security Error: email of an user can be accessed by some other user.'
         
     def save_cookie(self):
         cookie = web.ctx.headers[0][1].split(';')[0]        

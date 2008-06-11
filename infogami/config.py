@@ -4,7 +4,6 @@ Infogami configuration.
 
 import web
 
-internalerror = web.debugerror
 middleware = []
 
 cache_templates = True

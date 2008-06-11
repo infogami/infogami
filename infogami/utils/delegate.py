@@ -208,4 +208,17 @@ def admin_login(site=None):
     web.ctx.admin_mode = True
     web.ctx.ip = '127.0.0.1'
     web.ctx.site.login('admin', config.admin_password)
-    
+
+exception_hooks = []
+def add_exception_hook(hook):
+    exception_hooks.append(hook)
+
+def register_exception():
+    """Called to on exceptions to log exception or send exception mail."""
+    for h in exception_hooks:
+        h()
+        
+def email_excetpions():
+    if config.bugfixer:
+        web.emailerrors(config.bugfixer, lambda: None)()
+add_exception_hook(email_excetpions)

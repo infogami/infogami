@@ -99,6 +99,9 @@ def saferender(templates, *a, **kw):
             if i.safe.lower() == "false":
                 raise
             
+            import delegate
+            delegate.register_exception()
+            
             import traceback
             traceback.print_exc()
             from view import set_error

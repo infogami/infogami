@@ -35,8 +35,9 @@ def _setup():
 
     if config.site is None:
         raise Exception('infogami.config.site is not specified')
-        
-    web.webapi.internalerror = config.internalerror
+
+    if config.bugfixer:        
+        web.webapi.internalerror = web.emailerrors(config.bugfixer, web.debugerror)
     web.config.db_parameters = config.db_parameters
     web.config.db_printing = config.db_printing
 

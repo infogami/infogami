@@ -90,10 +90,10 @@ class Logger:
         os.fsync(f.fileno())
         f.close()
     
-    def on_new_account(self, site, timestamp, username, displayname, email, password):
-        self.write('new_account', site.name, timestamp, data=dict(username=username, displayname=displayname, email=email, password=password))
+    def on_new_account(self, site, timestamp, username, displayname, email, password, ip):
+        self.write('new_account', site.name, timestamp, data=dict(username=username, displayname=displayname, email=email, password=password, ip=ip))
         
-    def on_update_account(self, site, timestamp, username, email, password):
+    def on_update_account(self, site, timestamp, username, email, password, ip):
         # email will be be None when password is updated and password is None when email is updated.
         d = dict(username=username)
         if email:

@@ -50,7 +50,7 @@ class AccountManager:
     def __init__(self, site):
         self.site = site
     
-    def register(self, username, displayname, email, password, password_encrypted=False, timestamp=None):
+    def register(self, username, displayname, email, password, password_encrypted=False, timestamp=None, ip=None):
         username = '/user/' + username
         web.ctx.infobase_bootstrap = True
 
@@ -63,7 +63,9 @@ class AccountManager:
         web.transact()
         try:
             q = make_query(username, displayname)
-            self.site._write(q, timestamp=timestamp, ip=web.ctx.get('ip'), log=False)
+            ip = ip or web.ctx.get('ip')
+            timestamp = timestamp or datetime.datetime.utcnow()
+            self.site._write(q, timestamp=timestamp, ip=ip, log=False)
             user = self.site.withKey(username)
             if not password_encrypted:
                 password = self._generate_salted_hash(self.site.secret_key, password)
@@ -76,7 +78,12 @@ class AccountManager:
         else:
             web.commit()
             timestamp = timestamp or datetime.datetime.utcnow()
-            self.site.logger.on_new_account(self.site, timestamp, web.lstrips(user.key, '/user/'), email=email, password=password, displayname=displayname)
+            self.site.logger.on_new_account(self.site, timestamp, 
+                username=web.lstrips(user.key, '/user/'), 
+                displayname=displayname,
+                email=email, 
+                password=password, 
+                ip=ip)
             self.set_auth_token(user)
             return user
             
@@ -117,11 +124,9 @@ class AccountManager:
         timestamp = timestamp or datetime.datetime.utcnow()
         def _update_password(user, password):
             web.update('account', where='thing_id=$user.id', password=password, vars=locals())
-            self.site.logger.on_update_account(self.site, timestamp, user.key, email=None, password=password)
             
         def _update_email(user, email):
             web.update('account', where='thing_id=$user.id', email=email, vars=locals())
-            self.site.logger.on_update_account(self.site, timestamp, user.key, email=email, password=None)
         
         if encrypted_password:
             _update_password(user, encrypted_password)
@@ -129,6 +134,11 @@ class AccountManager:
         if email:
             _update_email(user, email)
         
+        self.site.logger.on_update_account(self.site, timestamp, 
+            username=user.key, 
+            password=encrypted_password, 
+            email=email, 
+            ip=web.ctx.get('ip'))
             
     def assert_password(self, password):
         pass

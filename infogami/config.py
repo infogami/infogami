@@ -28,3 +28,5 @@ from_address = "noreply@infogami.org"
 smtp_server = "localhost"
 
 infobase_parameters = dict(type='local')
+bugfixer = None
+

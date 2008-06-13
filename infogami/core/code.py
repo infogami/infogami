@@ -297,7 +297,7 @@ class register(delegate.page):
             except ClientException, e:
                 f.note = str(e)
                 return render.register(f)
-            web.seecookie('infogami_session', web.ctx.conn.get_auth_token())
+            web.setcookie('infogami_session', web.ctx.conn.get_auth_token())
             web.seeother(i.redirect)
 
 class logout(delegate.page):

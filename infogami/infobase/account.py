@@ -76,7 +76,7 @@ class AccountManager:
         else:
             web.commit()
             timestamp = timestamp or datetime.datetime.utcnow()
-            self.site.logger.on_new_account(self.site, timestamp, user.key, email=email, password=password, displayname=displayname)
+            self.site.logger.on_new_account(self.site, timestamp, web.lstrips(user.key, '/user/'), email=email, password=password, displayname=displayname)
             self.set_auth_token(user)
             return user
             

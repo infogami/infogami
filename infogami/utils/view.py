@@ -161,7 +161,7 @@ def render_site(url, page):
 @public
 def thingrepr(value, type=None):
     if isinstance(value, list):
-        return ','.join(thingrepr(t, type) for t in value)
+        return ', '.join(thingrepr(t, type).strip() for t in value)
         
     from infogami.infobase import client        
     if type is None and value is client.nothing:

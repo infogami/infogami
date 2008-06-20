@@ -58,23 +58,58 @@ class LogReader:
                 return []
                     
         if infinite:
-            log = readfile(LogFile(self.root, timestamp))
+            log = readfile(self.create_logfile(timestamp))
         else:
             log = ijoin(read(date) for date in daterange(timestamp))
         return itertools.dropwhile(lambda entry: entry.timestamp <= timestamp, log)
-        
+
+    def create_logfile(self, timestamp):
+        return LogFile(self.root, timestamp)
+
+class RsyncLogReader(LogReader):
+    def __init__(self, rsync_root, dir, waittime=60):
+        LogReader.__init__(self, dir)
+        self.rsync_root = rsync_root
+        if not self.rsync_root.endswith('/'):
+            self.rsync_root += '/'
+        self.dir = dir
+        self.waittime = waittime
+
+    def create_logfile(self, timestamp):
+        return RsyncLogFile(self.rsync_root, self.dir, self.waittime)
+
+    def rsync(self):
+        cmd = "rsync -r %s %s" % (self.rsync_root, self.dir)
+        print cmd
+        os.system(cmd)
+
+    def read_from(self, timestamp, infinite=False):
+        if infinite:
+            while True:
+                self.rsync()
+                #@@ calling read_from again and again is not efficient
+                for entry in LogReader.read_from(self, timestamp):
+                    timestamp = entry.timestamp
+                    yield entry
+
+                time.sleep(self.waittime)
+        else:
+            self.rsync()
+            for entry in LogReader.read_from(self, timestamp):
+                yield entry
+
 class LogFile:
     """Single file interface over entire log files.
     Iterator on this file never terminates. It instead keep waiting for more log data to come.
     """
-    def __init__(self, root, begin_date):
+    def __init__(self, root, begin_date, waittime=1):
         """Creates a Logfile to read the log from the specified begin date."""
         self.root = root
+        self.waittime = waittime
         end_of_world = datetime.date(9999, 12, 31)
         self.dates = daterange(begin_date, end_of_world)        
         self.extn = ".log"
         self.advance()
-    
     
     def advance(self):
         """Move to the next file."""
@@ -96,9 +131,12 @@ class LogFile:
         if self.current_date.date() < datetime.datetime.utcnow().date():
             self.advance()
         else:
-            time.sleep(1)
+            self.sleep(self.waittime)
             if self.file is None:
                 self.file = self.openfile()
+
+    def sleep(self, seconds):
+        time.sleep(seconds)
                 
     def read(self, n):
         return "".join(self.readchar() for i in xrange(n))
@@ -127,7 +165,7 @@ class LogFile:
             yield ''.join(iter(self.readchar, '\n')) 
     
     xreadlines = __iter__
-    
+
 class LogPlayback:
     """Playback log"""
     def __init__(self, infobase):

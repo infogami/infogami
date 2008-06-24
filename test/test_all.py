@@ -1,7 +1,9 @@
 import webtest
 
 def suite():
-    modules = ["test_infobase"]
+    bugs = [239238]
+
+    modules = ["test_infobase"] + ["bug_%d" % bug for bug in bugs]
     return webtest.suite(modules)
 
 if __name__ == "__main__":

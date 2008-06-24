@@ -385,6 +385,7 @@ class Infosite(object):
             cache[query] = result
         else:
             result = cache[query]
+            
         return result
 
     def things(self, query):
@@ -448,7 +449,12 @@ class Infosite(object):
             self.key_cache[o.key] = o.id
             if (o.id, None) in self.thing_cache:
                 del self.thing_cache[o.id, None]
-                
+        
+        #@@ objects passed are not up to date (for whatever reason).
+        #@@ getting the objects again after the invalidating thing_cache 
+        #@@ will give the latest.
+        objects = [self.withKey(o.key) for o in objects]
+
         for q in self.things_cache.keys():
             for o in objects:
                 if q in self.things_cache and (q.matches(o) or o.key in self.things_cache[q]):

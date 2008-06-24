@@ -59,7 +59,7 @@ class InfobaseTestCase(webtest.TestCase):
             'type': '/type/type',
             'properties': [
                 property('/type/book', 'title', '/type/string'),
-                property('/type/book', 'authors', {
+                property('/type/book', 'author', {
                     'create': 'unless_exists',
                     'key': '/type/author',
                     'type': '/type/type',
@@ -70,6 +70,16 @@ class InfobaseTestCase(webtest.TestCase):
             ]         
         }
         
+        self.site.write(q)
+
+        q = {
+            'connect': 'update',
+            'key': '/type/author',
+            'backreferences': {
+                'connect': 'update_list',
+                'value': [backreference('/type/author', 'books', '/type/book', 'author')]
+            }
+        }
         self.site.write(q)
 
     def tearDown(self):

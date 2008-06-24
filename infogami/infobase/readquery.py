@@ -167,6 +167,9 @@ class Things:
             
         tables = ['thing'] + ['datum as ' + t for t in _tables.values()]
         return [r.key for r in web.select(tables, what=what, where=where, offset=self.offset, limit=self.limit, order=order)]
+        
+    def __repr__(self):
+        return repr(self.query)
     
 class ThingItem:
     """An Item in Things query.

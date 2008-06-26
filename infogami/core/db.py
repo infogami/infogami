@@ -87,7 +87,10 @@ def get_recent_changes(key=None, author=None, limit=None, offset=None):
     
     q['limit'] = limit or 100
     q['offset'] = offset or 0
-    return web.ctx.site.versions(q)
+    result = web.ctx.site.versions(q)
+    for r in result:
+        r.thing = web.ctx.site.get(r.key, r.revision, lazy=True)
+    return result
 
 @public
 def list_pages(path, limit=100, offset=0):

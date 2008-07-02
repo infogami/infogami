@@ -7,7 +7,12 @@ import datetime
 import time
 import web
 
-import _json as simplejson
+try:
+    import _json as simplejson
+except ImportError:
+    # make sure this module can be used indepent of infobase.
+    import simplejson
+    
 import logger
 
 def daterange(begin, end=None):
@@ -26,6 +31,20 @@ def ijoin(iters):
         [0, 1, 2, 3, 4, 10, 11, 12, 13, 14]
     """
     return (x for it in iters for x in it)
+    
+def to_timestamp(iso_date_string):
+    """
+        >>> t = '2008-01-01T01:01:01.010101'
+        >>> to_timestamp(t).isoformat()
+        '2008-01-01T01:01:01.010101'
+    """
+    #@@ python datetime module is ugly. 
+    #@@ It takes so much of work to create datetime from isoformat.
+    date, time = iso_date_string.split('T', 1)
+    y, m, d = date.split('-')
+    H, M, S = time.split(':')
+    S, ms = S.split('.')
+    return datetime.datetime(*map(int, [y, m, d, H, M, S, ms]))    
 
 class LogReader:
     def __init__(self, logroot):
@@ -47,7 +66,7 @@ class LogReader:
             for line in f:
                 entry = simplejson.loads(line)
                 entry = web.storage(entry)
-                entry.timestamp = logger.to_timestamp(entry.timestamp)
+                entry.timestamp = to_timestamp(entry.timestamp)
                 yield entry
                 
         def read(date):

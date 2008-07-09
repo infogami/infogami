@@ -21,7 +21,12 @@ def daterange(begin, end=None):
     If end is not specified, end is taken as utcnow."""
     end = end or datetime.datetime.utcnow().date()
 
-    while begin.date() <= end:
+    if isinstance(begin, datetime.datetime):
+        begin = begin.date()
+    if isinstance(end, datetime.datetime):
+        end = end.date()
+
+    while begin <= end:
         yield begin
         begin = nextday(begin)
         
@@ -51,7 +56,7 @@ class LogReader:
     """
     Reads log file line by line and converts each line to python dict using simplejson.loads.
     """
-    def __init__(self, logfile, begin_date):
+    def __init__(self, logfile):
         self.logfile = logfile
         
     def skip_till(self, timestamp):
@@ -73,18 +78,24 @@ class LogReader:
         """
         line = self.logfile.read()
         if line:
-            return simplejson.loads(line)
+            return self._loads(line)
         else:
             return None
             
     def read_entries(self, n=1000000):
         """"Reads multiple enties from the log. The maximum entries to be read is specified as argument.
         """
-        return [simplejson.loads(line) for line in self.logfile.readlines(n)]
+        return [self._loads(line) for line in self.logfile.readlines(n)]
         
     def __iter__(self):
         for line in self.logfile:
-            yield simplejson.loads(line)
+            yield self._loads(line)
+
+    def _loads(self, line):
+        entry = simplejson.loads(line)
+        entry = web.storage(entry)
+        entry.timestamp = to_timestamp(entry.timestamp)
+        return entry
 
 class LogFile:
     """
@@ -169,13 +180,11 @@ class LogFile:
             filelist.sort()
         else:
             filelist = [self.date2file(date) for date in daterange(from_date)]
-            print filelist
             filelist = [f for f in filelist if os.path.exists(f)]
 
         return filelist
         
     def readline(self, do_update=True):
-        print 'readline', do_update, self.file, self.filelist
         line = self.file and self.file.readline()
         if line:
             return line
@@ -190,10 +199,12 @@ class LogFile:
                 return ""
                 
     def __iter__(self):
-        line = True
-        while line:
+        while True:
             line = self.readline()
-            yield line
+            if line:
+                yield line
+            else:
+                break
     
     def readlines(self, n=1000000):
         """Reads multiple lines from the log file."""
@@ -227,9 +238,9 @@ class LogFile:
         self.file.seek(offset)
         
     def tell(self):
-        date = self.date2file(self.current_filename)
+        date = self.file2date(self.current_filename)
         offset = self.file.tell()
-        return "%04d-%02d-%02d:$d" % (date.year, date.month, date.day, offset)
+        return "%04d-%02d-%02d:%d" % (date.year, date.month, date.day, offset)
 
 class RsyncLogFile(LogFile):
     """File interface to Remote log files. rsync is used for data transfer.

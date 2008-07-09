@@ -12,17 +12,18 @@ try:
 except ImportError:
     # make sure this module can be used indepent of infobase.
     import simplejson
-    
-import logger
 
+def nextday(date):
+    return date + datetime.timedelta(1)
+    
 def daterange(begin, end=None):
     """Return an iterator over dates from begin to end (inclusive). 
     If end is not specified, end is taken as utcnow."""
     end = end or datetime.datetime.utcnow().date()
-    
+
     while begin.date() <= end:
         yield begin
-        begin = begin + datetime.timedelta(1) # add one day
+        begin = nextday(begin)
         
 def ijoin(iters):
     """Joins given list of iterators as a single iterator.
@@ -44,146 +45,222 @@ def to_timestamp(iso_date_string):
     y, m, d = date.split('-')
     H, M, S = time.split(':')
     S, ms = S.split('.')
-    return datetime.datetime(*map(int, [y, m, d, H, M, S, ms]))    
-
+    return datetime.datetime(*map(int, [y, m, d, H, M, S, ms]))
+    
 class LogReader:
-    def __init__(self, logroot):
-        self.root = logroot
-        self.extn = ".log"
-                
-    def get_path(self, date):
-        return os.path.join(self.root, "%02d" % date.year, "%02d" % date.month, "%02d" % date.day) + self.extn
-        
-    def read_from(self, timestamp, infinite=False):
-        """Returns iterator over the log starting from the specified timestamp.
-        If argument 'infinite' is true, the iterable never terminates.
-        It instead expects the log to keep growing as new log records
-        arrive, so on reaching end of log it blocks until more data
-        becomes available.   If 'infinite' is false, generator terminates
-        when it reaches end of the log.
-        """
-        def readfile(f):
-            for line in f:
-                entry = simplejson.loads(line)
-                entry = web.storage(entry)
-                entry.timestamp = to_timestamp(entry.timestamp)
-                yield entry
-                
-        def read(date):
-            logfile = self.get_path(date)
-            if os.path.exists(logfile):
-                return readfile(open(logfile))
-            else:
-                return []
-                    
-        if infinite:
-            log = readfile(self.create_logfile(timestamp))
-        else:
-            log = ijoin(read(date) for date in daterange(timestamp))
-        return itertools.dropwhile(lambda entry: entry.timestamp <= timestamp, log)
-
-    def create_logfile(self, timestamp):
-        return LogFile(self.root, timestamp)
-
-class RsyncLogReader(LogReader):
-    def __init__(self, rsync_root, dir, waittime=60):
-        LogReader.__init__(self, dir)
-        self.rsync_root = rsync_root
-        if not self.rsync_root.endswith('/'):
-            self.rsync_root += '/'
-        self.dir = dir
-        self.waittime = waittime
-
-    def create_logfile(self, timestamp):
-        return RsyncLogFile(self.rsync_root, self.dir, self.waittime)
-
-    def rsync(self):
-        cmd = "rsync -r %s %s" % (self.rsync_root, self.dir)
-        print cmd
-        os.system(cmd)
-
-    def read_from(self, timestamp, infinite=False):
-        if infinite:
-            while True:
-                self.rsync()
-                #@@ calling read_from again and again is not efficient
-                for entry in LogReader.read_from(self, timestamp):
-                    timestamp = entry.timestamp
-                    yield entry
-
-                time.sleep(self.waittime)
-        else:
-            self.rsync()
-            for entry in LogReader.read_from(self, timestamp):
-                yield entry
-
-class LogFile:
-    """Single file interface over entire log files.
-    Iterator on this file never terminates. It instead keep waiting for more log data to come.
     """
-    def __init__(self, root, begin_date, waittime=1):
-        """Creates a Logfile to read the log from the specified begin date."""
-        self.root = root
-        self.waittime = waittime
-        end_of_world = datetime.date(9999, 12, 31)
-        self.dates = daterange(begin_date, end_of_world)        
-        self.extn = ".log"
-        self.advance()
-    
-    def advance(self):
-        """Move to the next file."""
-        self.current_date = self.dates.next()
-        self.file = self.openfile()
+    Reads log file line by line and converts each line to python dict using simplejson.loads.
+    """
+    def __init__(self, logfile, begin_date):
+        self.logfile = logfile
         
-    def openfile(self):
-        date = self.current_date
-        path = os.path.join(self.root, "%02d" % date.year, "%02d" % date.month, "%02d" % date.day) + self.extn
-        if os.path.exists(path):
-            return open(path)
-        
-    def wait(self):
-        """Called when there are no chars left in the file. 
-        It waits if the current file is the latest, otherwise it advances 
-        to the next file.
+    def skip_till(self, timestamp):
+        """Skips the log file till the specified timestamp.
         """
-        assert self.current_date.date() <= datetime.datetime.utcnow().date()
-        if self.current_date.date() < datetime.datetime.utcnow().date():
-            self.advance()
-        else:
-            self.sleep(self.waittime)
-            if self.file is None:
-                self.file = self.openfile()
-
-    def sleep(self, seconds):
-        time.sleep(seconds)
+        self.logfile.skip_till(timestamp.date())
+        
+        for entry in self:
+            offset = self.logfile.tell()
+            if entry.timestamp > timestamp:
+                # timestamp of this entry is more than the required timestamp.
+                # so it must be put back.
+                self.logfile.seek(offset)
+                break
                 
-    def read(self, n):
-        return "".join(self.readchar() for i in xrange(n))
-    
-    def readchar(self):
-        """Read a single char from log. If no character is available 
-        (when end of log is reached), it blocks till more data is avalable."""
-        c = self.file and self.file.read(1)
-        while not c:
-            self.wait()
-            c = self.file and self.file.read(1)
-        return c
+    def read_entry(self):
+        """Reads one entry from the log.
+        None is returned when there are no more enties.
+        """
+        line = self.logfile.read()
+        if line:
+            return simplejson.loads(line)
+        else:
+            return None
+            
+    def read_entries(self, n=1000000):
+        """"Reads multiple enties from the log. The maximum entries to be read is specified as argument.
+        """
+        return [simplejson.loads(line) for line in self.logfile.readlines(n)]
         
     def __iter__(self):
-        """Returns an infinite stream over the log."""
-        def charstream():
-            # generate a sequence of the lines in fd, never
-            # terminating.  On reaching end of fd, 
-            # sleep til more characters are available.
-            while True:
-                c = self.file and self.file.read(1)
-                if c: yield c
-                else: self.wait()
-                
-        while True:
-            yield ''.join(iter(self.readchar, '\n')) 
+        for line in self.logfile:
+            yield simplejson.loads(line)
+
+class LogFile:
+    """
+    Single file interface over entire log files.
     
-    xreadlines = __iter__
+    Read all enties from a given timestamp:
+    
+        log = LogFile("log")
+        log.skip_till(datetime.datetime(2008, 01, 01))
+        
+        for line in log:
+            print log
+
+    Read log entries in chunks:
+    
+        log = LogFile("log")
+        while True:
+            # read upto a maximum of 1000 lines
+            lines = log.readlines(1000)
+            if lines:
+                do_something(lines)
+            else:
+                break
+
+    Read log entries infinitely:
+
+        log = LogFile("log")
+        while True:
+            # read upto a maximum of 1000 lines
+            lines = log.readlines(1000)
+            if lines:
+                do_something(lines)
+            else:
+                time.sleep(10) # wait for more data to come
+                
+    Remember the offset and set the offset.
+    
+        offset = log.tell()
+        log.seek(offset)
+    """
+    def __init__(self, root):
+        self.root = root
+        self.extn = ".log"
+        
+        self.file = None
+        self.filelist = None
+        self.current_filename = None
+        
+    def skip_till(self, date):
+        """Skips till file with the specified date.
+        """
+        self.filelist = self.find_filelist(date)
+        self.advance()
+        
+    def update(self):
+        date = self.file2date(self.current_filename)
+        self.filelist = self.find_filelist(nextday(date))
+        
+    def file2date(self, file):
+        file, ext = os.path.splitext(file)
+        _, year, month, day = file.rsplit('/', 3)
+        return datetime.datetime(int(year), int(month), int(day))
+        
+    def date2file(self, date):
+        return "%s/%04d/%02d/%02d.log" % (self.root, date.year, date.month, date.day)
+        
+    def advance(self):
+        """Move to next file."""
+        if self.filelist is None:
+            self.filelist = self.find_filelist()
+            
+        if self.filelist:
+            self.current_filename = self.filelist.pop()
+            self.file = open(self.current_filename)
+            return True
+        else:
+            return False
+        
+    def find_filelist(self, from_date=None):
+        if from_date is None:
+            filelist = glob.glob('%s/[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9].log' % self.root)
+            filelist.sort()
+        else:
+            filelist = [self.date2file(date) for date in daterange(from_date)]
+            print filelist
+            filelist = [f for f in filelist if os.path.exists(f)]
+
+        return filelist
+        
+    def readline(self, do_update=True):
+        print 'readline', do_update, self.file, self.filelist
+        line = self.file and self.file.readline()
+        if line:
+            return line
+        elif self.filelist:
+            self.advance()
+            return self.readline()
+        else:
+            if do_update:
+                self.update()
+                return self.readline(do_update=False)
+            else:
+                return ""
+                
+    def __iter__(self):
+        line = True
+        while line:
+            line = self.readline()
+            yield line
+    
+    def readlines(self, n=1000000):
+        """Reads multiple lines from the log file."""
+        lines = self._readlines()
+        if not lines:
+            self.update()
+            lines = self._readlines()
+        return lines
+        
+    def _readlines(self, n):
+        lines = []
+        for i in range(n):
+            line = self.readline(do_update=False)
+            if not line:
+                break
+            lines.append(line)
+        return lines
+        
+    def seek(self, offset):
+        date, offset = offset.split(':')
+        year, month, day = date.split("-")
+        year, month, day, offset = int(year), int(month), int(day), int(offset)
+        
+        filename = self.date2file(datetime.date(year, month, day))
+        if filename != self.current_filename:
+            self.current_filename = filename
+            self.file = open(filename)
+            # filelist needs to be re-initialized
+            self.filelist = []
+            
+        self.file.seek(offset)
+        
+    def tell(self):
+        date = self.date2file(self.current_filename)
+        offset = self.file.tell()
+        return "%04d-%02d-%02d:$d" % (date.year, date.month, date.day, offset)
+
+class RsyncLogFile(LogFile):
+    """File interface to Remote log files. rsync is used for data transfer.
+    
+        log = RsyncLogFile("machine::module_name/path", "log")
+        
+        for line in log:
+            print line
+    """
+    def __init__(self, rsync_root, root):
+        LogFile.__init__(self, root)
+        self.rsync_root = rsync_root
+        if not self.rsync_root.endswith('/'):
+            self.rsync_root += "/"
+        self.rsync()
+
+    def update(self):
+        self.rsync()
+        LogFile.update(self)
+
+        if self.file:
+            # if the current file is updated, it will be overwritten and possibly with a different inode.
+            # Solving the problem by opening the file again and jumping to the current location
+            file = open(self.file.name)
+            file.seek(self.file.tell())
+            self.file = file
+        
+    def rsync(self):
+        cmd = "rsync -r %s %s" % (self.rsync_root, self.root)
+        print cmd
+        os.system(cmd)
 
 class LogPlayback:
     """Playback log"""

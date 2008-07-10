@@ -168,7 +168,7 @@ class LogFile:
             self.filelist = self.find_filelist()
             
         if self.filelist:
-            self.current_filename = self.filelist.pop()
+            self.current_filename = self.filelist.pop(0)
             self.file = open(self.current_filename)
             return True
         else:

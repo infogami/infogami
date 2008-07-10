@@ -318,8 +318,9 @@ class Context:
     def modified_objects(self):
         return [self.get(k) for k in list(self.updated) + list(self.created)]
         
-    def has_permission(self, key, get_groups):
-        if web.ctx.get('infobase_bootstrap'):
+    def has_permission(self, key, get_groups):        
+        # admin user has all permissions, but he is allowed to login only from localhost/trusted_machines
+        if web.ctx.get('infobase_bootstrap') or (self.author and self.author.key) == '/user/admin':
             return True
             
         permission = self.get_permission(key)        

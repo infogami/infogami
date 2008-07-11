@@ -15,9 +15,20 @@ def get_type(path):
 @public
 def get_expected_type(page, property_name):
     """Returns the expected type of a property."""
+    defaults = {
+        "key": "/type/key",
+        "type": "/type/type",
+        "permission": "/type/permission",
+        "child_permission": "/type/permission"
+    }
+    
+    if property_name in defaults:
+        return defaults[property_name]
+    
     for p in page.type.properties:
         if p.name == property_name:
             return p.expected_type
+
     return "/type/string"
     
 def new_version(path, type):

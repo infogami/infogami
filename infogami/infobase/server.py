@@ -37,6 +37,10 @@ def jsonify(f):
             d['status'] = 'fail'
             d['message'] = 'InternalError: %s' % str(e)
             d['traceback'] = traceback.format_exc()
+            
+            # call web.internalerror to send email when web.internalerror is set to web.emailerrors
+            web.internalerror()
+            web.ctx.output = ""
         
         t2 = time.time()
         i = input(prettyprint=None, stats=None)

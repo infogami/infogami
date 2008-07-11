@@ -38,6 +38,7 @@ def _setup():
 
     if config.bugfixer:        
         web.webapi.internalerror = web.emailerrors(config.bugfixer, web.debugerror)
+        web.internalerror = web.webapi.internalerror
     web.config.db_parameters = config.db_parameters
     web.config.db_printing = config.db_printing
 

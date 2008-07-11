@@ -454,16 +454,34 @@ class Infosite(object):
         #@@ getting the objects again after the invalidating thing_cache 
         #@@ will give the latest.
         objects = [self.withKey(o.key) for o in objects]
+        
+        def invalidate_cache(cache, items, check):
+            try:
+                for q in cache.keys():
+                    for item in items:
+                        if q in cache and check(q, item):
+                            del cache[q]
+            except:
+                # something went wrong in invalidating the cache.
+                print >> web.debug, 'Error in invalidating cache. clearing entire cache.'
+                import traceback
+                traceback.print_exc()
 
-        for q in self.things_cache.keys():
-            for o in objects:
-                if q in self.things_cache and (q.matches(o) or o.key in self.things_cache[q]):
-                    del self.things_cache[q]
-                    
-        for q in self.versions_cache.keys():
-            for v in versions:
-                if q in self.versions_cache and q.matches(v):
-                    del self.versions_cache[q]
+                # make a local copy of the items, so that it will be displayed in the error report
+                items = cache.items()
+
+                # clear the cache completely
+                cache.clear()
+                
+                # call web.internalerror to send email when web.internalerror is set to web.emailerrors
+                web.internalerror()
+                web.ctx.output = ""
+                
+        invalidate_cache(self.things_cache, objects, 
+            lambda q, o: q.matches(o) and o.key in self.things_cache)
+            
+        invalidate_cache(self.versions_cache, versions, 
+            lambda q, v: q.matches(v))
         
     def get_account_manager(self):
         import account

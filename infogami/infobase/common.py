@@ -1,3 +1,4 @@
+import _json as simplejson
 import web
 
 try:
@@ -69,13 +70,21 @@ class InfobaseContext:
 		self.superuser = self.user and (self.user.key == '/user/admin')
 
 class Thing:
-    def __init__(self, key, metadata=None, data=None):
+    def __init__(self, store, key, metadata=None, data=None):
+        self._store = store
         self.key = key
         self._metadata = metadata or web.storage()
         self._data = web.storage()
         
     def get_value(self, key):
+        if key not in self._data:
+            return None
         datatype, value = self._data[key]
+        if datatype == 'ref':
+            if isinstance(value, list):
+                value = [self._store.get(v) for v in value]
+            else:
+                value = self._store.get(value)
         return value
 
     def get_datatype(self, key):
@@ -86,6 +95,11 @@ class Thing:
         return self._data[name]
         
     def set(self, name, value, datatype):
+        if datatype == 'ref':
+            if isinstance(value, list):
+                value = [v.key for v in value]
+            else:
+                value = value.key
         self._data[name] = (datatype, value)
         
     def __contains__(self, name):
@@ -102,9 +116,25 @@ class Thing:
     def to_json(self):
         return simplejson.dumps(self._data)
         
+    @staticmethod
+    def from_json(store, key, json):
+        d = simplejson.loads(json)
+        for k, v in d.items():
+            if isinstance(v, bool):
+                d[k] = 'boolean', v
+            elif isinstance(v, int):
+                d[k] = 'int', v
+            elif isinstance(v, float):
+                d[k] = 'float', v
+            elif isinstance(v, dict):
+                d[k] = 'ref', v['key']
+            else:
+                d[k] = 'str', v
+        return Thing(store, key, d)
+        
     def get_property(self, name):
         """Makes sense only when this object is a type object."""
-        for p in self.properties:
+        for p in self.properties or []:
             if p.name == name:
                 return p
 
@@ -131,22 +161,22 @@ def create_test_store():
     store = web.storage()
     
     def add_type(key, *properties):
-        t = Thing(key)
+        t = Thing(store, key)
         store[key] = t
         t.type = store['/type/type']
         t.set('properties', [], 'ref')
                 
         for name, expected_type in properties:
-            p = Thing(key + '/' + name)
+            p = Thing(store, key + '/' + name)
             p.type = store['/type/property']
             p.set('name', name, 'str')
             p.set('expected_type', store[expected_type], 'ref')
-            t.properties.append(p)
+            t.set('properties', t.properties + [p], 'ref')
             store[p.key] = p
         return t
         
     def add_object(key, type, *values):
-        t = Thing(key)
+        t = Thing(store, key)
         t.type = store[type]
         for name, value, datatype in values:
             if datatype == "ref":

@@ -12,6 +12,7 @@ See Bug#231831 for details.
     {u'x': u'\u1234'}
 """
 import simplejson
+import datetime
 
 def unicodify(d):
     """Converts all utf-8 encoded strings to unicode recursively."""
@@ -21,6 +22,8 @@ def unicodify(d):
         return [unicodify(x) for x in d]
     elif isinstance(d, str):
         return d.decode('utf-8')
+    elif isinstance(d, datetime.datetime):
+        return d.isoformat()
     else:
         return d
 

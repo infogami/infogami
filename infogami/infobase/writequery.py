@@ -8,7 +8,7 @@ def make_query(store, query):
     r"""Compiles query into subqueries.    
     """
     for q in serialize(query):
-        action, key, q = process(q)
+        action, key, q = compile(store, q)
         if action != 'ignore':
             yield action, key, q
     
@@ -250,6 +250,11 @@ class QueryValue:
             self.value = self.key
         elif self.value is not None:
             self.key = self.value
+            
+    def get_datatype(self):
+        return type2datatype(self.guess_type())
+        
+    datatype = property(get_datatype)
             
     def guess_type(self):
         """Guess type of this QueryValue.

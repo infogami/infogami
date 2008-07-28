@@ -152,29 +152,37 @@ class DBStore:
         else:
             return web.insert(property_table, key=name)
 	    
-    def update(self, key, actions):
+    def update(self, key, timestamp, actions):
         thing = self.get(key)
+        thing_id = thing.id
 
-        for a in actions:
-            table = self.schema.find_table(thing.type.key, a.datatype, a.name)
+        for name, a in actions.items():
+            table = self.schema.find_table(thing.type.key, a.datatype, name)
             if a.connect == 'update':
-                web.insert()
+                pid = self.get_property_id(table, name, create=True)
+                
+                #@@ TODO: table for delete should be found from the datatype of the existing value 
+                web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
+                
+                if a.value is not None:
+                    web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.value)
             elif a.connect == 'insert':
-                pass
+                # using time as ordering to always insert at the end.
+                ordering = int(time.time() * 1000000) # time since epoch in micro secs
+                web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.value, ordering=ordering)
             elif a.connect == 'delete':
-                pass
-            elif a.connect == 'update':
-                pass
-                                
-    def do_update(self, thing, name, datatype, value):
-        pass
-        
-    def do_insert(self, thing, name, datatype, value, ordering):
-        pass
-        
-    def do_delete(self, thing, name, datatype, value):
-        pass
-                    
+                #@@ TODO: table for delete should be found from the datatype of the existing value 
+                web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
+            elif a.connect == 'update_list':
+                pid = self.get_property_id(table, name, create=True)
+                
+                #@@ TODO: table for delete should be found from the datatype of the existing value 
+                web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
+                
+                if a.value is not None:
+                    for i, v in enumerate(a.value):
+                        web.insert(table, False, thing_id=thing_id, key_id=pid, value=v, ordering=i)
+
     def things(self, query):
         pass
     
@@ -199,11 +207,13 @@ if __name__ == "__main__":
             'description': 'Page type'
         },
         'title': 'Welcome',
-        'description': 'blah blah blah'
+        'description': {'connect': 'update', 'value': 'blah blah blah'}
     }
     web.transact()
     for q in writequery.make_query(store, query):
         action, key, data = q
         if action == 'create':
             store.create(key, datetime.datetime.utcnow(), data)
+        elif action == 'update':
+            store.update(key, datetime.datetime.utcnow(), data)
     web.commit()

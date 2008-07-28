@@ -45,10 +45,13 @@ class Schema:
         entry = web.storage(table=table, type=type, datatype=datatype, name=name)
         self.entries.append(entry)
         
+    def add_table_group(self, prefix, type):
+        for d in INDEXED_DATATYPES:
+            schema.add_entry(prefix + "_" + d, type, d, None)
+        
     def find_table(self, type, datatype, name):
         def match(a, b):
             return a is None or a == b
-            
         for e in self.entries:
             if match(e.type, type) and match(e.datatype, datatype) and match(e.name, name):
                 return e.table
@@ -107,8 +110,8 @@ class DBStore:
     def create(self, key, timestamp, data):
         web.transact()
         
-        type = data.pop('type')
-        type_id = self.get_metadata(type.value).id
+        type = data.pop('type').value
+        type_id = self.get_metadata(type).id
 
         # replace key with id for all reference items
         for k, v in data.items():
@@ -182,18 +185,25 @@ if __name__ == "__main__":
     web.config.db_printing = True
     web.load()
     schema = Schema()
+    schema.add_table_group('sys', '/type/type')
     store = DBStore(schema)
     query = {
         'create': 'unless_exists',
-        'key': '/type/page',
-        'type': '/type/type',
-        'name': 'Page',
-        'pages': 42,
-        'description': 'Page type'
+        'key': '/',
+        'type': {
+            'create': 'unless_exists',
+            'key': '/type/page',
+            'type': '/type/type',
+            'name': 'Page',
+            'pages': 42,
+            'description': 'Page type'
+        },
+        'title': 'Welcome',
+        'description': 'blah blah blah'
     }
     web.transact()
     for q in writequery.make_query(store, query):
         action, key, data = q
         if action == 'create':
             store.create(key, datetime.datetime.utcnow(), data)
-    web.rollback()
+    web.commit()

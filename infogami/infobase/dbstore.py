@@ -27,7 +27,7 @@ class Table:
         return web.reparam(q, locals())
         
 INDEXED_DATATYPES = ["str", "int", "float", "ref", "boolean", "url", "datetime"]
-        
+
 class Schema:
     """Schema to map <type, datatype, key> to database table.
     
@@ -84,7 +84,7 @@ class Schema:
     def __str__(self):
         lines = ["%s\t%s\t%s\t%s" % (e.table, e.type, e.datatype, e.name) for e in self.entries]
         return "\n".join(lines)
-                
+    
 class DBStore:
     """
     """
@@ -236,8 +236,84 @@ class DBStore:
         web.insert('data', False, thing_id=thing_id, revision=revision, data=data)
 
     def things(self, query):
-        pass
-    
+        type = query.get_type()
+        
+        class DBTable:
+            def __init__(self, name, label=None):
+                self.name = name
+                self.label = label or name
+                
+            def sql(self):
+                if self.label != self.name:
+                    return "%s as %s" % (self.name, self.label)
+                else:
+                    return self.name
+                    
+            def __repr__(self):
+                return self.label
+                
+        class Literal:
+            def __init__(self, value):
+                self.value = value
+                
+            def __repr__(self):
+                return self.value
+
+        base_properties = ['key', 'type', 'created', 'last_modified']
+        tables = {}
+        
+        def get_table(datatype, key):
+            if key not in tables:
+                table = self.schema.find_table(type, datatype, key)
+                label = 'd%d' % len(tables)
+                tables[key] = DBTable(table, label)
+            return tables[key]
+                    
+        wheres = []
+        
+        for c in query.conditions:
+            if c.datatype == 'ref':
+                metadata = self.get_metadata(c.value)
+                assert metadata is not None, 'Not found: ' + c.value
+                c.value = metadata.id
+                
+            if c.op == '~':
+                op = Literal('LIKE')
+                c.value = c.value.replace('*', '%')
+            else:
+                op = Literal(c.op)
+                
+            if c.key in base_properties:
+                q = 'thing.%s %s $c.value' % (c.key, op)
+                wheres += [web.reparam(q, locals())]
+            else:
+                assert type is not None, "Missing type"
+                table = get_table(c.datatype, c.key)
+                key_id = self.get_property_id(table.name, c.key)
+                if not key_id:
+                    return []
+                
+                q = '%(table)s.thing_id = thing.id AND %(table)s.key_id=$key_id AND %(table)s.value %(op)s $c.value' % {'table': table, 'op': op}
+                wheres += [web.reparam(q, locals())]
+                
+        tables = ['thing'] + [t.sql() for t in tables.values()]
+        result = web.select(
+            what='thing.key', 
+            tables=tables, 
+            where=self.sqljoin(wheres, ' AND '), 
+            limit=query.limit, 
+            offset=query.offset)
+        return [r.key for r in result]
+        
+    def sqljoin(self, queries, delim):
+        delim = web.SQLQuery(delim)
+        result = web.SQLQuery('')
+        for i, q in enumerate(queries):
+            if i != 0:
+                result = result + delim
+            result = result + q
+        return result
+        
 if __name__ == "__main__":
     import web
     import writequery, bootstrap
@@ -263,6 +339,7 @@ if __name__ == "__main__":
         'title': 'Welcome',
         'description': {'type': '/type/text', 'value': 'blah blah'}
     }
+    """
     web.transact()
     query = bootstrap.make_query()
     
@@ -273,3 +350,8 @@ if __name__ == "__main__":
         elif action == 'update':
             store.update(key, datetime.datetime.utcnow(), data)
     web.commit()
+    """
+    import readquery
+    query = readquery.make_query(store, {"type" : "/type/property", 'name~': 'n*'})
+    result = store.things(query)
+    print result

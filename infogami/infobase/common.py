@@ -14,7 +14,6 @@ except ImportError:
             if not x:
                 return False
         return True
-            
 
 primitive_types = [
     "/type/key",
@@ -236,50 +235,6 @@ def create_test_store():
     
     return store
                         
-class WriteQuery:
-    """Write query is a list of actions.
-        >>> q = WriteQuery('update', "/foo", "/type/page")
-    """
-    def __init__(self, action, key, type):
-        pass
-    
-class Query:
-    """Query is a list of conditions.
-    Each condition is a storage object with ("key", "op", "datatype", "value") as keys.
-    
-        >>> q = Query()
-        >>> q
-        <query: []>
-        >>> q.add_condition("name", "=", "str", "foo")
-        >>> q
-        <query: ['name = str:foo']>
-        >>> q.add_condition('type', '=', 'ref', '/type/page')
-        >>> q.get_type()
-        '/type/page'
-        >>> q
-        <query: ['name = str:foo', 'type = ref:/type/page']>
-    """
-    def __init__(self, conditions=None):
-        self.conditions = conditions or []
-        self.sort = None
-        self.limit = None
-        self.offset = None
-        
-    def get_type(self):
-        """Returns the value of the condition for type if there is any.
-        """
-        for c in self.conditions:
-            #@@ also make sure op is =
-            if c.key == 'type':
-                return c.value
-    
-    def add_condition(self, key, op, datatype, value):
-        self.conditions.append(web.storage(key=key, op=op, datatype=datatype, value=value))
-        
-    def __repr__(self):
-        conditions = ["%s %s %s:%s" % (c.key, c.op, c.datatype, c.value) for c in self.conditions]
-        return "<query: %s>" % repr(conditions)
-
 def pprint(obj):
     """Pretty prints given object.
     >>> pprint(1)

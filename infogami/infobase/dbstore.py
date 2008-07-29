@@ -155,7 +155,16 @@ class DBStore:
     def update(self, key, timestamp, actions):
         thing = self.get(key)
         thing_id = thing.id
-
+        
+        thing.set('last_modified', timestamp, 'datetime')
+        d = web.query(
+            'UPDATE thing set latest_revision=latest_revision+1, last_modified=$timestamp WHERE id=$thing_id;' + \
+            'SELECT latest_revision FROM thing WHERE id=$thing_id', vars=locals())
+        revision = d[0].latest_revision
+        
+        
+        web.insert('version', False, thing_id=thing_id, revision=revision, created=timestamp)
+        
         for name, a in actions.items():
             table = self.schema.find_table(thing.type.key, a.datatype, name)
             if a.connect == 'update':
@@ -166,13 +175,20 @@ class DBStore:
                 
                 if a.value is not None:
                     web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.value)
+                    thing.set(name, a.value, a.datatype)
+                else:
+                    if name in thing:
+                        del thing[name]
+    
             elif a.connect == 'insert':
-                # using time as ordering to always insert at the end.
+                # using time as ordering so that insert always happens at the end.
                 ordering = int(time.time() * 1000000) # time since epoch in micro secs
                 web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.value, ordering=ordering)
+                #@@ TODO: update thing
             elif a.connect == 'delete':
                 #@@ TODO: table for delete should be found from the datatype of the existing value 
                 web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
+                #@@ TODO: update thing
             elif a.connect == 'update_list':
                 pid = self.get_property_id(table, name, create=True)
                 
@@ -182,6 +198,10 @@ class DBStore:
                 if a.value is not None:
                     for i, v in enumerate(a.value):
                         web.insert(table, False, thing_id=thing_id, key_id=pid, value=v, ordering=i)
+                #@@ TODO: update thing
+                
+        data = thing.to_json()
+        web.insert('data', False, thing_id=thing_id, revision=revision, data=data)
 
     def things(self, query):
         pass
@@ -207,7 +227,7 @@ if __name__ == "__main__":
             'description': 'Page type'
         },
         'title': 'Welcome',
-        'description': {'connect': 'update', 'value': 'blah blah blah'}
+        'description': {'connect': 'update', 'value': 'blah blah'}
     }
     web.transact()
     for q in writequery.make_query(store, query):

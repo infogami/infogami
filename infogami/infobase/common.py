@@ -74,7 +74,7 @@ class Thing:
         self._store = store
         self.key = key
         self._metadata = metadata or web.storage()
-        self._data = web.storage()
+        self._data = data or {}
         
     def get_value(self, key):
         if key not in self._data:
@@ -113,8 +113,17 @@ class Thing:
             raise AttributeError, key
         return self.get_value(key)
         
+    def __delattr__(self, key):
+        del self._data[key]
+        
     def to_json(self):
-        return simplejson.dumps(self._data)
+        d = {}
+        for k, v in self._data.items():
+            datatype, v = v
+            if datatype == 'ref':
+                v = {'key': v}
+            d[k] = v
+        return simplejson.dumps(d)
         
     @staticmethod
     def from_json(store, key, json):
@@ -130,7 +139,7 @@ class Thing:
                 d[k] = 'ref', v['key']
             else:
                 d[k] = 'str', v
-        return Thing(store, key, d)
+        return Thing(store, key, data=d)
         
     def get_property(self, name):
         """Makes sense only when this object is a type object."""

@@ -95,9 +95,13 @@ class Thing:
         return self._data[name]
         
     def set(self, name, value, datatype):
+        def unthing(x):
+            if isinstance(x, Thing): return x.key
+            else: return x
+            
         if datatype == 'ref':
             if isinstance(value, list):
-                value = [v.key for v in value]
+                value = [unthing(v) for v in value]
             else:
                 value = value.key
         self._data[name] = (datatype, value)
@@ -122,6 +126,8 @@ class Thing:
             datatype, v = v
             if datatype == 'ref':
                 v = {'key': v}
+            elif datatype not in ['int', 'boolean', 'float', 'str', 'key']:
+                v = {'type': datatype2type(datatype), 'value': v}
             d[k] = v
         return simplejson.dumps(d)
         
@@ -136,7 +142,10 @@ class Thing:
             elif isinstance(v, float):
                 d[k] = 'float', v
             elif isinstance(v, dict):
-                d[k] = 'ref', v['key']
+                if 'key' in v:
+                    d[k] = 'ref', v['key']
+                else:
+                    d[k] = type2datatype(v['type']), v['value']
             else:
                 d[k] = 'str', v
         return Thing(store, key, data=d)

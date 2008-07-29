@@ -244,7 +244,7 @@ class QueryValue:
         keys = ['key', 'value', 'type', 'connect', 'create']
         for k in keys:
             setattr(self, k, data.get(k))
-            
+        
         # just for easy of use
         if self.key is not None:
             self.value = self.key
@@ -373,7 +373,7 @@ class ListQueryValue:
     datatype = property(get_datatype)
         
     def __repr__(self):
-        return "<%s of type %s>" % ([v.value for v in self.value], repr(self.type))
+        return "<%s of type %s>" % (self.value, repr(self.type))
         
 if __name__ == "__main__":
     import doctest

@@ -148,6 +148,19 @@ class DBStore:
             
         web.insert('data', False, thing_id=thing_id, revision=1, data=thing.to_json())
         web.commit()
+        
+    def unkey(self, data):
+        """Replace keys with ids.
+        TODO: explain better
+        """
+        for k, v in data.items():
+            if v.datatype == 'ref':
+                if isinstance(v.value, list):
+                    v.xvalue = [self.get_metadata(key).id for key in v.value]
+                else:
+                    v.xvalue = self.get_metadata(v.value).id
+            else:
+                v.xvalue = v.value
 		
     def _insert(self, thing_id, type, name, datatype, value, ordering=None):
         table = self.schema.find_table(type, datatype, name)
@@ -167,6 +180,7 @@ class DBStore:
     def update(self, key, timestamp, actions):
         thing = self.get(key)
         thing_id = thing.id
+        self.unkey(actions)
         
         thing.set('last_modified', timestamp, 'datetime')
         d = web.query(
@@ -184,7 +198,7 @@ class DBStore:
                 table and web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
                 
                 if a.value is not None:
-                    table and web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.value)
+                    table and web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.xvalue)
                     thing.set(name, a.value, a.datatype)
                 else:
                     if name in thing:
@@ -197,14 +211,14 @@ class DBStore:
                     'SELECT max(ordering) as ordering FROM %s WHERE thing_id=$thing_id and key_id=$pid GROUP BY thing_id, key_id' % table,
                     vars=locals())
                 ordering = (d and d[0].ordering + 1) or 0
-                table and web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.value, ordering=ordering)
+                table and web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.xvalue, ordering=ordering)
                 value = thing.get_value(name) or []
                 thing.set(name, value + [a.value], a.datatype)
             elif a.connect == 'delete':
                 pid = self.get_property_id(table, name, create=False)
                 if pid:
                     #@@ TODO: table for delete should be found from the datatype of the existing value 
-                    table and web.delete(table, where='thing_id=thing_id and key_id=$pid and value=$a.value', vars=locals())
+                    table and web.delete(table, where='thing_id=thing_id and key_id=$pid and value=$a.xvalue', vars=locals())
                     value = [v for v in thing.get_value(name) or [] if v != a.value]
                     thing.set(name, value, a.datatype)
             elif a.connect == 'update_list':
@@ -214,7 +228,7 @@ class DBStore:
                 table and web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
                 
                 if a.value is not None:
-                    for i, v in enumerate(a.value):
+                    for i, v in enumerate(a.xvalue):
                         table and web.insert(table, False, thing_id=thing_id, key_id=pid, value=v, ordering=i)
                 thing.set(name, a.value, a.datatype)
                 
@@ -226,12 +240,14 @@ class DBStore:
     
 if __name__ == "__main__":
     import web
-    import writequery
+    import writequery, bootstrap
     web.config.db_parameters = dict(dbn='postgres', db='infobase2', user='anand', pw='')
     web.config.db_printing = True
     web.load()
     schema = Schema()
     schema.add_table_group('sys', '/type/type')
+    schema.add_table_group('sys', '/type/property')
+    schema.add_table_group('sys', '/type/backreference')
     store = DBStore(schema)
     query = {
         'create': 'unless_exists',
@@ -248,6 +264,8 @@ if __name__ == "__main__":
         'description': {'type': '/type/text', 'value': 'blah blah'}
     }
     web.transact()
+    query = bootstrap.make_query()
+    
     for q in writequery.make_query(store, query):
         action, key, data = q
         if action == 'create':

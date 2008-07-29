@@ -46,6 +46,10 @@ def primitive_types():
         q('/type/uri', 'URI', 'Type to store URIs.'),
         q('/type/datetime', 'Datetime', 'Type to store datetimes from 4713 BC to 5874897 AD with 1 millisecond resolution.'),
         
+        q('/type/property', 'Property', ''),
+        q('/type/backreference', 'Back Reference', ''),
+        
+        
         q('/type/object', 'Object', 'Placeholder type for storing arbitrary dictionaries.'),
         # this is not a primitive type, but it is easier to add here than anywhere else.
         q('/type/delete', 'Delete', 'Type to make a page as deleted.'),
@@ -57,31 +61,31 @@ def _property(key, property_name, expected_type, unique):
         'key': key + '/' + property_name,
         'type': '/type/property',
         'name': property_name,
-        'expected_type': {'key': expected_type},
+        'expected_type': {'key': expected_type, 'type': '/type/type'},
         'unique': unique
     }
 
-def type_property_and_backreference():
+def update_type_property_and_backreference():
     return [{
-        'create': 'unless_exists',
         'key': '/type/property',
-        'name': 'Property',
-        'type': '/type/type',
-        'properties': [
-            _property('/type/property', 'name', '/type/string', True),
-            _property('/type/property', 'expected_type', '/type/type', True),
-            _property('/type/property', 'unique', '/type/boolean', True),
-        ],
+        'properties': {
+            'connect': 'update_list',
+            'value': [
+                _property('/type/property', 'name', '/type/string', True),
+                _property('/type/property', 'expected_type', '/type/type', True),
+                _property('/type/property', 'unique', '/type/boolean', True),
+            ],
+        }
     }, {
-        'create': 'unless_exists',
         'key': '/type/backreference',
-        'name': 'Back Reference',
-        'type': '/type/type',
-        'properties': [
-            _property('/type/backreference', 'name', '/type/string', True),
-            _property('/type/backreference', 'expected_type', '/type/type', True),
-            _property('/type/backreference', 'property_name', '/type/string', True),
-        ],
+        'properties': {
+            'connect': 'update_list',        
+            'value': [
+                _property('/type/backreference', 'name', '/type/string', True),
+                _property('/type/backreference', 'expected_type', '/type/type', True),
+                _property('/type/backreference', 'property_name', '/type/string', True),
+            ],
+        }
     }]
 
 def update_metatype():
@@ -178,7 +182,7 @@ def make_query():
     return [
         metatype(),
         primitive_types(),
-        type_property_and_backreference(),
+        update_type_property_and_backreference(),
         update_metatype(),
         type_user_etal(),
         groups_and_permissions(),

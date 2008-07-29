@@ -160,7 +160,7 @@ def compile(store, query):
         else:
             p = type.get_property(name)
             return p and p.expected_type and p.expected_type.key
-            
+    
     def coerce_all(d, type):
         for k, v in d.items():
             v.coerce(store, get_expected_type(type, k))
@@ -347,13 +347,30 @@ class ListQueryValue:
             data = dict(value=data)            
             
         self.connect = data.get('connect')
-        self.value = [QueryValue(path + '.' + str(i), v) for i, v in enumerate(data['value'])]
+        self.values = [QueryValue(path + '.' + str(i), v) for i, v in enumerate(data['value'])]
         self.type = None
+        
+    def get_value(self):
+        return [v.value for v in self.values]
+        
+    value = property(get_value)
     
-    def coerce(self, expected_type):
-        for v in self.value:
-            v.coerce(expected_type)
+    def coerce(self, store, expected_type):
+        if expected_type is None:
+            if self.values:
+                expected_type = self.values[0].guess_type()
+            else:
+                # values is empty list. Any type with do.
+                expected_type = '/type/string'
+                
+        for v in self.values:
+            v.coerce(store, expected_type)
         self.type = expected_type
+
+    def get_datatype(self):
+        return type2datatype(self.type)
+
+    datatype = property(get_datatype)
         
     def __repr__(self):
         return "<%s of type %s>" % ([v.value for v in self.value], repr(self.type))

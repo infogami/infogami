@@ -3,7 +3,7 @@
 import common
 import web
 import _json as simplejson
-import datetime
+import datetime, time
 
 class Table:
     """Interface to database table
@@ -113,23 +113,25 @@ class DBStore:
         type = data.pop('type').value
         type_id = self.get_metadata(type).id
 
-        # replace key with id for all reference items
-        for k, v in data.items():
-            if v.datatype == 'ref':
-                v.value = self.get_metadata(v.value).id
-
         thing_id = web.insert('thing', key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
 
         web.ctx.infobase_context = web.storage(user=None, ip='127.0.0.1')
         ctx = web.ctx.infobase_context
         web.insert('version', False, thing_id=thing_id, created=timestamp, user_id=ctx.user and ctx.user.id, ip=ctx.ip, revision=1)
         
+        def insert(name, value, datatype, ordering=None):
+            if datatype == 'ref':
+                value = self.get_metadata(value).id
+            self._insert(thing_id, type, name, datatype, value, ordering=ordering)
+        
         d = {}
         for name, datum in data.items():
-            d[k] = datum.value
-            if datum.datatype == 'ref':
-                datatype.value = self.get_metadata(datatype.value).id
-            self._insert(thing_id, type, name, datum.datatype, datum.value)
+            d[name] = datum.value
+            if isinstance(datum.value, list):
+                for i, v in enumerate(datum.value):
+                    insert(name, v, datum.datatype, ordering=i)
+            else:
+                insert(name, datum.value, datum.datatype)
             
         d['key'] = key
         d['created'] = timestamp
@@ -139,18 +141,20 @@ class DBStore:
         web.insert('data', False, thing_id=thing_id, revision=1, data=simplejson.dumps(d))
         web.commit()
 		
-    def _insert(self, thing_id, type, name, datatype, value):
+    def _insert(self, thing_id, type, name, datatype, value, ordering=None):
         table = self.schema.find_table(type, datatype, name)
         pid = self.get_property_id(table, name, create=True)
-        web.insert(table, False, thing_id=thing_id, key_id=pid, value=value)
+        web.insert(table, False, thing_id=thing_id, key_id=pid, value=value, ordering=ordering)
             
     def get_property_id(self, table, name, create=False):
         property_table = table.split('_')[0] + '_keys'
         d = web.select(property_table, where='key=$name', vars=locals())
         if d:
             return d[0].id
-        else:
+        elif create:
             return web.insert(property_table, key=name)
+        else:
+            return None
 	    
     def update(self, key, timestamp, actions):
         thing = self.get(key)
@@ -162,14 +166,12 @@ class DBStore:
             'SELECT latest_revision FROM thing WHERE id=$thing_id', vars=locals())
         revision = d[0].latest_revision
         
-        
         web.insert('version', False, thing_id=thing_id, revision=revision, created=timestamp)
         
         for name, a in actions.items():
             table = self.schema.find_table(thing.type.key, a.datatype, name)
             if a.connect == 'update':
                 pid = self.get_property_id(table, name, create=True)
-                
                 #@@ TODO: table for delete should be found from the datatype of the existing value 
                 web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
                 
@@ -182,13 +184,21 @@ class DBStore:
     
             elif a.connect == 'insert':
                 # using time as ordering so that insert always happens at the end.
-                ordering = int(time.time() * 1000000) # time since epoch in micro secs
+                pid = self.get_property_id(table, name, create=True)
+                d = web.query(
+                    'SELECT max(ordering) as ordering FROM %s WHERE thing_id=$thing_id and key_id=$pid GROUP BY thing_id, key_id' % table,
+                    vars=locals())
+                ordering = (d and d[0].ordering + 1) or 0
                 web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.value, ordering=ordering)
-                #@@ TODO: update thing
+                value = thing.get_value(name) or []
+                thing.set(name, value + [a.value], a.datatype)
             elif a.connect == 'delete':
-                #@@ TODO: table for delete should be found from the datatype of the existing value 
-                web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
-                #@@ TODO: update thing
+                pid = self.get_property_id(table, name, create=False)
+                if pid:
+                    #@@ TODO: table for delete should be found from the datatype of the existing value 
+                    web.delete(table, where='thing_id=thing_id and key_id=$pid and value=$a.value', vars=locals())
+                    value = [v for v in thing.get_value(name) or [] if v != a.value]
+                    thing.set(name, value, a.datatype)
             elif a.connect == 'update_list':
                 pid = self.get_property_id(table, name, create=True)
                 
@@ -198,7 +208,7 @@ class DBStore:
                 if a.value is not None:
                     for i, v in enumerate(a.value):
                         web.insert(table, False, thing_id=thing_id, key_id=pid, value=v, ordering=i)
-                #@@ TODO: update thing
+                thing.set(name, a.value, a.datatype)
                 
         data = thing.to_json()
         web.insert('data', False, thing_id=thing_id, revision=revision, data=data)
@@ -217,15 +227,15 @@ if __name__ == "__main__":
     store = DBStore(schema)
     query = {
         'create': 'unless_exists',
-        'key': '/',
+        'key': '/bar',
         'type': {
             'create': 'unless_exists',
             'key': '/type/page',
             'type': '/type/type',
             'name': 'Page',
-            'pages': 42,
             'description': 'Page type'
         },
+        'x': {'connect': 'delete', 'value': 42},   
         'title': 'Welcome',
         'description': {'connect': 'update', 'value': 'blah blah'}
     }

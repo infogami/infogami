@@ -26,7 +26,7 @@ class Table:
             q = "%s.key = $key" % (label) + ' AND ' + q
         return web.reparam(q, locals())
         
-INDEXED_DATATYPES = ["str", "int", "float", "ref"]
+INDEXED_DATATYPES = ["str", "int", "float", "ref", "boolean", "url", "datetime"]
         
 class Schema:
     """Schema to map <type, datatype, key> to database table.
@@ -50,12 +50,15 @@ class Schema:
             schema.add_entry(prefix + "_" + d, type, d, None)
         
     def find_table(self, type, datatype, name):
+        if datatype not in INDEXED_DATATYPES:
+            return None
+            
         def match(a, b):
             return a is None or a == b
         for e in self.entries:
             if match(e.type, type) and match(e.datatype, datatype) and match(e.name, name):
                 return e.table
-                
+        
         return 'datum_' + datatype
         
     @staticmethod
@@ -120,25 +123,30 @@ class DBStore:
         web.insert('version', False, thing_id=thing_id, created=timestamp, user_id=ctx.user and ctx.user.id, ip=ctx.ip, revision=1)
         
         def insert(name, value, datatype, ordering=None):
+            if datatype not in INDEXED_DATATYPES:
+                return
+                
             if datatype == 'ref':
                 value = self.get_metadata(value).id
             self._insert(thing_id, type, name, datatype, value, ordering=ordering)
         
         d = {}
         for name, datum in data.items():
-            d[name] = datum.value
+            d[name] = (datum.datatype, datum.value)
             if isinstance(datum.value, list):
                 for i, v in enumerate(datum.value):
                     insert(name, v, datum.datatype, ordering=i)
             else:
                 insert(name, datum.value, datum.datatype)
             
-        d['key'] = key
-        d['created'] = timestamp
-        d['last_modified'] = timestamp
-        d['id'] = thing_id
+        d['key'] = 'key', key
+        d['created'] = ('datetime', timestamp)
+        d['last_modified'] = ('datetime', timestamp)
+        d['id'] = 'int', thing_id
+        
+        thing = common.Thing(store, key, data=d)
             
-        web.insert('data', False, thing_id=thing_id, revision=1, data=simplejson.dumps(d))
+        web.insert('data', False, thing_id=thing_id, revision=1, data=thing.to_json())
         web.commit()
 		
     def _insert(self, thing_id, type, name, datatype, value, ordering=None):
@@ -173,10 +181,10 @@ class DBStore:
             if a.connect == 'update':
                 pid = self.get_property_id(table, name, create=True)
                 #@@ TODO: table for delete should be found from the datatype of the existing value 
-                web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
+                table and web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
                 
                 if a.value is not None:
-                    web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.value)
+                    table and web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.value)
                     thing.set(name, a.value, a.datatype)
                 else:
                     if name in thing:
@@ -189,25 +197,25 @@ class DBStore:
                     'SELECT max(ordering) as ordering FROM %s WHERE thing_id=$thing_id and key_id=$pid GROUP BY thing_id, key_id' % table,
                     vars=locals())
                 ordering = (d and d[0].ordering + 1) or 0
-                web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.value, ordering=ordering)
+                table and web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.value, ordering=ordering)
                 value = thing.get_value(name) or []
                 thing.set(name, value + [a.value], a.datatype)
             elif a.connect == 'delete':
                 pid = self.get_property_id(table, name, create=False)
                 if pid:
                     #@@ TODO: table for delete should be found from the datatype of the existing value 
-                    web.delete(table, where='thing_id=thing_id and key_id=$pid and value=$a.value', vars=locals())
+                    table and web.delete(table, where='thing_id=thing_id and key_id=$pid and value=$a.value', vars=locals())
                     value = [v for v in thing.get_value(name) or [] if v != a.value]
                     thing.set(name, value, a.datatype)
             elif a.connect == 'update_list':
                 pid = self.get_property_id(table, name, create=True)
                 
                 #@@ TODO: table for delete should be found from the datatype of the existing value 
-                web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
+                table and web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
                 
                 if a.value is not None:
                     for i, v in enumerate(a.value):
-                        web.insert(table, False, thing_id=thing_id, key_id=pid, value=v, ordering=i)
+                        table and web.insert(table, False, thing_id=thing_id, key_id=pid, value=v, ordering=i)
                 thing.set(name, a.value, a.datatype)
                 
         data = thing.to_json()
@@ -237,7 +245,7 @@ if __name__ == "__main__":
         },
         'x': {'connect': 'delete', 'value': 42},   
         'title': 'Welcome',
-        'description': {'connect': 'update', 'value': 'blah blah'}
+        'description': {'type': '/type/text', 'value': 'blah blah'}
     }
     web.transact()
     for q in writequery.make_query(store, query):

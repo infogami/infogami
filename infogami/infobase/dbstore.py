@@ -5,27 +5,6 @@ import web
 import _json as simplejson
 import datetime, time
 
-class Table:
-    """Interface to database table
-
-        >>> t = Table('datum_str')
-        >>> t.query('d', 'name', '=', 'foo')
-        <sql: "d.key = 'name' AND d.value = 'foo'">
-        >>> t = Table('book_author_ref', 'author')
-        >>> t.query('d', 'author', '=', 34)
-        <sql: 'd.value = 34'>
-    """
-    def __init__(self, name, key=None):
-        self.name = name
-        self.key = key
-    
-    def query(self, label, key, op, value):
-        q = "%s.value %s $value" % (label, op)
-        
-        if self.key is None:
-            q = "%s.key = $key" % (label) + ' AND ' + q
-        return web.reparam(q, locals())
-        
 INDEXED_DATATYPES = ["str", "int", "float", "ref", "boolean", "url", "datetime"]
 
 class Schema:
@@ -41,13 +20,21 @@ class Schema:
     def __init__(self):
         self.entries = []
         
+        # default schema
+        self.add_table_group('sys', '/type/type')
+        self.add_table_group('sys', '/type/property')
+        self.add_table_group('sys', '/type/backreference')
+        self.add_table_group('user', '/type/user')
+        self.add_table_group('user', '/type/usergroup')
+        self.add_table_group('user', '/type/permission')
+        
     def add_entry(self, table, type, datatype, name):
         entry = web.storage(table=table, type=type, datatype=datatype, name=name)
         self.entries.append(entry)
         
     def add_table_group(self, prefix, type):
         for d in INDEXED_DATATYPES:
-            schema.add_entry(prefix + "_" + d, type, d, None)
+            self.add_entry(prefix + "_" + d, type, d, None)
         
     def find_table(self, type, datatype, name):
         if datatype not in INDEXED_DATATYPES:
@@ -70,6 +57,7 @@ class Schema:
                 return item
                 
         schema = Schema()
+        schema.entries = []
         entries = [line.strip().split() for line in open(filename).readlines() if line.strip() and not line.strip().startswith('#')]
         entries = [map(unstar, e) for e in entries]
         
@@ -84,7 +72,7 @@ class Schema:
     def __str__(self):
         lines = ["%s\t%s\t%s\t%s" % (e.table, e.type, e.datatype, e.name) for e in self.entries]
         return "\n".join(lines)
-    
+        
 class DBStore:
     """
     """
@@ -109,19 +97,43 @@ class DBStore:
         thing = common.Thing.from_json(self, key, data)
         thing.set('type', self.get_metadata_from_id(metadata.type), 'ref')
         return thing
-    
-    def create(self, key, timestamp, data):
-        web.transact()
         
+    def write(self, queries, timestamp=None, comment=None, machine_comment=None, ip=None):
+        timestamp = timestamp or datetime.datetime.utcnow()
+        versions = {}
+        def add_version(thing_id, revision=None):
+            """Adds a new entry in the version table for the object specified by thing_id and returns the latest revision."""
+            if thing_id not in versions:
+                if revision is None:
+                    d = web.query(
+                        'UPDATE thing set latest_revision=latest_revision+1, last_modified=$timestamp WHERE id=$thing_id;' + \
+                        'SELECT latest_revision FROM thing WHERE id=$thing_id', vars=locals())
+                    revision = d[0].latest_revision
+                    
+                web.insert('version', False, 
+                    thing_id=thing_id, 
+                    revision=revision, 
+                    created=timestamp,
+                    comment=comment,
+                    machine_comment=machine_comment)
+                versions[thing_id] = revision
+            return versions[thing_id]
+        
+        web.transact()
+        for action, key, data in queries:
+            if action == 'create':
+                self.create(key, data, timestamp, add_version)
+            elif action == 'update':
+                self.update(key, data, timestamp, add_version)
+        web.commit()
+    
+    def create(self, key, data, timestamp, add_version):
         type = data.pop('type').value
         type_id = self.get_metadata(type).id
 
         thing_id = web.insert('thing', key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
+        add_version(thing_id, 1)
 
-        web.ctx.infobase_context = web.storage(user=None, ip='127.0.0.1')
-        ctx = web.ctx.infobase_context
-        web.insert('version', False, thing_id=thing_id, created=timestamp, user_id=ctx.user and ctx.user.id, ip=ctx.ip, revision=1)
-        
         def insert(name, value, datatype, ordering=None):
             if datatype not in INDEXED_DATATYPES:
                 return
@@ -147,7 +159,6 @@ class DBStore:
         thing = common.Thing(store, key, data=d)
             
         web.insert('data', False, thing_id=thing_id, revision=1, data=thing.to_json())
-        web.commit()
         
     def unkey(self, data):
         """Replace keys with ids.
@@ -177,18 +188,13 @@ class DBStore:
         else:
             return None
 	    
-    def update(self, key, timestamp, actions):
+    def update(self, key, actions, timestamp, add_version):
         thing = self.get(key)
         thing_id = thing.id
         self.unkey(actions)
         
         thing.set('last_modified', timestamp, 'datetime')
-        d = web.query(
-            'UPDATE thing set latest_revision=latest_revision+1, last_modified=$timestamp WHERE id=$thing_id;' + \
-            'SELECT latest_revision FROM thing WHERE id=$thing_id', vars=locals())
-        revision = d[0].latest_revision
-        
-        web.insert('version', False, thing_id=thing_id, revision=revision, created=timestamp)
+        revision = add_version(thing.id)
         
         for name, a in actions.items():
             table = self.schema.find_table(thing.type.key, a.datatype, name)
@@ -339,18 +345,9 @@ if __name__ == "__main__":
         'title': 'Welcome',
         'description': {'type': '/type/text', 'value': 'blah blah'}
     }
-    """
-    web.transact()
     query = bootstrap.make_query()
-    
-    for q in writequery.make_query(store, query):
-        action, key, data = q
-        if action == 'create':
-            store.create(key, datetime.datetime.utcnow(), data)
-        elif action == 'update':
-            store.update(key, datetime.datetime.utcnow(), data)
-    web.commit()
-    """
+    q = writequery.make_query(store, query)
+    store.write(q, comment='bootstrap')
     import readquery
     query = readquery.make_query(store, {"type" : "/type/property", 'name~': 'n*'})
     result = store.things(query)

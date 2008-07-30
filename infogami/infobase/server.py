@@ -5,6 +5,9 @@ import infobase
 import _json as simplejson
 import time
 
+infobase.NotFound = Exception
+infobase.InfobaseException = Exception
+
 urls = (
     "/([^/]*)/get", "withkey",
     "/([^/]*)/things", "things",
@@ -72,8 +75,11 @@ ibase = None
 def get_site(sitename):
     global ibase
     if not ibase:
-        ibase = infobase.Infobase()
-    return ibase.get_site(sitename)
+        import dbstore
+        schema = dbstore.Schema()
+        store = dbstore.DBStore(schema)
+        ibase = infobase.Infobase(store)
+    return ibase
 
 class write:
     @jsonify
@@ -81,7 +87,7 @@ class write:
         site = get_site(sitename)
         i = input('query', comment=None, machine_comment=None)
         query = simplejson.loads(i.query)
-        result = site.write(query, i.comment, i.machine_comment)
+        result = site.write(query, comment=i.comment, machine_comment=i.machine_comment)
         return result
 
 class withkey:
@@ -92,7 +98,7 @@ class withkey:
             site = get_site(sitename)
             revision = i.revision and int(i.revision)
             thing = site.withKey(i.key, revision=revision)
-            return thing._get_data(expand=i.expand)
+            return thing._get_data()
         except infobase.NotFound:
             return None
             
@@ -206,6 +212,6 @@ def run():
     web.run(urls, globals())
     
 if __name__ == "__main__":
-    web.config.db_parameters = dict(dbn='postgres', db='infobase', user='anand', pw='')
+    web.config.db_parameters = dict(dbn='postgres', db='infobase2', user='anand', pw='')
     web.config.db_printing = True
     web.run(urls, globals())

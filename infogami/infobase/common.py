@@ -120,6 +120,10 @@ class Thing:
         del self._data[key]
         
     def to_json(self):
+        d = self._get_data()
+        return simplejson.dumps(d)
+        
+    def _get_data(self):
         d = {}
         for k, v in self._data.items():
             datatype, v = v
@@ -128,7 +132,7 @@ class Thing:
             elif datatype not in ['int', 'boolean', 'float', 'str', 'key']:
                 v = {'type': datatype2type(datatype), 'value': v}
             d[k] = v
-        return simplejson.dumps(d)
+        return d
         
     @staticmethod
     def from_json(store, key, json):

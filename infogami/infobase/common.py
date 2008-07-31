@@ -125,32 +125,50 @@ class Thing:
         
     def _get_data(self):
         d = {}
-        for k, v in self._data.items():
-            datatype, v = v
+        for key, value in self._data.items():
+            datatype, value = value
             if datatype == 'ref':
-                v = {'key': v}
+                if isinstance(value, list):
+                    value = [{'key': v} for v in value]
+                else:
+                    value = {'key': value}
             elif datatype not in ['int', 'boolean', 'float', 'str', 'key']:
-                v = {'type': datatype2type(datatype), 'value': v}
-            d[k] = v
+                type = datatype2type(datatype)
+                if isinstance(value, list):
+                    value = [{"type": type, "value": v} for v in value]
+                else:
+                    value = {"type": type, "value": value}
+            d[key] = value
         return d
-        
+    
     @staticmethod
     def from_json(store, key, json):
+        def parse(value):
+            if isinstance(value, bool):
+                return 'boolean', value
+            elif isinstance(value, int):
+                return 'int', value
+            elif isinstance(value, float):
+                return 'float', value
+            elif isinstance(value, dict):
+                if 'key' in value:
+                    return 'ref', value['key']
+                else:
+                    return type2datatype(value['type']), value['value']
+            elif isinstance(value, list):
+                value = [parse(v) for v in value]
+                if value:
+                    return value[0][0], [v[1] for v in value]
+                else:
+                    return None
+            else:
+                return 'str', value
+                        
         d = simplejson.loads(json)
         for k, v in d.items():
-            if isinstance(v, bool):
-                d[k] = 'boolean', v
-            elif isinstance(v, int):
-                d[k] = 'int', v
-            elif isinstance(v, float):
-                d[k] = 'float', v
-            elif isinstance(v, dict):
-                if 'key' in v:
-                    d[k] = 'ref', v['key']
-                else:
-                    d[k] = type2datatype(v['type']), v['value']
-            else:
-                d[k] = 'str', v
+            v = parse(v)
+            if v:
+                d[k] = v
         return Thing(store, key, data=d)
         
     def get_property(self, name):
@@ -162,6 +180,33 @@ class Thing:
     def __repr__(self):
         return "<thing: %s>" % repr(self.key)
         
+class Store:
+    """Interface for Infobase data storage"""
+    def get(self, key, revision=None):
+        raise NotImplementedError
+    
+    def write(self, query):
+        raise NotImplementedError
+        
+    def things(self, query):
+        raise NotImplementedError
+        
+    def versions(self, query):
+        raise NotImplementedError
+        
+    def get_user_details(self, key):
+        """Returns a storage object with user email and encrypted password."""
+        raise NotImplementedError
+        
+    def update_user_details(self, key, email, enc_password):
+        """Update user's email and/or encrypted password.
+        """
+        raise NotImplementedError
+            
+    def find_user(self, email):
+        """Returns the key of the user with the specified email."""
+        raise NotImplementedError
+
 def create_test_store():
     """Creates a test implementation with /type/book and /type/author.
     Used is doctests.

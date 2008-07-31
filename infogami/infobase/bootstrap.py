@@ -197,6 +197,6 @@ def bootstrap(site, admin_password):
     query = make_query()
     site.write(query)
     a = site.get_account_manager()
-    a.register(username="admin", displayname="Administrator", email="admin@example.com", password=admin_password)
-    a.register(username="useradmin", displayname="User Administrator", email="useradmin@example.com", password=admin_password)
+    a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))
+    a.register(username="useradmin", email="useradmin@example.com", password=admin_password, data=dict(displayname="User Administrator"))
     

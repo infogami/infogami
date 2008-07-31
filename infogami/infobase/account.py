@@ -7,15 +7,17 @@ import web
 import infobase
 import config
 
-def make_query(username, displayname):
+def make_query(username, data):
     group = username + '/usergroup'
     permission = username + '/permission'
-    return [{
+    q = {
         'create': 'unless_exists',
         'key': username,
-        'displayname': displayname,
-        'type': '/type/user'
-    }, {
+        'type': '/type/user'    
+    }
+    q.update(data)
+    return [q, 
+    {
         'create': 'unless_exists',
         'key': group,
         'type': '/type/usergroup',
@@ -47,65 +49,25 @@ def admin_only(f):
     return g
 
 class AccountManager:
-    def __init__(self, site):
+    def __init__(self, site, secret_key):
         self.site = site
-    
-    def register(self, username, displayname, email, password, password_encrypted=False, timestamp=None, ip=None):
-        username = '/user/' + username
-        web.ctx.infobase_bootstrap = True
-
-        if self.site.get(username):
-            raise infobase.InfobaseException('Username is already used')
-
-        if self.has_user(email):
-            raise infobase.InfobaseException('Email is already used')
-             
-        web.transact()
-        try:
-            q = make_query(username, displayname)
-            ip = ip or web.ctx.get('ip')
-            timestamp = timestamp or datetime.datetime.utcnow()
-            self.site._write(q, timestamp=timestamp, ip=ip, log=False)
-            user = self.site.withKey(username)
-            if not password_encrypted:
-                password = self._generate_salted_hash(self.site.secret_key, password)
-            web.insert('account', False, thing_id=user.id, email=email, password=password)    
-        except:
-            import traceback
-            traceback.print_exc()
-            web.rollback()
-            raise
-        else:
-            web.commit()
-            timestamp = timestamp or datetime.datetime.utcnow()
-            self.site.logger.on_new_account(self.site, timestamp, 
-                username=web.lstrips(user.key, '/user/'), 
-                displayname=displayname,
-                email=email, 
-                password=password, 
-                ip=ip)
-            self.set_auth_token(user)
-            return user
-            
-    def has_user(self, email):
-        d = web.query('SELECT * from account'
-            + ' JOIN thing ON account.thing_id = thing.id'
-            + ' WHERE thing.site_id=$self.site.id AND account.email=$email', vars=locals())
-        return bool(d)
+        self.secret_key = secret_key
         
-    def get_email(self, user):
-        d = web.query('SELECT email FROM account WHERE thing_id=$user.id', vars=locals())
-        return d and d[0].email
+    def register(self, username, email, password, data):
+        key = '/user/' + username
+        if self.site.get(key):
+            raise Exception("User already exists: " + username)
         
-    def get_user(self):
-        """Returns the current user from the session."""
-        #@@ TODO: call assert_trusted_machine when user is admin.
-        auth_token = web.ctx.get('infobase_auth_token')
-        if auth_token:
-            user_id, login_time, digest = auth_token.split(',')
-            if self._check_salted_hash(self.site.secret_key, user_id + "," + login_time, digest):
-                return self.site.withID(int(user_id))
-                
+        if self.site.store.find_user(email):
+            raise Exception('Email is already used: ' + email)
+
+        q = make_query(key, data)
+        self.site.write(q)
+        
+        enc_password = self._generate_salted_hash(self.secret_key, password)
+        self.site.store.update_user_details(key, email, enc_password)
+        self.set_auth_token(key)
+                        
     def update_user(self, old_password, new_password, email, password_encrypted=False, timestamp=None):
         user = self.get_user()
         if user is None:
@@ -117,8 +79,8 @@ class AccountManager:
         new_password and self.assert_password(new_password)
         email and self.assert_email(email)
         
-        password = new_password and self._generate_salted_hash(self.site.secret_key, new_password) 
-        self._update_user(user, password, email)
+        password = new_password and self._generate_salted_hash(self.secret_key, new_password) 
+        self.site.store.update_user_details(user.key, email, password)
     
     def _update_user(self, user, encrypted_password, email, timestamp=None):
         timestamp = timestamp or datetime.datetime.utcnow()
@@ -149,34 +111,33 @@ class AccountManager:
     def assert_trusted_machine(self):
         if web.ctx.ip not in config.trusted_machines:
             raise infobase.InfobaseException('Permission denied to login as admin from ' + web.ctx.ip)
+            
+    @admin_only
+    def get_user_email(self, username):
+        details = self.site.store.get_user_details()
+        
+        if not details:
+            raise infobase.InfobaseException('No user registered with username: ' + username)
+        else:
+            return details.email
 
     @admin_only
     def get_user_code(self, email):
         """Returns a code for resetting password of a user."""
-        d = web.query('SELECT * FROM account' +
-            ' JOIN thing ON account.thing_id = thing.id' + 
-            ' WHERE thing.site_id=$self.site.id AND account.email=$email', vars=locals())
         
-        if not d:
+        key = self.site.store.find_user(email)
+        if not key:
             raise infobase.InfobaseException('No user registered with email: ' + email)
-        d = d[0]    
-        user = self.site.withID(d.thing_id)
+            
+        username = web.lstrips(key, '/user/')
+        details = self.site.store.get_user_details(key)
 
+        # generate code by combining encrypt password and timestamp. 
+        # encrypted_password for verification and timestamp for expriry check.
         timestamp = str(int(time.time()))
-        text = d.password + '$' + timestamp
-        username = web.lstrips(user.key, '/user/')
-        return username, timestamp + '$' + self._generate_salted_hash(self.site.secret_key, text)
-        
-    @admin_only
-    def get_user_email(self, username):
-        d = web.query("SELECT * FROM account" +
-            " JOIN thing ON account.thing_id = thing.id" +
-            " WHERE thing.site_id=$self.site.id AND thing.key=$username", vars=locals())
-        if not d:
-            raise infobase.InfobaseException('No user registered with username: ' + username)
-        else:
-            return d[0].email
-        
+        text = details.password + '$' + timestamp
+        return username, timestamp + '$' + self._generate_salted_hash(self.secret_key, text)
+            
     def reset_password(self, username, code, password):
         SEC_PER_WEEK = 7 * 24 * 3600
         timestamp, code = code.split('$', 1)
@@ -185,15 +146,14 @@ class AccountManager:
         if int(timestamp) + SEC_PER_WEEK < int(time.time()):
             raise infobase.InfobaseException('Password Reset code expired')
             
-        username = '/user/' + username
-        user = self.site.get(username)
+        username = '/user/' + username        
+        details = self.site.store.get_user_details(username)
         
-        d = web.select('account', where='thing_id=$user.id', vars=locals())
-        text = d[0].password + '$' + timestamp
-        if self._check_salted_hash(self.site.secret_key, text, code):
-            password = self._generate_salted_hash(self.site.secret_key, password)
-            web.update('account', where='thing_id=$user.id', password=password, vars=locals())
-            self.site.logger.on_update_account(user.key, email=None, password=password)
+        text = details.password + '$' + timestamp
+        
+        if self._check_salted_hash(self.secret_key, text, code):
+            enc_password = self._generate_salted_hash(self.secret_key, password)
+            self.site.store.update_user_details(username, password=enc_password)
         else:
             raise infobase.InfobaseException('Invalid password reset code')
         
@@ -202,17 +162,25 @@ class AccountManager:
             self.assert_trusted_machine()
             
         username = '/user/' + username
-        user = self.site.get(username)
-        if user and self.checkpassword(user, password):
-            self.set_auth_token(user)
-            return user
+        if user and self.checkpassword(username, password):
+            self.set_auth_token(username)
+            return self.site.get(username)
         else:
             return None
 
-    def set_auth_token(self, user):
+    def get_user(self):
+        """Returns the current user from the session."""
+        #@@ TODO: call assert_trusted_machine when user is admin.
+        auth_token = web.ctx.get('infobase_auth_token')
+        if auth_token:
+            user_key, login_time, digest = auth_token.split(',')
+            if self._check_salted_hash(self.secret_key, user_key + "," + login_time, digest):
+                return self.site.get(user_key)
+
+    def set_auth_token(self, user_key):
         t = datetime.datetime(*time.gmtime()[:6]).isoformat()
-        text = "%d,%s" % (user.id, t)
-        text += "," + self._generate_salted_hash(self.site.secret_key, text)
+        text = "%s,%s" % (user_key, t)
+        text += "," + self._generate_salted_hash(self.secret_key, text)
         web.ctx.infobase_auth_token = text
 
     def _generate_salted_hash(self, key, text, salt=None):
@@ -224,10 +192,10 @@ class AccountManager:
         salt, hash = salted_hash.split('$', 1)
         return self._generate_salted_hash(key, text, salt) == salted_hash
 
-    def checkpassword(self, user, raw_password):
-        d = web.select('account', where='thing_id=$user.id', vars=locals())
-        return self._check_salted_hash(self.site.secret_key, raw_password, d[0].password)
-        
+    def checkpassword(self, username, raw_password):
+        details = self.site.store.get_user_details(username)
+        return details is not None and self._check_salted_hash(self.secret_key, raw_password, details.password)
+                
 if __name__ == "__main__":
     web.transact()
     from infobase import Infobase

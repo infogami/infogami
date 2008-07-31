@@ -98,7 +98,7 @@ class DBStore:
         thing.set('type', self.get_metadata_from_id(metadata.type), 'ref')
         return thing
         
-    def write(self, queries, timestamp=None, comment=None, machine_comment=None, ip=None):
+    def write(self, queries, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         versions = {}
         def add_version(thing_id, revision=None):
@@ -156,8 +156,7 @@ class DBStore:
         d['last_modified'] = ('datetime', timestamp)
         d['id'] = 'int', thing_id
         
-        thing = common.Thing(store, key, data=d)
-            
+        thing = common.Thing(self, key, data=d)
         web.insert('data', False, thing_id=thing_id, revision=1, data=thing.to_json())
         
     def unkey(self, data):
@@ -319,7 +318,37 @@ class DBStore:
                 result = result + delim
             result = result + q
         return result
+    
+    def get_user_details(self, key):
+        """Returns a storage object with user email and encrypted password."""
+        metadata = get_metadata(key)
+        if metadata is None:
+            return None
+            
+        d = web.query("SELECT * FROM account WHERE thing_id=$metadata.id", vars=locals())
+        return d and d[0] or None
         
+    def update_user_details(self, key, email, enc_password):
+        """Update user's email and/or encrypted password."""
+        metadata = self.get_metadata(key)
+        if metadata is None:
+            return None
+        
+        params = {}
+        email and params.setdefault('email', email)
+        enc_password and params.setdefault('password', enc_password)
+        
+        if web.select('account', where='thing_id=$metadata.id', vars=locals()):
+            web.update('account', where='thing_id=$metadata.id', vars=locals(), **params)
+        else:
+            web.insert('account', False, email=email, password=enc_password)
+                
+    def find_user(self, email):
+        """Returns the key of the user with the specified email."""
+        d = web.select('account', where='$email=email', vars=locals())
+        thing_id = d and d[0].thing_id or None
+        return thing_id and self.get_metadata_from_id(thing_id).key
+
 if __name__ == "__main__":
     import web
     import writequery, bootstrap
@@ -345,6 +374,7 @@ if __name__ == "__main__":
         'title': 'Welcome',
         'description': {'type': '/type/text', 'value': 'blah blah'}
     }
+    
     query = bootstrap.make_query()
     q = writequery.make_query(store, query)
     store.write(q, comment='bootstrap')

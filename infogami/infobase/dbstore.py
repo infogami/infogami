@@ -95,7 +95,7 @@ class DBStore:
         d = web.query('SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision', vars=locals())
         data = d and d[0].data or '{}'
         thing = common.Thing.from_json(self, key, data)
-        thing.set('type', self.get_metadata_from_id(metadata.type), 'ref')
+        thing.set('type', self.get_metadata_from_id(metadata.type).key, 'ref')
         return thing
         
     def write(self, queries, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
@@ -119,13 +119,17 @@ class DBStore:
                 versions[thing_id] = revision
             return versions[thing_id]
         
+        result = web.storage(created=[], updated=[])
         web.transact()
         for action, key, data in queries:
             if action == 'create':
                 self.create(key, data, timestamp, add_version)
+                result.created.append(key)
             elif action == 'update':
                 self.update(key, data, timestamp, add_version)
+                result.updated.append(key)
         web.commit()
+        return result
     
     def create(self, key, data, timestamp, add_version):
         type = data.pop('type').value
@@ -178,6 +182,8 @@ class DBStore:
         web.insert(table, False, thing_id=thing_id, key_id=pid, value=value, ordering=ordering)
             
     def get_property_id(self, table, name, create=False):
+        if table is None:
+            return None
         property_table = table.split('_')[0] + '_keys'
         d = web.select(property_table, where='key=$name', vars=locals())
         if d:
@@ -300,7 +306,8 @@ class DBStore:
                 
                 q = '%(table)s.thing_id = thing.id AND %(table)s.key_id=$key_id AND %(table)s.value %(op)s $c.value' % {'table': table, 'op': op}
                 wheres += [web.reparam(q, locals())]
-                
+        
+        wheres = wheres or ['1 = 1']        
         tables = ['thing'] + [t.sql() for t in tables.values()]
         result = web.select(
             what='thing.key', 
@@ -321,7 +328,7 @@ class DBStore:
     
     def get_user_details(self, key):
         """Returns a storage object with user email and encrypted password."""
-        metadata = get_metadata(key)
+        metadata = self.get_metadata(key)
         if metadata is None:
             return None
             
@@ -333,7 +340,7 @@ class DBStore:
         metadata = self.get_metadata(key)
         if metadata is None:
             return None
-        
+                    
         params = {}
         email and params.setdefault('email', email)
         enc_password and params.setdefault('password', enc_password)
@@ -341,7 +348,7 @@ class DBStore:
         if web.select('account', where='thing_id=$metadata.id', vars=locals()):
             web.update('account', where='thing_id=$metadata.id', vars=locals(), **params)
         else:
-            web.insert('account', False, email=email, password=enc_password)
+            web.insert('account', False, email=email, password=enc_password, thing_id=metadata.id)
                 
     def find_user(self, email):
         """Returns the key of the user with the specified email."""
@@ -360,6 +367,7 @@ if __name__ == "__main__":
     schema.add_table_group('sys', '/type/property')
     schema.add_table_group('sys', '/type/backreference')
     store = DBStore(schema)
+    
     query = {
         'create': 'unless_exists',
         'key': '/bar',
@@ -374,7 +382,7 @@ if __name__ == "__main__":
         'title': 'Welcome',
         'description': {'type': '/type/text', 'value': 'blah blah'}
     }
-    
+
     query = bootstrap.make_query()
     q = writequery.make_query(store, query)
     store.write(q, comment='bootstrap')

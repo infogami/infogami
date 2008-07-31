@@ -162,7 +162,7 @@ class AccountManager:
             self.assert_trusted_machine()
             
         username = '/user/' + username
-        if user and self.checkpassword(username, password):
+        if self.checkpassword(username, password):
             self.set_auth_token(username)
             return self.site.get(username)
         else:

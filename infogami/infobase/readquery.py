@@ -57,7 +57,7 @@ def make_query(store, query):
         q.add_condition(k, op, None, v)
         
     type = store.get(q.get_type())
-    assert type is not None, 'Not found: ' + q.get_type()
+    #assert type is not None, 'Not found: ' + q.get_type()
     for c in q.conditions:
         c.datatype = find_datatype(type, c.key, c.value)
     

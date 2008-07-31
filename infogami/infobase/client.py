@@ -164,7 +164,10 @@ class Site:
             if isinstance(value, list):
                 return [process(v) for v in value]
             elif isinstance(value, dict):
-                return Thing(self, value['key'], None)
+                if 'value' in value:
+                    return value['value']
+                else:
+                    return Thing(self, value['key'], None)
             else:
                 return value
             

@@ -102,7 +102,7 @@ class Thing:
             if isinstance(value, list):
                 value = [unthing(v) for v in value]
             else:
-                value = value.key
+                value = unthing(value)
         self._data[name] = (datatype, value)
         
     def __contains__(self, name):
@@ -165,11 +165,12 @@ class Thing:
                 return 'str', value
                         
         d = simplejson.loads(json)
+        data = {}
         for k, v in d.items():
             v = parse(v)
             if v:
-                d[k] = v
-        return Thing(store, key, data=d)
+                data[k] = v
+        return Thing(store, key, data=data)
         
     def get_property(self, name):
         """Makes sense only when this object is a type object."""

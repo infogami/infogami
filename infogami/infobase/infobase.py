@@ -38,6 +38,9 @@ class Infobase:
     def versions(self, query):
         raise NotImplementedError
         
+    def get_permissions(self, key):
+        return web.storage(write=True, admin=True)
+        
 if __name__ == "__main__":
     import web
     web.config.db_parameters = dict(dbn='postgres', db='infobase2', user='anand', pw='')
@@ -55,4 +58,3 @@ if __name__ == "__main__":
     
     import bootstrap
     bootstrap.bootstrap(ibase, 'admin123')
-    

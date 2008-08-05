@@ -19,6 +19,8 @@ class Schema:
     """
     def __init__(self):
         self.entries = []
+        self.sequences = {}
+        self.prefixes = set()
         
         # default schema
         self.add_table_group('sys', '/type/type')
@@ -32,9 +34,20 @@ class Schema:
         entry = web.storage(table=table, type=type, datatype=datatype, name=name)
         self.entries.append(entry)
         
+    def add_seq(self, type, pattern='/%d'):
+        self.sequences[type] = pattern
+        
+    def get_seq(self, type):
+        if type in self.sequences:
+            # name is 'type_page_seq' for type='/type/page'
+            name = type[1:].replace('/', '_') + '_seq'
+            return web.storage(type=type, pattern=self.sequences[type], name=name)
+        
     def add_table_group(self, prefix, type):
         for d in INDEXED_DATATYPES:
             self.add_entry(prefix + "_" + d, type, d, None)
+            
+        self.prefixes.add(prefix)
         
     def find_table(self, type, datatype, name):
         if datatype not in INDEXED_DATATYPES:
@@ -48,32 +61,23 @@ class Schema:
         
         return 'datum_' + datatype
         
-    @staticmethod
-    def parse(filename):
-        def unstar(item):
-            if item == '*':
-                return None
-            else:
-                return item
-                
-        schema = Schema()
-        schema.entries = []
-        entries = [line.strip().split() for line in open(filename).readlines() if line.strip() and not line.strip().startswith('#')]
-        entries = [map(unstar, e) for e in entries]
+    def sql(self):
+        import os
+        prefixes = sorted(list(self.prefixes) + ['datum'])
+        sequences = [self.get_seq(type).name for type in self.sequences]
         
-        for table, type, datatype, name in entries:
-            if datatype is None:
-                for d in INDEXED_DATATYPES:
-                    schema.add_entry(table + "_" + d, type, d, name)
-            else:
-                schema.add_entry(table, type, datatype, name)
-        return schema
+        path = os.path.join(os.path.dirname(__file__), 'schema.sql')
+        t = web.template.frender(path)
+        
+        web.template.Template.globals['dict'] = dict
+        web.template.Template.globals['enumerate'] = enumerate
+        return t(prefixes, sequences)
         
     def __str__(self):
         lines = ["%s\t%s\t%s\t%s" % (e.table, e.type, e.datatype, e.name) for e in self.entries]
         return "\n".join(lines)
         
-class DBStore:
+class DBStore(common.Store):
     """
     """
     def __init__(self, schema):
@@ -87,6 +91,14 @@ class DBStore:
         d = web.query('SELECT * FROM thing WHERE id=$id', vars=locals())
         return d and d[0] or None
         
+    def new_key(self, type, kw):
+        seq = self.schema.get_seq(type)
+        if seq:
+            value = web.query("SELECT NEXTVAL($seq.name) as value", vars=locals())[0].value
+            return seq.pattern % value
+        else:
+            return common.Store.new_key(self, type, kw)
+        
     def get(self, key, revision=None):
         metadata = self.get_metadata(key)
         if not metadata: 
@@ -97,6 +109,16 @@ class DBStore:
         thing = common.Thing.from_json(self, key, data)
         thing.set('type', self.get_metadata_from_id(metadata.type).key, 'ref')
         return thing
+        
+    def get_many(self, keys):
+        metadata = web.select('thing', what='*', where=web.sqlors('key=', keys)).list()
+        things = dict((m.id, m.key) for m in metadata)
+        wheres = [web.reparam('(thing_id=$m.id AND revision=$m.latest_revision)', locals()) for m in metadata]        
+        query = 'SELECT * FROM data WHERE ' + self.sqljoin(wheres, ' OR ')
+        result = {}
+        for r in web.query(query):
+            result[things[r.thing_id]] = r.data
+        return result
         
     def write(self, queries, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
@@ -355,38 +377,19 @@ class DBStore:
         d = web.select('account', where='$email=email', vars=locals())
         thing_id = d and d[0].thing_id or None
         return thing_id and self.get_metadata_from_id(thing_id).key
-
+        
+    def initialize(self):
+        web.transact()
+        web.insert('thing', key='/type/type', type=1)
+        web.insert('version', thing_id=1, revision=1)
+        web.insert('data', thing_id=1, revision=1, data='{"key": "/type/type", "id": 1, "revision": 1, "type": {"key": "/type/type"}}')
+        web.commit()
+        
 if __name__ == "__main__":
-    import web
-    import writequery, bootstrap
-    web.config.db_parameters = dict(dbn='postgres', db='infobase2', user='anand', pw='')
-    web.config.db_printing = True
-    web.load()
     schema = Schema()
-    schema.add_table_group('sys', '/type/type')
-    schema.add_table_group('sys', '/type/property')
-    schema.add_table_group('sys', '/type/backreference')
-    store = DBStore(schema)
-    
-    query = {
-        'create': 'unless_exists',
-        'key': '/bar',
-        'type': {
-            'create': 'unless_exists',
-            'key': '/type/page',
-            'type': '/type/type',
-            'name': 'Page',
-            'description': 'Page type'
-        },
-        'x': {'connect': 'delete', 'value': 42},   
-        'title': 'Welcome',
-        'description': {'type': '/type/text', 'value': 'blah blah'}
-    }
+    schema.add_table_group('book', '/type/book')
+    schema.add_table_group('author', '/type/author')
 
-    query = bootstrap.make_query()
-    q = writequery.make_query(store, query)
-    store.write(q, comment='bootstrap')
-    import readquery
-    query = readquery.make_query(store, {"type" : "/type/property", 'name~': 'n*'})
-    result = store.things(query)
-    print result
+    schema.add_seq('/type/book', '/b/%d')
+    schema.add_seq('/type/author', '/a/%d')    
+    print schema.sql()

@@ -10,6 +10,7 @@ infobase.InfobaseException = Exception
 
 urls = (
     "/([^/]*)/get", "withkey",
+    "/([^/]*)/get_many", "get_many",
     "/([^/]*)/things", "things",
     "/([^/]*)/versions", "versions",
     "/([^/]*)/write", "write",
@@ -101,6 +102,17 @@ class withkey:
             return thing._get_data()
         except infobase.NotFound:
             return None
+
+class get_many:
+    @jsonify
+    def GET(self, sitename):
+        i = input("keys")
+        keys = simplejson.loads(i['keys'])
+        site = get_site(sitename)
+        things = site.get_many(keys)
+        for k, v in things.items():
+            things[k] = simplejson.loads(v)
+        return things
             
 class things:
     @jsonify

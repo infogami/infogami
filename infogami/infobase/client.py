@@ -214,6 +214,12 @@ class Site:
             return thing
         except NotFound:
             return None
+            
+    def get_many(self, keys):
+        data = dict(keys=simplejson.dumps(keys))
+        result = self._conn.request(self.name, '/get_many', data=data)['result']
+        things = [Thing(key, data) for key, data in result.values()]
+        return things
 
     def things(self, query):
         query = simplejson.dumps(query)

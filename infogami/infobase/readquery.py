@@ -62,6 +62,11 @@ def make_query(store, query):
         c.datatype = find_datatype(type, c.key, c.value)
     
     return q
+    
+def make_versions_query(store, query):
+    """Creates a versions query object from query dict.
+    """
+    pass
 
 def find_datatype(type, key, value):
     """

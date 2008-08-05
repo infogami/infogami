@@ -185,6 +185,18 @@ class Store:
     """Interface for Infobase data storage"""
     def get(self, key, revision=None):
         raise NotImplementedError
+        
+    def new_key(self, type, kw):
+        """Generates a new key to create a object of specified type. 
+        The store guarentees that it never returns the same key again.
+        Optional keyword arguments can be specified to give more hints 
+        to the store in generating the new key.
+        """
+        import uuid
+        return uuid.uuid1()
+        
+    def get_many(self, keys):
+        return [self.get(key) for key in keys]
     
     def write(self, query):
         raise NotImplementedError
@@ -207,6 +219,12 @@ class Store:
     def find_user(self, email):
         """Returns the key of the user with the specified email."""
         raise NotImplementedError
+        
+    def initialze(self):
+        """Initialzes the store for the first time.
+        This is called before doing the bootstrap.
+        """
+        pass
 
 def create_test_store():
     """Creates a test implementation with /type/book and /type/author.

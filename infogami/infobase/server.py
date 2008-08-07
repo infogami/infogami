@@ -169,9 +169,12 @@ class account:
             raise infobase.InfobaseException('Invalid username or password')
 
     def POST_register(self, site):
-        i = input('username', 'password', 'displayname', 'email')
+        i = input('username', 'password', 'email')
         a = site.get_account_manager()
-        a.register(username=i.username, displayname=i.displayname, email=i.email, password=i.password)
+        username = i.pop('username')
+        password = i.pop('password')
+        email = i.pop('email')
+        a.register(username=username, email=email, password=password, data=i)
         return ""
 
     def GET_get_user(self, site):

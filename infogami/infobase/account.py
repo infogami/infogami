@@ -114,12 +114,17 @@ class AccountManager:
             
     @admin_only
     def get_user_email(self, username):
-        details = self.site.store.get_user_details()
+        details = self.site.store.get_user_details('/user/' + username)
         
         if not details:
             raise infobase.InfobaseException('No user registered with username: ' + username)
         else:
             return details.email
+            
+    def get_email(self, user):
+        """Used internally by server."""
+        details = self.site.store.get_user_details(user.key)
+        return details.email
 
     @admin_only
     def get_user_code(self, email):

@@ -29,8 +29,8 @@ class Infobase:
     def get_many(self, keys):
         return self.store.get_many(keys)
         
-    def new_key(self, type, kw):
-        return self.store.new_key(type, kw)
+    def new_key(self, type, kw=None):
+        return self.store.new_key(type, kw or {})
         
     def write(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
@@ -47,12 +47,12 @@ class Infobase:
     def get_permissions(self, key):
         return web.storage(write=True, admin=True)
         
-    def bootstrap(self):
+    def bootstrap(self, admin_password='admin'):
         import bootstrap
         query = bootstrap.make_query()
         
         self.store.initialize()
-        self.store.write(query)
+        self.write(query)
         
         a = self.get_account_manager()
         a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))

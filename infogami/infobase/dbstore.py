@@ -111,6 +111,8 @@ class DBStore(common.Store):
         return thing
         
     def get_many(self, keys):
+        if not keys:
+            return {}
         metadata = web.select('thing', what='*', where=web.sqlors('key=', keys)).list()
         things = dict((m.id, m.key) for m in metadata)
         wheres = [web.reparam('(thing_id=$m.id AND revision=$m.latest_revision)', locals()) for m in metadata]        
@@ -379,11 +381,13 @@ class DBStore(common.Store):
         return thing_id and self.get_metadata_from_id(thing_id).key
         
     def initialize(self):
-        web.transact()
-        web.insert('thing', key='/type/type', type=1)
-        web.insert('version', thing_id=1, revision=1)
-        web.insert('data', thing_id=1, revision=1, data='{"key": "/type/type", "id": 1, "revision": 1, "type": {"key": "/type/type"}}')
-        web.commit()
+        if not web.select('thing', where="key='/type/type'"):
+            web.transact()
+            id = web.insert('thing', key='/type/type')
+            web.update('thing', type=id, where='id=$id', vars=locals())
+            web.insert('version', False, thing_id=id, revision=1)
+            web.insert('data', False, thing_id=id, revision=1, data='{"key": "/type/type", "id": %d, "revision": 1, "type": {"key": "/type/type"}}' % id)
+            web.commit()
         
 if __name__ == "__main__":
     schema = Schema()

@@ -9,6 +9,10 @@ def make_query(store, query):
     """
     for q in serialize(query):
         action, key, q = compile(store, q)
+        if action == 'update':
+            q = optimize(store, key, q)
+            if not q:
+                continue
         if action != 'ignore':
             yield action, key, q
     
@@ -107,6 +111,34 @@ class QueryError(Exception):
         self.msg = msg
         self.path = path
         
+def optimize(store, key, query):
+    """Optimizes the query by removing unnecessary actions.
+    """
+    thing = store.get(key)
+    
+    def equal(name):
+        if name in thing and name in query:
+            q = query[name]
+            datatype, value = thing.get(name)
+            if q.connect == 'update' or q.connect == 'update_list':
+                return q.datatype == datatype and q.value == value
+            elif q.connect == 'insert':
+                return isinstance(value, list) and q.value in value
+            elif q.connect == 'delete':
+                return isinstance(value, list) and q.value not in value
+        return False
+    
+    # don't try to optimize if there is change in type
+    # The store might keep values for each type in different tables.
+    if not equal('type'):
+        return query
+        
+    for k in query.keys():
+        if equal(k):
+            del query[k]
+    
+    return query
+        
 def compile(store, query):
     """Compiles the given query.
     
@@ -196,7 +228,7 @@ def compile(store, query):
     if create and thing is None:
         if 'type' not in d:
             raise QueryError(query.path, 'Missing type')
-            
+        
         type = get_type(None, d['type'].value)
         coerce_all(d, type)
         return 'create', key, d

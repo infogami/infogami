@@ -42,7 +42,8 @@ class Infobase:
         return self.store.things(q)
         
     def versions(self, query):
-        raise NotImplementedError
+        q = readquery.make_versions_query(self.store, query)
+        return self.store.versions(q)
         
     def get_permissions(self, key):
         return web.storage(write=True, admin=True)

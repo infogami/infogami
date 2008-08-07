@@ -63,11 +63,6 @@ def make_query(store, query):
     
     return q
     
-def make_versions_query(store, query):
-    """Creates a versions query object from query dict.
-    """
-    pass
-
 def find_datatype(type, key, value):
     """
         >>> find_datatype(None, "foo", 1)
@@ -117,6 +112,24 @@ def parse_key(key):
             key = key[:-len(op)]
             return key, op
     return key, "="
+    
+def make_versions_query(store, query):
+    """Creates a versions query object from query dict.
+    """
+    q = Query()
+    
+    q.offset = query.pop('offset', None)
+    q.limit = query.pop('limit', None)
+    q.sort = query.pop('sort', None)
+    
+    columns = ['key', 'revision', 'author', 'comment', 'machine_comment', 'ip', 'created']
+    
+    for k, v in query.items():
+        assert k in columns
+        q.add_condition(k, '=', None, v)
+        
+    return q
+
     
 if __name__ == "__main__":
     import doctest

@@ -349,6 +349,33 @@ class DBStore(common.Store):
                 result = result + delim
             result = result + q
         return result
+        
+    def versions(self, query):
+        what = 'thing.key, version.*'
+        where = 'version.thing_id = thing.id'
+        
+        for c in query.conditions:
+            key, value = c.key, c.value
+            
+            if key == 'key':
+                key = 'thing_id'
+                value = self.get_metadata(value).id
+            elif key == 'author':
+                key = 'user_id'
+                value = self.get_metadata(value).id
+                
+            where += web.reparam(' AND %s=$value' % key, locals())
+            
+        sort = query.sort
+        if sort and sort.startswith('-'):
+            sort = sort[1:] + ' desc'
+                
+        result = web.select(['thing','version'], what=what, where=where, offset=query.offset, limit=query.limit, order=sort)
+        result = result.list()
+        for r in result:
+            del r.thing_id
+            r.author = r.user_id and self.get_metadata_from_id(r.user_id).key
+        return result
     
     def get_user_details(self, key):
         """Returns a storage object with user email and encrypted password."""

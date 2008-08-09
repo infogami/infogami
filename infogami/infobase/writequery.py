@@ -4,17 +4,60 @@ import common
 from common import types, pprint, datatype2type, type2datatype, any, all
 import web
 
-def make_query(store, query):
+def make_query(store, author, query):
     r"""Compiles query into subqueries.    
     """
     for q in serialize(query):
         action, key, q = compile(store, q)
+        if not has_permission(store, author, key):
+            raise Exception('Permission denied to modify %s' % repr(key))
         if action == 'update':
             q = optimize(store, key, q)
             if not q:
                 continue
         if action != 'ignore':
             yield action, key, q
+            
+def has_permission(store, author, key):
+    # admin user can modify everything
+    if author and author.key == '/user/admin':
+        return True
+    
+    permission = get_permission(store, key)
+    if permission is None:
+        return True
+    else:
+        groups = permission.get_value('writers') or []
+        for group in groups:
+            if group.key == '/usergroup/everyone':
+                return True
+            elif author is not None:
+                if group.key == '/usergroup/allusers' or self.author in group._get('members', []):
+                    return True
+            else:
+                return False        
+        
+def get_permission(store, key):
+    """Returns permission for the specified key."""
+    def parent(key):
+        if key == "/":
+            return None
+        else:
+            return key.rsplit('/', 1)[0] or "/"
+
+    def _get_permission(key, child_permission=False):
+        if key is None:
+            return None
+        thing = store.get(key)
+        if child_permission:
+            permission = thing and (thing.get_value("child_permission") or thing.get_value("permission"))
+        else:
+            permission = thing and thing.get_value("permission")
+        return permission or _get_permission(parent(key), child_permission=True)
+
+    return _get_permission(key)
+
+    
     
 def serialize(query):
     r"""Serializes a nested query such that each subquery acts on a single object.

@@ -55,7 +55,7 @@ class Site:
         
     def write(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
-        q = writequery.make_query(self.store, query)
+        q = writequery.make_query(self.store, author, query)
         ip = web.ctx.get('ip', '127.0.0.1')
         author = self.get_account_manager().get_user()
         return self.store.write(q, timestamp=timestamp, comment=comment, machine_comment=machine_comment, ip=ip, author=author and author.key)

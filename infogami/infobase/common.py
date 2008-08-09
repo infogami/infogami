@@ -22,7 +22,7 @@ primitive_types = [
     "/type/int",
     "/type/float",
     "/type/boolean",
-    "/type/datetime"
+    "/type/datetime",
 ]
 
 types = web.storage(

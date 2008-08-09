@@ -5,7 +5,7 @@ import web
 import _json as simplejson
 import datetime, time
 
-INDEXED_DATATYPES = ["str", "int", "float", "ref", "boolean", "url", "datetime"]
+INDEXED_DATATYPES = ["str", "int", "float", "ref", "boolean", "datetime"]
 
 class Schema:
     """Schema to map <type, datatype, key> to database table.
@@ -17,19 +17,12 @@ class Schema:
         >>> schema.find_table('/type/article', 'str', 'title')
         'datum_str'
     """
-    def __init__(self):
+    def __init__(self, multisite=False):
         self.entries = []
         self.sequences = {}
         self.prefixes = set()
-        
-        # default schema
-        self.add_table_group('sys', '/type/type')
-        self.add_table_group('sys', '/type/property')
-        self.add_table_group('sys', '/type/backreference')
-        self.add_table_group('user', '/type/user')
-        self.add_table_group('user', '/type/usergroup')
-        self.add_table_group('user', '/type/permission')
-        
+        self.multisite = multisite
+                
     def add_entry(self, table, type, datatype, name):
         entry = web.storage(table=table, type=type, datatype=datatype, name=name)
         self.entries.append(entry)
@@ -71,7 +64,7 @@ class Schema:
         
         web.template.Template.globals['dict'] = dict
         web.template.Template.globals['enumerate'] = enumerate
-        return t(prefixes, sequences)
+        return t(prefixes, sequences, self.multisite)
         
     def __str__(self):
         lines = ["%s\t%s\t%s\t%s" % (e.table, e.type, e.datatype, e.name) for e in self.entries]
@@ -86,6 +79,12 @@ class DBStore(common.Store):
     def get_metadata(self, key):
         d = web.query('SELECT * FROM thing WHERE key=$key', vars=locals())
         return d and d[0] or None
+        
+    def get_metadata_list(self, keys):
+        return web.select('thing', what='*', where=web.sqlors('key=', keys)).list()
+        
+    def new_thing(self, **kw):
+        return web.insert('thing', **kw)
         
     def get_metadata_from_id(self, id):
         d = web.query('SELECT * FROM thing WHERE id=$id', vars=locals())
@@ -113,7 +112,7 @@ class DBStore(common.Store):
     def get_many(self, keys):
         if not keys:
             return {}
-        metadata = web.select('thing', what='*', where=web.sqlors('key=', keys)).list()
+        metadata = self.get_metadata_list(keys)
         things = dict((m.id, m.key) for m in metadata)
         wheres = [web.reparam('(thing_id=$m.id AND revision=$m.latest_revision)', locals()) for m in metadata]        
         query = 'SELECT * FROM data WHERE ' + self.sqljoin(wheres, ' OR ')
@@ -139,13 +138,17 @@ class DBStore(common.Store):
                     revision=revision, 
                     created=timestamp,
                     comment=comment,
-                    machine_comment=machine_comment)
+                    machine_comment=machine_comment,
+                    ip=ip,
+                    author_id=author and self.get_metadata(author).id
+                    )
                 versions[thing_id] = revision
             return versions[thing_id]
         
         result = web.storage(created=[], updated=[])
         web.transact()
         for action, key, data in queries:
+            print >> web.debug, common.prepr((action, key, data))
             if action == 'create':
                 self.create(key, data, timestamp, add_version)
                 result.created.append(key)
@@ -159,7 +162,7 @@ class DBStore(common.Store):
         type = data.pop('type').value
         type_id = self.get_metadata(type).id
 
-        thing_id = web.insert('thing', key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
+        thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
         add_version(thing_id, 1)
 
         def insert(name, value, datatype, ordering=None):
@@ -361,7 +364,7 @@ class DBStore(common.Store):
                 key = 'thing_id'
                 value = self.get_metadata(value).id
             elif key == 'author':
-                key = 'user_id'
+                key = 'author_id'
                 value = self.get_metadata(value).id
                 
             where += web.reparam(' AND %s=$value' % key, locals())
@@ -374,7 +377,7 @@ class DBStore(common.Store):
         result = result.list()
         for r in result:
             del r.thing_id
-            r.author = r.user_id and self.get_metadata_from_id(r.user_id).key
+            r.author = r.author_id and self.get_metadata_from_id(r.author_id).key
         return result
     
     def get_user_details(self, key):
@@ -408,14 +411,17 @@ class DBStore(common.Store):
         return thing_id and self.get_metadata_from_id(thing_id).key
         
     def initialize(self):
-        if not web.select('thing', where="key='/type/type'"):
+        if not self.initialized():
             web.transact()
-            id = web.insert('thing', key='/type/type')
+            id = self.new_thing(key='/type/type')
             web.update('thing', type=id, where='id=$id', vars=locals())
             web.insert('version', False, thing_id=id, revision=1)
             web.insert('data', False, thing_id=id, revision=1, data='{"key": "/type/type", "id": %d, "revision": 1, "type": {"key": "/type/type"}}' % id)
             web.commit()
-        
+            
+    def initialized(self):
+        return get_metadata('/type/type') is not None
+            
 if __name__ == "__main__":
     schema = Schema()
     schema.add_table_group('book', '/type/book')

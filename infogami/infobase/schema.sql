@@ -1,9 +1,17 @@
-$def with (prefixes, sequences)
+$def with (prefixes, sequences, multisite=False)
 
 BEGIN;
 
+$if multisite:
+    create table site (
+        id serial primary key,
+        name text UNIQUE
+    );
+
 create table thing (
     id serial primary key,
+    $if multiple_sites:
+        site_id int references site,
     key text,
     type int references thing,   
     latest_revision int default 1,
@@ -12,6 +20,9 @@ create table thing (
 );
 $for name in ['key', 'type', 'latest_revision', 'last_modified', 'created']:
     create index thing_${name}_idx ON thing($name);
+        
+$if multisite:
+    create index thing_site_id_idx ON thing(site_id);
 
 create table version (
     thing_id int references thing,
@@ -19,11 +30,11 @@ create table version (
     comment text,
     machine_comment text,
     ip inet,
-    user_id int references thing,
+    author_id int references thing,
     created timestamp default (current_timestamp at time zone 'utc'),
     PRIMARY KEY (thing_id, revision)
 );
-$for name in ['user_id', 'ip', 'created']:
+$for name in ['author_id', 'ip', 'created']:
     create index version_${name}_idx ON version($name);
 
 create table account (

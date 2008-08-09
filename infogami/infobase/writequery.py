@@ -79,13 +79,13 @@ def serialize(query):
             'key': '/foo'
         }]
     """
-    def flatten(query, result, path=[]):
+    def flatten(query, result, path=[], from_list=False):
         """This does two things. 
 	    1. It flattens the query and appends it to result.
         2. It returns its minimal value to use in parent query.
         """
         if isinstance(query, list):
-            data = [flatten(q, result, path + [str(i)]) for i, q in enumerate(query)]
+            data = [flatten(q, result, path + [str(i)], from_list=True) for i, q in enumerate(query)]
             return data
         elif isinstance(query, dict):
             #@@ FIX ME
@@ -95,8 +95,17 @@ def serialize(query):
                 
             if 'key' in q:
                 result.append(Query(path, q))
-            # take keys (connect, key, type, value) from q
-            data = dict((k, v) for k, v in q.items() if k in ("connect", "key", "type", "value"))
+                
+            if from_list:
+                #@@ quick fix
+                if 'key' in q:
+                    data = {'key': q['key']}
+                else:
+                    # take keys (connect, key, type, value) from q
+                    data = dict((k, v) for k, v in q.items() if k in ("connect", "key", "type", "value"))
+            else:
+                # take keys (connect, key, type, value) from q
+                data = dict((k, v) for k, v in q.items() if k in ("connect", "key", "type", "value"))
             return data
         else:
             return query
@@ -117,16 +126,27 @@ def optimize(store, key, query):
     thing = store.get(key)
     
     def equal(name):
-        if name in thing and name in query:
-            q = query[name]
+        q = query[name]
+        
+        if name in thing:
             datatype, value = thing.get(name)
-            if q.connect == 'update' or q.connect == 'update_list':
-                return q.datatype == datatype and q.value == value
-            elif q.connect == 'insert':
-                return isinstance(value, list) and q.value in value
-            elif q.connect == 'delete':
-                return isinstance(value, list) and q.value not in value
-        return False
+        else:
+            if q.connect == 'update':
+                datatype, value = None, None
+            else:
+                datatype, value = None, []
+            
+        if q.connect == 'update':
+            return (q.value == None and value == None) or (q.datatype == datatype and q.value == value)
+        elif q.connect == 'update_list':
+            return (q.value == [] and value == []) or (q.datatype == datatype and q.value == value)
+        elif q.connect == 'insert':
+            return isinstance(value, list) and q.value in value
+        elif q.connect == 'delete':
+            return isinstance(value, list) and q.value not in value
+        else:
+            # not possible case.
+            return False
     
     # don't try to optimize if there is change in type
     # The store might keep values for each type in different tables.
@@ -272,6 +292,8 @@ class QueryValue:
         
         if not isinstance(data, dict):
             data = dict(value=data)
+            
+        self._data = data
         
         keys = ['key', 'value', 'type', 'connect', 'create']
         for k in keys:
@@ -349,12 +371,15 @@ class QueryValue:
                 raise QueryError(self.path, msg)
                 
         # nothing can be converted to ini, float boolean and string
-        elif expected_type in ["/type/int", "/type/float", "/type/boolean", "/type/string"]:
+        elif expected_type in ["/type/int", "/type/float", "/type/string"]:
             raise QueryError(self.path, "Expected %s, but found %s: %s" % (expected_type, self.guess_type(), repr(self.value)))
             
         # int, float and boolean can not be converted to any other type
         elif self.guess_type() in ["/type/int", "/type/float", "/type/boolean"]:
             raise QueryError(self.path, "Expected %s, but found %s: %s" % (expected_type, self.guess_type(), repr(self.value)))
+        elif expected_type == '/type/boolean':
+            if self.guess_type() == '/type/string':
+                self.value = self.value.lower() != 'false' and self.value.lower() != ''
         
         #@@ validate conversion to datetime, url etc
         self.type = expected_type

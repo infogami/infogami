@@ -116,7 +116,7 @@ def type_user_etal():
         'type': '/type/type',
         'properties': [
             _property('/type/user', 'displayname', '/type/string', True),
-            _property('/type/user', 'website', '/type/uri', True),
+            _property('/type/user', 'website', '/type/string', True),
             _property('/type/user', 'description', '/type/text', True),
         ]
     }, {

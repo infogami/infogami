@@ -35,7 +35,9 @@ class Infobase:
     def write(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         q = writequery.make_query(self.store, query)
-        return self.store.write(q, timestamp=timestamp, comment=comment, machine_comment=machine_comment, ip=ip, author=author)
+        ip = web.ctx.get('ip', '127.0.0.1')
+        author = self.get_account_manager().get_user()
+        return self.store.write(q, timestamp=timestamp, comment=comment, machine_comment=machine_comment, ip=ip, author=author and author.key)
         
     def things(self, query):
         q = readquery.make_query(self.store, query)
@@ -68,11 +70,8 @@ if __name__ == "__main__":
     from dbstore import Schema, DBStore
     
     schema = Schema()
-    schema.add_table_group('sys', '/type/type')
-    schema.add_table_group('sys', '/type/property')
-    schema.add_table_group('sys', '/type/backreference')
     store = DBStore(schema)
     ibase = Infobase(store)
     
     import bootstrap
-    bootstrap.bootstrap(ibase, 'admin123')
+    ibase.bootstrap('admin123')

@@ -43,7 +43,6 @@ def primitive_types():
         q('/type/int', 'Integer', 'Type to store 32-bit integers. This can store integers in the range [-2**32, 2**31-1].'),
         q('/type/boolean', 'Boolean', 'Type to store boolean values true and false.'),
         q('/type/float', 'Floating Point Number', 'Type to store 32-bit floating point numbers'),
-        q('/type/uri', 'URI', 'Type to store URIs.'),
         q('/type/datetime', 'Datetime', 'Type to store datetimes from 4713 BC to 5874897 AD with 1 millisecond resolution.'),
         
         q('/type/property', 'Property', ''),

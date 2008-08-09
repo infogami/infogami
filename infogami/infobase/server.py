@@ -72,15 +72,16 @@ def input(*a, **kw):
     else:
         return web.input(*a, **kw)
     
-ibase = None
+_infobase = None
 def get_site(sitename):
-    global ibase
-    if not ibase:
+    import config
+    global _infobase
+    if not _infobase:
         import dbstore
         schema = dbstore.Schema()
         store = dbstore.DBStore(schema)
-        ibase = infobase.Infobase(store)
-    return ibase
+        _infobase = infobase.Infobase(store, config.secret_key)
+    return _infobase.get(sitename)
 
 class write:
     @jsonify

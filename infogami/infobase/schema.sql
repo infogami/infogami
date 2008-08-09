@@ -5,12 +5,13 @@ BEGIN;
 $if multisite:
     create table site (
         id serial primary key,
-        name text UNIQUE
+        name text UNIQUE,
+        created timestamp default(current_timestamp at time zone 'utc')
     );
 
 create table thing (
     id serial primary key,
-    $if multiple_sites:
+    $if multisite:
         site_id int references site,
     key text,
     type int references thing,   
@@ -20,7 +21,7 @@ create table thing (
 );
 $for name in ['key', 'type', 'latest_revision', 'last_modified', 'created']:
     create index thing_${name}_idx ON thing($name);
-        
+
 $if multisite:
     create index thing_site_id_idx ON thing(site_id);
 
@@ -38,12 +39,17 @@ $for name in ['author_id', 'ip', 'created']:
     create index version_${name}_idx ON version($name);
 
 create table account (
+    $if multisite:
+        site_id int references site,
     thing_id int references thing,
-    email text unique,
-    password text
+    email text,
+    password text,
+    $if multisite:
+        UNIQUE(site_id, email)
+    $else:
+        UNIQUE(email)
 );
 create index account_thing_id_idx ON account(thing_id);
-create index account_email_idx ON account(email);
 
 create table data (
     thing_id int references thing,

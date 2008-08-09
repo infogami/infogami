@@ -181,7 +181,7 @@ class Thing:
     def __repr__(self):
         return "<thing: %s>" % repr(self.key)
         
-class Store:
+class SiteStore:
     """Interface for Infobase data storage"""
     def get(self, key, revision=None):
         raise NotImplementedError
@@ -225,7 +225,24 @@ class Store:
         This is called before doing the bootstrap.
         """
         pass
-
+        
+class Store:
+    """Storage for Infobase.
+    
+    Store manages one or many SiteStores. 
+    """
+    def create(self, sitename):
+        """Creates a new site with the given name and returns store for it."""
+        raise NotImplementedError
+        
+    def get(self, sitename):
+        """Returns store object for the given sitename."""
+        raise NotImplementedError
+    
+    def delete(self, sitename):
+        """Deletes the store for the specified sitename."""
+        raise NotImplementedError
+        
 def create_test_store():
     """Creates a test implementation with /type/book and /type/author.
     Used is doctests.

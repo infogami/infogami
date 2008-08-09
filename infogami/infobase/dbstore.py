@@ -70,11 +70,12 @@ class Schema:
         lines = ["%s\t%s\t%s\t%s" % (e.table, e.type, e.datatype, e.name) for e in self.entries]
         return "\n".join(lines)
         
-class DBStore(common.Store):
+class DBSiteStore(common.SiteStore):
     """
     """
     def __init__(self, schema):
         self.schema = schema
+        self.sitename = None
 
     def get_metadata(self, key):
         d = web.query('SELECT * FROM thing WHERE key=$key', vars=locals())
@@ -402,14 +403,17 @@ class DBStore(common.Store):
         if web.select('account', where='thing_id=$metadata.id', vars=locals()):
             web.update('account', where='thing_id=$metadata.id', vars=locals(), **params)
         else:
-            web.insert('account', False, email=email, password=enc_password, thing_id=metadata.id)
-                
+            self.new_account(thing_id=metadata.id, email=email, enc_password=enc_password)
+    
+    def new_account(self, thing_id, email, enc_password):
+        return web.insert('account', False, email=email, password=enc_password, thing_id=thing_id)
+        
     def find_user(self, email):
         """Returns the key of the user with the specified email."""
         d = web.select('account', where='$email=email', vars=locals())
         thing_id = d and d[0].thing_id or None
         return thing_id and self.get_metadata_from_id(thing_id).key
-        
+    
     def initialize(self):
         if not self.initialized():
             web.transact()
@@ -420,13 +424,94 @@ class DBStore(common.Store):
             web.commit()
             
     def initialized(self):
-        return get_metadata('/type/type') is not None
+        return self.get_metadata('/type/type') is not None
+
+class DBStore(common.Store):
+    """StoreFactory that works with single site. 
+    It always returns a the same site irrespective of the sitename.
+    """
+    def __init__(self, schema):
+        self.schema = schema
+        self.sitestore = None
+        
+    def create(self, sitename):
+        if self.sitestore is None:
+            self.sitestore = DBSiteStore(self.schema)
+        self.sitestore.initialize()
+        return self.sitestore
+        
+    def get(self, sitename):
+        if self.sitestore is None:
+            sitestore = DBSiteStore(self.schema)
+            if not sitestore.initialized():
+                return None
+            self.sitestore = sitestore
+        return self.sitestore
+
+    def delete(self, sitename):
+        pass
             
+class MultiDBStore(DBStore):
+    """StoreFactory that works with multiple sites.
+    """
+    def __init__(self, schema):
+        self.schema = schema
+        self.sitestores = {}
+        
+    def create(self, sitename):
+        web.transact()
+        try:
+            site_id = web.insert('site', name=sitename)
+            sitestore = MultiDBSiteStore(self.schema, sitename, site_id)
+            sitestore.initialize()
+            self.sitestores[sitename] = sitestore
+        except:
+            web.rollback()
+            raise
+        else:
+            web.commit()
+            return self.sitestores[sitename]
+            
+    def get(self, sitename):
+        if sitename not in self.sitestores:
+            site_id = self.get_site_id(sitename)
+            if site_id is None:
+                return None
+            else:
+                self.sitestores[sitename] = MultiDBSiteStore(self.schema, sitename, site_id)
+        return self.sitestores[sitename]
+        
+    def get_site_id(self, sitename):
+        d = web.query('SELECT * FROM site WHERE name=$sitename', vars=locals())
+        return d and d[0].id or None
+            
+class MultiDBSiteStore(DBSiteStore):
+    def __init__(self, schema, sitename, site_id):
+        DBStore.__init__(self, schema)
+        self.sitename = sitename
+        self.site_id = site_id
+        
+    def get_metadata(self, key):
+        d = web.query('SELECT * FROM thing WHERE site_id=self.site_id AND key=$key', vars=locals())
+        return d and d[0] or None
+        
+    def get_metadata_list(self, keys):
+        where = web.reparam('site_id=$self.site_id', locals()) + web.sqlors('key=', keys)
+        return web.select('thing', what='*', where=where).list()
+        
+    def new_thing(self, **kw):
+        kw['site_id'] = self.site_id
+        return web.insert('thing', **kw)
+        
+    def new_account(self, thing_id, email, enc_password):
+        return web.insert('account', False, site_id=self.site_id, thing_id=thing_id, email=email, password=enc_password)
+
+    def find_user(self, email):
+        """Returns the key of the user with the specified email."""
+        d = web.select('account', where='site_id=$self.site_id, $email=email', vars=locals())
+        thing_id = d and d[0].thing_id or None
+        return thing_id and self.get_metadata_from_id(thing_id).key
+                    
 if __name__ == "__main__":
     schema = Schema()
-    schema.add_table_group('book', '/type/book')
-    schema.add_table_group('author', '/type/author')
-
-    schema.add_seq('/type/book', '/b/%d')
-    schema.add_seq('/type/author', '/a/%d')    
     print schema.sql()

@@ -150,7 +150,7 @@ def optimize(store, key, query):
     
     # don't try to optimize if there is change in type
     # The store might keep values for each type in different tables.
-    if not equal('type'):
+    if 'type' in query and not equal('type'):
         return query
         
     for k in query.keys():
@@ -284,6 +284,8 @@ class QueryValue:
         <1 of type '/type/int'>
         >>> QueryValue('', dict(value="foo", type='/type/text'))
         <'foo' of type '/type/text'>
+        >>> QueryValue('', dict(key="/foo"))
+        <'/foo' of type '/type/object'>
     """
     def __init__(self, path, data):
         if isinstance(path, list):
@@ -302,8 +304,12 @@ class QueryValue:
         # just for easy of use
         if self.key is not None:
             self.value = self.key
+            self._key_specified = True
         elif self.value is not None:
+            self._key_specified = False
             self.key = self.value
+        else:
+            self._key_specified = False
             
     def get_datatype(self):
         return type2datatype(self.guess_type())
@@ -328,6 +334,8 @@ class QueryValue:
             return '/type/int'
         elif isinstance(self.value, float):
             return '/type/float'
+        elif self._key_specified:
+            return '/type/object'
         else:
             return '/type/string'
             

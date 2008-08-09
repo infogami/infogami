@@ -13,6 +13,8 @@ thing_cache_size = None
 things_cache_size = None
 versions_cache_size = None
 
+secret_key = "bzuim9ws8u"
+
 # set this to log dir to enable logging
 logroot = None
 compress_log = False

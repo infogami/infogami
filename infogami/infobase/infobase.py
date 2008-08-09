@@ -1,8 +1,8 @@
 """
 Infobase: structured database.
 
-Infobase contains multiple sites and each site can store any number of objects. 
-Each object has a key, that is unique to the site it belongs.
+Infobase is a structured database which contains multiple sites.
+Each site is an independent collection of objects. 
 """
 import web
 import datetime
@@ -12,10 +12,31 @@ import readquery
 import writequery
 
 class Infobase:
-    def __init__(self, store):
+    """Infobase contains multiple sites."""
+    def __init__(self, store, secret_key):
+        self.store = store
+        self.secret_key = secret_key
+        
+    def create(self, sitename):
+        """Creates a new site with the sitename."""
+        site = Site(self.store.create(sitename), self.secret_key)
+        site.bootstrap()
+        return site
+    
+    def get(self, sitename):
+        """Returns the site with the given name."""
+        return Site(self.store.get(sitename), self.secret_key)
+        
+    def delete(self, sitename):
+        """Deletes the site with the given name."""
+        return self.store.delete(sitename)
+
+class Site:
+    """A site of infobase."""
+    def __init__(self, store, secret_key):
         self.store = store
         import account
-        self.account_manager = account.AccountManager(self, 'admin123')
+        self.account_manager = account.AccountManager(self, secret_key)
         
     def get_account_manager(self):
         return self.account_manager
@@ -50,28 +71,21 @@ class Infobase:
     def get_permissions(self, key):
         return web.storage(write=True, admin=True)
         
-    def bootstrap(self, admin_password='admin'):
+    def bootstrap(self, admin_password='admin123'):
         import bootstrap
         query = bootstrap.make_query()
         
-        self.store.initialize()
-        self.write(query)
-        
+        self.write(query)        
         a = self.get_account_manager()
         a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))
         a.register(username="useradmin", email="useradmin@example.com", password=admin_password, data=dict(displayname="User Administrator"))
-        
-if __name__ == "__main__":
-    import web
+
+if __name__ == '__main__':
     web.config.db_parameters = dict(dbn='postgres', db='infobase2', user='anand', pw='')
     web.config.db_printing = True
     web.load()
-    
-    from dbstore import Schema, DBStore
-    
-    schema = Schema()
-    store = DBStore(schema)
-    ibase = Infobase(store)
-    
-    import bootstrap
-    ibase.bootstrap('admin123')
+    import dbstore, config
+    schema = dbstore.Schema()
+    store = dbstore.DBStore(schema)
+    _infobase = Infobase(store, config.secret_key)
+    print _infobase.create('infogami.org')

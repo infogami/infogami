@@ -63,7 +63,7 @@ def jsonify(f):
             # set auth-token as cookie for remote connection.
             if web.ctx.get('infobase_auth_token'):
                 web.setcookie('infobase_auth_token', web.ctx.infobase_auth_token)
-            web.ctx.output = result
+            web.ctx.output = web.utf8(result)
     return g
     
 def input(*a, **kw):
@@ -111,8 +111,6 @@ class get_many:
         keys = simplejson.loads(i['keys'])
         site = get_site(sitename)
         things = site.get_many(keys)
-        for k, v in things.items():
-            things[k] = simplejson.loads(v)
         return things
             
 class things:

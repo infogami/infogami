@@ -119,7 +119,8 @@ class DBSiteStore(common.SiteStore):
         query = 'SELECT * FROM data WHERE ' + self.sqljoin(wheres, ' OR ')
         result = {}
         for r in web.query(query):
-            result[things[r.thing_id]] = r.data
+            key = things[r.thing_id]
+            result[key] = common.LazyThing(self, key, r.data)
         return result
         
     def write(self, queries, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
@@ -149,7 +150,6 @@ class DBSiteStore(common.SiteStore):
         result = web.storage(created=[], updated=[])
         web.transact()
         for action, key, data in queries:
-            print >> web.debug, common.prepr((action, key, data))
             if action == 'create':
                 self.create(key, data, timestamp, add_version)
                 result.created.append(key)

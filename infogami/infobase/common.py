@@ -181,6 +181,27 @@ class Thing:
     def __repr__(self):
         return "<thing: %s>" % repr(self.key)
         
+class LazyThing:
+    def __init__(self, store, key, json):
+        self.__dict__['_key'] = key
+        self.__dict__['_store'] = store
+        self.__dict__['_json'] = json
+        self.__dict__['_thing'] = None
+        
+    def _get(self):
+        if self._thing is None:
+            self._thing = Thing.from_json(self._store, self._key, self._json)
+        return self._thing
+        
+    def __getattr__(self, key):
+        return getattr(self._get(), key)
+        
+    def __json__(self):
+        return self._json
+        
+    def __repr__(self):
+        return "<LazyThing: %s>" % repr(self._key)
+        
 class SiteStore:
     """Interface for Infobase data storage"""
     def get(self, key, revision=None):

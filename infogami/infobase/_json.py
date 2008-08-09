@@ -26,9 +26,24 @@ def unicodify(d):
         return d.isoformat()
     else:
         return d
+        
+class JSONEncoder(simplejson.JSONEncoder):
+    def _iterencode(self, o, markers=None):
+        if hasattr(o, '__json__'):
+            return iter([o.__json__()])
+        else:
+            return simplejson.JSONEncoder._iterencode(self, o, markers)
 
 def dumps(obj, **kw):
-    return simplejson.dumps(unicodify(obj), **kw)
+    """
+        >>> class Foo:
+        ...     def __json__(self): return 'foo'
+        ...
+        >>> a = [Foo(), Foo()]
+        >>> dumps(a)
+        '[foo, foo]'
+    """
+    return simplejson.dumps(unicodify(obj), cls=JSONEncoder, **kw)
 
 def loads(s, **kw):
     return simplejson.loads(s, **kw)

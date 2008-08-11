@@ -16,25 +16,35 @@ class Infobase:
     def __init__(self, store, secret_key):
         self.store = store
         self.secret_key = secret_key
+        self.sites = {}
         
     def create(self, sitename):
         """Creates a new site with the sitename."""
         site = Site(self.store.create(sitename), self.secret_key)
         site.bootstrap()
+        self.sites[sitename] = site
         return site
     
     def get(self, sitename):
         """Returns the site with the given name."""
-        return Site(self.store.get(sitename), self.secret_key)
+        if sitename in self.sites:
+            site = self.sites[sitename]
+        else:
+            site = Site(self.store.get(sitename), self.secret_key)
+            self.sites[sitename] = site
+        return site
         
     def delete(self, sitename):
         """Deletes the site with the given name."""
+        if sitename in self.sites:
+            del self.sites[sitename]
         return self.store.delete(sitename)
 
 class Site:
     """A site of infobase."""
     def __init__(self, store, secret_key):
         self.store = store
+        self.store = common.CachedSiteStore(store)
         import account
         self.account_manager = account.AccountManager(self, secret_key)
         
@@ -55,6 +65,7 @@ class Site:
         
     def write(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
+        
         q = writequery.make_query(self.store, author, query)
         ip = web.ctx.get('ip', '127.0.0.1')
         author = self.get_account_manager().get_user()
@@ -75,7 +86,7 @@ class Site:
         import bootstrap
         query = bootstrap.make_query()
         
-        self.write(query)        
+        self.write(query)     
         a = self.get_account_manager()
         a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))
         a.register(username="useradmin", email="useradmin@example.com", password=admin_password, data=dict(displayname="User Administrator"))

@@ -76,8 +76,17 @@ class DBSiteStore(common.SiteStore):
     def __init__(self, schema):
         self.schema = schema
         self.sitename = None
+        
+        self.cache = None
+        self.property_id_cache = {}
+        
+    def set_cache(self, cache):
+        self.cache = cache
 
     def get_metadata(self, key):
+        if self.cache and key in self.cache:
+            thing = self.cache[key]
+            return thing and web.storage(id=thing.id, key=thing.key, last_modified=thing.last_modified, created=thing.created)
         d = web.query('SELECT * FROM thing WHERE key=$key', vars=locals())
         return d and d[0] or None
         
@@ -100,6 +109,17 @@ class DBSiteStore(common.SiteStore):
             return common.Store.new_key(self, type, kw)
         
     def get(self, key, revision=None):
+        if self.cache is None or revision is not None:
+            return self._get(key, revision)
+        else:
+            if key not in self.cache:
+                thing = self._get(key, revision)
+                self.cache[key] = thing
+            else:
+                thing = self.cache[key]
+            return thing
+    
+    def _get(self, key, revision):    
         metadata = self.get_metadata(key)
         if not metadata: 
             return None
@@ -107,6 +127,7 @@ class DBSiteStore(common.SiteStore):
         d = web.query('SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision', vars=locals())
         data = d and d[0].data or '{}'
         thing = common.Thing.from_json(self, key, data)
+        #@@ why is this required? for bootstrap?
         thing.set('type', self.get_metadata_from_id(metadata.type).key, 'ref')
         return thing
         
@@ -208,8 +229,17 @@ class DBSiteStore(common.SiteStore):
         table = self.schema.find_table(type, datatype, name)
         pid = self.get_property_id(table, name, create=True)
         web.insert(table, False, thing_id=thing_id, key_id=pid, value=value, ordering=ordering)
-            
+
     def get_property_id(self, table, name, create=False):
+        if table is None:
+            return None
+        
+        if (table, name) not in self.property_id_cache:
+            self.property_id_cache[table, name] = self._get_property_id(table, name, create)
+            
+        return self.property_id_cache[table, name]
+            
+    def _get_property_id(self, table, name, create=False):
         if table is None:
             return None
         property_table = table.split('_')[0] + '_keys'
@@ -222,7 +252,7 @@ class DBSiteStore(common.SiteStore):
             return None
 	    
     def update(self, key, actions, timestamp, add_version):
-        thing = self.get(key)
+        thing = self.get(key).copy()
         thing_id = thing.id
         self.unkey(actions)
         
@@ -410,7 +440,7 @@ class DBSiteStore(common.SiteStore):
         
     def find_user(self, email):
         """Returns the key of the user with the specified email."""
-        d = web.select('account', where='$email=email', vars=locals())
+        d = web.select('account', where='email=$email', vars=locals())
         thing_id = d and d[0].thing_id or None
         return thing_id and self.get_metadata_from_id(thing_id).key
     

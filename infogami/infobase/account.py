@@ -17,27 +17,28 @@ def make_query(username, data):
     }
     q.update(data)
     return [q, 
-    {
-        'create': 'unless_exists',
-        'key': group,
-        'type': '/type/usergroup',
-        'members': [username]
-    },
-    {
-        'create': 'unless_exists',
-        'key': permission,
-        'type': '/type/permission',
-        'readers': ['/usergroup/everyone'],
-        'writers': [group],
-        'admins': [group]
-    },
-    {
-        'key': username,
-        'permission': {
-            'connect': 'update',
-            'key': permission
+        {
+            'create': 'unless_exists',
+            'key': group,
+            'type': '/type/usergroup',
+            'members': [username]
+        },
+        {
+            'create': 'unless_exists',
+            'key': permission,
+            'type': '/type/permission',
+            'readers': ['/usergroup/everyone'],
+            'writers': [group],
+            'admins': [group]
+        },
+        {
+            'key': username,
+            'permission': {
+                'connect': 'update',
+                'key': permission
+            }
         }
-    }]
+    ]
     
 def admin_only(f):
     """Decorator to limit a function to admin user only."""
@@ -62,6 +63,7 @@ class AccountManager:
             raise Exception('Email is already used: ' + email)
 
         q = make_query(key, data)
+        import common
         self.site.write(q)
         
         enc_password = self._generate_salted_hash(self.secret_key, password)

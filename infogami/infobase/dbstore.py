@@ -99,6 +99,9 @@ class DBSiteStore(common.SiteStore):
     def get_metadata_from_id(self, id):
         d = web.query('SELECT * FROM thing WHERE id=$id', vars=locals())
         return d and d[0] or None
+
+    def get_metadata_list_from_ids(self, ids):
+        return web.select('thing', what='*', where=web.sqlors('id=', ids)).list()
         
     def new_key(self, type, kw):
         seq = self.schema.get_seq(type)
@@ -106,7 +109,7 @@ class DBSiteStore(common.SiteStore):
             value = web.query("SELECT NEXTVAL($seq.name) as value", vars=locals())[0].value
             return seq.pattern % value
         else:
-            return common.Store.new_key(self, type, kw)
+            return common.SiteStore.new_key(self, type, kw)
         
     def get(self, key, revision=None):
         if self.cache is None or revision is not None:
@@ -406,9 +409,13 @@ class DBSiteStore(common.SiteStore):
                 
         result = web.select(['thing','version'], what=what, where=where, offset=query.offset, limit=query.limit, order=sort)
         result = result.list()
+        author_ids = list(set(r.author_id for r in result if r.author_id))
+        author_keys = [a.key for a in self.get_metadata_list_from_ids(author_ids)]
+        authors = dict(zip(author_ids, author_keys))
+        
         for r in result:
             del r.thing_id
-            r.author = r.author_id and self.get_metadata_from_id(r.author_id).key
+            r.author = r.author_id and authors[r.author_id]
         return result
     
     def get_user_details(self, key):

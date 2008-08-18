@@ -407,7 +407,7 @@ class QueryValue:
                 ...
             QueryError: Expected /type/string, but found /type/int: 23 (at 'book.pages')
         """
-        if expected_type is None or self.guess_type() == expected_type:
+        if expected_type is None or self.guess_type() == expected_type or self.value is None:
             return
             
         if self.type is not None:
@@ -417,7 +417,7 @@ class QueryValue:
             if thing is None:
                 msg = "%s is not found" % repr(self.key)
                 raise QueryError(self.path, msg)
-            elif thing.type.key != expected_type:
+            elif thing.type.key != expected_type and expected_type != '/type/object': # /type/object means any type
                 msg = "Expected %s, but found %s: %s" % (repr(expected_type), repr(thing.type.key), repr(self.key))
                 raise QueryError(self.path, msg)
                 

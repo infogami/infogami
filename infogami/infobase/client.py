@@ -60,7 +60,7 @@ class LocalConnection(Connection):
         out = server.request(path, method, data)
         if 'infobase_auth_token' in web.ctx:
             self.set_auth_token(web.ctx.infobase_auth_token)
-            
+        
         out = simplejson.loads(out)
         out = storify(out)
         if out.status == 'fail':
@@ -78,6 +78,7 @@ class RemoteConnection(Connection):
 
     def request(self, sitename, path, method='GET', data=None):
         url = self.base_url + '/' + sitename + path
+        path = '/' + sitename + path
         if data:
             for k in data.keys():
                 if data[k] is None: del data[k]
@@ -90,7 +91,7 @@ class RemoteConnection(Connection):
             path += '?' + data
             data = None
         
-        conn = httplib.HTTPConnection(self.host)
+        conn = httplib.HTTPConnection(self.base_url)
         env = web.ctx.get('env') or {}
         
         if self.auth_token:
@@ -104,7 +105,7 @@ class RemoteConnection(Connection):
         
         conn.request(method, path, data, headers=headers)
         response = conn.getresponse()
-        
+
         cookie = response.getheader('Set-Cookie')
         if cookie:
             import Cookie
@@ -214,12 +215,17 @@ class Site:
             return thing
         except NotFound:
             return None
-            
+
     def get_many(self, keys):
         data = dict(keys=simplejson.dumps(keys))
         result = self._conn.request(self.name, '/get_many', data=data)['result']
-        things = [Thing(key, data) for key, data in result.values()]
+        things = [Thing(self, key, data) for key, data in result.items()]
         return things
+
+    def new_key(self, type):
+        data = {'type': type}
+        result = self._conn.request(self.name, '/new_key', data=data)['result']
+        return result
 
     def things(self, query):
         query = simplejson.dumps(query)
@@ -359,7 +365,7 @@ class Thing:
     def _getdata(self):
         if self._data is None:
             self._data = self._site._load(self.key, self.revision)
-            self.revision = self._data.pop('revision')
+            self.revision = self._data.pop('revision', None) or self.revision
         return self._data
         
     def keys(self):

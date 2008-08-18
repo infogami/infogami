@@ -11,6 +11,7 @@ infobase.InfobaseException = Exception
 urls = (
     "/([^/]*)/get", "withkey",
     "/([^/]*)/get_many", "get_many",
+    "/([^/]*)/new_key", "new_key",
     "/([^/]*)/things", "things",
     "/([^/]*)/versions", "versions",
     "/([^/]*)/write", "write",
@@ -112,7 +113,14 @@ class get_many:
         site = get_site(sitename)
         things = site.get_many(keys)
         return things
-            
+        
+class new_key:
+    @jsonify
+    def GET(self, sitename):
+        i = input('type')
+        site = get_site(sitename)
+        return site.new_key(i.type)
+
 class things:
     @jsonify
     def GET(self, sitename):

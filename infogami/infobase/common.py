@@ -234,7 +234,7 @@ class SiteStore:
         to the store in generating the new key.
         """
         import uuid
-        return uuid.uuid1()
+        return '/' + str(uuid.uuid1())
         
     def get_many(self, keys):
         return [self.get(key) for key in keys]

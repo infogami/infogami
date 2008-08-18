@@ -7,7 +7,7 @@ def get_all_strings(site):
         return []
     else:
         q = {'type': '/type/i18n'}
-        return [site.get(key) for key in site.things(q)]
+        return site.get_many(site.things(q))
 
 def get_all_sites():
     return [web.ctx.site]

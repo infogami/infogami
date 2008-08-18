@@ -5,14 +5,16 @@ def get_all_templates(site):
     if t is None:
         return []
     q = {'type': '/type/template'}
-    return [site.get(key) for key in site.things(q)]
+    #return [site.get(key) for key in site.things(q)]
+    return site.get_many([key for key in site.things(q)])
 
 def get_all_macros(site):
     t = site.get('/type/macro')
     if t is None:
         return []
     q = {'type': '/type/macro'}
-    return [site.get(key) for key in site.things(q)]
+    #return [site.get(key) for key in site.things(q)]
+    return site.get_many([key for key in site.things(q)])
     
 def get_all_sites():
     return [web.ctx.site]

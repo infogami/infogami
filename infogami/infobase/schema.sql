@@ -26,14 +26,15 @@ $if multisite:
     create index thing_site_id_idx ON thing(site_id);
 
 create table version (
+    id serial primary key,
     thing_id int references thing,
     revision int,
+    author_id int references thing,
+    ip inet,
     comment text,
     machine_comment text,
-    ip inet,
-    author_id int references thing,
     created timestamp default (current_timestamp at time zone 'utc'),
-    PRIMARY KEY (thing_id, revision)
+    UNIQUE (thing_id, revision)
 );
 $for name in ['author_id', 'ip', 'created']:
     create index version_${name}_idx ON version($name);

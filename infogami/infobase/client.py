@@ -306,7 +306,7 @@ def parse_datetime(datestring):
     Is there any way to do this in stdlib?
     """
     import re, datetime
-    tokens = re.split('-|T|:|\.', datestring)
+    tokens = re.split('-|T|:|\.| ', datestring)
     return datetime.datetime(*map(int, tokens))
 
 class Nothing:

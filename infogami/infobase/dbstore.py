@@ -489,7 +489,7 @@ class DBStore(common.Store):
         pass
             
 class MultiDBStore(DBStore):
-    """StoreFactory that works with multiple sites.
+    """DBStore that works with multiple sites.
     """
     def __init__(self, schema):
         self.schema = schema

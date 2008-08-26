@@ -75,9 +75,9 @@ class Thing:
         self._metadata = metadata or web.storage()
         self._data = data or {}
         
-    def get_value(self, key):
+    def get_value(self, key, default=None):
         if key not in self._data:
-            return None
+            return default
         datatype, value = self._data[key]
         if datatype == 'ref':
             if isinstance(value, list):

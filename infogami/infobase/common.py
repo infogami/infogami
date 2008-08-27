@@ -1,6 +1,12 @@
 import _json as simplejson
 import web
 
+class InfobaseException(Exception):
+    pass
+    
+class NotFound(InfobaseException):
+    pass
+
 try:
     from __builtin__ import any, all
 except ImportError:

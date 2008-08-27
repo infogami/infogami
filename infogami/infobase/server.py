@@ -5,8 +5,7 @@ import infobase
 import _json as simplejson
 import time
 
-infobase.NotFound = Exception
-infobase.InfobaseException = Exception
+from common import NotFound, InfobaseException
 
 urls = (
     "/([^/]*)/get", "withkey",
@@ -96,14 +95,11 @@ class write:
 class withkey:
     @jsonify
     def GET(self, sitename):
-        try:
-            i = input("key", revision=None, expand=False)
-            site = get_site(sitename)
-            revision = i.revision and int(i.revision)
-            thing = site.withKey(i.key, revision=revision)
-            return thing._get_data()
-        except infobase.NotFound:
-            return None
+        i = input("key", revision=None, expand=False)
+        site = get_site(sitename)
+        revision = i.revision and int(i.revision)
+        thing = site.withKey(i.key, revision=revision)
+        return thing and thing._get_data()
 
 class get_many:
     @jsonify

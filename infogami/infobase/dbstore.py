@@ -128,7 +128,9 @@ class DBSiteStore(common.SiteStore):
             return None
         revision = revision or metadata.latest_revision
         d = web.query('SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision', vars=locals())
-        data = d and d[0].data or '{}'
+        data = d and d[0].data 
+        if not data:
+            return None
         thing = common.Thing.from_json(self, key, data)
         #@@ why is this required? for bootstrap?
         thing.set('type', self.get_metadata_from_id(metadata.type).key, 'ref')

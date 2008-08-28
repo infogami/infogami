@@ -4,7 +4,7 @@ import datetime
 import time
 import web
 
-import infobase
+import common
 import config
 
 def make_query(username, data):
@@ -45,7 +45,7 @@ def admin_only(f):
     def g(self, *a, **kw):
         user = self.get_user()
         if user is None or user.key != '/user/admin':
-            raise infobase.InfobaseException('Permission denied')
+            raise common.InfobaseException('Permission denied')
         return f(self, *a, **kw)
     return g
 
@@ -73,10 +73,10 @@ class AccountManager:
     def update_user(self, old_password, new_password, email, password_encrypted=False, timestamp=None):
         user = self.get_user()
         if user is None:
-            raise infobase.InfobaseException("Not logged in")
+            raise common.InfobaseException("Not logged in")
 
         if not self.checkpassword(user, old_password):
-            raise infobase.InfobaseException('Invalid Password')
+            raise common.InfobaseException('Invalid Password')
             
         new_password and self.assert_password(new_password)
         email and self.assert_email(email)
@@ -112,14 +112,14 @@ class AccountManager:
 
     def assert_trusted_machine(self):
         if web.ctx.ip not in config.trusted_machines:
-            raise infobase.InfobaseException('Permission denied to login as admin from ' + web.ctx.ip)
+            raise common.InfobaseException('Permission denied to login as admin from ' + web.ctx.ip)
             
     @admin_only
     def get_user_email(self, username):
         details = self.site.store.get_user_details('/user/' + username)
         
         if not details:
-            raise infobase.InfobaseException('No user registered with username: ' + username)
+            raise common.InfobaseException('No user registered with username: ' + username)
         else:
             return details.email
             
@@ -134,7 +134,7 @@ class AccountManager:
         
         key = self.site.store.find_user(email)
         if not key:
-            raise infobase.InfobaseException('No user registered with email: ' + email)
+            raise common.InfobaseException('No user registered with email: ' + email)
             
         username = web.lstrips(key, '/user/')
         details = self.site.store.get_user_details(key)
@@ -151,7 +151,7 @@ class AccountManager:
         
         # code is valid only for a week
         if int(timestamp) + SEC_PER_WEEK < int(time.time()):
-            raise infobase.InfobaseException('Password Reset code expired')
+            raise common.InfobaseException('Password Reset code expired')
             
         username = '/user/' + username        
         details = self.site.store.get_user_details(username)
@@ -162,7 +162,7 @@ class AccountManager:
             enc_password = self._generate_salted_hash(self.secret_key, password)
             self.site.store.update_user_details(username, password=enc_password)
         else:
-            raise infobase.InfobaseException('Invalid password reset code')
+            raise common.InfobaseException('Invalid password reset code')
         
     def login(self, username, password):
         if username == 'admin':

@@ -29,7 +29,7 @@ def jsonify(f):
         d = {'status': 'ok'}
         try:
             d['result'] = f(self, *a, **kw)
-        except (infobase.InfobaseException, AssertionError), e:
+        except (InfobaseException, AssertionError), e:
             import traceback
             traceback.print_exc()
             d['status'] = 'fail'
@@ -169,7 +169,7 @@ class account:
         if user:
             return user._get_data()
         else:
-            raise infobase.InfobaseException('Invalid username or password')
+            raise InfobaseException('Invalid username or password')
 
     def POST_register(self, site):
         i = input('username', 'password', 'email')

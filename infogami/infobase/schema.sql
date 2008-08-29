@@ -16,8 +16,8 @@ create table thing (
     key text,
     type int references thing,   
     latest_revision int default 1,
-    last_modified timestamp default(current_timestamp at time zone 'utc'),
-    created timestamp default(current_timestamp at time zone 'utc')
+    created timestamp default(current_timestamp at time zone 'utc'),
+    last_modified timestamp default(current_timestamp at time zone 'utc')
 );
 $for name in ['key', 'type', 'latest_revision', 'last_modified', 'created']:
     create index thing_${name}_idx ON thing($name);

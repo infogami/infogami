@@ -80,7 +80,9 @@ class Site:
         return self.store.versions(q)
         
     def get_permissions(self, key):
-        return web.storage(write=True, admin=True)
+        author = self.get_account_manager().get_user()
+        perm = writequery.has_permission(self.store, author, key)
+        return web.storage(write=perm, admin=perm)
         
     def bootstrap(self, admin_password='admin123'):
         import bootstrap

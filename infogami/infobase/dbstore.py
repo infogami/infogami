@@ -362,7 +362,7 @@ class DBSiteStore(common.SiteStore):
             else:
                 op = Literal(c.op)
                 
-            if c.key in common.COMMON_PROPERTIES:
+            if c.key in ['key', 'type', 'created', 'last_modified']:
                 q = 'thing.%s %s $c.value' % (c.key, op)
                 wheres += [web.reparam(q, locals())]
             else:

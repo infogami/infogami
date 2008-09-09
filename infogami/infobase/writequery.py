@@ -9,13 +9,13 @@ def make_query(store, author, query):
     """
     for q in serialize(query):
         action, key, q = compile(store, q)
-        if not has_permission(store, author, key):
-            raise Exception('Permission denied to modify %s' % repr(key))
         if action == 'update':
             q = optimize(store, key, q)
             if not q:
                 continue
         if action != 'ignore':
+            if not has_permission(store, author, key):
+                raise Exception('Permission denied to modify %s' % repr(key))
             yield action, key, q
             
 def has_permission(store, author, key):

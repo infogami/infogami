@@ -62,12 +62,13 @@ class AccountManager:
         if self.site.store.find_user(email):
             raise Exception('Email is already used: ' + email)
 
-        q = make_query(key, data)
-        import common
-        self.site.write(q)
+        def f():
+            q = make_query(key, data)
+            self.site.write(q)
+            enc_password = self._generate_salted_hash(self.secret_key, password)
+            self.site.store.register(key, email, enc_password)
         
-        enc_password = self._generate_salted_hash(self.secret_key, password)
-        self.site.store.update_user_details(key, email, enc_password)
+        self.site.store.transact(f)
         self.set_auth_token(key)
                         
     def update_user(self, old_password, new_password, email, password_encrypted=False, timestamp=None):

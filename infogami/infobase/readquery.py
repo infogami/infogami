@@ -1,4 +1,5 @@
 import common
+from common import all
 import web
 
 class Query:
@@ -30,7 +31,12 @@ class Query:
             #@@ also make sure op is =
             if c.key == 'type':
                 return c.value
-    
+                
+    def assert_type_required(self):
+        type_required = any(c.key not in common.COMMON_PROPERTIES for c in self.conditions)
+        if type_required and self.get_type() is None:
+            raise common.InfobaseException("missing 'type' in query")
+
     def add_condition(self, key, op, datatype, value):
         self.conditions.append(web.storage(key=key, op=op, datatype=datatype, value=value))
         
@@ -47,7 +53,6 @@ def make_query(store, query):
         <query: ['life = int:42', 'title ~ str:foo']>
     """
     q = Query()
-    
     q.offset = query.pop('offset', None)
     q.limit = query.pop('limit', None)
     q.sort = query.pop('sort', None)
@@ -55,6 +60,8 @@ def make_query(store, query):
     for k, v in query.items():
         k, op = parse_key(k)
         q.add_condition(k, op, None, v)
+    
+    q.assert_type_required()
         
     type = store.get(q.get_type())
     #assert type is not None, 'Not found: ' + q.get_type()

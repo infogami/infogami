@@ -106,8 +106,13 @@ class DBSiteStore(common.SiteStore):
     def new_key(self, type, kw):
         seq = self.schema.get_seq(type)
         if seq:
-            value = web.query("SELECT NEXTVAL($seq.name) as value", vars=locals())[0].value
-            return seq.pattern % value
+            # repeat until a non-existing key is found.
+            # This is required to prevent error in cases where an object with the next key is already created.
+            while True:
+                value = web.query("SELECT NEXTVAL($seq.name) as value", vars=locals())[0].value
+                key = seq.pattern % value
+                if get_metadata(key) is None:
+                    return key
         else:
             return common.SiteStore.new_key(self, type, kw)
         
@@ -333,7 +338,6 @@ class DBSiteStore(common.SiteStore):
             def __repr__(self):
                 return self.value
 
-        base_properties = ['key', 'type', 'created', 'last_modified']
         tables = {}
         
         def get_table(datatype, key):
@@ -357,7 +361,7 @@ class DBSiteStore(common.SiteStore):
             else:
                 op = Literal(c.op)
                 
-            if c.key in base_properties:
+            if c.key in common.COMMON_PROPERTIES:
                 q = 'thing.%s %s $c.value' % (c.key, op)
                 wheres += [web.reparam(q, locals())]
             else:
@@ -438,15 +442,22 @@ class DBSiteStore(common.SiteStore):
         params = {}
         email and params.setdefault('email', email)
         enc_password and params.setdefault('password', enc_password)
+        web.update('account', where='thing_id=$metadata.id', vars=locals(), **params)
+            
+    def register(self, key, email, enc_password):
+        metadata = self.get_metadata(key)
+        web.insert('account', False, email=email, password=enc_password, thing_id=metadata.id)
         
-        if web.select('account', where='thing_id=$metadata.id', vars=locals()):
-            web.update('account', where='thing_id=$metadata.id', vars=locals(), **params)
+    def transact(self, f):
+        web.transact()
+        try:
+            f()
+        except:
+            web.rollback()
+            raise
         else:
-            self.new_account(thing_id=metadata.id, email=email, enc_password=enc_password)
+            web.commit()
     
-    def new_account(self, thing_id, email, enc_password):
-        return web.insert('account', False, email=email, password=enc_password, thing_id=thing_id)
-        
     def find_user(self, email):
         """Returns the key of the user with the specified email."""
         d = web.select('account', where='email=$email', vars=locals())

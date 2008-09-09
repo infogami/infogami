@@ -52,6 +52,9 @@ _datatypes = {
     "/type/datetime": types.datetime
 }
 
+# properties present for every type of object.
+COMMON_PROPERTIES = ['key', 'type', 'created', 'last_modified', 'permission', 'child_permission']
+
 _types = dict((v, k) for (k, v) in _datatypes.items())
 
 def type2datatype(type):
@@ -265,6 +268,15 @@ class SiteStore:
             
     def find_user(self, email):
         """Returns the key of the user with the specified email."""
+        raise NotImplementedError
+        
+    def register(self, key, email, encrypted):
+        """Registers a new user.
+        """
+        raise NotImplementedError
+        
+    def transact(self, f):
+        """Executes function f in a transaction."""
         raise NotImplementedError
         
     def initialze(self):

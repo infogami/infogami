@@ -18,6 +18,25 @@ urls = (
     "/([^/]*)/permission", "permission",
 )
 
+MISSING_PARAM = 10
+BAD_PARAM = 11
+BAD_JSON = 20
+INTERNAL_ERROR = 90
+UNKNOWN = 99
+
+class APIException(InfobaseException):
+    def __init__(self, code, msg):
+        InfobaseException.__init__(self, msg)
+        self.code = code
+    
+class MissingArgument(APIException):
+    def __init__(self, key):
+        APIException.__init__(self, MISSING_PARAM , "Missing argument: " + key)
+        
+class BadJSON(APIException):
+    def __init__(self, error):
+        APIException.__init__(self, BAD_JSON, "Bad JSON: %s" % error)
+
 def jsonify(f):
     def g(self, *a, **kw):
         t1 = time.time()
@@ -29,17 +48,23 @@ def jsonify(f):
         d = {'status': 'ok'}
         try:
             d['result'] = f(self, *a, **kw)
-        except (InfobaseException, AssertionError), e:
+        except APIException, e:
+            d['status'] = 'fail'
+            d['message'] = str(e)
+            d['code'] = e.code
+        except InfobaseException, e:
             import traceback
             traceback.print_exc()
             d['status'] = 'fail'
             d['message'] = str(e)
-            d['traceback'] = traceback.format_exc()
+            d['code'] = UNKNOWN
         except Exception, e:
             import traceback
             traceback.print_exc()
+            on_error(e)
             d['status'] = 'fail'
             d['message'] = 'InternalError: %s' % str(e)
+            d['code'] = INTERNAL_ERROR
             d['traceback'] = traceback.format_exc()
             
             # call web.internalerror to send email when web.internalerror is set to web.emailerrors
@@ -66,11 +91,39 @@ def jsonify(f):
             web.ctx.output = web.utf8(result)
     return g
     
-def input(*a, **kw):
+def input(*required, **defaults):
     if 'infobase_input' in web.ctx:
-        return web.storify(web.ctx.infobase_input, *a, **kw)
+        d = web.ctx.infobase_input
     else:
-        return web.input(*a, **kw)
+        d = web.input()
+        
+    for k in required:
+        if k not in d:
+            raise MissingArgument(k)
+            
+    result = web.storage(defaults)
+    result.update(d)
+    return result
+    
+def to_int(value, key):
+    try:
+        return int(value)
+    except:
+        raise APIException(BAD_PARAM, "Bad integer value for %s: %s" % (repr(key), repr(value)))
+        
+def assert_key(key):
+    rx = web.re_compile(r'^/([^ ]*[^/])?$')
+    if not rx.match(key):
+        raise APIException(BAD_PARAM, "Invalid key: %s" % repr(key))
+        
+def from_json(s):
+    try:
+        return simplejson.loads(s)
+    except ValueError, e:
+        raise BadJSON(str(e))
+        
+def on_error(e):
+    pass
     
 _infobase = None
 def get_site(sitename):
@@ -88,7 +141,7 @@ class write:
     def POST(self, sitename):
         site = get_site(sitename)
         i = input('query', comment=None, machine_comment=None)
-        query = simplejson.loads(i.query)
+        query = from_json(i.query)
         result = site.write(query, comment=i.comment, machine_comment=i.machine_comment)
         return result
 
@@ -97,7 +150,8 @@ class withkey:
     def GET(self, sitename):
         i = input("key", revision=None, expand=False)
         site = get_site(sitename)
-        revision = i.revision and int(i.revision)
+        revision = i.revision and to_int(i.revision, "revision")
+        assert_key(i.key)
         thing = site.withKey(i.key, revision=revision)
         return thing and thing._get_data()
 
@@ -105,7 +159,7 @@ class get_many:
     @jsonify
     def GET(self, sitename):
         i = input("keys")
-        keys = simplejson.loads(i['keys'])
+        keys = from_json(i['keys'])
         site = get_site(sitename)
         things = site.get_many(keys)
         return things
@@ -122,7 +176,7 @@ class things:
     def GET(self, sitename):
         site = get_site(sitename)
         i = input('query')
-        q = simplejson.loads(i.query)
+        q = from_json(i.query)
         return site.things(q)
 
 class versions:
@@ -130,7 +184,7 @@ class versions:
     def GET(self, sitename):
         site = get_site(sitename)
         i = input('query')
-        q = simplejson.loads(i.query)
+        q = from_json(i.query)
         return site.versions(q)
         
 class permission:

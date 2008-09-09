@@ -219,6 +219,7 @@ class DBSiteStore(common.SiteStore):
         d['created'] = ('datetime', timestamp)
         d['last_modified'] = ('datetime', timestamp)
         d['id'] = 'int', thing_id
+        d['revision'] = 1
         
         thing = common.Thing(self, key, data=d)
         web.insert('data', False, thing_id=thing_id, revision=1, data=thing.to_json())
@@ -269,6 +270,7 @@ class DBSiteStore(common.SiteStore):
         
         thing.set('last_modified', timestamp, 'datetime')
         revision = add_version(thing.id)
+        thing.set('revision', revision, 'int')
         
         for name, a in actions.items():
             table = self.schema.find_table(thing.type.key, a.datatype, name)

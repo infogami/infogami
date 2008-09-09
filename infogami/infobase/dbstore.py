@@ -86,7 +86,7 @@ class DBSiteStore(common.SiteStore):
     def get_metadata(self, key):
         if self.cache and key in self.cache:
             thing = self.cache[key]
-            return thing and web.storage(id=thing.id, key=thing.key, last_modified=thing.last_modified, created=thing.created)
+            return thing and web.storage(id=thing.id, key=thing.key, last_modified=thing.last_modified, created=thing.created, type=thing.type.id)
         d = web.query('SELECT * FROM thing WHERE key=$key', vars=locals())
         return d and d[0] or None
         
@@ -143,15 +143,16 @@ class DBSiteStore(common.SiteStore):
         
     def get_many(self, keys):
         if not keys:
-            return {}
-        metadata = self.get_metadata_list(keys)
-        things = dict((m.id, m.key) for m in metadata)
-        wheres = [web.reparam('(thing_id=$m.id AND revision=$m.latest_revision)', locals()) for m in metadata]        
-        query = 'SELECT * FROM data WHERE ' + self.sqljoin(wheres, ' OR ')
+            return o
+
+        xkeys = [web.reparam('$k', dict(k=k)) for k in keys]
+        query = 'SELECT thing.key, data.data from thing, data ' \
+            + 'WHERE data.revision = thing.latest_revision and data.thing_id=thing.id ' \
+            + ' AND thing.key IN (' + self.sqljoin(xkeys, ', ') + ')'
+
         result = {}
         for r in web.query(query):
-            key = things[r.thing_id]
-            result[key] = common.LazyThing(self, key, r.data)
+            result[r.key] = common.LazyThing(self, r.key, r.data)
         return result
         
     def write(self, queries, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):

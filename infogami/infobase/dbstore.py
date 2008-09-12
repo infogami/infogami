@@ -224,7 +224,7 @@ class DBSiteStore(common.SiteStore):
         d['created'] = ('datetime', timestamp)
         d['last_modified'] = ('datetime', timestamp)
         d['id'] = 'int', thing_id
-        d['revision'] = 1
+        d['revision'] = 'int', 1
         
         thing = common.Thing(self, key, data=d)
         web.insert('data', False, thing_id=thing_id, revision=1, data=thing.to_json())

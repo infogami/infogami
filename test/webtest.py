@@ -31,6 +31,14 @@ def suite(module_names):
     for mod in load_modules(module_names):
         suite.addTest(module_suite(mod))
     return suite
+    
+def doctest_suite(module_names):
+    """Makes a test suite from doctests."""
+    import doctest
+    suite = unittest.TestSuite()
+    for mod in load_modules(module_names):
+        suite.addTest(doctest.DocTestSuite(mod))
+    return suite
 
 def load_modules(names):
     return [__import__(name, None, None, "x") for name in names]

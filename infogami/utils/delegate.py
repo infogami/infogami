@@ -140,6 +140,8 @@ def delegate(path):
     if out is not None:
         if isinstance(out, basestring):
             out = web.template.Stowage(_str=out, title=path)
+        elif 'title' not in out:
+            out.title = path
             
         if hasattr(out, 'rawtext'):
             print out.rawtext

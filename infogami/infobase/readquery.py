@@ -46,11 +46,11 @@ class Query:
 
 def make_query(store, query):
     """Creates a query object from query dict.
-    
-        >>> make_query({'type': '/type/page'})
+        >>> store = common.create_test_store()
+        >>> make_query(store, {'type': '/type/page'})
         <query: ['type = ref:/type/page']>
-        >>> make_query({'title~': 'foo', 'life': 42})
-        <query: ['life = int:42', 'title ~ str:foo']>
+        >>> make_query(store, {'type': '/type/page', 'title~': 'foo', 'life': 42})
+        <query: ['life = int:42', 'type = ref:/type/page', 'title ~ str:foo']>
     """
     q = Query()
     q.offset = query.pop('offset', None)

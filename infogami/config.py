@@ -4,6 +4,9 @@ Infogami configuration.
 
 import web
 
+def get(name, default=None):
+    return globals().get(name, default)
+
 middleware = []
 
 cache_templates = True

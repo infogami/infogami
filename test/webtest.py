@@ -15,14 +15,15 @@ def runTests(suite):
     return runner.run(suite)
     
 def main(suite=None):
-    web.config.db_parameters = dict(dbn='postgres', db='infobase_test', user='scott', pw='tiger')
+    user = os.getenv('USER')
+    web.config.db_parameters = dict(dbn='postgres', db='infobase_test', user=user, pw='')
     web.load()
     
     if not suite:
         main_module = __import__('__main__')
         suite = module_suite(main_module, sys.argv[1:] or None)
-        
-    result = runTests(suite)
+    
+    result = runTests(suite)    
     sys.exit(not result.wasSuccessful())
 
 def suite(module_names):

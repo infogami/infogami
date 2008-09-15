@@ -30,6 +30,9 @@ class Infobase:
         if sitename in self.sites:
             site = self.sites[sitename]
         else:
+            store = self.store.get(sitename)
+            if store is None:
+                return None
             site = Site(self.store.get(sitename), self.secret_key)
             self.sites[sitename] = site
         return site

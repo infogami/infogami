@@ -277,8 +277,14 @@ class DBSiteStore(common.SiteStore):
         revision = add_version(thing.id)
         thing.set('revision', revision, 'int')
         
+        if 'type' in actions:
+            type = self.get(actions['type'].value)
+            web.update('thing', where='id=$thing_id', type=type.id, vars=locals())
+        else:
+            type = thing.type
+        
         for name, a in actions.items():
-            table = self.schema.find_table(thing.type.key, a.datatype, name)
+            table = self.schema.find_table(type.key, a.datatype, name)
             if a.connect == 'update':
                 pid = self.get_property_id(table, name, create=True)
                 #@@ TODO: table for delete should be found from the datatype of the existing value 

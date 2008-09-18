@@ -300,8 +300,8 @@ def compile(store, query):
             raise QueryError(query.path, 'Not found: ' + repr(key))
             
         d = dict((k, v) for k, v in d.items() if v.connect)
-        type_key = d.get('key')
-        type = type_key and get_type(thing, type_key) or thing.type
+        type_key = d.get('type')
+        type = type_key and get_type(thing, type_key.value) or thing.type
         coerce_all(d, type)
         return 'update', key, d
     else:

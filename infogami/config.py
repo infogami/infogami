@@ -30,6 +30,8 @@ password_salt = "zxps#2s4g@z"
 from_address = "noreply@infogami.org"
 smtp_server = "localhost"
 
+login_cookie_name = "infogami_session"
+
 infobase_parameters = dict(type='local')
 bugfixer = None
 

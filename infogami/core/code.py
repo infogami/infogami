@@ -276,7 +276,7 @@ class login(delegate.page):
             i.redirect = "/"
 
         expires = (i.remember and 3600*24*7) or ""
-        web.setcookie('infogami_session', web.ctx.conn.get_auth_token(), expires=expires)
+        web.setcookie(config.login_cookie_name, web.ctx.conn.get_auth_token(), expires=expires)
         web.seeother(i.redirect)
         
 class register(delegate.page):
@@ -297,14 +297,14 @@ class register(delegate.page):
             except ClientException, e:
                 f.note = str(e)
                 return render.register(f)
-            web.setcookie('infogami_session', web.ctx.conn.get_auth_token())
+            web.setcookie(config.login_cookie_name, web.ctx.conn.get_auth_token())
             web.seeother(i.redirect)
 
 class logout(delegate.page):
     path = "/account/logout"
     
     def POST(self):
-        web.setcookie("infogami_session", "", expires=-1)
+        web.setcookie(config.login_cookie_name, "", expires=-1)
         referer = web.ctx.env.get('HTTP_REFERER', '/')
         web.seeother(referer)
 

@@ -75,7 +75,7 @@ def create_site():
     
     # set auto token in the connection
     if web.ctx.get('env'): # do this only if web.load is already called
-        auth_token = web.cookies(infogami_session=None).infogami_session
+        auth_token = web.cookies().get(config.login_cookie_name)
         web.ctx.conn.set_auth_token(auth_token)
     
     return client.Site(web.ctx.conn, site)

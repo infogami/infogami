@@ -63,6 +63,7 @@ class AccountManager:
             raise Exception('Email is already used: ' + email)
 
         def f():
+            web.ctx.disable_permission_check = True
             q = make_query(key, data)
             self.site.write(q)
             enc_password = self._generate_salted_hash(self.secret_key, password)

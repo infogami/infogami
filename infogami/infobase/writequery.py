@@ -20,7 +20,7 @@ def make_query(store, author, query):
                     del q[k]
             
         if action != 'ignore':
-            if not has_permission(store, author, key):
+            if not web.ctx.get('disable_permission_check', False) and not has_permission(store, author, key):
                 raise Exception('Permission denied to modify %s' % repr(key))
             yield action, key, q
             

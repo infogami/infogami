@@ -65,11 +65,17 @@ class AccountManager:
         def f():
             web.ctx.disable_permission_check = True
             q = make_query(key, data)
-            self.site.write(q)
-            enc_password = self._generate_salted_hash(self.secret_key, password)
+            self.site.write(q, timestamp=timestamp, _internal=True)
             self.site.store.register(key, email, enc_password)
         
+        timestamp = datetime.datetime.utcnow()
+        enc_password = self._generate_salted_hash(self.secret_key, password)
+        
         self.site.store.transact(f)
+        
+        event_data = dict(data, username=username, email=email, password=enc_password)
+        self.site._fire_event("register", timestamp=timestamp, ip=web.ctx.ip, username=None, data=event_data)
+        
         self.set_auth_token(key)
                         
     def update_user(self, old_password, new_password, email, password_encrypted=False, timestamp=None):
@@ -77,7 +83,7 @@ class AccountManager:
         if user is None:
             raise common.InfobaseException("Not logged in")
 
-        if not self.checkpassword(user, old_password):
+        if not self.checkpassword(user.key, old_password):
             raise common.InfobaseException('Invalid Password')
             
         new_password and self.assert_password(new_password)
@@ -85,27 +91,11 @@ class AccountManager:
         
         password = new_password and self._generate_salted_hash(self.secret_key, new_password) 
         self.site.store.update_user_details(user.key, email, password)
-    
-    def _update_user(self, user, encrypted_password, email, timestamp=None):
-        timestamp = timestamp or datetime.datetime.utcnow()
-        def _update_password(user, password):
-            web.update('account', where='thing_id=$user.id', password=password, vars=locals())
-            
-        def _update_email(user, email):
-            web.update('account', where='thing_id=$user.id', email=email, vars=locals())
         
-        if encrypted_password:
-            _update_password(user, encrypted_password)
-            
-        if email:
-            _update_email(user, email)
+        timestamp = datetime.datetime.utcnow()
+        event_data = dict(username=user.key, email=email, password=password)
+        self.site._fire_event("update_user", timestamp=timestamp, ip=web.ctx.ip, username=None, data=event_data)
         
-        self.site.logger.on_update_account(self.site, timestamp, 
-            username=user.key, 
-            password=encrypted_password, 
-            email=email, 
-            ip=web.ctx.get('ip'))
-            
     def assert_password(self, password):
         pass
         

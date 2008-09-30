@@ -5,6 +5,7 @@ import infobase
 import _json as simplejson
 import time
 
+import common
 from common import NotFound, InfobaseException
 
 urls = (
@@ -53,19 +54,15 @@ def jsonify(f):
             d['message'] = str(e)
             d['code'] = e.code
         except InfobaseException, e:
-            import traceback
-            traceback.print_exc()
+            common.record_exception()
             d['status'] = 'fail'
             d['message'] = str(e)
             d['code'] = UNKNOWN
         except Exception, e:
-            import traceback
-            traceback.print_exc()
-            on_error(e)
+            common.record_exception()
             d['status'] = 'fail'
             d['message'] = 'InternalError: %s' % str(e)
             d['code'] = INTERNAL_ERROR
-            d['traceback'] = traceback.format_exc()
             
             # call web.internalerror to send email when web.internalerror is set to web.emailerrors
             web.internalerror()
@@ -122,9 +119,6 @@ def from_json(s):
     except ValueError, e:
         raise BadJSON(str(e))
         
-def on_error(e):
-    pass
-    
 _infobase = None
 def get_site(sitename):
     import config

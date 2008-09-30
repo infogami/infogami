@@ -55,6 +55,9 @@ class DummyLogger:
         
     def on_update_account(self, *a, **kw):
         pass
+        
+    def __call__(self, event):
+        pass
     
 class Logger:
     def __init__(self, root, compress=False):
@@ -71,11 +74,26 @@ class Logger:
         timestamp = timestamp or datetime.datetime.utcnow()
         date = timestamp.date()
         return os.path.join(self.root, "%02d" % date.year, "%02d" % date.month, "%02d" % date.day) + self.extn
-    
-    def on_write(self, site, timestamp, query, result, comment, machine_comment, author, ip):
-        d = dict(query=query, comment=comment, machine_comment=machine_comment, author=author and author.key, ip=ip)
-        self.write('write', site.name, timestamp, d)
-    
+            
+    def __call__(self, event):
+        import web
+        data = event.data.copy()
+        if event.name == 'write':
+            name = "write"
+            data['ip'] = event.ip
+            data['author'] = event.username
+        elif event.name == 'register':
+            # data will already contain username, password, email and displayname
+            name = "new_account"
+            data['ip'] = event.ip
+        elif event.name == 'update_user':
+            name = "update_account"
+            data['ip'] = event.ip
+        else:
+            return
+            
+        self.write(name, event.sitename, event.timestamp, data)
+        
     @synchronize
     def write(self, action, sitename, timestamp, data):
         path = self.get_path(timestamp)
@@ -89,19 +107,7 @@ class Logger:
         #@@ optimize: call fsync after all modifications are written instead of calling for every modification
         os.fsync(f.fileno())
         f.close()
-    
-    def on_new_account(self, site, timestamp, username, displayname, email, password, ip):
-        self.write('new_account', site.name, timestamp, data=dict(username=username, displayname=displayname, email=email, password=password, ip=ip))
-        
-    def on_update_account(self, site, timestamp, username, email, password, ip):
-        # email will be be None when password is updated and password is None when email is updated.
-        d = dict(username=username)
-        if email:
-            d['email'] = email
-        if password:
-            d['password'] = password
-        self.write('update_account', site.name, timestamp, d)
-        
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()

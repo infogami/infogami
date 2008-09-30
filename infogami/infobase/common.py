@@ -73,6 +73,14 @@ def type2datatype(type):
     
 def datatype2type(datatype):
     return _types.get(datatype)
+    
+def record_exception():
+    """This function is called whenever there is any exception in Infobase.
+    
+    Overwrite this function if some action (like logging the exception) needs to be taken on exceptions.
+    """
+    import traceback
+    traceback.print_exc()
 
 class InfobaseContext:
 	def __init__(self, sitename, user, ip):
@@ -80,6 +88,29 @@ class InfobaseContext:
 		self.user = user
 		self.ip = ip
 		self.superuser = self.user and (self.user.key == '/user/admin')
+		
+class Event:
+    """Infobase Event.
+    
+    Events are fired when something important happens (write, new account etc.).
+    Some code can listen to the events and do some action (like logging, updating external cache etc.).
+    """
+    def __init__(self, sitename, name, timestamp, ip, username, data):
+        """Creates a new event.
+        
+        sitename - name of the site where the event is triggered.
+        name - name of the event
+        timestamp - timestamp of the event
+        ip - client's ip address
+        username - current user
+        data - additional data of the event
+        """
+        self.sitename = sitename
+        self.name = name
+        self.timestamp = timestamp
+        self.ip = ip
+        self.username = username
+        self.data = data
 
 class Thing:
     def __init__(self, store, key, metadata=None, data=None):

@@ -172,6 +172,10 @@ class LRU:
         node = self.getnode(key, touch=False)
         self.remove_node(node)
         
+    def update(self, d):
+        for k, v in d.items():
+            self[k] = v
+        
     def keys(self):
         return self.d.keys()
         

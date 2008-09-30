@@ -8,6 +8,7 @@ import web
 import datetime
 
 import common
+import config
 import readquery
 import writequery
 
@@ -17,10 +18,14 @@ class Infobase:
         self.store = store
         self.secret_key = secret_key
         self.sites = {}
+        self.event_listeners = []
+        
+        if config.startup_hook:
+            config.startup_hook(self)
         
     def create(self, sitename):
         """Creates a new site with the sitename."""
-        site = Site(self.store.create(sitename), self.secret_key)
+        site = Site(self, sitename, self.store.create(sitename), self.secret_key)
         site.bootstrap()
         self.sites[sitename] = site
         return site
@@ -33,7 +38,7 @@ class Infobase:
             store = self.store.get(sitename)
             if store is None:
                 return None
-            site = Site(self.store.get(sitename), self.secret_key)
+            site = Site(self, sitename, self.store.get(sitename), self.secret_key)
             self.sites[sitename] = site
         return site
         
@@ -42,10 +47,29 @@ class Infobase:
         if sitename in self.sites:
             del self.sites[sitename]
         return self.store.delete(sitename)
+        
+    def add_event_listener(self, listener):
+        self.event_listeners.append(listener)
+    
+    def remove_event_listener(self, listener):
+        try:
+            self.event_listeners.remove(listener)
+        except ValueError:
+            pass
 
+    def fire_event(self, event):
+        for listener in self.event_listeners:
+            try:
+                listener(event)
+            except:
+                common.record_exception()
+                pass
+        
 class Site:
     """A site of infobase."""
-    def __init__(self, store, secret_key):
+    def __init__(self, _infobase, sitename, store, secret_key):
+        self._infobase = _infobase
+        self.sitename = sitename
         self.store = store
         self.store = common.CachedSiteStore(store)
         import account
@@ -66,13 +90,24 @@ class Site:
     def new_key(self, type, kw=None):
         return self.store.new_key(type, kw or {})
         
-    def write(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
+    def write(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, _internal=False):
         timestamp = timestamp or datetime.datetime.utcnow()
         
-        author = self.get_account_manager().get_user()
+        author = author or self.get_account_manager().get_user()
         q = writequery.make_query(self.store, author, query)
         ip = web.ctx.get('ip', '127.0.0.1')
-        return self.store.write(q, timestamp=timestamp, comment=comment, machine_comment=machine_comment, ip=ip, author=author and author.key)
+        result = self.store.write(q, timestamp=timestamp, comment=comment, machine_comment=machine_comment, ip=ip, author=author and author.key)
+        
+        if not _internal:
+            # fire event
+            data = dict(comment=comment, machine_comment=machine_comment, query=query, result=result)
+            self._fire_event("write", timestamp, ip, author and author.key, data)
+        
+        return result
+        
+    def _fire_event(self, name, timestamp, ip, username, data):
+        event = common.Event(self.sitename, name, timestamp, ip, username, data)
+        self._infobase.fire_event(event)
         
     def things(self, query):
         q = readquery.make_query(self.store, query)

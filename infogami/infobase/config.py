@@ -15,3 +15,6 @@ compress_log = False
 # query_timeout in milli seconds.
 query_timeout = None
 
+#@@ Hack to execute some code when infobase is created. 
+#@@ This will be replaced with a better method soon.
+startup_hook = None

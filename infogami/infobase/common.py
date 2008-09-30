@@ -1,5 +1,9 @@
+import config
+from cache import LRU
+
 import _json as simplejson
 import web
+
 
 class InfobaseException(Exception):
     pass
@@ -319,7 +323,10 @@ class Cache:
     >>> cache['y']
     3
     """
-    def __init__(self, dict_cls=dict):
+    def __init__(self, dict_cls=None):
+        if dict_cls is None:
+            dict_cls = lambda: LRU(config.cache_size)
+            
         self._global = dict_cls()
         
         import threading

@@ -4,14 +4,7 @@
 trusted_machines = ["127.0.0.1"]
 
 # default size of cache
-default_cache_size = 1000
-
-# set size of individual caches
-site_cache_size = 10
-key_cache_size = None
-thing_cache_size = None
-things_cache_size = None
-versions_cache_size = None
+cache_size = 1000
 
 secret_key = "bzuim9ws8u"
 

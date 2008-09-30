@@ -131,6 +131,9 @@ class Thing:
     def __delattr__(self, key):
         del self._data[key]
         
+    def __delitem__(self, key):
+        del self._data[key]
+        
     def to_json(self):
         d = self._get_data()
         return simplejson.dumps(d)

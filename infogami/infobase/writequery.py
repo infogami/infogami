@@ -13,6 +13,12 @@ def make_query(store, author, query):
             q = optimize(store, key, q)
             if not q:
                 continue
+        elif action == 'create':
+            # strip None values
+            for k, v in q.items():
+                if v.value == None:
+                    del q[k]
+            
         if action != 'ignore':
             if not has_permission(store, author, key):
                 raise Exception('Permission denied to modify %s' % repr(key))

@@ -420,9 +420,20 @@ class QueryValue:
             elif thing.type.key != expected_type and expected_type != '/type/object': # /type/object means any type
                 msg = "Expected %s, but found %s: %s" % (repr(expected_type), repr(thing.type.key), repr(self.key))
                 raise QueryError(self.path, msg)
+        
+        # string can be converted to int or float
+        elif expected_type in ["/type/int", "/type/float"]:
+            if self.guess_type() != '/type/string':
+                raise QueryError(self.path, "Expected %s, but found %s: %s" % (expected_type, self.guess_type(), repr(self.value)))
                 
-        # nothing can be converted to ini, float boolean and string
-        elif expected_type in ["/type/int", "/type/float", "/type/string"]:
+            d = {'/type/int': int, '/type/float': float}
+            try:
+                self.value = d[expected_type](self.value)
+            except ValueError:
+                raise QueryError(self.path, "Expected %s, but found %s: %s" % (expected_type, self.guess_type(), repr(self.value)))
+                
+        # nothing can be converted to string
+        elif expected_type == '/type/string':
             raise QueryError(self.path, "Expected %s, but found %s: %s" % (expected_type, self.guess_type(), repr(self.value)))
             
         # int, float and boolean can not be converted to any other type

@@ -173,6 +173,10 @@ class Thing:
         d = self._get_data()
         return simplejson.dumps(d)
         
+    def __json__(self):
+        d = self._get_data()
+        return simplejson.dumps(d)
+        
     def _get_data(self):
         d = {}
         for key, value in self._data.items():

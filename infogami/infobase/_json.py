@@ -28,11 +28,11 @@ def unicodify(d):
         return d
         
 class JSONEncoder(simplejson.JSONEncoder):
-    def _iterencode(self, o, markers=None):
+    def default(self, o):
         if hasattr(o, '__json__'):
-            return iter([o.__json__()])
+            return simplejson.loads(o.__json__())
         else:
-            return simplejson.JSONEncoder._iterencode(self, o, markers)
+            return simplejson.JSONEncoder.default(self, o)
 
 def dumps(obj, **kw):
     """

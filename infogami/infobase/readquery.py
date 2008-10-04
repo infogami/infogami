@@ -1,5 +1,5 @@
 import common
-from common import all
+from common import all, any
 import web
 
 class Query:

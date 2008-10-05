@@ -4,6 +4,7 @@ import common
 import web
 import _json as simplejson
 import datetime, time
+from multiple_insert import multiple_insert
 
 INDEXED_DATATYPES = ["str", "int", "float", "ref", "boolean", "datetime"]
 
@@ -116,7 +117,7 @@ class DBSiteStore(common.SiteStore):
             while True:
                 value = web.query("SELECT NEXTVAL($seq.name) as value", vars=locals())[0].value
                 key = seq.pattern % value
-                if get_metadata(key) is None:
+                if self.get_metadata(key) is None:
                     return key
         else:
             return common.SiteStore.new_key(self, type, kw)
@@ -202,6 +203,8 @@ class DBSiteStore(common.SiteStore):
 
         thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
         add_version(thing_id, 1)
+        
+        _inserts = {}
 
         def insert(name, value, datatype, ordering=None):
             if datatype not in INDEXED_DATATYPES:
@@ -209,8 +212,16 @@ class DBSiteStore(common.SiteStore):
                 
             if datatype == 'ref':
                 value = self.get_metadata(value).id
-            self._insert(thing_id, type, name, datatype, value, ordering=ordering)
-        
+
+            table = self.schema.find_table(type, datatype, name)
+            pid = self.get_property_id(table, name, create=True)
+            
+            if table not in _inserts:
+                _inserts[table] = []
+            
+            row = dict(thing_id=thing_id, key_id=pid, value=value, ordering=ordering)
+            _inserts[table].append(row)
+            
         d = {}
         for name, datum in data.items():
             d[name] = (datum.datatype, datum.value)
@@ -219,12 +230,16 @@ class DBSiteStore(common.SiteStore):
                     insert(name, v, datum.datatype, ordering=i)
             else:
                 insert(name, datum.value, datum.datatype)
+                
+        for table, rows in _inserts.items():
+            multiple_insert(table, rows, seqname=False)
             
         d['key'] = 'key', key
         d['created'] = ('datetime', timestamp)
         d['last_modified'] = ('datetime', timestamp)
         d['id'] = 'int', thing_id
         d['revision'] = 'int', 1
+        d['type'] = 'ref', type
         
         thing = common.Thing(self, key, data=d)
         web.insert('data', False, thing_id=thing_id, revision=1, data=thing.to_json())
@@ -242,11 +257,6 @@ class DBSiteStore(common.SiteStore):
             else:
                 v.xvalue = v.value
 		
-    def _insert(self, thing_id, type, name, datatype, value, ordering=None):
-        table = self.schema.find_table(type, datatype, name)
-        pid = self.get_property_id(table, name, create=True)
-        web.insert(table, False, thing_id=thing_id, key_id=pid, value=value, ordering=ordering)
-
     def get_property_id(self, table, name, create=False):
         if table is None:
             return None

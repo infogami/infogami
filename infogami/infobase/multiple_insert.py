@@ -17,7 +17,7 @@ def get_postgres_version():
         version = web.query('SELECT version();')[0].version
         # convert "PostgreSQL 8.2.4 on ..." in to (8, 2, 4)
         tokens = version.split()[1].split('.')
-        _pg_version = [int(t) for t in tokens]
+        _pg_version = tuple([int(t) for t in tokens])
     return _pg_version
 
 def multiple_insert(tablename, values, seqname=None, _test=False):

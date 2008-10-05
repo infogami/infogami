@@ -164,6 +164,7 @@ class DBSiteStore(common.SiteStore):
     def write(self, queries, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         versions = {}
+        
         def add_version(thing_id, revision=None):
             """Adds a new entry in the version table for the object specified by thing_id and returns the latest revision."""
             if thing_id not in versions:
@@ -187,16 +188,20 @@ class DBSiteStore(common.SiteStore):
         
         result = web.storage(created=[], updated=[])
         web.transact()
+        _inserts = {}
         try:
             for action, key, data in queries:
                 if action == 'create':
-                    thing = self.create(key, data, timestamp, add_version)
+                    thing = self.create(key, data, timestamp, add_version, _inserts)
                     web.ctx.new_objects[key] = thing
                     result.created.append(key)
                 elif action == 'update':
                     thing = self.update(key, data, timestamp, add_version)
                     web.ctx.new_objects[key] = thing
                     result.updated.append(key)
+            
+            for table, rows in _inserts.items():
+                multiple_insert(table, rows, seqname=False)
         except:
             web.ctx.new_objects.clear()
             web.rollback()
@@ -205,15 +210,13 @@ class DBSiteStore(common.SiteStore):
 
         return result
     
-    def create(self, key, data, timestamp, add_version):
+    def create(self, key, data, timestamp, add_version, _inserts):
         type = data.pop('type').value
         type_id = self.get_metadata(type).id
 
         thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
         add_version(thing_id, 1)
         
-        _inserts = {}
-
         def insert(name, value, datatype, ordering=None):
             if datatype not in INDEXED_DATATYPES:
                 return
@@ -239,9 +242,6 @@ class DBSiteStore(common.SiteStore):
             else:
                 insert(name, datum.value, datum.datatype)
                 
-        for table, rows in _inserts.items():
-            multiple_insert(table, rows, seqname=False)
-            
         d['key'] = 'key', key
         d['created'] = ('datetime', timestamp)
         d['last_modified'] = ('datetime', timestamp)
@@ -250,7 +250,8 @@ class DBSiteStore(common.SiteStore):
         d['type'] = 'ref', type
         
         thing = common.Thing(self, key, data=d)
-        web.insert('data', False, thing_id=thing_id, revision=1, data=thing.to_json())
+        row = dict(thing_id=thing_id, revision=1, data=thing.to_json())
+        _inserts.setdefault('data', []).append(row)        
         return thing
         
     def unkey(self, data):

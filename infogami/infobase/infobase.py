@@ -12,6 +12,9 @@ import config
 import readquery
 import writequery
 
+# important: this is required here to setup _loadhooks and unloadhooks
+import cache
+
 class Infobase:
     """Infobase contains multiple sites."""
     def __init__(self, store, secret_key):
@@ -71,7 +74,8 @@ class Site:
         self._infobase = _infobase
         self.sitename = sitename
         self.store = store
-        self.store = common.CachedSiteStore(store)
+        self.store.set_cache(cache.Cache())
+        
         import account
         self.account_manager = account.AccountManager(self, secret_key)
         

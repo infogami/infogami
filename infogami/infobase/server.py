@@ -262,18 +262,29 @@ def request(path, method, data):
     """Fakes the web request.
     Useful when infobase is not run as a separate process.
     """
+    
     web.ctx.infobase_localmode = True
     web.ctx.infobase_input = data or {}
     web.ctx.infobase_method = method
-    for pattern, classname in web.group(urls, 2):
-        m = web.re_compile('^' + pattern + '$').match(path)
-        if m:
-            args = m.groups()
-            cls = globals()[classname]
-            tocall = getattr(cls(), method)
-            return tocall(*args)
-    return web.notfound()
-
+    
+    import cache
+    
+    try:
+        # hack to make cache work for local infobase connections
+        cache.loadhook()
+            
+        for pattern, classname in web.group(urls, 2):
+            m = web.re_compile('^' + pattern + '$').match(path)
+            if m:
+                args = m.groups()
+                cls = globals()[classname]
+                tocall = getattr(cls(), method)
+                return tocall(*args)
+        return web.notfound()
+    finally:
+        # hack to make cache work for local infobase connections
+        cache.unloadhook()
+        
 def run():
     web.run(urls, globals())
     

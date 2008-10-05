@@ -126,11 +126,11 @@ class DBSiteStore(common.SiteStore):
         if self.cache is None or revision is not None:
             return self._get(key, revision)
         else:
-            if key not in self.cache:
+            thing = self.cache.get(key)
+            if thing is None:
                 thing = self._get(key, revision)
-                self.cache[key] = thing
-            else:
-                thing = self.cache[key]
+                if thing:
+                    self.cache[key] = thing
             return thing
     
     def _get(self, key, revision):    
@@ -187,14 +187,22 @@ class DBSiteStore(common.SiteStore):
         
         result = web.storage(created=[], updated=[])
         web.transact()
-        for action, key, data in queries:
-            if action == 'create':
-                self.create(key, data, timestamp, add_version)
-                result.created.append(key)
-            elif action == 'update':
-                self.update(key, data, timestamp, add_version)
-                result.updated.append(key)
-        web.commit()
+        try:
+            for action, key, data in queries:
+                if action == 'create':
+                    thing = self.create(key, data, timestamp, add_version)
+                    web.ctx.new_objects[key] = thing
+                    result.created.append(key)
+                elif action == 'update':
+                    thing = self.update(key, data, timestamp, add_version)
+                    web.ctx.new_objects[key] = thing
+                    result.updated.append(key)
+        except:
+            web.ctx.new_objects.clear()
+            web.rollback()
+        else:
+            web.commit()
+
         return result
     
     def create(self, key, data, timestamp, add_version):
@@ -243,6 +251,7 @@ class DBSiteStore(common.SiteStore):
         
         thing = common.Thing(self, key, data=d)
         web.insert('data', False, thing_id=thing_id, revision=1, data=thing.to_json())
+        return thing
         
     def unkey(self, data):
         """Replace keys with ids.
@@ -337,6 +346,7 @@ class DBSiteStore(common.SiteStore):
                 
         data = thing.to_json()
         web.insert('data', False, thing_id=thing_id, revision=revision, data=data)
+        return thing
 
     def things(self, query):
         type = query.get_type()

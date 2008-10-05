@@ -1,5 +1,5 @@
 import config
-from cache import LRU
+from lru import LRU
 
 import _json as simplejson
 import web

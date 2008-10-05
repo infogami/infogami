@@ -154,7 +154,7 @@ class LRU:
         
     @synchronized
     def __getitem__(self, key):
-        return self.getnode(key).value
+        return self.d[key].value
         
     def get(self, key, default=None):
         try:

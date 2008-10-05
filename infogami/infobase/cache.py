@@ -69,7 +69,7 @@ class Cache:
         
         if not obj:    
             obj = global_cache[key]
-            ctx.localcache[key] = obj
+            ctx.local_cache[key] = obj
             
         return obj
         

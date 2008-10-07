@@ -102,6 +102,9 @@ class RemoteConnection(Connection):
             headers = {'Cookie': cookie}
         else:
             headers = {}
+            
+        # pass the remote ip to the infobase server
+        headers['X-REMOTE-IP'] = web.ctx.ip
         
         conn.request(method, path, data, headers=headers)
         response = conn.getresponse()

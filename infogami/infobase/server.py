@@ -8,6 +8,11 @@ import time
 import common
 from common import NotFound, InfobaseException
 
+def setup_remoteip():
+    web.ctx.ip = web.ctx.env.get('HTTP_X_REMOTE_IP', web.ctx.ip)
+
+web.webapi._loadhooks['remoteip'] = setup_remoteip
+
 urls = (
     "/([^/]*)/get", "withkey",
     "/([^/]*)/get_many", "get_many",
@@ -261,8 +266,7 @@ class account:
 def request(path, method, data):
     """Fakes the web request.
     Useful when infobase is not run as a separate process.
-    """
-    
+    """    
     web.ctx.infobase_localmode = True
     web.ctx.infobase_input = data or {}
     web.ctx.infobase_method = method

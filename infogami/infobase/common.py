@@ -227,10 +227,15 @@ class Thing:
         
     def get_property(self, name):
         """Makes sense only when this object is a type object."""
-        for p in self.properties or []:
-            if p.name == name:
-                return p
-
+        if 'properties' in self._data:
+            datatype, properties = self._data['properties']
+            if datatype == 'ref' and isinstance(properties, list):
+                for p in properties:
+                    # key of property x will be typekey/name
+                    if p == self.key + '/' + name:
+                        return self._store.get(p)
+        return None
+        
     def __repr__(self):
         return "<thing: %s>" % repr(self.key)
         

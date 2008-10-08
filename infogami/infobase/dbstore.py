@@ -23,6 +23,8 @@ class Schema:
         self.sequences = {}
         self.prefixes = set()
         self.multisite = multisite
+        
+        self._table_cache = {}
                 
     def add_entry(self, table, type, datatype, name):
         entry = web.storage(table=table, type=type, datatype=datatype, name=name)
@@ -47,13 +49,18 @@ class Schema:
         if datatype not in INDEXED_DATATYPES:
             return None
             
-        def match(a, b):
-            return a is None or a == b
-        for e in self.entries:
-            if match(e.type, type) and match(e.datatype, datatype) and match(e.name, name):
-                return e.table
+        def f():
+            def match(a, b):
+                return a is None or a == b
+            for e in self.entries:
+                if match(e.type, type) and match(e.datatype, datatype) and match(e.name, name):
+                    return e.table
+            return 'datum_' + datatype
         
-        return 'datum_' + datatype
+        key = type, datatype, name
+        if key not in self._table_cache:
+            self._table_cache[key] = f()
+        return self._table_cache[key]
         
     def sql(self):
         import os

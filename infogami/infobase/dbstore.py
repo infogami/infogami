@@ -174,23 +174,22 @@ class DBSiteStore(common.SiteStore):
         
         def add_version(thing_id, revision=None):
             """Adds a new entry in the version table for the object specified by thing_id and returns the latest revision."""
-            if thing_id not in versions:
-                if revision is None:
-                    d = web.query(
-                        'UPDATE thing set latest_revision=latest_revision+1, last_modified=$timestamp WHERE id=$thing_id;' + \
-                        'SELECT latest_revision FROM thing WHERE id=$thing_id', vars=locals())
-                    revision = d[0].latest_revision
-                    
-                web.insert('version', False, 
-                    thing_id=thing_id, 
-                    revision=revision, 
-                    created=timestamp,
-                    comment=comment,
-                    machine_comment=machine_comment,
-                    ip=ip,
-                    author_id=author and self.get_metadata(author).id
-                    )
-                versions[thing_id] = revision
+            if revision is None:
+                d = web.query(
+                    'UPDATE thing set latest_revision=latest_revision+1, last_modified=$timestamp WHERE id=$thing_id;' + \
+                    'SELECT latest_revision FROM thing WHERE id=$thing_id', vars=locals())
+                revision = d[0].latest_revision
+                
+            web.insert('version', False, 
+                thing_id=thing_id, 
+                revision=revision, 
+                created=timestamp,
+                comment=comment,
+                machine_comment=machine_comment,
+                ip=ip,
+                author_id=author and self.get_metadata(author).id
+                )
+            versions[thing_id] = revision
             return versions[thing_id]
         
         result = web.storage(created=[], updated=[])

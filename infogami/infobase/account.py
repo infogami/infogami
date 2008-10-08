@@ -55,6 +55,10 @@ class AccountManager:
         self.secret_key = secret_key
         
     def register(self, username, email, password, data):
+        enc_password = self._generate_salted_hash(self.secret_key, password)
+        self.register1(username, email, enc_password, data)
+        
+    def register1(self, username, email, enc_password, data, timestamp=None):
         key = '/user/' + username
         if self.site.get(key):
             raise Exception("User already exists: " + username)
@@ -68,8 +72,7 @@ class AccountManager:
             self.site.write(q, timestamp=timestamp, _internal=True)
             self.site.store.register(key, email, enc_password)
         
-        timestamp = datetime.datetime.utcnow()
-        enc_password = self._generate_salted_hash(self.secret_key, password)
+        timestamp = timestamp or datetime.datetime.utcnow()
         
         self.site.store.transact(f)
         
@@ -78,7 +81,7 @@ class AccountManager:
         
         self.set_auth_token(key)
                         
-    def update_user(self, old_password, new_password, email, password_encrypted=False, timestamp=None):
+    def update_user(self, old_password, new_password, email):
         user = self.get_user()
         if user is None:
             raise common.InfobaseException("Not logged in")
@@ -89,11 +92,14 @@ class AccountManager:
         new_password and self.assert_password(new_password)
         email and self.assert_email(email)
         
-        password = new_password and self._generate_salted_hash(self.secret_key, new_password) 
-        self.site.store.update_user_details(user.key, email, password)
+        enc_password = new_password and self._generate_salted_hash(self.secret_key, new_password)
+        self.update_user1(user, enc_password, email)
         
-        timestamp = datetime.datetime.utcnow()
-        event_data = dict(username=user.key, email=email, password=password)
+    def update_user1(self, user, enc_password, email, timestamp=None):
+        self.site.store.update_user_details(user.key, email, enc_password)
+        
+        timestamp = timestamp or datetime.datetime.utcnow()
+        event_data = dict(username=user.key, email=email, password=enc_password)
         self.site._fire_event("update_user", timestamp=timestamp, ip=web.ctx.ip, username=None, data=event_data)
         
     def assert_password(self, password):

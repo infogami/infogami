@@ -64,13 +64,14 @@ class LogReader:
         """
         self.logfile.skip_till(timestamp.date())
         
+        offset = self.logfile.tell()
         for entry in self:
-            offset = self.logfile.tell()
             if entry.timestamp > timestamp:
                 # timestamp of this entry is more than the required timestamp.
                 # so it must be put back.
                 self.logfile.seek(offset)
                 break
+            offset = self.logfile.tell()
                 
     def read_entry(self):
         """Reads one entry from the log.
@@ -286,29 +287,30 @@ class LogPlayback:
     def playback(self, entry):
         """Playback one log entry."""
         #@@ hack to disable permission check
-        web.ctx.infobase_bootstrap = True
-        site = self.infobase.get_site(entry.site)
+        web.ctx.disable_permission_check = True
+        site = self.infobase.get(entry.site)
         return getattr(self, entry.action)(site, entry.timestamp, entry.data)
     
     def write(self, site, timestamp, data):
         d = web.storage(data)
         author = d.author and site.withKey(d.author)
-        site._write(d.query, comment=d.comment, machine_comment=d.comment, ip=d.ip, author=author, timestamp=timestamp)
+        return site.write(d.query, comment=d.comment, machine_comment=d.comment, ip=d.ip, author=author, timestamp=timestamp)
                 
     def new_account(self, site, timestamp, data):
         d = web.storage(data)
         a = site.get_account_manager()
-        a.register(d.username, d.displayname, d.email, d.password, password_encrypted=True, timestamp=timestamp)
+        return a.register1(username=d.username, email=d.email, enc_password=d.password, data=dict(displayname=d.displayname), timestamp=timestamp)
         
     def update_account(self, site, timestamp, data):
         d = web.storage(data)
         user = site.withKey(d.username)
         a = site.get_account_manager()
-        a._update_user(user, 
-            encrypted_password=d.get('password'), 
+        return a.update_user1(user, 
+            enc_password=d.get('password'), 
             email=d.get('email'),
             timestamp=timestamp)
     
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
+    

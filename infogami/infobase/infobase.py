@@ -99,7 +99,7 @@ class Site:
         
         author = author or self.get_account_manager().get_user()
         q = writequery.make_query(self.store, author, query)
-        ip = web.ctx.get('ip', '127.0.0.1')
+        ip = ip or web.ctx.get('ip', '127.0.0.1')
         result = self.store.write(q, timestamp=timestamp, comment=comment, machine_comment=machine_comment, ip=ip, author=author and author.key)
         
         if not _internal:

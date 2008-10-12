@@ -337,14 +337,14 @@ class DBSiteStore(common.SiteStore):
                 pid = self.get_property_id(table, name, create=False)
                 if pid:
                     #@@ TODO: table for delete should be found from the datatype of the existing value 
-                    table and web.delete(table, where='thing_id=thing_id and key_id=$pid and value=$a.xvalue', vars=locals())
+                    table and web.delete(table, where='thing_id=$thing_id and key_id=$pid and value=$a.xvalue', vars=locals())
                     value = [v for v in thing.get_value(name) or [] if v != a.value]
                     thing.set(name, value, a.datatype)
             elif a.connect == 'update_list':
                 pid = self.get_property_id(table, name, create=True)
                 
                 #@@ TODO: table for delete should be found from the datatype of the existing value 
-                table and web.delete(table, where='thing_id=thing_id and key_id=$pid', vars=locals())
+                table and web.delete(table, where='thing_id=$thing_id and key_id=$pid', vars=locals())
                 
                 if a.value is not None:
                     for i, v in enumerate(a.xvalue):

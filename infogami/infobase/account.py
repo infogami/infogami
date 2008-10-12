@@ -58,7 +58,7 @@ class AccountManager:
         enc_password = self._generate_salted_hash(self.secret_key, password)
         self.register1(username, email, enc_password, data)
         
-    def register1(self, username, email, enc_password, data, timestamp=None):
+    def register1(self, username, email, enc_password, data, ip=None, timestamp=None):
         key = '/user/' + username
         if self.site.get(key):
             raise Exception("User already exists: " + username)
@@ -69,7 +69,7 @@ class AccountManager:
         def f():
             web.ctx.disable_permission_check = True
             q = make_query(key, data)
-            self.site.write(q, timestamp=timestamp, _internal=True)
+            self.site.write(q, ip=ip, timestamp=timestamp, _internal=True)
             self.site.store.register(key, email, enc_password)
         
         timestamp = timestamp or datetime.datetime.utcnow()
@@ -77,7 +77,7 @@ class AccountManager:
         self.site.store.transact(f)
         
         event_data = dict(data, username=username, email=email, password=enc_password)
-        self.site._fire_event("register", timestamp=timestamp, ip=web.ctx.ip, username=None, data=event_data)
+        self.site._fire_event("register", timestamp=timestamp, ip=ip or web.ctx.ip, username=None, data=event_data)
         
         self.set_auth_token(key)
                         
@@ -95,12 +95,12 @@ class AccountManager:
         enc_password = new_password and self._generate_salted_hash(self.secret_key, new_password)
         self.update_user1(user, enc_password, email)
         
-    def update_user1(self, user, enc_password, email, timestamp=None):
+    def update_user1(self, user, enc_password, email, ip=None, timestamp=None):
         self.site.store.update_user_details(user.key, email, enc_password)
         
         timestamp = timestamp or datetime.datetime.utcnow()
         event_data = dict(username=user.key, email=email, password=enc_password)
-        self.site._fire_event("update_user", timestamp=timestamp, ip=web.ctx.ip, username=None, data=event_data)
+        self.site._fire_event("update_user", timestamp=timestamp, ip=ip or web.ctx.ip, username=None, data=event_data)
         
     def assert_password(self, password):
         pass

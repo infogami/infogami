@@ -299,7 +299,7 @@ class LogPlayback:
     def new_account(self, site, timestamp, data):
         d = web.storage(data)
         a = site.get_account_manager()
-        return a.register1(username=d.username, email=d.email, enc_password=d.password, data=dict(displayname=d.displayname), timestamp=timestamp)
+        return a.register1(username=d.username, email=d.email, enc_password=d.password, data=dict(displayname=d.displayname), ip=d.ip, timestamp=timestamp)
         
     def update_account(self, site, timestamp, data):
         d = web.storage(data)
@@ -308,6 +308,7 @@ class LogPlayback:
         return a.update_user1(user, 
             enc_password=d.get('password'), 
             email=d.get('email'),
+            ip = d.ip,
             timestamp=timestamp)
     
 if __name__ == "__main__":

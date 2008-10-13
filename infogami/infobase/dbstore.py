@@ -460,7 +460,6 @@ class DBSiteStore(common.SiteStore):
         authors = self.get_metadata_list_from_ids(author_ids)
         
         for r in result:
-            del r.thing_id
             r.author = r.author_id and authors[r.author_id].key
         return result
     

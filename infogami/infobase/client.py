@@ -2,6 +2,7 @@
 import httplib, urllib
 import _json as simplejson
 import web
+import socket
 
 DEBUG = False
 
@@ -60,16 +61,8 @@ class LocalConnection(Connection):
         out = server.request(path, method, data)
         if 'infobase_auth_token' in web.ctx:
             self.set_auth_token(web.ctx.infobase_auth_token)
-        
-        out = simplejson.loads(out)
-        out = storify(out)
-        if out.status == 'fail':
-            raise ClientException(out['message'])
-        else:
-            return out
-            
         return out
-        
+                
 class RemoteConnection(Connection):
     """Connection to remote Infobase server."""
     def __init__(self, base_url):
@@ -106,8 +99,11 @@ class RemoteConnection(Connection):
         # pass the remote ip to the infobase server
         headers['X-REMOTE-IP'] = web.ctx.ip
         
-        conn.request(method, path, data, headers=headers)
-        response = conn.getresponse()
+        try:
+            conn.request(method, path, data, headers=headers)
+            response = conn.getresponse()
+        except socket.error:
+            return simplejson.dumps({'status': 'fail', 'message': 'unable to connect to the infobase server'})
 
         cookie = response.getheader('Set-Cookie')
         if cookie:
@@ -117,17 +113,10 @@ class RemoteConnection(Connection):
             if 'infobase_auth_token' in c:
                 self.set_auth_token(c['infobase_auth_token'].value)                
         if response.status == 200:
-            out = response.read()
+            return response.read()
         else:
-            raise HTTPError("%d: %s" % (response.status, response.reason))
-            
-        out = simplejson.loads(out)
-        out = storify(out)
-        if out.status == 'fail':
-            raise ClientException(out['message'])
-        else:
-            return out
-    
+            return simplejson.dumps({'status': 'fail', 'message': 'HTTP Error: %d - %s' % (response.status, response.reason)})    
+        
 class LazyObject:
     """LazyObject which creates the required object on demand.
         >>> o = LazyObject(lambda: [1, 2, 3])
@@ -153,11 +142,20 @@ class Site:
         # cache for storing pages requested in this HTTP request
         self._cache = {}
         
+    def _request(self, path, method='GET', data=None):
+        out = self._conn.request(self.name, path, method, data)
+        out = simplejson.loads(out)
+        out = storify(out)
+        if out.status == 'fail':
+            raise ClientException(out['message'])
+        else:
+            return out
+        
     def _get(self, key, revision=None):
         """Returns properties of the thing with the specified key."""
         revision = revision and int(revision)
         data = dict(key=key, revision=revision)
-        result = self._conn.request(self.name, '/get', data=data)['result']
+        result = self._request('/get', data=data)['result']
         if result is None:
             raise NotFound, key
         else:
@@ -221,18 +219,18 @@ class Site:
 
     def get_many(self, keys):
         data = dict(keys=simplejson.dumps(keys))
-        result = self._conn.request(self.name, '/get_many', data=data)['result']
+        result = self._request('/get_many', data=data)['result']
         things = [Thing(self, key, data) for key, data in result.items()]
         return things
 
     def new_key(self, type):
         data = {'type': type}
-        result = self._conn.request(self.name, '/new_key', data=data)['result']
+        result = self._request('/new_key', data=data)['result']
         return result
 
     def things(self, query):
         query = simplejson.dumps(query)
-        return self._conn.request(self.name, '/things', 'GET', {'query': query})['result']
+        return self._request('/things', 'GET', {'query': query})['result']
                 
     def versions(self, query):
         def process(v):
@@ -241,18 +239,18 @@ class Site:
             v.author = v.author and self.get(v.author, lazy=True)
             return v
         query = simplejson.dumps(query)
-        versions =  self._conn.request(self.name, '/versions', 'GET', {'query': query})['result']
+        versions =  self._request('/versions', 'GET', {'query': query})['result']
         return [process(v) for v in versions]
 
     def write(self, query, comment=None):
         self._run_hooks('before_new_version', query)
         _query = simplejson.dumps(query)
-        result = self._conn.request(self.name, '/write', 'POST', dict(query=_query, comment=comment))['result']
+        result = self._request('/write', 'POST', dict(query=_query, comment=comment))['result']
         self._run_hooks('on_new_version', query)
         return result
         
     def can_write(self, key):
-        perms = self._conn.request(self.name, '/permission', 'GET', dict(key=key))['result']
+        perms = self._request('/permission', 'GET', dict(key=key))['result']
         return perms['write']
 
     def _run_hooks(self, name, query):
@@ -271,14 +269,14 @@ class Site:
                 _run_hooks(name, t)
         
     def login(self, username, password, remember=False):
-        return self._conn.request(self.name, '/account/login', 'POST', dict(username=username, password=password))
+        return self._request('/account/login', 'POST', dict(username=username, password=password))
         
     def register(self, username, displayname, email, password):
-        return self._conn.request(self.name, '/account/register', 'POST', 
+        return self._request('/account/register', 'POST', 
             dict(username=username, displayname=displayname, email=email, password=password))
             
     def update_user(self, old_password, new_password, email):
-        return self._conn.request(self.name, '/account/update_user', 'POST', 
+        return self._request('/account/update_user', 'POST', 
             dict(old_password=old_password, new_password=new_password, email=email))
             
     def get_reset_code(self, email):
@@ -286,16 +284,19 @@ class Site:
         This called to send forgot password email. 
         This should be called after logging in as admin.
         """
-        return self._conn.request(self.name, '/account/get_reset_code', 'GET', dict(email=email))['result']
+        return self._request('/account/get_reset_code', 'GET', dict(email=email))['result']
         
     def get_user_email(self, username):
-        return self._conn.request(self.name, '/account/get_user_email', 'GET', dict(username=username))['result']
+        return self._request('/account/get_user_email', 'GET', dict(username=username))['result']
         
     def reset_password(self, username, code, password):
-        return self._conn.request(self.name, '/account/reset_password', 'POST', dict(username=username, code=code, password=password))
+        return self._request('/account/reset_password', 'POST', dict(username=username, code=code, password=password))
         
     def get_user(self):
-        data = self._conn.request(self.name, '/account/get_user')['result']
+        try:
+            data = self._request('/account/get_user')['result']
+        except ClientException:
+            return None
         user = data and Thing(self, data['key'], data)
         return user
 

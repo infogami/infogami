@@ -4,7 +4,7 @@ Infogami read/write API.
 import web
 import infogami
 from infogami.utils import delegate
-from infogami.infobase import server
+from infogami.infobase import client
 
 hooks = {}        
 def add_hook(name, cls):
@@ -36,50 +36,18 @@ class api(delegate.page):
 
 class infobase_request:
     def delegate(self):
-        method = web.ctx.method
-        path = web.lstrips(web.ctx.path, "/api/")
-    
-        host = infogami.config.infobase_host
         sitename = web.ctx.site.name
-        path = "/%s/%s" % (sitename, path)
+        path = web.lstrips(web.ctx.path, "/api")
         method = web.ctx.method
-
-        if host:
-            if method == 'GET':
-                path += '?' + web.ctx.env['QUERY_STRING']
-                data = None
-            else:
-                data = web.data()
+        data = web.input()
         
-            conn = httplib.HTTPConnection(self.host)
-            env = web.ctx.get('env') or {}
+        conn = client.connect(**infogami.config.infobase_parameters)            
+        out = conn.request(sitename, path, method, data)
+        return out
         
-            cookie = self.cookie or env.get('HTTP_COOKIE')
-            if cookie:
-                headers = {'Cookie': cookie}
-            else:
-                headers = {}
-        
-            conn.request(method, path, data, headers=headers)
-            response = conn.getresponse()
-        
-            cookie = response.getheader('Set-Cookie')
-            self.cookie = cookie
-            web.header('Set-Cookie', cookie)
-        
-            web.ctx.status = "%s %s" % (response.status, response.reason)
-            return response.read()
-        else:
-            data = web.input()
-            out = server.request(path, method, data)
-            if web.ctx.status.split()[0] != '200':
-                web.ctx.output = ''
-            else:
-                return out
-                
     GET = delegate
 
 add_hook("get", infobase_request)
 add_hook("things", infobase_request)
 add_hook("versions", infobase_request)
-            
+

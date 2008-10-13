@@ -4,7 +4,6 @@ import os
 import urllib
 
 import infogami
-from infogami import tdb
 from infogami.core.diff import simple_diff, better_diff
 from infogami.utils import i18n
 from infogami.utils.markdown import markdown, mdx_footnotes
@@ -14,8 +13,7 @@ import template
 import macro
 import storage
 
-#@@ This must be moved to some better place
-from infogami.tdb.lru import lrumemoize
+from infogami.infobase.lru import lrumemoize
 
 wiki_processors = []
 def register_wiki_processor(p):

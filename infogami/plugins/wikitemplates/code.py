@@ -7,7 +7,7 @@ import os
 from UserDict import DictMixin
 
 import infogami
-from infogami import core, tdb
+from infogami import core
 from infogami.core.db import ValidationException
 from infogami.utils import delegate, macro, template, storage, view
 from infogami.utils.context import context

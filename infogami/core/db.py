@@ -2,7 +2,6 @@ import web
 import pickle
 
 import infogami
-from infogami import tdb
 from infogami.utils.view import public
 
 def get_version(path, revision=None):
@@ -48,42 +47,7 @@ def get_i18n_page(page):
     return get(web.ctx.lang) or get('en') or None
 
 class ValidationException(Exception): pass
-
-def get_user(site, userid):
-    try:
-        u = tdb.withID(userid)
-        if u.type == get_type(site, '/type/user'):
-            return u
-    except tdb.NotFound:
-        return None
-        
-def get_user_by_name(site, username):
-    try:
-        return tdb.withName('/user/' + username, site)
-    except tdb.NotFound:
-        return None
-
-def get_user_by_email(site, email):
-    result = tdb.Things(parent=site, type=get_type(site, '/type/user'), email=email).list()
-    if result:
-        return result[0]
     
-def new_user(site, username, displayname, email, password):
-    tdb.transact()
-    try:
-        d = dict(displayname=displayname, email=email)
-        user = tdb.new('/user/' + username, site, get_type(site, "/type/user"), d)
-        user.save()
-    
-        import auth
-        auth.set_password(user, password)
-    except:
-        tdb.rollback()
-        raise
-    else:
-        tdb.commit()
-        return user
-
 def get_user_preferences(user):
     return get_version(user.key + '/preferences')
     

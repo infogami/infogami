@@ -2,7 +2,7 @@ import web
 import os
 
 import infogami
-from infogami import utils, tdb, config
+from infogami import utils, config
 from infogami.utils import delegate, types
 from infogami.utils.context import context
 from infogami.utils.template import render
@@ -10,7 +10,6 @@ from infogami.utils.view import login_redirect, require_login, safeint
 
 import db
 import forms
-import thingutil
 import helpers
 
 from infogami.infobase.client import ClientException
@@ -48,9 +47,8 @@ class edit (delegate.mode):
         p = db.get_version(path, i.v) or db.new_version(path, types.guess_type(path))
         
         if i.t:
-            try:
-                type = db.get_type(i.t)
-            except tdb.NotFound:
+            type = db.get_type(i.t)
+            if type is None:
                 utils.view.set_error('Unknown type: ' + i.t)
             else:
                 p.type = type 

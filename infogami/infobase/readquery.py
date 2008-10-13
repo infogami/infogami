@@ -54,7 +54,9 @@ def make_query(store, query):
     """
     q = Query()
     q.offset = query.pop('offset', None)
-    q.limit = query.pop('limit', None)
+    q.limit = query.pop('limit', 1000)
+    if q.limit > 1000:
+        q.limit = 1000
     q.sort = query.pop('sort', None)
     
     for k, v in query.items():
@@ -126,7 +128,9 @@ def make_versions_query(store, query):
     q = Query()
     
     q.offset = query.pop('offset', None)
-    q.limit = query.pop('limit', None)
+    q.limit = query.pop('limit', 1000)
+    if q.limit > 1000:
+        q.limit = 1000
     q.sort = query.pop('sort', None)
     
     columns = ['key', 'revision', 'author', 'comment', 'machine_comment', 'ip', 'created']

@@ -286,6 +286,7 @@ class LogPlayback:
             
     def playback(self, entry):
         """Playback one log entry."""
+        web.ctx.infobase_auth_token = None
         #@@ hack to disable permission check
         web.ctx.disable_permission_check = True
         site = self.infobase.get(entry.site)

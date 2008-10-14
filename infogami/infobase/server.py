@@ -4,6 +4,7 @@ import web
 import infobase
 import _json as simplejson
 import time
+from infobase import config
 
 import common
 from common import NotFound, InfobaseException
@@ -46,6 +47,9 @@ class BadJSON(APIException):
 def jsonify(f):
     def g(self, *a, **kw):
         t1 = time.time()
+
+        if config.query_timeout:
+            web.query("SELECT set_config('statement_timeout', $query_timeout, false)", dict(query_timeout=config.query_timeout))
         
         if not web.ctx.get('infobase_localmode'):
             cookies = web.cookies(infobase_auth_token=None)

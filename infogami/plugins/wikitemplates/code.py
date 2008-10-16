@@ -105,7 +105,7 @@ def _compile_template(name, text):
         else:
             return value
             
-    text = stringify(text)
+    text = web.utf8(stringify(text))
             
     try:
         return web.template.Template(text, filter=web.websafe, filename=name)

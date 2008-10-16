@@ -98,6 +98,12 @@ def fakeload():
     web.ctx.site = create_site()
     
 def normpath(path):
+    try:
+        # take care of bad unicode values in urls
+        path.decode('utf-8')
+    except UnicodeDecodeError:
+        return '/'
+
     path = os.path.normpath(path) # correct multiple /'s and trailing /
     path = path.replace(' ', '_') # replace space with underscore
     return path

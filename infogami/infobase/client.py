@@ -365,11 +365,13 @@ class Thing:
         else:
             self._data = data
         self.revision = revision
+        self.latest_revision = self.revision
         
     def _getdata(self):
         if self._data is None:
             self._data = self._site._load(self.key, self.revision)
             self.revision = self._data.pop('revision', None) or self.revision
+        self.latest_revision = self.revision
         return self._data
         
     def keys(self):
@@ -382,7 +384,7 @@ class Thing:
         self._getdata()[key] = value
     
     def __setattr__(self, key, value):
-        if key in ['key', 'revision'] or key.startswith('_'):
+        if key in ['key', 'revision', 'latest_revision'] or key.startswith('_'):
             self.__dict__[key] = value
         else:
             self._getdata()[key] = value

@@ -114,7 +114,7 @@ class AccountManager:
             
     @admin_only
     def get_user_email(self, username):
-        details = self.site.store.get_user_details('/user/' + username)
+        details = self.site.store.get_user_details(username)
         
         if not details:
             raise common.InfobaseException('No user registered with username: ' + username)

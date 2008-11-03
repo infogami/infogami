@@ -156,7 +156,7 @@ class DBSiteStore(common.SiteStore):
         
     def get_many(self, keys):
         if not keys:
-            return o
+            return {}
 
         xkeys = [web.reparam('$k', dict(k=k)) for k in keys]
         query = 'SELECT thing.key, data.data from thing, data ' \

@@ -211,6 +211,7 @@ class DBSiteStore(common.SiteStore):
         except:
             web.ctx.new_objects.clear()
             web.rollback()
+            raise
         else:
             web.commit()
 

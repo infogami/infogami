@@ -28,13 +28,11 @@ class HTTPError(ClientException):
 def connect(type, **params):
     """Connect to infobase server using the given params.
     """
-    if type == 'local':
-        return LocalConnection(**params)
-    elif type == 'remote':
-        return RemoteConnection(**params)
-    else:
-        raise Exception('Invalid connection type: ' + type)
-        
+    for t in _connection_types:
+        if type == t:
+            return _connection_types[t](**params)
+    raise Exception('Invalid connection type: ' + type)
+                
 class Connection:
     def __init__(self):
         self.auth_token = None
@@ -116,6 +114,11 @@ class RemoteConnection(Connection):
             return response.read()
         else:
             return simplejson.dumps({'status': 'fail', 'message': 'HTTP Error: %d - %s' % (response.status, response.reason)})    
+
+_connection_types = {
+    'local': LocalConnection,
+    'remote': RemoteConnection
+}
         
 class LazyObject:
     """LazyObject which creates the required object on demand.
@@ -293,6 +296,10 @@ class Site:
         return self._request('/account/reset_password', 'POST', dict(username=username, code=code, password=password))
         
     def get_user(self):
+        # avoid hitting infobase when there is no cookie.
+        from infogami import config
+        if web.cookies().get(config.login_cookie_name) is None:
+            return None
         try:
             data = self._request('/account/get_user')['result']
         except ClientException:

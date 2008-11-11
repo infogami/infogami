@@ -178,7 +178,10 @@ class AccountManager:
         #@@ TODO: call assert_trusted_machine when user is admin.
         auth_token = web.ctx.get('infobase_auth_token')
         if auth_token:
-            user_key, login_time, digest = auth_token.split(',')
+            try:
+                user_key, login_time, digest = auth_token.split(',')
+            except ValueError:
+                return
             if self._check_salted_hash(self.secret_key, user_key + "," + login_time, digest):
                 return self.site.get(user_key)
 
@@ -194,7 +197,7 @@ class AccountManager:
         return '%s$%s' % (salt, hash)
         
     def _check_salted_hash(self, key, text, salted_hash):
-        salt, hash = salted_hash.split('$', 1)        
+        salt, hash = salted_hash.split('$', 1)
         return self._generate_salted_hash(key, text, salt) == salted_hash
 
     def checkpassword(self, username, raw_password):

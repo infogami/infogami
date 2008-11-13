@@ -60,8 +60,13 @@ class MacroSource(WikiSource):
         return web.lstrips(key, '/macros/')
 
 def get_user_root():
+    #@ quick hack to avoid querying for user_preferences again and again
+    if 'user_preferences' in web.ctx:
+        return web.ctx.user_preferences
+
     if context.user:
         preferences = web.ctx.site.get(context.user.key + "/preferences")
+        web.ctx.user_preferences = preferences
         root = preferences and preferences.get("template_root", None)
         return root
     return None

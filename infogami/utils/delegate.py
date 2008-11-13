@@ -206,8 +206,8 @@ def _load():
             plugins += _list_plugins(root)
             
     for plugin in plugins:
-        template.load_templates(plugin.path)
-        macro.load_macros(plugin.path)
+        template.load_templates(plugin.path, lazy=True)
+        macro.load_macros(plugin.path, lazy=True)
         i18n.load_strings(plugin.path)
         __import__(plugin.module + '.code', globals(), locals(), ['plugins'])
 

@@ -13,11 +13,16 @@ import os
 
 import storage
 
+class LazyTemplate:
+    def __init__(self, func):
+        self.func = func
+        
+
 class DiskTemplateSource(web.storage):
     """Template source of templates on disk.
     Supports loading of templates from a search path instead of single dir.
     """
-    def load_templates(self, path):
+    def load_templates(self, path, lazy=False):
         def get_template(render, name):
             tokens = name.split(os.path.sep)
             for t in tokens:
@@ -25,14 +30,25 @@ class DiskTemplateSource(web.storage):
             render.filepath = '%s/%s.html' % (path, name)
             return render
             
+        def set_template(render, name):
+            self[name] = get_template(render, name)
+            return self[name]
+            
         render = web.template.render(path)
         # assuming all templates have .html extension
         names = [web.rstrips(p, '.html') for p in find(path) if p.endswith('.html')]
         for name in names:
-            t = get_template(render, name)
-            if t:
-                self[name] = t
-                
+            if lazy:
+                self[name] = LazyTemplate(lambda: set_template(render, name))
+            else:
+                self[name] = get_template(render, name)
+            
+    def __getitem__(self, name):
+        value = dict.__getitem__(self, name)
+        if isinstance(value, LazyTemplate):
+            value = value.func()
+        return value
+           
     def __repr__(self):
         return "<DiskTemplateSource at %d>" % id(self)
             
@@ -118,11 +134,11 @@ def typetemplate(name):
         return t(page, *a, **kw)
     return template
     
-def load_templates(plugin_root):
+def load_templates(plugin_root, lazy=True):
     """Adds $plugin_root/templates to template search path"""
     path = os.path.join(plugin_root, 'templates')
     if os.path.exists(path):
-        disktemplates.load_templates(path)
+        disktemplates.load_templates(path, lazy=lazy)
 
 disktemplates = DiskTemplateSource()
 render = Render()

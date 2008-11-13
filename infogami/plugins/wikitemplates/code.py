@@ -18,6 +18,8 @@ from infogami.infobase import client
 
 import db
 
+LazyTemplate = template.LazyTemplate
+
 class WikiSource(DictMixin):
     """Template source for templates in the wiki"""
     def __init__(self, templates):
@@ -31,7 +33,12 @@ class WikiSource(DictMixin):
         root = web.rstrips(self.getroot() or "", "/")
         if root is None or context.get('rescue_mode'):
             raise KeyError, key
-        return self.templates[root+key]
+        
+        value = self.templates[root + key]    
+        if isinstance(value, LazyTemplate):
+            value = value.func()
+                    
+        return value
         
     def keys(self):
         return [self.unprocess_key(k) for k in self.templates.keys()]
@@ -53,7 +60,6 @@ class MacroSource(WikiSource):
         return web.lstrips(key, '/macros/')
 
 def get_user_root():
-    from infogami.core import db
     if context.user:
         preferences = web.ctx.site.get(context.user.key + "/preferences")
         root = preferences and preferences.get("template_root", None)
@@ -115,24 +121,30 @@ def _compile_template(name, text):
         traceback.print_exc()
         raise ValidationException("Template parsing failed: " + str(e))
 
-def _load_template(page):
+def _load_template(page, lazy=False):
     """load template from a wiki page."""
-    wikitemplates[page.key] = _compile_template(page.key, page.body)
+    if lazy:
+        wikitemplates[page.key] = LazyTemplate(lambda: _load_template(page))
+    else:
+        wikitemplates[page.key] = _compile_template(page.key, page.body)
     
-def _load_macro(page):
-    t = _compile_template(page.key, page.macro)
-    t.__doc__ = page.description or ''
-    wikimacros[page.key] = t
+def _load_macro(page, lazy=False):
+    if lazy:
+        wikimacros[page.key] = LazyTemplate(lambda: _load_macro(page))
+    else:
+        t = _compile_template(page.key, page.macro)
+        t.__doc__ = page.description or ''
+        wikimacros[page.key] = t
     
 def setup():
     delegate.fakeload()
     def load_macros(site): 
         for m in db.get_all_macros(site):
-            _load_macro(m)
+            _load_macro(m, lazy=True)
     
     def load_templates(site):
         for t in db.get_all_templates(site):
-            _load_template(t)
+            _load_template(t, lazy=True)
     
     for site in db.get_all_sites():
         context.site = site

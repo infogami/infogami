@@ -26,11 +26,11 @@ def macro(f):
     codemacros[f.__name__] = f
     return f
 
-def load_macros(plugin_root):
+def load_macros(plugin_root, lazy=False):
     """Adds $plugin_root/macros to macro search path."""
     path = os.path.join(plugin_root, 'macros')
     if os.path.isdir(path):
-        diskmacros.load_templates(path)
+        diskmacros.load_templates(path, lazy=lazy)
 
 #-- macro execution 
 

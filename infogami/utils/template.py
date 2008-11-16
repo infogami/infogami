@@ -16,7 +16,6 @@ import storage
 class LazyTemplate:
     def __init__(self, func):
         self.func = func
-        
 
 class DiskTemplateSource(web.storage):
     """Template source of templates on disk.
@@ -39,7 +38,7 @@ class DiskTemplateSource(web.storage):
         names = [web.rstrips(p, '.html') for p in find(path) if p.endswith('.html')]
         for name in names:
             if lazy:
-                self[name] = LazyTemplate(lambda: set_template(render, name))
+                self[name] = LazyTemplate(lambda render=render, name=name: set_template(render, name))
             else:
                 self[name] = get_template(render, name)
             
@@ -47,6 +46,7 @@ class DiskTemplateSource(web.storage):
         value = dict.__getitem__(self, name)
         if isinstance(value, LazyTemplate):
             value = value.func()
+            
         return value
            
     def __repr__(self):

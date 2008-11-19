@@ -191,6 +191,11 @@ class Thing:
                     value = [{"type": type, "value": v} for v in value]
                 else:
                     value = {"type": type, "value": value}
+
+            # ignore empty lists
+            if isinstance(value, list) and len(value) == 0:
+                continue
+
             d[key] = value
         return d
     

@@ -158,7 +158,7 @@ class AccountManager:
         
         if self._check_salted_hash(self.secret_key, text, code):
             enc_password = self._generate_salted_hash(self.secret_key, password)
-            self.site.store.update_user_details(username, password=enc_password)
+            self.site.store.update_user_details(username, email=None, enc_password=enc_password)
         else:
             raise common.InfobaseException('Invalid password reset code')
         

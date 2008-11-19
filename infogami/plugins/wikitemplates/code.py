@@ -59,17 +59,15 @@ class MacroSource(WikiSource):
     def unprocess_key(self, key):
         return web.lstrips(key, '/macros/')
 
-def get_user_root():
+def get_user_preferences():
     #@ quick hack to avoid querying for user_preferences again and again
-    if 'user_preferences' in web.ctx:
-        return web.ctx.user_preferences
+    if 'user_preferences' not in web.ctx:
+        web.ctx.user_preferences = ctx.user and web.ctx.site.get(context.user.key + "/preferences")
+    return web.ctx.user_preferences
 
-    if context.user:
-        preferences = web.ctx.site.get(context.user.key + "/preferences")
-        web.ctx.user_preferences = preferences
-        root = preferences and preferences.get("template_root", None)
-        return root
-    return None
+def get_user_root():
+    preferences = get_user_preferences()
+    return preferences and preferences.get("template_root", None)
     
 class UserSource(WikiSource):
     """Template source for user templates."""

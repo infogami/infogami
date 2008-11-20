@@ -173,8 +173,23 @@ class LRU:
     
     @synchronized
     def __delitem__(self, key):
+        if key not in self.d:
+            raise KeyError, key
         node = self.getnode(key, touch=False)
         self.remove_node(node)
+        
+    @synchronized
+    def delete(self, key):
+        try:
+            del self[key]
+        except KeyError:
+            pass
+            
+    @synchronized
+    def delete_many(self, keys):
+        for k in keys:
+            if k in self.d:
+                del self[k]
         
     @synchronized
     def update(self, d):

@@ -93,7 +93,7 @@ def synchronized(f):
         lock = getattr(self, '__lock__', None)
         if lock is None:
             import threading
-            lock = threading.Lock()
+            lock = threading.RLock()
             setattr(self, '__lock__', lock)
             
         try:
@@ -130,6 +130,7 @@ class LRU:
         self.d = d or {}
         self.queue = Queue()
 
+    @synchronized
     def getnode(self, key, touch=True):
         if key not in self.d:
             self.d[key] = Node(key)
@@ -138,11 +139,13 @@ class LRU:
             self.touch(node)
         return node
 
+    @synchronized
     def touch(self, node):
         # don't call remove for newly created nodes 
         node.next and self.queue.remove(node)
         self.queue.insert(node)
     
+    @synchronized
     def prune(self):
         """Remove least recently used items if required."""
         while len(self.d) > self.capacity:
@@ -156,6 +159,7 @@ class LRU:
     def __getitem__(self, key):
         return self.d[key].value
         
+    @synchronized
     def get(self, key, default=None):
         try:
             return self[key]
@@ -166,46 +170,37 @@ class LRU:
     def __setitem__(self, key, value):
         self.getnode(key).value = value
         self.prune()
-        
+    
     @synchronized
     def __delitem__(self, key):
-        if key not in self.d:
-            raise KeyError, key
         node = self.getnode(key, touch=False)
         self.remove_node(node)
         
     @synchronized
-    def delete(self, key):
-        """Deletes a key from lru. If the key is not present it is just ignored."""
-        if key in self.d:
-            del self[key]
-                
-    @synchronized
-    def delete_many(self, keys):
-        """Delete multiple keys from lru. If any key is not present it is just ignored."""
-        for k in keys:
-            if k in self.d:
-                del self[k]
-    
     def update(self, d):
         for k, v in d.items():
             self[k] = v
         
+    @synchronized
     def keys(self):
         return self.d.keys()
         
+    @synchronized
     def items(self):
         return [(k, node.value) for k, node in self.d.items()]
-        
+    
+    @synchronized    
     def clear(self):
         self.d.clear()
         self.queue.clear()
         
+    @synchronized
     def remove_node(self, node=None):
         node = self.queue.remove(node)
         del self.d[node.key]
         return node
                 
+    @synchronized
     def __str__(self):
         return str(self.queue)
     __repr__ = __str__

@@ -250,8 +250,16 @@ class Site:
         _query = simplejson.dumps(query)
         result = self._request('/write', 'POST', dict(query=_query, comment=comment))['result']
         self._run_hooks('on_new_version', query)
+        self._invalidate_cache(result.created + result.updated)
         return result
-        
+
+    def _invalidate_cache(self, keys):
+        for k in keys:
+            try:
+                del self._cache[k, None]
+            except KeyError:
+                pass
+    
     def can_write(self, key):
         perms = self._request('/permission', 'GET', dict(key=key))['result']
         return perms['write']

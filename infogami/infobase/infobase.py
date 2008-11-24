@@ -79,6 +79,8 @@ class Site:
         import account
         self.account_manager = account.AccountManager(self, secret_key)
         
+        self._triggers = {}
+        
     def get_account_manager(self):
         return self.account_manager
     
@@ -106,6 +108,7 @@ class Site:
             # fire event
             data = dict(comment=comment, machine_comment=machine_comment, query=query, result=result)
             self._fire_event("write", timestamp, ip, author and author.key, data)
+            self._fire_triggers(result.created, result.updated)
         
         return result
         
@@ -134,7 +137,38 @@ class Site:
         a = self.get_account_manager()
         a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))
         a.register(username="useradmin", email="useradmin@example.com", password=admin_password, data=dict(displayname="User Administrator"))
-
+        
+    def add_trigger(self, type, func):
+        """Registers a trigger to call func when object of specified type is modified.
+        func is called with old object and new object as arguments. old object will be None if the object is newly created.
+        """
+        self._triggers.setdefault(type, []).append(func)
+                
+    def _fire_triggers(self, created, updated):
+        """Executes all required triggers on write."""
+        def fire_trigger(type, old, new):
+            triggers = self._triggers.get(type.key, [])
+            for t in triggers:
+                try:
+                    t(old, new)
+                except:
+                    print >> web.debug, 'Failed to execute trigger', t
+                    import traceback
+                    traceback.print_exc()
+        
+        for key in created:
+            thing = self.get(key)
+            fire_trigger(thing.type, None, thing)
+        
+        for key in updated:
+            thing = self.get(key)
+            old = self.get(key, thing.revision-1)
+            if old.type.key == thing.type.key:
+                fire_trigger(thing.type, old, thing)
+            else:
+                fire_trigger(old.type, old, thing)
+                fire_trigger(thing.type, old, thing)
+        
 if __name__ == '__main__':
     web.config.db_parameters = dict(dbn='postgres', db='infobase2', user='anand', pw='')
     web.config.db_printing = True

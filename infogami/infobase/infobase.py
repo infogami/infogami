@@ -150,7 +150,7 @@ class Site:
             triggers = self._triggers.get(type.key, [])
             for t in triggers:
                 try:
-                    t(old, new)
+                    t(self, old, new)
                 except:
                     print >> web.debug, 'Failed to execute trigger', t
                     import traceback

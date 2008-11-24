@@ -150,8 +150,6 @@ class DBSiteStore(common.SiteStore):
         if not data:
             return None
         thing = common.Thing.from_json(self, key, data)
-        #@@ why is this required? for bootstrap?
-        thing.set('type', self.get_metadata_from_id(metadata.type).key, 'ref')
         return thing
         
     def get_many(self, keys):

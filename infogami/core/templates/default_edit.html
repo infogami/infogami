@@ -19,7 +19,7 @@ function moveup(e) {
     if (e.preventDefault)
         e.preventDefault();
     
-    var parents = $ (this).parents().filter("tr[@repeat]");
+    var parents = \$(this).parents().filter("tr[@repeat]");
     var a = parents[0];
     var b = parents.prev()[0]
     swapvalues(a, b);
@@ -31,7 +31,7 @@ function movedown(e) {
     if (e.preventDefault)
         e.preventDefault();
     
-    var parents = $ (this).parents().filter("tr[@repeat]");
+    var parents = \$(this).parents().filter("tr[@repeat]");
     var a = parents[0];
     var b = parents.next()[0]
     swapvalues(a, b);
@@ -39,8 +39,8 @@ function movedown(e) {
 }
 
 function swapvalues(a, b) {
-    var ia = $ (':input', a);
-    var ib = $ (':input', b);
+    var ia = \$(':input', a);
+    var ib = \$(':input', b);
     
     for (var i=0; i<ia.length; i++)
         swap(ia[i], ib[i]);

@@ -23,7 +23,7 @@ class view (delegate.mode):
         i = web.input(v=None)
 
         if i.v is not None and safeint(i.v, None) is None:
-            return web.seeother(web.changequery(v=None))
+            raise web.seeother(web.changequery(v=None))
 		
         p = db.get_version(path, i.v)
 
@@ -42,7 +42,7 @@ class edit (delegate.mode):
         i = web.input(v=None, t=None)
 
         if i.v is not None and safeint(i.v, None) is None:
-            return web.seeother(web.changequery(v=None))
+            raise web.seeother(web.changequery(v=None))
 		        
         p = db.get_version(path, i.v) or db.new_version(path, types.guess_type(path))
         
@@ -141,7 +141,7 @@ class edit (delegate.mode):
             try:
                 web.ctx.site.write(q, comment)
                 path = web.input(_method='GET', redirect=None).redirect or web.changequery(query={})
-                return web.seeother(path)
+                raise web.seeother(path)
             except ClientException, e:
                 utils.view.set_error(str(e))
                 p = self.process(i)
@@ -149,7 +149,7 @@ class edit (delegate.mode):
         elif action == 'delete':
             q = dict(key=q['key'], type=dict(connect='update', key='/type/delete'))
             web.ctx.site.write(q, comment)
-            return web.seeother(web.changequery(query={}))
+            raise web.seeother(web.changequery(query={}))
 
     def process(self, data):
         """Updates thing with given data recursively."""
@@ -180,13 +180,13 @@ class permission(delegate.mode):
     def GET(self, path):
         p = db.get_version(path)
         if not p:
-            return web.seeother('/' + path)
+            raise web.seeother('/' + path)
         return render.permission(p)
         
     def POST(self, path):
         p = db.get_version(path)
         if not p:
-            return web.seeother('/' + path)
+            raise web.seeother('/' + path)
             
         i = web.input('permission.key', 'child_permission.key')
         q = {
@@ -214,7 +214,7 @@ class history (delegate.mode):
     def GET(self, path):
         page = web.ctx.site.get(path)
         if not page:
-            return web.seeother(path)
+            raise web.seeother(path)
         i = web.input(page=0)
         offset = 20 * safeint(i.page)
         limit = 20
@@ -245,7 +245,7 @@ class diff (delegate.mode):
 
         # if the page is not there go to view page
         if b is None:
-            return web.seeother(web.changequery(query={}))
+            raise web.seeother(web.changequery(query={}))
         
         a = get(path, safeint(i.a, b.revision-1))            
         return render.diff(a, b)

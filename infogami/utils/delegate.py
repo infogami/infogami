@@ -5,13 +5,29 @@ from infogami import config
 
 import template
 import macro
-import view
-import i18n
 from context import context
 
 urls = (
   '(/.*)', 'item'
 )
+app = web.application(urls, globals())
+web._loadhooks = {}
+web.unloadhooks = {}
+web.load = lambda: None
+
+def hook_processor(handler):
+    for h in web._loadhooks.values():
+        h()
+    try:
+        return handler()
+    except:
+        for h in web.unloadhooks.values():
+            h()
+            
+app.add_processor(hook_processor)
+
+import view
+import i18n
 
 modes = {}
 pages = {}
@@ -49,8 +65,6 @@ def _changepath(new_path):
     return new_path + web.ctx.query
 
 def initialize_context():
-    from infogami.core import db
-
     web.ctx.site = create_site()
     context.load()
     context.error = None
@@ -82,7 +96,7 @@ def create_site():
 
 def fakeload():
     from infogami.core import db
-    web.load()
+    #web.load()
     web.ctx.ip = None
     context.load()
     context.error = None
@@ -118,23 +132,23 @@ def delegate(path):
         normalized = normpath(path)
         if path != normalized:
             if method == 'GET':
-                return web.seeother(_changepath(normalized))
+                raise web.seeother(_changepath(normalized))
             elif method == 'POST':
-                return web.notfound()
+                raise web.notfound()
 
     for p in pages:
         m = re.match('^' + p + '$', path)
         if m:
             cls = pages[p]
             if not hasattr(cls, method):
-                return web.nomethod(method)
+                raise web.nomethod(method)
             out = getattr(cls(), method)(*m.groups())
             break
     else: # mode
         what = web.input(_method='GET').get('m', 'view')
         
         if what not in modes:
-            return web.seeother(web.changequery(m=None))
+            raise web.seeother(web.changequery(m=None))
         
         if what == 'edit' and not web.ctx.site.can_write(path):
             out = view.permission_denied(error="You don't have permission to edit " + path + ".")
@@ -150,9 +164,9 @@ def delegate(path):
             out.title = path
             
         if hasattr(out, 'rawtext'):
-            print out.rawtext
+            return out.rawtext
         else:
-            print view.render_site(config.site, out)
+            return view.render_site(config.site, out)
             
 class item:
     GET = POST = lambda self, path: delegate(path)

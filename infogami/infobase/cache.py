@@ -57,9 +57,6 @@ def unloadhook():
     if d:
         global_cache.update(d)
     
-web.webapi._loadhooks['infobase_cache'] = loadhook
-web.webapi.unloadhooks['infobase_cache'] = unloadhook
-
 class Cache:
     def __getitem__(self, key):
         ctx = web.ctx

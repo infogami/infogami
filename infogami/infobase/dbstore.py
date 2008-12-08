@@ -1,10 +1,10 @@
 """Infobase Implementation based on database.
 """
 import common
+import config
 import web
 import _json as simplejson
 import datetime, time
-from multiple_insert import multiple_insert
 
 INDEXED_DATATYPES = ["str", "int", "float", "ref", "boolean", "datetime"]
 
@@ -81,7 +81,8 @@ class Schema:
 class DBSiteStore(common.SiteStore):
     """
     """
-    def __init__(self, schema):
+    def __init__(self, db, schema):
+        self.db = db
         self.schema = schema
         self.sitename = None
         
@@ -95,24 +96,24 @@ class DBSiteStore(common.SiteStore):
         if self.cache and key in self.cache:
             thing = self.cache[key]
             return thing and web.storage(id=thing.id, key=thing.key, last_modified=thing.last_modified, created=thing.created, type=thing.type.id)
-        d = web.query('SELECT * FROM thing WHERE key=$key', vars=locals())
+        d = self.db.query('SELECT * FROM thing WHERE key=$key', vars=locals())
         return d and d[0] or None
         
     def get_metadata_list(self, keys):
-        result = web.select('thing', what='*', where=web.sqlors('key=', keys)).list()
+        result = self.db.select('thing', what='*', where=web.sqlors('key=', keys)).list()
         d = dict((r.key, r) for r in result)
         return d
         
     def new_thing(self, **kw):
-        return web.insert('thing', **kw)
+        return self.db.insert('thing', **kw)
         
     def get_metadata_from_id(self, id):
-        d = web.query('SELECT * FROM thing WHERE id=$id', vars=locals())
+        d = self.db.query('SELECT * FROM thing WHERE id=$id', vars=locals())
         return d and d[0] or None
 
     def get_metadata_list_from_ids(self, ids):
         d = {}
-        result = web.select('thing', what='*', where=web.sqlors('id=', ids)).list()
+        result = self.db.select('thing', what='*', where=web.sqlors('id=', ids)).list()
         d = dict((r.id, r) for r in result)
         return d
         
@@ -122,7 +123,7 @@ class DBSiteStore(common.SiteStore):
             # repeat until a non-existing key is found.
             # This is required to prevent error in cases where an object with the next key is already created.
             while True:
-                value = web.query("SELECT NEXTVAL($seq.name) as value", vars=locals())[0].value
+                value = self.db.query("SELECT NEXTVAL($seq.name) as value", vars=locals())[0].value
                 key = seq.pattern % value
                 if self.get_metadata(key) is None:
                     return key
@@ -145,7 +146,7 @@ class DBSiteStore(common.SiteStore):
         if not metadata: 
             return None
         revision = revision or metadata.latest_revision
-        d = web.query('SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision', vars=locals())
+        d = self.db.query('SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision', vars=locals())
         data = d and d[0].data 
         if not data:
             return None
@@ -162,7 +163,7 @@ class DBSiteStore(common.SiteStore):
             + ' AND thing.key IN (' + self.sqljoin(xkeys, ', ') + ')'
 
         result = {}
-        for r in web.query(query):
+        for r in self.db.query(query):
             result[r.key] = common.LazyThing(self, r.key, r.data)
         return result
         
@@ -173,12 +174,12 @@ class DBSiteStore(common.SiteStore):
         def add_version(thing_id, revision=None):
             """Adds a new entry in the version table for the object specified by thing_id and returns the latest revision."""
             if revision is None:
-                d = web.query(
+                d = self.db.query(
                     'UPDATE thing set latest_revision=latest_revision+1, last_modified=$timestamp WHERE id=$thing_id;' + \
                     'SELECT latest_revision FROM thing WHERE id=$thing_id', vars=locals())
                 revision = d[0].latest_revision
                 
-            web.insert('version', False, 
+            self.db.insert('version', False, 
                 thing_id=thing_id, 
                 revision=revision, 
                 created=timestamp,
@@ -191,7 +192,7 @@ class DBSiteStore(common.SiteStore):
             return versions[thing_id]
         
         result = web.storage(created=[], updated=[])
-        web.transact()
+        t = self.db.transaction()
         _inserts = {}
         try:
             for action, key, data in queries:
@@ -205,13 +206,13 @@ class DBSiteStore(common.SiteStore):
                     result.updated.append(key)
             
             for table, rows in _inserts.items():
-                multiple_insert(table, rows, seqname=False)
+                self.db.multiple_insert(table, rows, seqname=False)
         except:
             web.ctx.new_objects.clear()
-            web.rollback()
+            t.rollback()
             raise
         else:
-            web.commit()
+            t.commit()
 
         return result
     
@@ -285,11 +286,11 @@ class DBSiteStore(common.SiteStore):
         if table is None:
             return None
         property_table = table.split('_')[0] + '_keys'
-        d = web.select(property_table, where='key=$name', vars=locals())
+        d = self.db.select(property_table, where='key=$name', vars=locals())
         if d:
             return d[0].id
         elif create:
-            return web.insert(property_table, key=name)
+            return self.db.insert(property_table, key=name)
         else:
             return None
 	    
@@ -304,20 +305,20 @@ class DBSiteStore(common.SiteStore):
         
         if 'type' in actions:
             type = self.get(actions['type'].value)
-            web.update('thing', where='id=$thing_id', type=type.id, vars=locals())
+            self.db.update('thing', where='id=$thing_id', type=type.id, vars=locals())
         else:
             type = thing.type
-        
+            
         for name, a in actions.items():
             table = self.schema.find_table(type.key, a.datatype, name)
             if a.connect == 'update':
                 pid = self.get_property_id(table, name, create=True)
                 #@@ TODO: table for delete should be found from the datatype of the existing value 
-                table and web.delete(table, where='thing_id=$thing_id and key_id=$pid', vars=locals())
+                table and self.db.delete(table, where='thing_id=$thing_id and key_id=$pid', vars=locals())
                 
                 if a.value is not None:
-                    table and web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.xvalue)
-                    thing.set(name, a.value, a.datatype)
+                    table and self.db.insert(table, False, thing_id=thing_id, key_id=pid, value=a.xvalue)
+                    thing.set(name, a.value, a.datatype)    
                 else:
                     if name in thing:
                         del thing[name]
@@ -325,33 +326,33 @@ class DBSiteStore(common.SiteStore):
             elif a.connect == 'insert':
                 # using time as ordering so that insert always happens at the end.
                 pid = self.get_property_id(table, name, create=True)
-                d = web.query(
+                d = self.db.query(
                     'SELECT max(ordering) as ordering FROM %s WHERE thing_id=$thing_id and key_id=$pid GROUP BY thing_id, key_id' % table,
                     vars=locals())
                 ordering = (d and d[0].ordering + 1) or 0
-                table and web.insert(table, False, thing_id=thing_id, key_id=pid, value=a.xvalue, ordering=ordering)
+                table and self.db.insert(table, False, thing_id=thing_id, key_id=pid, value=a.xvalue, ordering=ordering)
                 value = thing.get_value(name) or []
                 thing.set(name, value + [a.value], a.datatype)
             elif a.connect == 'delete':
                 pid = self.get_property_id(table, name, create=False)
                 if pid:
                     #@@ TODO: table for delete should be found from the datatype of the existing value 
-                    table and web.delete(table, where='thing_id=$thing_id and key_id=$pid and value=$a.xvalue', vars=locals())
+                    table and self.db.delete(table, where='thing_id=$thing_id and key_id=$pid and value=$a.xvalue', vars=locals())
                     value = [v for v in thing.get_value(name) or [] if v != a.value]
                     thing.set(name, value, a.datatype)
             elif a.connect == 'update_list':
                 pid = self.get_property_id(table, name, create=True)
                 
                 #@@ TODO: table for delete should be found from the datatype of the existing value 
-                table and web.delete(table, where='thing_id=$thing_id and key_id=$pid', vars=locals())
+                table and self.db.delete(table, where='thing_id=$thing_id and key_id=$pid', vars=locals())
                 
                 if a.value is not None:
                     for i, v in enumerate(a.xvalue):
-                        table and web.insert(table, False, thing_id=thing_id, key_id=pid, value=v, ordering=i)
+                        table and self.db.insert(table, False, thing_id=thing_id, key_id=pid, value=v, ordering=i)
                 thing.set(name, a.value, a.datatype)
-                
+                                        
         data = thing.to_json()
-        web.insert('data', False, thing_id=thing_id, revision=revision, data=data)
+        self.db.insert('data', False, thing_id=thing_id, revision=revision, data=data)
         return thing
 
     def things(self, query):
@@ -414,24 +415,26 @@ class DBSiteStore(common.SiteStore):
                 q = '%(table)s.thing_id = thing.id AND %(table)s.key_id=$key_id AND %(table)s.value %(op)s $c.value' % {'table': table, 'op': op}
                 wheres += [web.reparam(q, locals())]
         
-        wheres = wheres or ['1 = 1']        
+        wheres = wheres or ['1 = 1']
         tables = ['thing'] + [t.sql() for t in tables.values()]
-        result = web.select(
+
+        t = self.db.transaction()
+        if config.query_timeout:
+            self.db.query("SELECT set_config('statement_timeout', $query_timeout, false)", dict(query_timeout=config.query_timeout))
+                        
+        result = self.db.select(
             what='thing.key', 
             tables=tables, 
             where=self.sqljoin(wheres, ' AND '), 
             limit=query.limit, 
             offset=query.offset)
-        return [r.key for r in result]
+        result = [r.key for r in result]
+        t.commit()
+        
+        return result
         
     def sqljoin(self, queries, delim):
-        delim = web.SQLQuery(delim)
-        result = web.SQLQuery('')
-        for i, q in enumerate(queries):
-            if i != 0:
-                result = result + delim
-            result = result + q
-        return result
+        return web.SQLQuery.join(queries, delim)
         
     def versions(self, query):
         what = 'thing.key, version.*'
@@ -452,11 +455,17 @@ class DBSiteStore(common.SiteStore):
         sort = query.sort
         if sort and sort.startswith('-'):
             sort = sort[1:] + ' desc'
+        
+        t = self.db.transaction()
+        if config.query_timeout:
+            self.db.query("SELECT set_config('statement_timeout', $query_timeout, false)", dict(query_timeout=config.query_timeout))
                 
-        result = web.select(['thing','version'], what=what, where=where, offset=query.offset, limit=query.limit, order=sort)
+        result = self.db.select(['thing','version'], what=what, where=where, offset=query.offset, limit=query.limit, order=sort)
         result = result.list()
         author_ids = list(set(r.author_id for r in result if r.author_id))
         authors = self.get_metadata_list_from_ids(author_ids)
+        
+        t.commit()
         
         for r in result:
             r.author = r.author_id and authors[r.author_id].key
@@ -468,7 +477,7 @@ class DBSiteStore(common.SiteStore):
         if metadata is None:
             return None
             
-        d = web.query("SELECT * FROM account WHERE thing_id=$metadata.id", vars=locals())
+        d = self.db.query("SELECT * FROM account WHERE thing_id=$metadata.id", vars=locals())
         return d and d[0] or None
         
     def update_user_details(self, key, email, enc_password):
@@ -480,36 +489,36 @@ class DBSiteStore(common.SiteStore):
         params = {}
         email and params.setdefault('email', email)
         enc_password and params.setdefault('password', enc_password)
-        web.update('account', where='thing_id=$metadata.id', vars=locals(), **params)
+        self.db.update('account', where='thing_id=$metadata.id', vars=locals(), **params)
             
     def register(self, key, email, enc_password):
         metadata = self.get_metadata(key)
-        web.insert('account', False, email=email, password=enc_password, thing_id=metadata.id)
+        self.db.insert('account', False, email=email, password=enc_password, thing_id=metadata.id)
         
     def transact(self, f):
-        web.transact()
+        t = self.db.transaction()
         try:
             f()
         except:
-            web.rollback()
+            t.rollback()
             raise
         else:
-            web.commit()
+            t.commit()
     
     def find_user(self, email):
         """Returns the key of the user with the specified email."""
-        d = web.select('account', where='email=$email', vars=locals())
+        d = self.db.select('account', where='email=$email', vars=locals())
         thing_id = d and d[0].thing_id or None
         return thing_id and self.get_metadata_from_id(thing_id).key
     
     def initialize(self):
         if not self.initialized():
-            web.transact()
+            t = self.db.transaction()
             id = self.new_thing(key='/type/type')
-            web.update('thing', type=id, where='id=$id', vars=locals())
-            web.insert('version', False, thing_id=id, revision=1)
-            web.insert('data', False, thing_id=id, revision=1, data='{"key": "/type/type", "id": %d, "revision": 1, "type": {"key": "/type/type"}}' % id)
-            web.commit()
+            self.db.update('thing', type=id, where='id=$id', vars=locals())
+            self.db.insert('version', False, thing_id=id, revision=1)
+            self.db.insert('data', False, thing_id=id, revision=1, data='{"key": "/type/type", "id": %d, "revision": 1, "type": {"key": "/type/type"}}' % id)
+            t.commit()
             
     def initialized(self):
         return self.get_metadata('/type/type') is not None
@@ -521,16 +530,17 @@ class DBStore(common.Store):
     def __init__(self, schema):
         self.schema = schema
         self.sitestore = None
+        self.db = web.database(**web.config.db_parameters)
         
     def create(self, sitename):
         if self.sitestore is None:
-            self.sitestore = DBSiteStore(self.schema)
+            self.sitestore = DBSiteStore(self.db, self.schema)
         self.sitestore.initialize()
         return self.sitestore
         
     def get(self, sitename):
         if self.sitestore is None:
-            sitestore = DBSiteStore(self.schema)
+            sitestore = DBSiteStore(self.db, self.schema)
             if not sitestore.initialized():
                 return None
             self.sitestore = sitestore
@@ -545,19 +555,20 @@ class MultiDBStore(DBStore):
     def __init__(self, schema):
         self.schema = schema
         self.sitestores = {}
+        self.db = web.database(**web.config.db_parameters)
         
     def create(self, sitename):
-        web.transact()
+        t = self.db.transaction()
         try:
-            site_id = web.insert('site', name=sitename)
-            sitestore = MultiDBSiteStore(self.schema, sitename, site_id)
+            site_id = self.db.insert('site', name=sitename)
+            sitestore = MultiDBSiteStore(self.db, self.schema, sitename, site_id)
             sitestore.initialize()
             self.sitestores[sitename] = sitestore
         except:
-            web.rollback()
+            t.rollback()
             raise
         else:
-            web.commit()
+            t.commit()
             return self.sitestores[sitename]
             
     def get(self, sitename):
@@ -570,35 +581,35 @@ class MultiDBStore(DBStore):
         return self.sitestores[sitename]
         
     def get_site_id(self, sitename):
-        d = web.query('SELECT * FROM site WHERE name=$sitename', vars=locals())
+        d = self.db.query('SELECT * FROM site WHERE name=$sitename', vars=locals())
         return d and d[0].id or None
             
 class MultiDBSiteStore(DBSiteStore):
-    def __init__(self, schema, sitename, site_id):
-        DBStore.__init__(self, schema)
+    def __init__(self, db, schema, sitename, site_id):
+        DBStore.__init__(self, db, schema)
         self.sitename = sitename
         self.site_id = site_id
         
     def get_metadata(self, key):
-        d = web.query('SELECT * FROM thing WHERE site_id=self.site_id AND key=$key', vars=locals())
+        d = self.db.query('SELECT * FROM thing WHERE site_id=self.site_id AND key=$key', vars=locals())
         return d and d[0] or None
         
     def get_metadata_list(self, keys):
         where = web.reparam('site_id=$self.site_id', locals()) + web.sqlors('key=', keys)
-        result = web.select('thing', what='*', where=where).list()
+        result = self.db.select('thing', what='*', where=where).list()
         d = dict((r.key, r) for r in result)
         return d
         
     def new_thing(self, **kw):
         kw['site_id'] = self.site_id
-        return web.insert('thing', **kw)
+        return self.db.insert('thing', **kw)
         
     def new_account(self, thing_id, email, enc_password):
-        return web.insert('account', False, site_id=self.site_id, thing_id=thing_id, email=email, password=enc_password)
+        return self.db.insert('account', False, site_id=self.site_id, thing_id=thing_id, email=email, password=enc_password)
 
     def find_user(self, email):
         """Returns the key of the user with the specified email."""
-        d = web.select('account', where='site_id=$self.site_id, $email=email', vars=locals())
+        d = self.db.select('account', where='site_id=$self.site_id, $email=email', vars=locals())
         thing_id = d and d[0].thing_id or None
         return thing_id and self.get_metadata_from_id(thing_id).key
                     

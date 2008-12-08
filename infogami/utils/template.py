@@ -99,6 +99,10 @@ def usermode(f):
     g.__name__ = f.__name__
     return g
 
+class Stowage(web.storage):
+    def __str__(self):
+        return self._str
+
 @usermode
 def saferender(templates, *a, **kw):
     """Renders using the first successful template from the list of templates."""
@@ -123,7 +127,7 @@ def saferender(templates, *a, **kw):
             from view import set_error
             set_error(str(t.filename) + ': error in processing template: ' + e.__class__.__name__ + ': ' + str(e) + ' (falling back to default template)')
 
-    return web.template.Stowage(_str="Unable to render this page.", title='Error')
+    return Stowage(_str="Unable to render this page.", title='Error')
 
 def typetemplate(name):
     """explain later"""

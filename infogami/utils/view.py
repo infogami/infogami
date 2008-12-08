@@ -323,8 +323,7 @@ def login_redirect(path=None):
         path = web.ctx.fullpath
 
     query = urllib.urlencode({"redirect":path})
-    web.seeother("/account/login?" + query)
-    raise StopIteration
+    raise web.seeother("/account/login?" + query)
 
 def permission_denied(error):
     return render.permission_denied(web.ctx.fullpath, error)

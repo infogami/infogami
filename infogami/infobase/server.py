@@ -8,11 +8,10 @@ from infobase import config
 
 import common
 from common import NotFound, InfobaseException
+import cache
 
 def setup_remoteip():
     web.ctx.ip = web.ctx.env.get('HTTP_X_REMOTE_IP', web.ctx.ip)
-
-web.webapi._loadhooks['remoteip'] = setup_remoteip
 
 urls = (
     "/([^/]*)/get", "withkey",
@@ -24,6 +23,12 @@ urls = (
     "/([^/]*)/account/(.*)", "account",
     "/([^/]*)/permission", "permission",
 )
+
+app = web.application(urls, globals())
+
+app.add_processor(web.loadhook(setup_remoteip))
+app.add_processor(web.loadhook(cache.loadhook))
+app.add_processor(web.loadhook(cache.unloadhook))
 
 MISSING_PARAM = 10
 BAD_PARAM = 11
@@ -48,9 +53,6 @@ def jsonify(f):
     def g(self, *a, **kw):
         t1 = time.time()
 
-        if config.query_timeout:
-            web.query("SELECT set_config('statement_timeout', $query_timeout, false)", dict(query_timeout=config.query_timeout))
-        
         if not web.ctx.get('infobase_localmode'):
             cookies = web.cookies(infobase_auth_token=None)
             web.ctx.infobase_auth_token = cookies.infobase_auth_token
@@ -94,7 +96,7 @@ def jsonify(f):
             # set auth-token as cookie for remote connection.
             if web.ctx.get('infobase_auth_token'):
                 web.setcookie('infobase_auth_token', web.ctx.infobase_auth_token)
-            web.ctx.output = web.utf8(result)
+            return result
     return g
     
 def input(*required, **defaults):
@@ -214,8 +216,7 @@ class account:
         if m:
             return m(site)
         else:
-            web.notfound()
-            raise StopIteration
+            raise web.notfound()
         
     GET = POST = delegate
 
@@ -275,8 +276,6 @@ def request(path, method, data):
     web.ctx.infobase_input = data or {}
     web.ctx.infobase_method = method
     
-    import cache
-    
     try:
         # hack to make cache work for local infobase connections
         cache.loadhook()
@@ -294,9 +293,5 @@ def request(path, method, data):
         cache.unloadhook()
         
 def run():
-    web.run(urls, globals())
+    app.run()
     
-if __name__ == "__main__":
-    web.config.db_parameters = dict(dbn='postgres', db='infobase2', user='anand', pw='')
-    web.config.db_printing = True
-    web.run(urls, globals())

@@ -173,6 +173,10 @@ def movetemplates(prefix_pattern=None):
         return title
     
     templates = []
+
+    for name, t in template.disktemplates.items():
+        if isinstance(t, LazyTemplate):
+            t.func()
     
     for name, t in template.disktemplates.items():
         prefix = '/templates/'
@@ -195,6 +199,11 @@ def movetemplates(prefix_pattern=None):
 def movemacros():
     """Move macros to wiki."""
     macros = []
+
+    for name, t in macro.diskmacros.items():
+        if isinstance(t, LazyTemplate):
+            t.func()
+    
     for name, m in macro.diskmacros.items():
         key = _wikiname(name, '/macros/', '')
         body = open(m.filepath).read()
@@ -244,9 +253,25 @@ class template_preferences(delegate.page):
         }
         web.ctx.site.write(q)
         web.seeother('/account/preferences')
+        
+def monkey_patch_debugerror():
+    """Monkey patch web.debug error to display template code."""
+    def xopen(filename):
+        if filename.endswith('.tmpl') or filename.startswith('/macros/'):
+            page = web.ctx.site.get(filename)
+            if page is None:
+                raise IOError("not found: " + filename)
+            from StringIO import StringIO
+            return StringIO(page.body)
+        else:
+            return open(filename)
+            
+    web.debugerror.func_globals['open'] = xopen
 
 from infogami.core.code import register_preferences
 register_preferences(template_preferences)
 
 # load templates and macros from all sites.
 setup()
+
+monkey_patch_debugerror()

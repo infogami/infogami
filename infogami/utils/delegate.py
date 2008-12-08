@@ -20,7 +20,7 @@ def hook_processor(handler):
         h()
     try:
         return handler()
-    except:
+    finally:
         for h in web.unloadhooks.values():
             h()
             

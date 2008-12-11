@@ -401,7 +401,8 @@ class getthings(delegate.page):
             'limit': int(i.limit)
         }
         things = [web.ctx.site.get(t, lazy=True) for t in web.ctx.site.things(q)]
-        print "\n".join("%s|%s" % (t[i.property], t.key) for t in things)
+        data = "\n".join("%s|%s" % (t[i.property], t.key) for t in things)
+        raise web.HTTPError('200 OK', {}, data)
     
 class favicon(delegate.page):
     path = "/favicon.ico"

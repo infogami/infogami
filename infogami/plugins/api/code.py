@@ -26,7 +26,7 @@ class api(delegate.page):
             cls = hooks[suffix]
             m = getattr(cls(), method, None)
             if m:
-                print m()
+                raise web.HTTPError('200 OK', {}, m())
             else:
                 web.ctx.status = '405 Method Not Allowed'
         else:

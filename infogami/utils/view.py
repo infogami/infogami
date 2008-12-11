@@ -170,12 +170,12 @@ def thingrepr(value, type=None):
     if isinstance(value, client.Thing):
         type = value.type
         
-    return render.repr(thingify(type, value))
+    return unicode(render.repr(thingify(type, value)))
         
 @public
 def thinginput(type, name, value, **attrs):
     """Renders html input field of given type."""
-    return render.input(thingify(type, value), name)
+    return unicode(render.input(thingify(type, value), name))
     
 def thingify(type, value):
     # if type is given as string then get the type from db

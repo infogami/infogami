@@ -1,14 +1,29 @@
 """webtest: test utilities.
 """
 import sys, os
-import web
-
 # adding current directory to path to make sure local copy of web module is used.
 sys.path.insert(0, '.')
 
 import unittest
 
-TestCase = unittest.TestCase
+from infogami.utils import delegate
+import web
+from web.browser import Browser
+
+web.config.debug = False
+
+class TestCase(unittest.TestCase):
+    def setUp(self):
+        from infogami.infobase import server
+        db = server.get_site('infogami.org').store.db
+        
+        self._t = db.transaction()
+
+    def tearDown(self):
+        self._t.rollback()
+        
+    def browser(self):
+        return Browser(delegate.app)
 
 def runTests(suite):
     runner = unittest.TextTestRunner()
@@ -16,8 +31,11 @@ def runTests(suite):
     
 def main(suite=None):
     user = os.getenv('USER')
-    web.config.db_parameters = dict(dbn='postgres', db='infobase_test', user=user, pw='')
+    web.config.db_parameters = dict(dbn='postgres', db='infogami_test', user=user, pw='')
     web.load()
+
+    delegate.app.request('/')
+    delegate._load()
     
     if not suite:
         main_module = __import__('__main__')

@@ -215,7 +215,7 @@ def thingdiff(type, name, v1, v2):
     if v1 == v2:
         return ""
     else:
-        return render.xdiff(thingify(type, v1), thingify(type, v2), name)
+        return unicode(render.xdiff(thingify(type, v1), thingify(type, v2), name))
         
 @public
 def thingview(page):

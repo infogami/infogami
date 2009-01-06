@@ -132,7 +132,7 @@ def saferender(templates, *a, **kw):
 def typetemplate(name):
     """explain later"""
     def template(page, *a, **kw):
-        default_template = getattr(render, 'default_' + name)
+        default_template = getattr(render, 'default_' + name, None)
         key = page.type.key[1:] + '/' + name
         t = getattr(render, web.utf8(key), default_template)
         return t(page, *a, **kw)

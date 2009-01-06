@@ -203,7 +203,7 @@ class permission(delegate.mode):
         
         try:
             web.ctx.site.write(q)
-            web.seeother(web.changequery({}, m='permission'))
+            raise web.seeother(web.changequery({}, m='permission'))
         except Exception, e:
             import traceback
             traceback.print_exc(e)
@@ -275,7 +275,7 @@ class login(delegate.page):
 
         expires = (i.remember and 3600*24*7) or ""
         web.setcookie(config.login_cookie_name, web.ctx.conn.get_auth_token(), expires=expires)
-        web.seeother(i.redirect)
+        raise web.seeother(i.redirect)
         
 class register(delegate.page):
     path = "/account/register"
@@ -296,7 +296,7 @@ class register(delegate.page):
                 f.note = str(e)
                 return render.register(f)
             web.setcookie(config.login_cookie_name, web.ctx.conn.get_auth_token())
-            web.seeother(i.redirect)
+            raise web.seeother(i.redirect)
 
 class logout(delegate.page):
     path = "/account/logout"
@@ -304,7 +304,7 @@ class logout(delegate.page):
     def POST(self):
         web.setcookie(config.login_cookie_name, "", expires=-1)
         referer = web.ctx.env.get('HTTP_REFERER', '/')
-        web.seeother(referer)
+        raise web.seeother(referer)
 
 class forgot_password(delegate.page):
     path = "/account/forgot_password"
@@ -351,7 +351,7 @@ class reset_password(delegate.page):
             try:
                 web.ctx.site.reset_password(i.username, i.code, i.password)
                 web.ctx.site.login(i.username, i.password, False)
-                web.seeother('/')
+                raise web.seeother('/')
             except Exception, e:
                 return "Failed to reset password.<br/><br/> Reason: "  + str(e)
         
@@ -387,7 +387,7 @@ class change_password(delegate.page):
             except ClientException, e:
                 f.note = str(e)
                 return render.login_preferences(f)
-            web.seeother("/account/preferences")
+            raise web.seeother("/account/preferences")
 
 register_preferences(change_password)
 

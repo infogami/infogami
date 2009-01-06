@@ -252,7 +252,7 @@ class template_preferences(delegate.page):
             }
         }
         web.ctx.site.write(q)
-        web.seeother('/account/preferences')
+        raise web.seeother('/account/preferences')
         
 def monkey_patch_debugerror():
     """Monkey patch web.debug error to display template code."""

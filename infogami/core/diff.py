@@ -39,6 +39,8 @@ def better_diff(a, b):
     return map
 
 def simple_diff(a, b):
+    a = a or ''
+    b = b or ''
     if a is None: a = ''
     if b is None: b = ''
     a = web.utf8(a).split(' ')

@@ -287,7 +287,7 @@ def request(path, method, data):
                 cls = globals()[classname]
                 tocall = getattr(cls(), method)
                 return tocall(*args)
-        return web.notfound()
+        raise web.notfound()
     finally:
         # hack to make cache work for local infobase connections
         cache.unloadhook()

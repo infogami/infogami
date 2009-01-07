@@ -184,6 +184,7 @@ class Site:
         
             data['last_modified'] = parse_datetime(data['last_modified'])
             self._cache[key, revision] = data
+            data['_backreferences'] = {}
             # it is important to call _fill_backreferences after updating the cache.
             # otherwise, _fill_backreferences is called recursively for type/type.
             self._fill_backreferences(key, data)
@@ -208,7 +209,7 @@ class Site:
             }
             if p.expected_type:
                 q['type'] = p.expected_type.key
-            data[p.name] = LazyObject(lambda: [self.get(key, lazy=True) for key in self.things(q)])
+            data['_backreferences'][p.name] = LazyObject(lambda: [self.get(key, lazy=True) for key in self.things(q)])
             
     def get(self, key, revision=None, lazy=False):
         assert key.startswith('/')
@@ -376,30 +377,44 @@ class Thing:
         self._site = site
         self.key = key
         if data is False:
-            self._data = {}
-        else:
-            self._data = data
+            data = {}
+        
+        self._backreferences = {}
         self.revision = revision
         self.latest_revision = self.revision
         
+        self._process_data(data)
+        
     def _getdata(self):
         if self._data is None:
-            self._data = self._site._load(self.key, self.revision)
-            self.revision = self._data.pop('revision', None) or self.revision
-        self.latest_revision = self.revision
+            data = self._site._load(self.key, self.revision)
+            self._process_data(data)
         return self._data
         
+    def _process_data(self, data):
+        self._data = data
+        if data is None:
+            return
+            
+        self.revision = self._data.pop('revision', None) or self.revision
+        self.latest_revision = self.revision
+
+        self._backreferences = self._data.pop('_backreferences', {})
+        self.created = self._data.pop('created', None)
+        self.last_modified = self._data.pop('last_modified', None)
+                    
     def keys(self):
+        #print 'Thing.keys', self.key, self.revision, self._getdata().keys()
         return self._getdata().keys()
         
     def __getitem__(self, key):
-        return self._getdata().get(key, nothing)
+        return self.get(key, nothing)
         
     def __setitem__(self, key, value):
         self._getdata()[key] = value
     
     def __setattr__(self, key, value):
-        if key in ['key', 'revision', 'latest_revision'] or key.startswith('_'):
+        if key in ['key', 'revision', 'latest_revision', 'last_modified', 'created'] or key.startswith('_'):
             self.__dict__[key] = value
         else:
             self._getdata()[key] = value
@@ -408,7 +423,10 @@ class Thing:
         return iter(self._data)
         
     def get(self, key, default=None):
-        return self._getdata().get(key, default)
+        try:
+            return self._getdata()[key]
+        except KeyError:
+            return self._backreferences.get(key, default)            
     
     def save(self, comment=None):
         d = self.dict()

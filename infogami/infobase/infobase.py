@@ -111,7 +111,15 @@ class Site:
             self._fire_triggers(result.created, result.updated)
         
         return result
+    
+    def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
+        timestamp = timestamp or datetime.datetime.utcnow()
+        author = author or self.get_account_manager().get_user()
+        ip = ip or web.ctx.get('ip', '127.0.0.1')
+        self.store.save(key, data, timestamp, comment, machine_comment, ip, author)
         
+        #@@ TODO: fire event
+
     def _fire_event(self, name, timestamp, ip, username, data):
         event = common.Event(self.sitename, name, timestamp, ip, username, data)
         self._infobase.fire_event(event)

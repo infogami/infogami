@@ -16,6 +16,7 @@ def setup_remoteip():
 urls = (
     "/([^/]*)/get", "withkey",
     "/([^/]*)/get_many", "get_many",
+    '/([^/]*)/save', 'save',
     "/([^/]*)/new_key", "new_key",
     "/([^/]*)/things", "things",
     "/([^/]*)/versions", "versions",
@@ -168,6 +169,13 @@ class get_many:
         site = get_site(sitename)
         things = site.get_many(keys)
         return things
+
+class save:
+    @jsonify
+    def POST(self, sitename):
+        i = input('key', 'data', comment=None, machine_comment=None)
+        data = from_json(i.data)
+        return site.save(i.key, data, comment=i.comment, machine_comment=i.machine_comment)
         
 class new_key:
     @jsonify

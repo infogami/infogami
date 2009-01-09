@@ -62,6 +62,9 @@ class Schema:
             self._table_cache[key] = f()
         return self._table_cache[key]
         
+    def find_tables(self, type):
+        return [self.find_table(type, d, None) for d in INDEXED_DATATYPES]
+        
     def sql(self):
         import os
         prefixes = sorted(list(self.prefixes) + ['datum'])
@@ -166,6 +169,117 @@ class DBSiteStore(common.SiteStore):
         for r in self.db.query(query):
             result[r.key] = common.LazyThing(self, r.key, r.data)
         return result
+        
+    def _add_version(self, thing_id, revision=None, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
+        if revision is None:
+            d = self.db.query(
+                'UPDATE thing set latest_revision=latest_revision+1, last_modified=$timestamp WHERE id=$thing_id;' + \
+                'SELECT latest_revision FROM thing WHERE id=$thing_id', vars=locals())
+            revision = d[0].latest_revision
+            
+        self.db.insert('version', False, 
+            thing_id=thing_id, 
+            revision=revision, 
+            created=timestamp,
+            comment=comment,
+            machine_comment=machine_comment,
+            ip=ip,
+            author_id=author and self.get_metadata(author).id
+            )
+        return revision
+        
+    def _update_tables(self, thing_id, key, olddata, newdata):
+        def find_datatype(value):
+            if isinstance(value, int):
+                return 'int'
+            elif isinstance(value, float):
+                return 'float'
+            elif isinstance(value, dict):
+                if 'key' in value:
+                    return 'ref'
+                elif 'type' in value:
+                    for t in common._datatypes:
+                        if value['type'] == t:
+                            return common._datatypes[t]
+                else:
+                    raise ValueError, 'Bad data'
+            else:
+                return 'str'
+                
+        def do_action(f, typekey, thing_id, name, value, ordering=None):
+            if isinstance(value, list):
+                for i, v in enumerate(value):
+                    do_action(f, typekey, thing_id, name, v, i)
+            elif isinstance(value, dict) and 'key' not in value and 'value' not in value:
+                for k, v in value.items():
+                    do_action(f, typekey, thing_id, name + '.' + k, v, ordering)
+            else:
+                datatype = find_datatype(value)
+                if datatype == 'ref':
+                    value = self.get_metadata(value['key']).id
+                elif isinstance(value, dict):
+                    value = value['value']
+                table = self.schema.find_table(typekey, datatype, name)
+                if table:
+                    pid = self.get_property_id(table, name, create=True)
+                    f(table, thing_id, pid, value, ordering)
+        
+        def action_delete(table, thing_id, key_id, value, ordering):
+            self.db.delete(table, where='thing_id=$thing_id AND key_id=$key_id AND value=$value AND ordering=$ordering', vars=locals())
+        
+        def action_insert(table, thing_id, key_id, value, ordering):
+            self.db.insert(table, seqname=False, thing_id=thing_id, key_id=key_id, value=value, ordering=ordering)
+
+        old_type = olddata and olddata['type']['key']
+        new_type = newdata['type']['key']
+
+        for k in ['id', 'key', 'type', 'last_modified', 'created', 'revision']:
+            olddata.pop(k, None)
+            newdata.pop(k, None)
+        
+        removed, unchanged, added = common.dict_diff(olddata, newdata)
+                
+        if old_type != new_type:
+            removed = olddata.keys()
+        
+        for k in removed:
+            do_action(action_delete, old_type, thing_id, k, olddata[k])
+        
+        for k in added:
+            do_action(action_insert, new_type, thing_id, k, newdata[k])
+
+    def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
+        timestamp = timestamp or datetime.datetime.utcnow()
+        t = self.db.transaction()
+        
+        thing = self.get(key)
+        typekey = data['type']['key']
+
+        if thing:
+            revision = None
+            thing_id = thing.id
+            olddata = thing._get_data()
+        else:
+            revision = 1
+            type_id = self.get(typekey).id
+            thing_id = self.db.insert('thing', last_modified=timestamp, latest_revision=1, key=key, type=type_id)
+            olddata = {}
+            
+        revision = self._add_version(thing_id, timestamp=timestamp, 
+            comment=comment, machine_comment=machine_comment, 
+            ip=ip, author=author, revision=revision)
+        
+        self._update_tables(thing_id, key, olddata, dict(data))
+            
+        data['revision'] = revision
+        data['last_modified'] = {'type': '/type/datetime', 'value': timestamp}
+        data['key'] = key
+        data['id'] = thing_id
+        
+        type_id=self.get_metadata(typekey).id
+        self.db.update('thing', where='id=$thing_id', last_modified=timestamp, latest_revision=revision, type=type_id, vars=locals())
+        self.db.insert('data', seqname=False, thing_id=thing_id, revision=revision, data=simplejson.dumps(data))
+        t.commit()
         
     def write(self, queries, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()

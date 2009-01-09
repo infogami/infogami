@@ -198,4 +198,3 @@ def bootstrap(site, admin_password):
     a = site.get_account_manager()
     a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))
     a.register(username="useradmin", email="useradmin@example.com", password=admin_password, data=dict(displayname="User Administrator"))
-    

@@ -185,7 +185,7 @@ class Thing:
                     value = [{'key': v} for v in value]
                 else:
                     value = {'key': value}
-            elif datatype not in ['int', 'boolean', 'float', 'str', 'key']:
+            elif datatype not in ['int', 'boolean', 'float', 'str', 'key', 'dict']:
                 type = datatype2type(datatype)
                 if isinstance(value, list):
                     value = [{"type": type, "value": v} for v in value]
@@ -211,8 +211,10 @@ class Thing:
             elif isinstance(value, dict):
                 if 'key' in value:
                     return 'ref', value['key']
-                else:
+                elif 'value' in value:
                     return type2datatype(value['type']), value['value']
+                else:
+                    return 'dict', value
             elif isinstance(value, list):
                 value = [parse(v) for v in value]
                 if value:
@@ -415,6 +417,22 @@ def create_test_store():
     )
     
     return store
+    
+def dict_diff(d1, d2):
+    """Compares 2 dictionaries and returns the following.
+    
+        * all keys in d1 whose values are changed in d2
+        * all keys in d1 which have same values in d2
+        * all keys in d2 whose values are changed in d1
+    
+        >>> a, b, c = dict_diff({'x': 1, 'y': 2, 'z': 3}, {'x': 11, 'z': 3, 'w': 23})
+        >>> sorted(a), sorted(b), sorted(c)
+        (['x', 'y'], ['z'], ['w', 'x'])
+    """
+    same = set(k for k in d1 if d1[k] == d2.get(k))
+    left = set(d1.keys()).difference(same)
+    right = set(d2.keys()).difference(same)
+    return left, same, right
                         
 def pprint(obj):
     """Pretty prints given object.
@@ -471,4 +489,3 @@ def prepr(obj, indent=""):
 if __name__ == "__main__":
     import doctest
     doctest.testmod()
-    

@@ -1,18 +1,13 @@
 {
-    'create': 'unless_exists',
     'key': '/type/page',
-    'type': '/type/type',
+    'type': {'key': '/type/type'},
     'name': 'Page',
     'properties': [{
-        'create': 'unless_exists',
-        'key': '/type/page/title',
         'name': 'title',
         'type': '/type/property',
         'expected_type': '/type/string',
         'unique': True
     }, {
-        'create': 'unless_exists',
-        'key': '/type/page/body',
         'name': 'body',
         'type': '/type/property',
         'expected_type': '/type/text',

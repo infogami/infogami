@@ -219,6 +219,8 @@ class DBSiteStore(common.SiteStore):
                     value = self.get_metadata(value['key']).id
                 elif isinstance(value, dict):
                     value = value['value']
+                elif isinstance(value, bool):
+                    value = int(value)
                 table = self.schema.find_table(typekey, datatype, name)
                 if table:
                     pid = self.get_property_id(table, name, create=True)
@@ -247,6 +249,12 @@ class DBSiteStore(common.SiteStore):
         
         for k in added:
             do_action(action_insert, new_type, thing_id, k, newdata[k])
+            
+    def save_many(self, items, timestamp, comment, machine_comment, ip, author):
+        t = self.db.transaction()
+        for d in items:
+            self.save(d['key'], d, timestamp, comment, machine_comment, ip, author)
+        t.commit()
 
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()

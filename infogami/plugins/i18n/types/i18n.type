@@ -1,7 +1,6 @@
 {
-    'create': 'unless_exists',
     'key': '/type/i18n',
-    'type': '/type/type',
+    'type': {'key': '/type/type'},
     'name': 'i18n strings',
     'description': 'Type for storing internationalization strings',
     'properties': []

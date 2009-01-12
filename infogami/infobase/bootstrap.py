@@ -10,191 +10,131 @@
 # * create type/user, type/usergroup and type/permission
 # * create required usergroup and permission objects.
 
-def metatype():
-    """Subquery to create type/type."""
-    return {
-        'create': 'unless_exists',
-        'key': '/type/type',
-        'type': '/type/type',
-        'name': 'Type',
-        'description': {
-            'type': '/type/text',
-            'value': 'Metatype.\nThis is the type of all types including it self.'
-        }
-    }
+def _type(key, name, desc, properties=[], backreferences=[], kind='regular'):
+    return dict(key=key, type={'key': '/type/type'}, name=name, desc=desc, properties=properties, backreferences=backreferences)
+
+def _property(name, expected_type, unique=True, description=None, **kw):
+    return dict(kw, name=name, type={'key': '/type/property'}, expected_type={"key": expected_type}, unique={'type': '/type/boolean', 'value': unique}, description=description)
     
+def _backreference(name, expected_type, property_name):
+    pass
+
 def primitive_types():
     """Subqueries to create all primitive types."""
-    def q(key, name, description):
-        return {
-            'create': 'unless_exists',
-            'key': key,
-            'type': '/type/type',
-            'name': name,
-            'description': {
-                'type': '/type/text',
-                'value': description
-            }
-        }
+    def f(key, name, description):
+        return _type(key, name, description, kind='basic')
+    
     return [
-        q('/type/key', 'Key', 'Type to store keys. A key is a string constrained to the regular expression [a-z][a-z/_]*.'),
-        q('/type/string', 'String', 'Type to store unicode strings up to a maximum length of 2048.'),
-        q('/type/text', 'Text', 'Type to store arbitrary long unicode text. Values of this type are not indexed.'),
-        q('/type/int', 'Integer', 'Type to store 32-bit integers. This can store integers in the range [-2**32, 2**31-1].'),
-        q('/type/boolean', 'Boolean', 'Type to store boolean values true and false.'),
-        q('/type/float', 'Floating Point Number', 'Type to store 32-bit floating point numbers'),
-        q('/type/datetime', 'Datetime', 'Type to store datetimes from 4713 BC to 5874897 AD with 1 millisecond resolution.'),
-        
-        q('/type/property', 'Property', ''),
-        q('/type/backreference', 'Back Reference', ''),
-        
-        
-        q('/type/object', 'Object', 'Placeholder type for storing arbitrary dictionaries.'),
-        # this is not a primitive type, but it is easier to add here than anywhere else.
-        q('/type/delete', 'Delete', 'Type to make a page as deleted.'),
+        f('/type/key', 'Key', 'Type to store keys. A key is a string constrained to the regular expression [a-z][a-z/_]*.'),
+        f('/type/string', 'String', 'Type to store unicode strings up to a maximum length of 2048.'),
+        f('/type/text', 'Text', 'Type to store arbitrary long unicode text. Values of this type are not indexed.'),
+        f('/type/int', 'Integer', 'Type to store 32-bit integers. This can store integers in the range [-2**32, 2**31-1].'),
+        f('/type/boolean', 'Boolean', 'Type to store boolean values true and false.'),
+        f('/type/float', 'Floating Point Number', 'Type to store 32-bit floating point numbers'),
+        f('/type/datetime', 'Datetime', 'Type to store datetimes from 4713 BC to 5874897 AD with 1 millisecond resolution.'),
+    ]
+    
+def system_types():
+    return [
+        _type('/type/property', 'Property', '', kind="embeddable",
+            properties=[
+                _property("name", "/type/string"),
+                _property("expected_type", "/type/type"),
+                _property("unique", "/type/boolean")
+            ]
+        ),
+        _type('/type/backreference', 'Back-reference', '', kind='embeddable',
+            properties=[
+                _property("name", "/type/string"),
+                _property("expected_type", "/type/type"),
+                _property("property_name", "/type/string"),
+                _property("query", "/type/string"),
+            ]
+        ),
+        _type('/type/type', 'Type', 'Metatype.\nThis is the type of all types including it self.',
+            properties=[
+                _property("name", "/type/string"),
+                _property("description", "/type/text"),
+                _property("properties", "/type/property", unique=False),
+                _property("backreference", "/type/backreference", unique=False),
+                _property("kind", "/type/string", options=["primitive", "regular", "embeddable"]),
+            ]
+        ),
+        _type('/type/user', 'User', '',
+            properties=[
+                _property('displayname', '/type/string'),
+                _property('website', '/type/string'),
+                _property('description', '/type/text'),
+            ]
+        ),
+        _type('/type/usergroup', 'Usergroup', '',
+            properties = [
+                _property('description', '/type/text'),
+                _property('members', '/type/user', unique=False)
+            ]
+        ),
+        _type('/type/permission', 'Permission', '',
+            properties = [
+                _property('description', '/type/text'),
+                _property('readers', '/type/usergroup', unique=False),
+                _property('writers', '/type/usergroup', unique=False),
+                _property('admins', '/type/usergroup', unique=False),
+            ]
+        ),
+        _type('/type/object', 'Object', 'placeholder type for storing arbitrary objects'),
+        _type('/type/dict', 'Dict', 'placeholder type for storing arbitrary dictionaties', kind='embeddable'),
+        _type('/type/delete', 'Deleted object', 'Type to mark an object as deleted.'),
+        _type('/type/redirect', 'Redirect', 'Type to specify redirects.',
+            properties = [
+                _property('location', '/type/string'),
+            ],        
+        ),
     ]
 
-def _property(key, property_name, expected_type, unique):
-    return {
-        'create': 'unless_exists',
-        'key': key + '/' + property_name,
-        'type': '/type/property',
-        'name': property_name,
-        'expected_type': {'key': expected_type, 'type': '/type/type'},
-        'unique': unique
-    }
-
-def update_type_property_and_backreference():
-    return [{
-        'key': '/type/property',
-        'properties': {
-            'connect': 'update_list',
-            'value': [
-                _property('/type/property', 'name', '/type/string', True),
-                _property('/type/property', 'expected_type', '/type/type', True),
-                _property('/type/property', 'unique', '/type/boolean', True),
-            ],
-        }
-    }, {
-        'key': '/type/backreference',
-        'properties': {
-            'connect': 'update_list',        
-            'value': [
-                _property('/type/backreference', 'name', '/type/string', True),
-                _property('/type/backreference', 'expected_type', '/type/type', True),
-                _property('/type/backreference', 'property_name', '/type/string', True),
-            ],
-        }
-    }]
-
-def update_metatype():
-    def p(property_name, expected_type, unique, index):
-        q = _property('/type/type', property_name, expected_type, unique)
-        q['index'] = index
-        return q
-
-    return {
-        'key': '/type/type',
-        'type': '/type/type',
-        'properties': {
-            'connect': 'update_list',
-            'value': [
-                p('name', '/type/string', True, 0),
-                p('description', '/type/text', True, 1),
-                p('properties', '/type/property', False, 2),
-                p('backreferences', '/type/backreference', False, 3),
-            ]
-        }
-    }
-
-def type_user_etal():
-    """Query to create type/user, type/usergroup and type/permission."""
-    return [{
-        'create': 'unless_exists',
-        'key': '/type/user',
-        'type': '/type/type',
-        'properties': [
-            _property('/type/user', 'displayname', '/type/string', True),
-            _property('/type/user', 'website', '/type/string', True),
-            _property('/type/user', 'description', '/type/text', True),
-        ]
-    }, {
-        'create': 'unless_exists',
-        'key': '/type/usergroup',
-        'type': '/type/type',
-        'properties': [
-            _property('/type/usergroup', 'description', '/type/text', True),
-            _property('/type/usergroup', 'members', '/type/user', False),
-        ]
-    }, {
-        'create': 'unless_exists',
-        'key': '/type/permission',
-        'type': '/type/type',
-        'properties': [
-            _property('/type/permission', 'description', '/type/text', True),
-            _property('/type/permission', 'readers', '/type/usergroup', False),
-            _property('/type/permission', 'writers', '/type/usergroup', False),
-            _property('/type/permission', 'admins', '/type/usergroup', False),
-        ]
-    }]
-
-def groups_and_permissions():
+def system_objects():
     def group(key, description):
         return {
-            'create': 'unless_exists',
             'key': key,
-            'type': '/type/usergroup',
+            'type': {'key': '/type/usergroup'},
             'description': description
         }
     
     def permission(key, readers, writers, admins):
         return {
-            'create': 'unless_exists',
             'key': key,
-            'type': '/type/permission',
+            'type': {'key': '/type/permission'},
             'readers': readers,
             'writers': writers,
             'admins': admins
         }
+        
+    def t(key):
+        return {'key': key}
     
     return [
         group('/usergroup/everyone', 'Group of all users including anonymous users.'),
         group('/usergroup/allusers', 'Group of all registred users.'),
         group('/usergroup/admin', 'Group of admin users.'),
-        permission('/permission/open', ['/usergroup/everyone'], ['/usergroup/everyone'], ['/usergroup/admin']),
-        permission('/permission/restricted', ['/usergroup/everyone'], ['/usergroup/admin'], ['/usergroup/admin']),
-        permission('/permission/secret', ['/usergroup/admin'], ['/usergroup/admin'], ['/usergroup/admin']),
+        permission('/permission/open', [t('/usergroup/everyone')], [t('/usergroup/everyone')], [t('/usergroup/admin')]),
+        permission('/permission/restricted', [t('/usergroup/everyone')], [t('/usergroup/admin')], [t('/usergroup/admin')]),
+        permission('/permission/secret', [t('/usergroup/admin')], [t('/usergroup/admin')], [t('/usergroup/admin')]),
     ]
-    
-def type_redirect():
-    return {
-        'create': 'unless_exists',
-        'key': '/type/redirect',
-        'name': 'Redirect',
-        'type': '/type/type',
-        'properties': [
-            _property('/type/property', 'location', '/type/string', True),
-        ],
-    }
     
 def make_query():
-    return [
-        metatype(),
-        primitive_types(),
-        update_type_property_and_backreference(),
-        update_metatype(),
-        type_user_etal(),
-        groups_and_permissions(),
-        type_redirect(),
-    ]
+    return primitive_types() + system_types() + system_objects()
 
 def bootstrap(site, admin_password):
     """Creates system types and objects for a newly created site.
     """
+    import cache
+    cache.loadhook()
+    
     import web
     web.ctx.infobase_bootstrap = True
     query = make_query()
-    site.write(query)
+    
+    #site.write(query)
+    site.save_many(query)
     a = site.get_account_manager()
     a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))
     a.register(username="useradmin", email="useradmin@example.com", password=admin_password, data=dict(displayname="User Administrator"))

@@ -4,6 +4,17 @@ import common
 from common import types, pprint, datatype2type, type2datatype, any, all
 import web
 
+def process_save(key, data):
+    if 'key' not in data:
+        data['key'] = key
+        raise common.InfobaseException("")
+        
+    def validate(k, v, expected_type=None):
+        pass
+    
+    for k, v in data.items():
+        pass
+    
 def make_query(store, author, query):
     r"""Compiles query into subqueries.    
     """

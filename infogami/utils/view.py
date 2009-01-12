@@ -255,8 +255,6 @@ def movefiles():
 def movetypes():
     def property(type, name, expected_type, unique, rendering_hint=None):
         q = {
-            'create': 'unless_exists',
-            'key': type + '/' + name,
             'name': name,
             'type': '/type/property',
             'expected_type': expected_type,
@@ -268,8 +266,6 @@ def movetypes():
         
     def backreference(type, name, expected_type, property_name):
         return {
-            'create': 'unless_exists',
-            'key': type + '/' + name,
             'name': name,
             'type': '/type/backreference',
             'expected_type': expected_type,
@@ -278,7 +274,19 @@ def movetypes():
         
     def readfunc(text):
         return eval(text, {'property': property, 'backreference': backreference})
-    move("types", ".type", recursive=False, readfunc=readfunc)
+    #move("types", ".type", recursive=False, readfunc=readfunc)
+
+    import delegate
+    extension = ".type"
+    pages = []
+    for plugin in delegate.plugins:
+        path = os.path.join(plugin.path, 'types')
+        if os.path.exists(path) and os.path.isdir(path):
+            files = [os.path.join(path, f) for f in os.listdir(path) if f.endswith(extension)]
+            for f in files:
+                d = eval(open(f).read(), {'property': property, 'backreference': backreference})
+                pages.append(d)
+    web.ctx.site.save_many(pages, 'install')
 
 @infogami.install_hook
 def movepages():

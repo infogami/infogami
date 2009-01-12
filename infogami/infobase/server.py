@@ -17,6 +17,7 @@ urls = (
     "/([^/]*)/get", "withkey",
     "/([^/]*)/get_many", "get_many",
     '/([^/]*)/save', 'save',
+    '/([^/]*)/save_many', 'save_many',
     "/([^/]*)/new_key", "new_key",
     "/([^/]*)/things", "things",
     "/([^/]*)/versions", "versions",
@@ -175,7 +176,16 @@ class save:
     def POST(self, sitename):
         i = input('key', 'data', comment=None, machine_comment=None)
         data = from_json(i.data)
+        site = get_site(sitename)
         return site.save(i.key, data, comment=i.comment, machine_comment=i.machine_comment)
+
+class save_many:
+    @jsonify
+    def POST(self, sitename):
+        i = input('query', comment=None, machine_comment=None)
+        data = from_json(i.query)
+        site = get_site(sitename)
+        return site.save_many(data, comment=i.comment, machine_comment=i.machine_comment)
         
 class new_key:
     @jsonify

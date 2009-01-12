@@ -116,9 +116,15 @@ class Site:
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
-        self.store.save(key, data, timestamp, comment, machine_comment, ip, author)
+        self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
         
         #@@ TODO: fire event
+    
+    def save_many(self, items, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
+        timestamp = timestamp or datetime.datetime.utcnow()
+        author = author or self.get_account_manager().get_user()
+        ip = ip or web.ctx.get('ip', '127.0.0.1')
+        self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
 
     def _fire_event(self, name, timestamp, ip, username, data):
         event = common.Event(self.sitename, name, timestamp, ip, username, data)
@@ -141,7 +147,14 @@ class Site:
         import bootstrap
         query = bootstrap.make_query()
         
-        self.write(query)     
+        import cache
+        cache.loadhook()
+        
+        web.ctx.ip = '127.0.0.1'
+        
+        #self.write(query)
+        self.save_many(query)
+                
         a = self.get_account_manager()
         a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))
         a.register(username="useradmin", email="useradmin@example.com", password=admin_password, data=dict(displayname="User Administrator"))

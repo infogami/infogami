@@ -171,8 +171,13 @@ class Site:
             elif isinstance(value, dict):
                 if 'value' in value:
                     return value['value']
-                else:
+                elif 'key' in value:
                     return Thing(self, value['key'], None)
+                else:
+                    d = web.storage()
+                    for k, v in value.items():
+                        d[k] = process(v)
+                    return d
             else:
                 return value
             
@@ -253,7 +258,12 @@ class Site:
         self._run_hooks('on_new_version', query)
         self._invalidate_cache(result.created + result.updated)
         return result
-
+        
+    def save_many(self, query, comment=None):
+        _query = simplejson.dumps(query)
+        result = self._request('/save_many', 'POST', dict(query=_query, comment=comment))
+        return result
+    
     def _invalidate_cache(self, keys):
         for k in keys:
             try:

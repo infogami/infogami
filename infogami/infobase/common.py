@@ -234,13 +234,25 @@ class Thing:
         
     def get_property(self, name):
         """Makes sense only when this object is a type object."""
+        def storify(d):
+            if isinstance(d, dict):
+                d = web.storage(d)
+                for k, v in d.items():
+                    d[k] = storify(v)
+                return d
+            elif isinstance(d, list):
+                return [storify(v) for v in d]
+            else:
+                return d
+        
         if 'properties' in self._data:
             datatype, properties = self._data['properties']
-            if datatype == 'ref' and isinstance(properties, list):
-                for p in properties:
-                    # key of property x will be typekey/name
-                    if p == self.key + '/' + name:
-                        return self._store.get(p)
+            for p in properties:
+                p = storify(p)
+                if p.name == name:
+                    if isinstance(p.expected_type, basestring):
+                        p.expected_type = web.storage(key=p.expected_type)
+                    return p
         return None
         
     def __repr__(self):

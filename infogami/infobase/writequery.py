@@ -4,17 +4,115 @@ import common
 from common import types, pprint, datatype2type, type2datatype, any, all
 import web
 
-def process_save(key, data):
+def process_save(store, key, data):
     if 'key' not in data:
         data['key'] = key
-        raise common.InfobaseException("")
         
-    def validate(k, v, expected_type=None):
-        pass
-    
-    for k, v in data.items():
-        pass
-    
+    def get_type(type):
+        if type is None:
+            raise common.InfobaseException("missing type")
+        else:
+            if isinstance(type, str):
+                type = dict(key=type)
+        thing = store.get(type['key'])
+        if thing is None:
+            raise common.InfobaseException("Not Found: %s" % repr(type['key']))
+        return thing
+        
+    def assert_unique(key, value, unique):
+        if unique:
+            if isinstance(value, list):
+                raise common.InfobaseException("%s: Expected unique, found a list." % repr(key))
+        else:
+            if not isinstance(value, list):
+                raise common.InfobaseException("%s: Expected a list, found atom." % repr(key))
+                
+    def validate_regular(key, value, expected_type):
+        if not isinstance(value, dict):
+            value = dict(key=value)
+        
+        if 'key' not in value:
+            raise common.InfobaseException("%s: missing key" % repr(key))
+        
+        thing = store.get(value['key'])
+        if thing is None:
+            raise common.InfobaseException("Not Found: %s" % repr(value['key']))
+        else:
+            if expected_type and thing.type.key != expected_type:
+                raise common.InfobaseException("Expected %s, found %s" % (repr(expected_type), repr(thing.type.key)))
+        return value
+        
+    def validate_embedded(key, value, expected_type):
+        if expected_type:
+            return process(value, store.get(expected_type))
+        else:
+            return value
+            
+    def validate_primitive(key, value, expected_type):
+        # handle case of value={'type':'/type/text', 'value': 'foo'}
+        if isinstance(value, dict):
+            if 'type' in value and expected_type and value['type'] != expected_type:
+                raise common.InfobaseException("Expected %s, found %s" % (repr(expected_type), repr(thing.type.key)))
+            if 'value' not in value:    
+                raise common.InfobaseException("Missing 'value'")
+            value = value['value']
+        
+        try:
+            if expected_type == "/type/int":
+                return int(value)
+            elif expected_type == "/type/float":
+                return float(value)
+            elif expected_type == '/type/boolean':
+                return str(value).lower() in ["1", "true"]
+            elif expected_type == '/type/datetime':
+                #@@ TODO: validation
+                return value
+            elif expected_type == '/type/text':
+                return {'type': '/type/text', 'value': value}
+            else:
+                return str(value)
+        except ValueError, e:
+            raise common.InfobaseException(str(e))
+    def validate(key, value, expected_type, unique=None):
+        if unique is not None:
+            assert_unique(key, value, unique)
+        if isinstance(value, list):
+            # @@ make sure all elements in the list are of same type.
+            return [validate(key, v, expected_type) for v in value]
+        else:
+            expected_type = store.get(expected_type)
+            kind = expected_type and expected_type.get_value('kind', 'regular')
+            #print >> web.debug, 'validate', key, value, expected_type, kind, expected_type and expected_type._data
+            if expected_type is None:
+                return value
+            elif kind == 'regular':
+                return validate_regular(key, value, expected_type.key)
+            elif kind == 'embedded' :
+                return validate_embedded(key, value, expected_type.key)
+            else:
+                return validate_primitive(key, value, expected_type.key)
+        
+    def get_expected_type(type, name):
+        if name == 'type':
+            return '/type/type', True
+        else:
+            for p in type.get_value('properties', []):
+                if p.get('name') == name:
+                    return p.get('expected_type'), p.get('unique', True)
+        return None, None
+        
+    def process(d, type):
+        for k, v in d.items():
+            if str(v).strip() == '' or v is None or v == []:
+                del d[k]
+            else:
+                expected_type, unique = get_expected_type(type, k)
+                d[k] = validate(k, v, expected_type, unique)
+        return d
+
+    type = get_type(data.get('type'))
+    return process(data, type)
+        
 def make_query(store, author, query):
     r"""Compiles query into subqueries.    
     """
@@ -74,8 +172,6 @@ def get_permission(store, key):
 
     return _get_permission(key)
 
-    
-    
 def serialize(query):
     r"""Serializes a nested query such that each subquery acts on a single object.
 

@@ -116,7 +116,9 @@ class Site:
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
-        self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
+        
+        data = writequery.process_save(self.store, key, data)
+        return self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
         
         #@@ TODO: fire event
     
@@ -152,7 +154,6 @@ class Site:
         
         web.ctx.ip = '127.0.0.1'
         
-        #self.write(query)
         self.save_many(query)
                 
         a = self.get_account_manager()

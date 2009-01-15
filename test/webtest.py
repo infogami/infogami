@@ -8,9 +8,11 @@ import unittest
 
 from infogami.utils import delegate
 import web
+import infogami
 from web.browser import Browser
 
 web.config.debug = False
+infogami.config.site = 'infogami.org'
 
 class TestCase(unittest.TestCase):
     def setUp(self):

@@ -249,7 +249,7 @@ class DBSiteStore(common.SiteStore):
         
         for k in added:
             do_action(action_insert, new_type, thing_id, k, newdata[k])
-            
+                    
     def save_many(self, items, timestamp, comment, machine_comment, ip, author):
         t = self.db.transaction()
         for d in items:
@@ -288,6 +288,7 @@ class DBSiteStore(common.SiteStore):
         self.db.update('thing', where='id=$thing_id', last_modified=timestamp, latest_revision=revision, type=type_id, vars=locals())
         self.db.insert('data', seqname=False, thing_id=thing_id, revision=revision, data=simplejson.dumps(data))
         t.commit()
+        return {'key': key, 'revision': revision}
         
     def write(self, queries, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()

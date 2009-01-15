@@ -1,4 +1,4 @@
-"""Run all doctests in web.py.
+"""Run all doctests in infogami.
 """
 import webtest
 

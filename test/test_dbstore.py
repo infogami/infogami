@@ -72,7 +72,22 @@ class SaveTest(InfobaseTestCase):
 
         self.new(key='/a', type='/type/test', i='1', f='1.2', t='/type/test')
         self.new(key='/b', type='/type/test', i={'type': '/type/int', 'value': '1'}, f='1.2', t={'key': '/type/test'})
-        self.new(key='/e1', type='/type/test', i='bad integer', error="invalid literal for int() with base 10: 'bad integer'")        
+        self.new(key='/e1', type='/type/test', i='bad integer', error="invalid literal for int() with base 10: 'bad integer'")
+        
+    def test_embeddable_types(self):
+        def test(key, type):
+            self.new(key=key, type=type, link=dict(title='foo', link='http://infogami.org'))
+            d = self.site.get('/a')._get_data()
+            self.assertEquals(d['link']['title'], 'foo')
+            self.assertEquals(d['link']['link'], 'http://infogami.org')
+            
+        def p(name, expected_type, unique=True, **d):
+            return locals()                    
+        self.new(key='/type/link', type='/type/type', properties=[p('title', '/type/string'), p('link', '/type/string')], kind='embeddable')
+        self.new(key='/type/book', type='/type/type', properties=[p('link', '/type/link')])
+        
+        test('/a', '/type/object')
+        test('/b', '/type/book')
 
 if __name__ == "__main__":
     webtest.main()

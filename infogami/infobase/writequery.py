@@ -42,7 +42,7 @@ def process_save(store, key, data):
                 raise common.InfobaseException("Expected %s, found %s" % (repr(expected_type), repr(thing.type.key)))
         return value
         
-    def validate_embedded(key, value, expected_type):
+    def validate_embeddable(key, value, expected_type):
         if expected_type:
             return process(value, store.get(expected_type))
         else:
@@ -91,8 +91,8 @@ def process_save(store, key, data):
                 return value
             elif kind == 'regular':
                 return validate_regular(key, value, expected_type.key)
-            elif kind == 'embedded' or kind == 'embeddable':
-                return validate_embedded(key, value, expected_type.key)
+            elif kind == 'embeddable':
+                return validate_embeddable(key, value, expected_type.key)
             else:
                 return validate_primitive(key, value, expected_type.key)
         

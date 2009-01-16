@@ -118,15 +118,29 @@ class Site:
         ip = ip or web.ctx.get('ip', '127.0.0.1')
         
         data = writequery.process_save(self.store, key, data)
-        return self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
+        result = self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
         
-        #@@ TODO: fire event
+        self._fire_event("save", timestamp, ip, author and author.key, data)
+        
+        created = [r['key'] for r in [result] if r['revision'] == 1]
+        updated = [r['key'] for r in [result] if r['revision'] != 1]
+        self._fire_triggers(created=created, updated=updated)        
+        return result
     
     def save_many(self, items, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
-        self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
+        result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
+        
+        for item in items:
+            self._fire_event("save", timestamp, ip, author and author.key, item)
+
+        created = [r['key'] for r in result if r['revision'] == 1]
+        updated = [r['key'] for r in result if r['revision'] != 1]
+        self._fire_triggers(created=created, updated=updated)
+        
+        return result
 
     def _fire_event(self, name, timestamp, ip, username, data):
         event = common.Event(self.sitename, name, timestamp, ip, username, data)

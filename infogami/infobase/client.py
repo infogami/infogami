@@ -260,12 +260,17 @@ class Site:
     
     def save(self, query, comment=None):
         _query = simplejson.dumps(query)
-        result = self._request('/save', 'POST', dict(key=query['key'], data=_query, comment=comment))
+        result = self._request('/save', 'POST', dict(key=query['key'], data=_query, comment=comment))['result']
+        self._invalidate_cache([result['key']])
+        self._run_hooks('on_new_version', query)
         return result
         
     def save_many(self, query, comment=None):
         _query = simplejson.dumps(query)
-        result = self._request('/save_many', 'POST', dict(query=_query, comment=comment))
+        result = self._request('/save_many', 'POST', dict(query=_query, comment=comment))['result']
+        self._invalidate_cache([r['key'] for r in result])
+        for q in query:
+            self._run_hooks('on_new_version', q)
         return result
     
     def _invalidate_cache(self, keys):
@@ -280,7 +285,7 @@ class Site:
         return perms['write']
 
     def _run_hooks(self, name, query):
-        if isinstance(query, dict):
+        if isinstance(query, dict) and 'key' in query:
             key = query['key']
             type = query.get('type')
             # type is none when saving permission

@@ -98,7 +98,7 @@ class DBSiteStore(common.SiteStore):
     def get_metadata(self, key):
         if self.cache and key in self.cache:
             thing = self.cache[key]
-            return thing and web.storage(id=thing.id, key=thing.key, last_modified=thing.last_modified, created=thing.created, type=thing.type.id)
+            return thing and web.storage(id=thing.id, key=thing.key, last_modified=thing.last_modified, created=thing.created, type=thing.type.id, latest_revision=thing.latest_revision)
         d = self.db.query('SELECT * FROM thing WHERE key=$key', vars=locals())
         return d and d[0] or None
         
@@ -252,9 +252,9 @@ class DBSiteStore(common.SiteStore):
                     
     def save_many(self, items, timestamp, comment, machine_comment, ip, author):
         t = self.db.transaction()
-        for d in items:
-            self.save(d['key'], d, timestamp, comment, machine_comment, ip, author)
+        result = [self.save(d['key'], d, timestamp, comment, machine_comment, ip, author) for d in items]
         t.commit()
+        return result
 
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
@@ -288,6 +288,9 @@ class DBSiteStore(common.SiteStore):
         self.db.update('thing', where='id=$thing_id', last_modified=timestamp, latest_revision=revision, type=type_id, vars=locals())
         self.db.insert('data', seqname=False, thing_id=thing_id, revision=revision, data=simplejson.dumps(data))
         t.commit()
+        
+        thing = common.Thing.from_dict(self, key, data.copy())
+        web.ctx.new_objects[key] = thing    
         return {'key': key, 'revision': revision}
         
     def write(self, queries, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):

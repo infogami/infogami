@@ -201,6 +201,11 @@ class Thing:
     
     @staticmethod
     def from_json(store, key, json):
+        d = simplejson.loads(json)
+        return Thing.from_dict(store, key, d)
+        
+    @staticmethod
+    def from_dict(store, key, d):
         def parse(value):
             if isinstance(value, bool):
                 return 'boolean', value
@@ -224,7 +229,6 @@ class Thing:
             else:
                 return 'str', value
                         
-        d = simplejson.loads(json)
         data = {}
         for k, v in d.items():
             v = parse(v)

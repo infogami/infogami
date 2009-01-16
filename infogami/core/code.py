@@ -73,13 +73,13 @@ class edit (delegate.mode):
             elif isinstance(d, dict):
                 for k, v in d.items():
                     d[k] = trim(v)
-                if non_empty(d.values()) and (path == '' or d.get('key') or d.get('name')):
+                if non_empty(d.values()):
                     return d
                 else: 
                     return None
             else:
                 return d.strip()
-                   
+        
         i = trim(i)
         q = i
         if action == 'preview':

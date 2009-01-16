@@ -2,6 +2,13 @@ $def with (thing, name)
 
 $if thing.is_primitive:
     <input type="text" id="input_$name" name="$name" value="$thing.value" />
+$elif thing.type.kind == 'embeddable':
+    <table>
+    $for p in thing.type.properties:
+        <tr>
+            <td>$p.name</td>
+            <td>$:thinginput(p.expected_type, name + '.' + p.name, thing[p.name])</td>
+        </tr>
+    </table>
 $else:
     $:macros.ThingReference(thing.type, name, thing)
-

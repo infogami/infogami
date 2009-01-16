@@ -33,7 +33,7 @@ class Query:
                 return c.value
                 
     def assert_type_required(self):
-        type_required = any(c.key not in common.COMMON_PROPERTIES for c in self.conditions)
+        type_required = any(c.key not in common.COMMON_PROPERTIES for c in self.conditions if not isinstance(c, Query))
         if type_required and self.get_type() is None:
             raise common.InfobaseException("missing 'type' in query")
 
@@ -41,10 +41,15 @@ class Query:
         self.conditions.append(web.storage(key=key, op=op, datatype=datatype, value=value))
         
     def __repr__(self):
-        conditions = ["%s %s %s:%s" % (c.key, c.op, c.datatype, c.value) for c in self.conditions]
+        def f(c):
+            if isinstance(c, Query):
+                return repr(c)
+            else:
+                return "%s %s %s:%s" % (c.key, c.op, c.datatype, c.value)
+        conditions = [f(c) for c in self.conditions]
         return "<query: %s>" % repr(conditions)
 
-def make_query(store, query):
+def make_query(store, query, nested=False):
     """Creates a query object from query dict.
         >>> store = common.create_test_store()
         >>> make_query(store, {'type': '/type/page'})
@@ -60,15 +65,22 @@ def make_query(store, query):
     q.sort = query.pop('sort', None)
     
     for k, v in query.items():
-        k, op = parse_key(k)
-        q.add_condition(k, op, None, v)
-    
-    q.assert_type_required()
+        if isinstance(v, dict):
+            # make sure op is ==
+            v = dict((k + '.' + key, value) for key, value in v.items())
+            q.conditions.append(make_query(store, v, nested=True))
+        else:
+            k, op = parse_key(k)
+            q.add_condition(k, op, None, v)
+            
+    if not nested:
+        q.assert_type_required()
         
     type = store.get(q.get_type())
     #assert type is not None, 'Not found: ' + q.get_type()
     for c in q.conditions:
-        c.datatype = find_datatype(type, c.key, c.value)
+        if not isinstance(c, Query):
+            c.datatype = find_datatype(type, c.key, c.value)
     
     return q
     
@@ -89,7 +101,7 @@ def find_datatype(type, key, value):
         child_permission="ref",
         created="datetime", 
         last_modified="datetime")
-        
+    
     if key in d:
         return d[key]
     

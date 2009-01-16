@@ -509,6 +509,7 @@ class DBSiteStore(common.SiteStore):
         
         def get_table(datatype, key):
             if key not in tables:
+                assert type is not None, "Missing type"            
                 table = self.schema.find_table(type, datatype, key)
                 label = 'd%d' % len(tables)
                 tables[key] = DBTable(table, label)
@@ -516,12 +517,11 @@ class DBSiteStore(common.SiteStore):
                     
         wheres = []
         
-        for c in query.conditions:
+        def process(c, ordering_func=None):
             if c.datatype == 'ref':
                 metadata = self.get_metadata(c.value)
-                assert metadata is not None, 'Not found: ' + c.value
+                assert metadata is not None, 'Not found: ' + str(c.value)
                 c.value = metadata.id
-                
             if c.op == '~':
                 op = Literal('LIKE')
                 c.value = c.value.replace('*', '%')
@@ -530,17 +530,40 @@ class DBSiteStore(common.SiteStore):
                 
             if c.key in ['key', 'type', 'created', 'last_modified']:
                 q = 'thing.%s %s $c.value' % (c.key, op)
-                wheres += [web.reparam(q, locals())]
+                xwheres = [web.reparam(q, locals())]
+                table = None
             else:
-                assert type is not None, "Missing type"
                 table = get_table(c.datatype, c.key)
                 key_id = self.get_property_id(table.name, c.key)
                 if not key_id:
-                    return []
+                    raise StopIteration
                 
                 q = '%(table)s.thing_id = thing.id AND %(table)s.key_id=$key_id AND %(table)s.value %(op)s $c.value' % {'table': table, 'op': op}
-                wheres += [web.reparam(q, locals())]
+                xwheres = [web.reparam(q, locals())]
+                if ordering_func:
+                    xwheres.append(ordering_func(table))
+            wheres.extend(xwheres)
+            return table
         
+        def make_ordering_func():
+            d = web.storage(table=None)
+            def f(table):
+                d.table = d.table or table
+                return '%s.ordering = %s.ordering' % (table, d.table)
+            return f
+            
+        import readquery
+        def process_query(q, ordering_func=None):
+            for c in q.conditions:
+                if isinstance(c, readquery.Query):
+                    process_query(c, ordering_func or make_ordering_func())
+                else:
+                    process(c, ordering_func)
+        try:
+            process_query(query)
+        except StopIteration:
+            return []
+                                
         wheres = wheres or ['1 = 1']
         tables = ['thing'] + [t.sql() for t in tables.values()]
 

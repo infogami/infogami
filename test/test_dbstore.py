@@ -89,5 +89,20 @@ class SaveTest(InfobaseTestCase):
         test('/a', '/type/object')
         test('/b', '/type/book')
 
+    def test_things_with_embeddable_types(self):
+        def link(title, url):
+            return dict(title=title, url='http://example.com/' + url)
+        self.new(key='/x', type='/type/object', links=[link('a', 'a'), link('b', 'b')])
+        self.new(key='/y', type='/type/object', links=[link('a', 'b'), link('b', 'a')])
+
+        def things(query, result):
+            x = self.site.things(query)
+            self.assertEquals(sorted(x), sorted(result))
+        
+        things({'type': '/type/object', 'links': {'title': 'a', 'url': 'http://example.com/a'}}, ['/x'])
+        things({'type': '/type/object', 'links': {'title': 'a', 'url': 'http://example.com/b'}}, ['/y'])
+        things({'type': '/type/object', 'links': {'title': 'a'}}, ['/x', '/y'])
+        things({'type': '/type/object', 'links': {'url': 'http://example.com/a'}}, ['/x', '/y'])
+
 if __name__ == "__main__":
     webtest.main()

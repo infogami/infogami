@@ -73,7 +73,12 @@ def process_save(store, key, data):
                 return str(value)
         except ValueError, e:
             raise common.InfobaseException(str(e))
+            
     def validate(key, value, expected_type, unique=None):
+        if isinstance(expected_type, dict):
+            expected_type = expected_type['key']
+        if isinstance(unique, dict):
+            unique = unique['value']
         if unique is not None:
             assert_unique(key, value, unique)
         if isinstance(value, list):
@@ -82,12 +87,11 @@ def process_save(store, key, data):
         else:
             expected_type = store.get(expected_type)
             kind = expected_type and expected_type.get_value('kind', 'regular')
-            #print >> web.debug, 'validate', key, value, expected_type, kind, expected_type and expected_type._data
             if expected_type is None:
                 return value
             elif kind == 'regular':
                 return validate_regular(key, value, expected_type.key)
-            elif kind == 'embedded' :
+            elif kind == 'embedded' or kind == 'embeddable':
                 return validate_embedded(key, value, expected_type.key)
             else:
                 return validate_primitive(key, value, expected_type.key)

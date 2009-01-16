@@ -177,7 +177,7 @@ class Site:
                     d = web.storage()
                     for k, v in value.items():
                         d[k] = process(v)
-                    return d
+                    return Thing(self, None, d)
             else:
                 return value
             
@@ -186,7 +186,6 @@ class Site:
             data = web.storage(data)
             for k, v in data.items():
                 data[k] = process(v)
-        
             data['last_modified'] = parse_datetime(data['last_modified'])
             self._cache[key, revision] = data
             data['_backreferences'] = {}
@@ -257,6 +256,11 @@ class Site:
         result = self._request('/write', 'POST', dict(query=_query, comment=comment))['result']
         self._run_hooks('on_new_version', query)
         self._invalidate_cache(result.created + result.updated)
+        return result
+    
+    def save(self, query, comment=None):
+        _query = simplejson.dumps(query)
+        result = self._request('/save', 'POST', dict(key=query['key'], data=_query, comment=comment))
         return result
         
     def save_many(self, query, comment=None):

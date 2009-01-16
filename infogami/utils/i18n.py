@@ -104,6 +104,7 @@ class i18n_string:
     
     def __call__(self, *a):
         try:
+            a = [x or "" for x in a]
             return str(self) % tuple(web.utf8(x) for x in a)
         except:
             print >> web.debug, 'failed to substitute (%s/%s) in language %s' % (self._namespace, self._key, web.ctx.lang)

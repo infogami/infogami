@@ -55,64 +55,14 @@ class edit (delegate.mode):
 
         return render.editpage(p)
         
-    def make_query(self, value, connect=False):
-        """Make infobase write query from post data."""
-        if isinstance(value, dict):
-            d = dict()
-            for k, v in value.items():
-                if k in ['key', 'connect', 'create']: # key is never changed
-                    d[k] = v
-                    continue
-                d['create'] = 'unless_exists'
-                d[k] = self.make_query(v, connect=True)
-                
-            if connect and 'create' not in d:
-                d['connect'] = 'update'
-            return d
-        elif isinstance(value, list):
-            return dict(connect='update_list', value=[self.make_query(v, False) for v in value])
-        else:
-            return dict(connect='update', value=value or None)
-            
-        for key, value in i.items():
-            if key in ['key', 'connect', 'create']: # key is never changed
-                continue
-                
-            i['create'] = 'unless_exists'
-            if isinstance(value, dict):
-                value = self.make_query(value)
-                if 'create' not in value:
-                    value['connect'] = 'update'
-            elif isinstance(value, list):
-                value = dict(
-                    connect='update_list', 
-                    value=[self.make_query(v) for v in value])
-            else:
-                value = dict(connect='update', value=value)
-            i[key] = value
-            
-        return i
-        
     def POST(self, path):
         i = web.input(_method='post')
         i = web.storage(helpers.unflatten(i))
         i.key = path
-        i.create = 'unless_exists'
         
         _ = web.storage((k, i.pop(k)) for k in i.keys() if k.startswith('_'))
         action = self.get_action(_)
         comment = _.get('_comment', None)
-        
-        #@@ hack to make editing types work.
-        def hack(d):
-            if isinstance(d, list):
-                for x in d:
-                    hack(x)
-            elif isinstance(d, dict):
-                if 'key' not in d and 'name' in d:
-                    d['key'] = path + '/' + d['name']
-                for k, v in d.items():
-                    hack(v)
         
         def non_empty(items):
             return [i for i in items if i]
@@ -131,15 +81,13 @@ class edit (delegate.mode):
                 return d.strip()
                    
         i = trim(i)
-        hack(i)
-        from copy import deepcopy
-        q = self.make_query(deepcopy(i))
+        q = i
         if action == 'preview':
             p = self.process(i)
             return render.editpage(p, preview=True)
         elif action == 'save':
             try:
-                web.ctx.site.write(q, comment)
+                web.ctx.site.save(q, comment)
                 path = web.input(_method='GET', redirect=None).redirect or web.changequery(query={})
                 raise web.seeother(path)
             except ClientException, e:
@@ -147,8 +95,8 @@ class edit (delegate.mode):
                 p = self.process(i)
                 return render.editpage(p)
         elif action == 'delete':
-            q = dict(key=q['key'], type=dict(connect='update', key='/type/delete'))
-            web.ctx.site.write(q, comment)
+            q = dict(key=q['key'], type=dict(key='/type/delete'))
+            web.ctx.site.save(q, comment)
             raise web.seeother(web.changequery(query={}))
 
     def process(self, data):
@@ -159,7 +107,7 @@ class edit (delegate.mode):
                 thing = web.ctx.site.new(data['key'], data)
             return thing
                 
-        if isinstance(data, dict):
+        if isinstance(data, dict) and 'key' in data:
             thing = new_version(data)
             for k, v in data.items():
                 thing[k] = self.process(v)
@@ -446,6 +394,7 @@ class feed(delegate.page):
                 a = db.get_version(key, revision=rev_a)
                 
             diff = render.diff(a, b)
+
             #@@ dirty hack to extract diff table from diff
             import re
             rx = re.compile(r"^.*(<table.*<\/table>).*$", re.S)

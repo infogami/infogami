@@ -1,0 +1,5 @@
+$def with (value, property)
+
+$ regular = property.get('kind') == "regular"
+$ key = value.get('key')
+$:Dropdown(property.name, [""] + get_types(regular=regular), value=key or "").render()

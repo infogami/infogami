@@ -22,7 +22,7 @@ def _backreference(name, expected_type, property_name):
 def primitive_types():
     """Subqueries to create all primitive types."""
     def f(key, name, description):
-        return _type(key, name, description, kind='basic')
+        return _type(key, name, description, kind='primitive')
     
     return [
         f('/type/key', 'Key', 'Type to store keys. A key is a string constrained to the regular expression [a-z][a-z/_]*.'),

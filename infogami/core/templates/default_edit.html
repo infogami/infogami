@@ -65,11 +65,7 @@ function swap(a, b) {
 <form name="edit" method="POST">
 <table>
 <tbody>
-    <tr>
-        <td>$_.page_type</td>
-        <td>$:macros.ThingReference("/type/type", "type", page.type)</td>
-        <td><input type="button" onclick="changeTemplate()" value="$_.change"/></td>
-    </tr>
+    $:macros.TypeChanger(page.type, usetable=True)
     <tr>
         <td>&nbsp;</td>
         <td>&nbsp;</td>
@@ -92,7 +88,7 @@ $for p in page.type.properties:
         <tbody>
         $for x in page[key]:
             <tr repeat="$i">
-                <td colspan="2" style="padding-left:1.0em"> $:thinginput(p.expected_type, key + "#" + str(i), value=x)</td>
+                <td colspan="2" style="padding-left:1.0em"> $:thinginput(x, expected_type=p.expected_type, name=key + "#")</td>
                 <td>
                     <button type="remove" template="row_$key">$_.delete</button>
                     <button type="move-up" template="row_$key" onclick="return moveup.apply(this, [event]);">$_.move_up</button>
@@ -102,7 +98,7 @@ $for p in page.type.properties:
             $ i = i + 1
         <tr id="row_$key" repeat="template">
             <td colspan="2" style="padding-left:1.0em">
-                $:thinginput(p.expected_type, key + '#[row_' + key + ']', value="")
+                $:thinginput("", expected_type=p.expected_type, name=key + '#[row_' + key + ']')
             </td>
             <td>
                 <button type="remove" template="row_$key">$_.delete</button>
@@ -118,7 +114,7 @@ $for p in page.type.properties:
     $else:
         <tr>
             <td>$label</td>
-            <td>$:thinginput(p.expected_type, key, value=page[key])</td>
+            <td>$:thinginput(page[key], p)</td>
             <td></td>
         </tr>
     </tbody>

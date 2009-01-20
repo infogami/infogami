@@ -12,10 +12,10 @@ function changeTemplate() {
 $if usetable:
     <tr>
         <td>$_.page_type</td>
-        <td>$:thinginput("/type/type", "type", type)</td>
+        <td>$:thinginput(type, name="type", expected_type="/type/type", kind="regular")</td>        
         <td><input type="button" onclick="changeTemplate()" value="$_.change"/></td>
     </tr>
 $else:
-    <strong>$_.page_type</strong>  $:thinginput("/type/type", "type", type)
+    <strong>$_.page_type</strong>  $:thinginput(type, name="type", expected_type="/type/type", kind="regular")
     <input type="button" onclick="changeTemplate()" value="$_.change"/><br /><br />
     

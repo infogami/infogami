@@ -2,6 +2,7 @@
     'key': '/type/page',
     'type': {'key': '/type/type'},
     'name': 'Page',
+    'kind': 'regular',
     'properties': [{
         'name': 'title',
         'type': '/type/property',

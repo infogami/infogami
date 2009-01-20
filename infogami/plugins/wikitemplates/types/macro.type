@@ -2,6 +2,7 @@
     'key': '/type/macro',
     'type': {'key': '/type/type'},
     'name': 'Macro',
+    'kind': 'regular',
     'properties': [{
         'name': 'macro',
         'type': '/type/property',

@@ -1,18 +1,18 @@
-$def with (p, name)
+$def with (value, p)
 
 <table>
     <tr>
         <td>Name</td>
-        <td>$:thinginput("/type/string", name + ".name", p.name)
+        <td>$:thinginput(value.name, expected_type="/type/string", name=p.name + ".name")
         </td>        
     </tr>
     <tr>
         <td>Expected Type</td>
-        <td>$:thinginput("/type/type", name + ".expected_type", p.expected_type)</td>
+        <td>$:thinginput(value.expected_type, expected_type="/type/type", name=p.name + ".expected_type")</td>
     </tr>
     <tr>
         <td>Property Name</td>
-        <td>$:thinginput("/type/string", name + ".property_name", p.property_name)</td>
+        <td>$:thinginput(value.property_name, expected_type="/type/string", name=p.name + ".property_name")</td>
     </tr>
 </table>
 <br/>

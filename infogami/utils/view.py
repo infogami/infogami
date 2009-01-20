@@ -172,11 +172,23 @@ def thingrepr(value, type=None):
         
     return unicode(render.repr(thingify(type, value)))
         
-@public
-def thinginput(type, name, value, **attrs):
-    """Renders html input field of given type."""
-    return unicode(render.input(thingify(type, value), name))
+#@public
+#def thinginput(type, name, value, **attrs):
+#    """Renders html input field of given type."""
+#    return unicode(render.input(thingify(type, value), name))
     
+@public
+def thinginput(value, property=None, **kw):
+    if property is None:
+        if 'expected_type' in kw:
+            if isinstance(kw['expected_type'], basestring):
+                from infogami.core import db        
+                kw['expected_type'] = db.get_version(kw['expected_type'])
+        else:
+            raise ValueError, "missing expected_type"
+        property = web.storage(kw)
+    return unicode(render.input(thingify(property.expected_type, value), property))
+
 def thingify(type, value):
     # if type is given as string then get the type from db
     if type is None:
@@ -197,7 +209,7 @@ def thingify(type, value):
     
     # primitive values
     if not isinstance(value, client.Thing):
-        value = web.storage(value=value, is_primitive=True, type=type)
+        value = web.storage(value=value, is_primitive=True, type=type, key=value)
     else:
         value.type = type # value.type might be string, make it Thing object
     
@@ -361,3 +373,11 @@ def datestr(then, now=None):
     else:
         month, rest = result.split(' ', 1)
         return "%s %s" % (_[month.lower()], rest)
+
+@public
+def get_types(regular=True):
+    q = {'type': "/type/type"}
+    if regular:
+        q['kind'] = 'regular'
+    return web.ctx.site.things(q)
+    

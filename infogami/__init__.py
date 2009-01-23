@@ -75,6 +75,7 @@ def help(name=None):
 def install():
     """Setup everything."""
     from infogami.utils import delegate
+    delegate.fakeload()
     delegate.admin_login()
     for a in _install_hooks:
         print >> web.debug, a.__name__

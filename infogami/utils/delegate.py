@@ -10,6 +10,7 @@ from context import context
 urls = (
   '(/.*)', 'item'
 )
+
 app = web.application(urls, globals())
 web._loadhooks = {}
 web.unloadhooks = {}
@@ -97,6 +98,7 @@ def create_site():
 def fakeload():
     from infogami.core import db
     #web.load()
+    app.load(dict(REQUEST_METHOD="GET", PATH_INFO="/install"))
     web.ctx.ip = None
     context.load()
     context.error = None

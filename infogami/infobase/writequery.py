@@ -4,9 +4,12 @@ import common
 from common import types, pprint, datatype2type, type2datatype, any, all
 import web
 
-def process_save(store, key, data):
+def process_save(store, author, key, data):
     if 'key' not in data:
         data['key'] = key
+        
+    if not web.ctx.get('disable_permission_check', False) and not has_permission(store, author, key):
+        raise common.InfobaseException('Permission denied to modify %s' % repr(key))
         
     def get_type(type):
         if type is None:

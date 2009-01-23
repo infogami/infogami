@@ -117,7 +117,7 @@ class Site:
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
         
-        data = writequery.process_save(self.store, key, data)
+        data = writequery.process_save(self.store, author, key, data)
         result = self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
         
         self._fire_event("save", timestamp, ip, author and author.key, data)
@@ -131,6 +131,8 @@ class Site:
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
+        
+        items = (writequery.process_save(self.store, author, item['key'], item) for item in items)
         result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
         
         for item in items:

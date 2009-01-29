@@ -13,7 +13,7 @@
 def _type(key, name, desc, properties=[], backreferences=[], kind='regular'):
     return dict(key=key, type={'key': '/type/type'}, name=name, desc=desc, kind=kind, properties=properties, backreferences=backreferences)
 
-def _property(name, expected_type, unique=True, description=None, **kw):
+def _property(name, expected_type, unique=True, description='', **kw):
     return dict(kw, name=name, type={'key': '/type/property'}, expected_type={"key": expected_type}, unique={'type': '/type/boolean', 'value': unique}, description=description)
     
 def _backreference(name, expected_type, property_name):

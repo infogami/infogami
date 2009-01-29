@@ -1,185 +1,214 @@
 """
 """
 import common
-from common import types, pprint, datatype2type, type2datatype, any, all
+from common import pprint, any, all
 import web
 
-def process_save(store, author, key, data):
-    if 'key' not in data:
-        data['key'] = key
+class SaveProcessor:
+    def __init__(self, store, author):
+        self.store = store
+        self.author = author
         
-    if not web.ctx.get('disable_permission_check', False) and not has_permission(store, author, key):
-        raise common.InfobaseException('Permission denied to modify %s' % repr(key))
+    def process(self, key, data):
+        if 'key' not in data:
+            data['key'] = key
+    
+        data = common.parse_query(data)
+    
+        if not web.ctx.get('disable_permission_check', False) and not has_permission(self.store, self.author, key):
+            raise common.InfobaseException('Permission denied to modify %s' % repr(key))
         
-    def get_type(type):
+        type = data.get('type')
         if type is None:
-            raise common.InfobaseException("missing type")
-        else:
-            if isinstance(type, str):
-                type = dict(key=type)
-        thing = store.get(type['key'])
-        if thing is None:
-            raise common.InfobaseException("Not Found: %s" % repr(type['key']))
-        return thing
-        
-    def assert_unique(key, value, unique):
-        if unique:
-            if isinstance(value, list):
-                raise common.InfobaseException("%s: Expected unique, found a list." % repr(key))
-        else:
-            if not isinstance(value, list):
-                raise common.InfobaseException("%s: Expected a list, found atom." % repr(key))
-                
-    def validate_regular(key, value, expected_type):
-        if not isinstance(value, dict):
-            value = dict(key=value)
-        
-        if 'key' not in value:
-            raise common.InfobaseException("%s: missing key" % repr(key))
-        
-        thing = store.get(value['key'])
-        if thing is None:
-            raise common.InfobaseException("Not Found: %s" % repr(value['key']))
-        else:
-            if expected_type and thing.type.key != expected_type:
-                raise common.InfobaseException("Expected %s, found %s" % (repr(expected_type), repr(thing.type.key)))
-        return value
-        
-    def validate_embeddable(key, value, expected_type):
-        if expected_type:
-            return process(value, store.get(expected_type))
-        else:
-            return value
-            
-    def validate_primitive(key, value, expected_type):
-        # handle case of value={'type':'/type/text', 'value': 'foo'}
-        if isinstance(value, dict):
-            if 'type' in value and expected_type and value['type'] != expected_type:
-                raise common.InfobaseException("Expected %s, found %s" % (repr(expected_type), repr(thing.type.key)))
-            if 'value' not in value:    
-                raise common.InfobaseException("Missing 'value'")
-            value = value['value']
-        
-        try:
-            if expected_type == "/type/int":
-                return int(value)
-            elif expected_type == "/type/float":
-                return float(value)
-            elif expected_type == '/type/boolean':
-                return str(value).lower() in ["1", "true"]
-            elif expected_type == '/type/datetime':
-                #@@ TODO: validation
-                return value
-            elif expected_type == '/type/text':
-                return {'type': '/type/text', 'value': value}
-            else:
-                return str(value)
-        except ValueError, e:
-            raise common.InfobaseException(str(e))
-            
-    def validate(key, value, expected_type, unique=None):
-        if isinstance(expected_type, dict):
-            expected_type = expected_type['key']
-        if isinstance(unique, dict):
-            unique = unique['value']
-        if unique is not None:
-            assert_unique(key, value, unique)
-        if isinstance(value, list):
-            # @@ make sure all elements in the list are of same type.
-            return [validate(key, v, expected_type) for v in value]
-        else:
-            expected_type = store.get(expected_type)
-            kind = expected_type and expected_type.get_value('kind', 'regular')
-            if expected_type is None:
-                return value
-            elif kind == 'regular':
-                return validate_regular(key, value, expected_type.key)
-            elif kind == 'embeddable':
-                return validate_embeddable(key, value, expected_type.key)
-            else:
-                return validate_primitive(key, value, expected_type.key)
-        
-    def get_expected_type(type, name):
+            raise common.InfobaseException("missing type")    
+        type = self.process_value(type, self.get_property(None, 'type'))
+        type = self.store.get(type)
+        return self.process_data(data, type)
+
+    def get_property(self, type, name):
         if name == 'type':
-            return '/type/type', True
+            return web.storage(name='type', expected_type=web.storage(key='/type/type', kind="regular"), unique=True)
+        elif name in ['permission', 'child_permission']:
+            return web.storage(name=name, expected_type=web.storage(key='/type/permission', kind="regular"), unique=True)
         else:
-            for p in type.get_value('properties', []):
+            for p in type.get('properties', []):
                 if p.get('name') == name:
-                    return p.get('expected_type'), p.get('unique', True)
-        return None, None
-        
-    def process(d, type):
+                    return p
+
+    def process_data(self, d, type):
         for k, v in d.items():
-            if str(v).strip() == '' or v is None or v == []:
+            if v is None or v == [] or str(v).strip() == '':
                 del d[k]
             else:
-                expected_type, unique = get_expected_type(type, k)
-                d[k] = validate(k, v, expected_type, unique)
+                p = self.get_property(type, k)
+                if p:
+                    d[k] = self.process_value(v, p)
+                else:
+                    d[k] = v
         return d
 
-    type = get_type(data.get('type'))
-    return process(data, type)
+    def process_value(self, value, property):
+        """
+            >>> def property(expected_type, unique=True):
+            ...     return web.storage(expected_type=web.storage(key=expected_type, kind='regular'), unique=unique)
+            ...
+            >>> p = SaveProcessor(common.create_test_store(), None)
+            
+            >>> p.process_value(1, property('/type/int'))
+            1
+            >>> p.process_value('1', property('/type/int'))
+            1
+            >>> p.process_value(['1', '2'], property('/type/int', unique=False))
+            [1, 2]
+            >>> p.process_value('x', property('/type/int'))
+            Traceback (most recent call last):
+                ... 
+            InfobaseException: invalid literal for int() with base 10: 'x'
+            >>> p.process_value('1', property('/type/int', unique=False))
+            Traceback (most recent call last):
+                ... 
+            InfobaseException: expected list, found atom
+            >>> p.process_value(['1'], property('/type/int'))
+            Traceback (most recent call last):
+                ... 
+            InfobaseException: expected atom, found list
         
-def make_query(store, author, query):
-    r"""Compiles query into subqueries.    
-    """
-    for q in serialize(query):
-        action, key, q = compile(store, q)
-        if action == 'update':
-            q = optimize(store, key, q)
-            if not q:
-                continue
-        elif action == 'create':
-            # strip None values
-            for k, v in q.items():
-                if v.value == None:
-                    del q[k]
+            >>> p.process_value('/type/string', property('/type/type'))
+            <ref: u'/type/string'>
+        """
+        unique = property.get('unique', True)
+        expected_type = property.expected_type.key
+
+        if isinstance(value, list):
+            if unique is True:
+                raise common.InfobaseException('expected atom, found list')
             
-        if action != 'ignore':
-            if not web.ctx.get('disable_permission_check', False) and not has_permission(store, author, key):
-                raise Exception('Permission denied to modify %s' % repr(key))
-            yield action, key, q
-            
-def has_permission(store, author, key):
-    # admin user can modify everything
-    if author and author.key == '/user/admin':
-        return True
+            p = web.storage(property.copy())
+            p.unique = True
+            return [self.process_value(v, p) for v in value]
     
-    permission = get_permission(store, key)
-    if permission is None:
-        return True
-    else:
-        groups = permission.get_value('writers') or []
-        for group in groups:
-            if group.key == '/usergroup/everyone':
-                return True
-            elif author is not None:
-                if group.key == '/usergroup/allusers' or author in group.get_value('members', []):
-                    return True
+        if unique is False:    
+            raise common.InfobaseException('expected list, found atom')
+
+        type_found = common.find_type(value)
+    
+        if expected_type in common.primitive_types:
+            # string can be converted to any type and int can be converted to float
+            try:
+                if type_found == '/type/string' and expected_type != '/type/string':
+                    value = common.primitive_types[expected_type](value)
+                elif type_found == '/type/int' and expected_type == '/type/float':
+                    value = float(value)
+            except ValueError, e:
+                raise common.InfobaseException(str(e))
+        elif property.expected_type.kind == 'embeddable':
+            if isinstance(value, dict):
+                return self.process_data(value, property.expected_type)
             else:
-                return False        
+                raise common.TypeMismatch(expected_type, type_found)
+        else:
+            if type_found == '/type/string':
+                value = common.Reference(value)
+    
+        type_found = common.find_type(value)
+    
+        if type_found == '/type/object':
+            thing = self.store.get(value)
+            if thing is None:
+                raise common.NotFound(value)
+            type_found = thing.type.key
+
+        if expected_type != type_found:
+            raise common.InfobaseException('expected %s, found %s' % (repr(property.expected_type.key), repr(type_found)))
+        return value
+
+class WriteQueryProcessor:
+    def __init__(self, store, author):
+        self.store = store
+        self.author = author
         
-def get_permission(store, key):
-    """Returns permission for the specified key."""
-    def parent(key):
-        if key == "/":
-            return None
-        else:
-            return key.rsplit('/', 1)[0] or "/"
+    def process(self, query):
+        p = SaveProcessor(self.store, self.author)
+        
+        for q in serialize(query):
+            q = common.parse_query(q)
+            
+            key = q['key']
+            thing = self.store.get(key)
+            create = q.pop('create', None)
+            
+            if thing is None:
+                if create:
+                    q = self.remove_connects(q)
+                else:
+                    raise common.NotFound(key)
+            else:
+                q = self.connect_all(thing._data, q)
+            
+            yield p.process(key, q)
+            
+    def remove_connects(self, query):
+        for k, v in query.items():
+            if isinstance(v, dict) and 'connect' in v:
+                query[k] = v['value']
+        return query
+            
+    def connect_all(self, data, query):
+        """Applys all connects specified in the query to data.
+        
+            >>> p = WriteQueryProcessor(None, None)
+            >>> data = {'a': 'foo', 'b': ['foo', 'bar']}
+            
+            >>> query = {'a': {'connect': 'update', 'value': 'bar'}, 'b': {'connect': 'insert', 'value': 'foobar'}}
+            >>> p.connect_all(data, query)
+            {'a': 'bar', 'b': ['foo', 'bar', 'foobar']}
+            
+            >>> query = {'a': {'connect': 'update', 'value': 'bar'}, 'b': {'connect': 'delete', 'value': 'foo'}}
+            >>> p.connect_all(data, query)
+            {'a': 'bar', 'b': ['bar']}
 
-    def _get_permission(key, child_permission=False):
-        if key is None:
-            return None
-        thing = store.get(key)
-        if child_permission:
-            permission = thing and (thing.get_value("child_permission") or thing.get_value("permission"))
-        else:
-            permission = thing and thing.get_value("permission")
-        return permission or _get_permission(parent(key), child_permission=True)
-
-    return _get_permission(key)
-
+            >>> query = {'a': {'connect': 'update', 'value': 'bar'}, 'b': {'connect': 'update_list', 'value': ['foo', 'foobar']}}
+            >>> p.connect_all(data, query)
+            {'a': 'bar', 'b': ['foo', 'foobar']}
+        """
+        import copy
+        data = copy.deepcopy(data)
+        
+        for k, v in query.items():
+            if isinstance(v, dict):
+                if 'connect' in v:
+                    self.connect(data, k, v['connect'], v['value'])
+        return data
+        
+    def connect(self, data, name, connect, value):
+        """Modifies the data dict by performing the specified connect.
+        
+            >>> getdata = lambda: {'a': 'foo', 'b': ['foo', 'bar']}
+            >>> p = WriteQueryProcessor(None, None)
+            
+            >>> p.connect(getdata(), 'a', 'update', 'bar')
+            {'a': 'bar', 'b': ['foo', 'bar']}
+            >>> p.connect(getdata(), 'b', 'update_list', ['foobar'])
+            {'a': 'foo', 'b': ['foobar']}
+            >>> p.connect(getdata(), 'b', 'insert', 'foobar')
+            {'a': 'foo', 'b': ['foo', 'bar', 'foobar']}
+            >>> p.connect(getdata(), 'b', 'insert', 'foo')
+            {'a': 'foo', 'b': ['foo', 'bar']}
+            >>> p.connect(getdata(), 'b', 'delete', 'foobar')
+            {'a': 'foo', 'b': ['foo', 'bar']}
+        """
+        if connect == 'update' or connect == 'update_list':
+            data[name] = value
+        elif connect == 'insert':
+            if value not in data[name]:
+                data[name].append(value)
+        elif connect == 'delete':
+            if value in data[name]:
+                data[name].remove(value)
+        return data
+            
 def serialize(query):
+    ""
     r"""Serializes a nested query such that each subquery acts on a single object.
 
         >>> q = {
@@ -257,7 +286,7 @@ def serialize(query):
                 q[k] = flatten(v, result, path + [k])
                 
             if 'key' in q:
-                result.append(Query(path, q))
+                result.append(q)
                 
             if from_list:
                 #@@ quick fix
@@ -277,343 +306,45 @@ def serialize(query):
     flatten(query, result)                         
     return result
 
-class QueryError(Exception):
-    def __init__(self, path, msg):
-        Exception.__init__(self, "%s (at %s)" % (msg, repr(path)))
-        self.msg = msg
-        self.path = path
-        
-def optimize(store, key, query):
-    """Optimizes the query by removing unnecessary actions.
-    """
-    thing = store.get(key)
+def has_permission(store, author, key):
+    # admin user can modify everything
+    if author and author.key == '/user/admin':
+        return True
     
-    def equal(name):
-        q = query[name]
-        
-        if name in thing:
-            datatype, value = thing.get(name)
-        else:
-            if q.connect == 'update':
-                datatype, value = None, None
-            else:
-                datatype, value = None, []
-            
-        if q.connect == 'update':
-            return (q.value == None and value == None) or (q.datatype == datatype and q.value == value)
-        elif q.connect == 'update_list':
-            return (q.value == [] and value == []) or (q.datatype == datatype and q.value == value)
-        elif q.connect == 'insert':
-            return isinstance(value, list) and q.value in value
-        elif q.connect == 'delete':
-            return isinstance(value, list) and q.value not in value
-        else:
-            # not possible case.
-            return False
-    
-    # don't try to optimize if there is change in type
-    # The store might keep values for each type in different tables.
-    if 'type' in query and not equal('type'):
-        return query
-        
-    for k in query.keys():
-        if equal(k):
-            del query[k]
-    
-    return query
-        
-def compile(store, query):
-    """Compiles the given query.
-    
-        >>> store = common.create_test_store()
-        >>> q = {
-        ...     'create': 'unless_exists',
-        ...     'key': '/foo',
-        ...     'type': '/type/book',
-        ...     'author': {
-        ...        'key': '/author/test',
-        ...     },
-        ...     'descption': {'value': 'foo', 'type': '/type/text'}
-        ... }
-        >>> pprint(compile(store, Query('', q)))
-        ('create', '/foo', {
-            'author': <'/author/test' of type '/type/author'>,
-            'descption': <'foo' of type '/type/text'>,
-            'type': <'/type/book' of type '/type/type'>
-        })
-        >>> q = {
-        ...     'key': '/book/test',
-        ...     'type': '/type/book',
-        ...     'author': {
-        ...         'connect': 'update',
-        ...         'key': '/author/test',
-        ...     },
-        ...     'descption': {'value': 'foo', 'type': '/type/text', 'connect': 'update'}
-        ... }
-        >>> pprint(compile(store, Query('', q)))
-        ('update', '/book/test', {
-            'author': <'/author/test' of type '/type/author' connect=update>,
-            'descption': <'foo' of type '/type/text' connect=update>
-        })
-    """
-    def query_value(path, v):
-        if isinstance(v, dict):
-            if 'value' in v and isinstance(v['value'], list):
-                return ListQueryValue(path, v)
-            else:
-                return QueryValue(path, v)
-        elif isinstance(v, list):
-            return ListQueryValue(path, dict(value=v))
-        else:
-            return QueryValue(path, dict(value=v))
-
-    def get_expected_type(type, name):
-        if name == 'key':
-            return '/type/key'
-        elif name == 'type':
-            return '/type/type'
-        else:
-            p = type.get_property(name)
-            return p and p.expected_type and p.expected_type.key
-    
-    def coerce_all(d, type):
-        for k, v in d.items():
-            v.coerce(store, get_expected_type(type, k))
-            
-    def get_type(thing, type_key):
-        if type_key:
-            #@@ what if there is no such type?
-            type = store.get(type_key)
-            assert type is not None
-            return type
-        else:
-            return thing.type
-        
-    def process(path, d):
-        """convert all values to QueryValues."""
-        result = {}
-        for k, v in d.items():
-            result[k] = query_value(path + '.' + k, v)
-        return result
-
-    d = query.query
-
-    if 'key' not in d:
-        raise QueryError(query.path, 'Missing key')
-
-    key = d.pop('key')
-    thing = store.get(key)
-    
-    create = d.pop('create', None)
-    d = process(query.path, d)
-    has_connects = any(v.connect for v in d.values())
-    
-    if create and thing is None:
-        if 'type' not in d:
-            raise QueryError(query.path, 'Missing type')
-        
-        type = get_type(None, d['type'].value)
-        coerce_all(d, type)
-        return 'create', key, d
-    elif has_connects:
-        if not thing:
-            raise QueryError(query.path, 'Not found: ' + repr(key))
-            
-        d = dict((k, v) for k, v in d.items() if v.connect)
-        type_key = d.get('type')
-        type = type_key and get_type(thing, type_key.value) or thing.type
-        coerce_all(d, type)
-        return 'update', key, d
+    permission = get_permission(store, key)
+    if permission is None:
+        return True
     else:
-        return 'ignore', key, None
-
-class Query(web.storage):
-    def __init__(self, path, query):
-        if isinstance(path, list):
-            path = ".".join(path)
-        
-        self.path = path
-        self.query = query
-    
-    def __repr__(self):
-        return common.prepr(self.query)
-
-class QueryValue:
-    """Representation of a value in the query dict.
-    Each query value contains a `value` and a `type`.
-    It also contains fields `connect` and `create` to know to how use this value in query execution.
-    
-        >>> QueryValue('', dict(value=1))
-        <1 of type '/type/int'>
-        >>> QueryValue('', dict(value="foo", type='/type/text'))
-        <'foo' of type '/type/text'>
-        >>> QueryValue('', dict(key="/foo"))
-        <'/foo' of type '/type/object'>
-    """
-    def __init__(self, path, data):
-        if isinstance(path, list):
-            path = ".".join(path)
-        self.path = path
-        
-        if not isinstance(data, dict):
-            data = dict(value=data)
-            
-        self._data = data
-        
-        keys = ['key', 'value', 'type', 'connect', 'create']
-        for k in keys:
-            setattr(self, k, data.get(k))
-        
-        # just for easy of use
-        if self.key is not None:
-            self.value = self.key
-            self._key_specified = True
-        elif self.value is not None:
-            self._key_specified = False
-            self.key = self.value
-        else:
-            self._key_specified = False
-            
-    def get_datatype(self):
-        return type2datatype(self.guess_type())
-        
-    datatype = property(get_datatype)
-            
-    def guess_type(self):
-        """Guess type of this QueryValue.
-        
-            >>> QueryValue('', dict(value=1)).guess_type()
-            '/type/int'
-            >>> QueryValue('', dict(value='foo')).guess_type()
-            '/type/string'
-            >>> QueryValue('', dict(value='foo', type='/type/text')).guess_type()
-            '/type/text'
-        """
-        if self.type:
-            return self.type
-        elif isinstance(self.value, bool):
-            return '/type/boolean'
-        elif isinstance(self.value, int):
-            return '/type/int'
-        elif isinstance(self.value, float):
-            return '/type/float'
-        elif self._key_specified:
-            return '/type/object'
-        else:
-            return '/type/string'
-            
-    def assert_unique(self, unique):
-        pass
-    
-    def coerce(self, store, expected_type):
-        r"""Coerces this QueryValue to the expected type.
-        
-            >>> v = QueryValue('page.body', dict(value='foo'))
-            >>> v.coerce(None, '/type/text')
-            >>> v.type
-            '/type/text'
-
-            >>> store = common.create_test_store()
-            >>> v = QueryValue('book.type', dict(key='/type/book'))
-            >>> v.coerce(store, '/type/type')
-            >>> v.type
-            '/type/type'
-    
-        When the coercion is not possible, it raises Exception.
-        
-            >>> v = QueryValue('book.pages', dict(value=23))
-            >>> v.coerce(None, '/type/string')
-            Traceback (most recent call last):
-                ...
-            QueryError: Expected /type/string, but found /type/int: 23 (at 'book.pages')
-        """
-        if expected_type is None or self.guess_type() == expected_type or self.value is None:
-            return
-            
-        if self.type is not None:
-            raise QueryError(self.path, "Expected %s, but found %s: %s" % (expected_type, self.guess_type(), repr(self.value)))
-        elif expected_type not in common.primitive_types:
-            thing = store.get(self.key)
-            if thing is None:
-                msg = "%s is not found" % repr(self.key)
-                raise QueryError(self.path, msg)
-            elif thing.type.key != expected_type and expected_type != '/type/object': # /type/object means any type
-                msg = "Expected %s, but found %s: %s" % (repr(expected_type), repr(thing.type.key), repr(self.key))
-                raise QueryError(self.path, msg)
-        
-        # string can be converted to int or float
-        elif expected_type in ["/type/int", "/type/float"]:
-            if self.guess_type() != '/type/string':
-                raise QueryError(self.path, "Expected %s, but found %s: %s" % (expected_type, self.guess_type(), repr(self.value)))
-                
-            d = {'/type/int': int, '/type/float': float}
-            try:
-                self.value = d[expected_type](self.value)
-            except ValueError:
-                raise QueryError(self.path, "Expected %s, but found %s: %s" % (expected_type, self.guess_type(), repr(self.value)))
-                
-        # nothing can be converted to string
-        elif expected_type == '/type/string':
-            raise QueryError(self.path, "Expected %s, but found %s: %s" % (expected_type, self.guess_type(), repr(self.value)))
-            
-        # int, float and boolean can not be converted to any other type
-        elif self.guess_type() in ["/type/int", "/type/float", "/type/boolean"]:
-            raise QueryError(self.path, "Expected %s, but found %s: %s" % (expected_type, self.guess_type(), repr(self.value)))
-        elif expected_type == '/type/boolean':
-            if self.guess_type() == '/type/string':
-                self.value = self.value.lower() != 'false' and self.value.lower() != ''
-        
-        #@@ validate conversion to datetime, url etc
-        self.type = expected_type
-
-    def __repr__(self):
-        if self.connect:
-            connect = ' connect=' + self.connect
-        else:
-            connect = ''
-        return "<%s of type %s%s>" % (repr(self.value), repr(self.guess_type()), connect)
-
-class ListQueryValue:
-    """
-        >>> ListQueryValue('', [1, 2, 3])
-        <[1, 2, 3] of type None>
-    """
-    def __init__(self, path, data):
-        if isinstance(path, list):
-            path = ".".join(path)
-            
-        if not isinstance(data, dict):
-            data = dict(value=data)            
-            
-        self.connect = data.get('connect')
-        self.values = [QueryValue(path + '.' + str(i), v) for i, v in enumerate(data['value'])]
-        self.type = None
-        
-    def get_value(self):
-        return [v.value for v in self.values]
-        
-    value = property(get_value)
-    
-    def coerce(self, store, expected_type):
-        if expected_type is None:
-            if self.values:
-                expected_type = self.values[0].guess_type()
+        groups = permission.get('writers') or []
+        for group in groups:
+            if group.key == '/usergroup/everyone':
+                return True
+            elif author is not None:
+                if group.key == '/usergroup/allusers' or author in group.get('members', []):
+                    return True
             else:
-                # values is empty list. Any type with do.
-                expected_type = '/type/string'
-                
-        for v in self.values:
-            v.coerce(store, expected_type)
-        self.type = expected_type
-
-    def get_datatype(self):
-        return type2datatype(self.type)
-
-    datatype = property(get_datatype)
+                return False        
         
-    def __repr__(self):
-        return "<%s of type %s>" % (self.value, repr(self.type))
-        
+def get_permission(store, key):
+    """Returns permission for the specified key."""
+    def parent(key):
+        if key == "/":
+            return None
+        else:
+            return key.rsplit('/', 1)[0] or "/"
+
+    def _get_permission(key, child_permission=False):
+        if key is None:
+            return None
+        thing = store.get(key)
+        if child_permission:
+            permission = thing and (thing.get("child_permission") or thing.get("permission"))
+        else:
+            permission = thing and thing.get("permission")
+        return permission or _get_permission(parent(key), child_permission=True)
+
+    return _get_permission(key)
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

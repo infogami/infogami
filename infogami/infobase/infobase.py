@@ -100,24 +100,27 @@ class Site:
         timestamp = timestamp or datetime.datetime.utcnow()
         
         author = author or self.get_account_manager().get_user()
-        q = writequery.make_query(self.store, author, query)
-        ip = ip or web.ctx.get('ip', '127.0.0.1')
-        result = self.store.write(q, timestamp=timestamp, comment=comment, machine_comment=machine_comment, ip=ip, author=author and author.key)
+        p = writequery.WriteQueryProcessor(self.store, author)
         
-        if not _internal:
-            # fire event
-            data = dict(comment=comment, machine_comment=machine_comment, query=query, result=result)
-            self._fire_event("write", timestamp, ip, author and author.key, data)
-            self._fire_triggers(result.created, result.updated)
+        items = p.process(query)
+        result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
         
-        return result
+        for item in items:
+            self._fire_event("save", timestamp, ip, author and author.key, item)
+
+        created = [r['key'] for r in result if r['revision'] == 1]
+        updated = [r['key'] for r in result if r['revision'] != 1]
+        self._fire_triggers(created=created, updated=updated)
+        
+        return dict(created=created, updated=updated)
     
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
         
-        data = writequery.process_save(self.store, author, key, data)
+        p = writequery.SaveProcessor(self.store, author)
+        data = p.process(key, data)
         result = self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
         
         self._fire_event("save", timestamp, ip, author and author.key, data)
@@ -131,8 +134,9 @@ class Site:
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
-        
-        items = (writequery.process_save(self.store, author, item['key'], item) for item in items)
+
+        p = writequery.SaveProcessor(self.store, author)        
+        items = (p.process(item['key'], item) for item in items)
         result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
         
         for item in items:

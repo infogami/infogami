@@ -160,7 +160,7 @@ class withkey:
         revision = i.revision and to_int(i.revision, "revision")
         assert_key(i.key)
         thing = site.withKey(i.key, revision=revision)
-        return thing and thing._get_data()
+        return thing and thing.format_data()
 
 class get_many:
     @jsonify
@@ -243,7 +243,7 @@ class account:
         a = site.get_account_manager()
         user = a.login(i.username, i.password)
         if user:
-            return user._get_data()
+            return user.format_data()
         else:
             raise InfobaseException('Invalid username or password')
 
@@ -260,7 +260,7 @@ class account:
         a = site.get_account_manager()
         user = a.get_user()
         if user:
-            d = user._get_data()
+            d = user.format_data()
             d['email'] = a.get_email(user)
             return d
 

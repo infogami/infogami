@@ -57,6 +57,7 @@ def make_query(store, query, nested=False):
         >>> make_query(store, {'type': '/type/page', 'title~': 'foo', 'life': 42})
         <query: ['life = int:42', 'type = ref:/type/page', 'title ~ str:foo']>
     """
+    query = common.parse_query(query)
     q = Query()
     q.offset = query.pop('offset', None)
     q.limit = query.pop('limit', 1000)
@@ -111,10 +112,20 @@ def find_datatype(type, key, value):
         return "int"
     elif isinstance(value, float):
         return "float"
+    elif isinstance(value, common.Reference):
+        return 'ref'
+
+    type2datatype = {
+        '/type/string': 'str',
+        '/type/int': 'int',
+        '/type/float': 'float',
+        '/type/boolean': 'boolean',
+        '/type/datetime': 'datetime'
+    }
     
     # if possible, get the datatype from the type schema
     p = type and type.get_property(key)
-    return (p and common.type2datatype(p.expected_type.key)) or "str"
+    return (p and type2datatype.get(p.expected_type.key, 'ref')) or "str"
     
 def parse_key(key):
     """Parses key and returns key and operator.

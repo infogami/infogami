@@ -1,78 +1,114 @@
 import config
-from lru import LRU
-import _json as simplejson
 import web
 
+from core import *
+from utils import *
 
-class InfobaseException(Exception):
-    pass
-    
-class NotFound(InfobaseException):
-    pass
-
-try:
-    from __builtin__ import any, all
-except ImportError:
-    def any(seq):
-        for x in seq:
-            if x:
-                return True
-                
-    def all(seq):
-        for x in seq:
-            if not x:
-                return False
-        return True
-
-primitive_types = [
-    "/type/key",
-    "/type/string",
-    "/type/text",
-    "/type/int",
-    "/type/float",
-    "/type/boolean",
-    "/type/datetime",
-]
-
-types = web.storage(
-    key="key",
-    str="str",
-    text="text",
-    int="int",
-    float="float",
-    boolean="boolean",
-    datetime="datetime",
-    ref="ref"
-)
-
-_datatypes = {
-    "/type/key": types.key,
-    "/type/string": types.str,
-    "/type/text": types.text,
-    "/type/int": types.int,
-    "/type/float": types.float,
-    "/type/boolean": types.boolean,
-    "/type/datetime": types.datetime
+# Primitive types and corresponding python types
+primitive_types = {
+    '/type/key': str,
+    '/type/int': int,
+    '/type/float': float,
+    '/type/boolean': parse_boolean,
+    '/type/string': str,
+    '/type/text': Text,
+    '/type/datetime': parse_datetime,
 }
 
 # properties present for every type of object.
 COMMON_PROPERTIES = ['key', 'type', 'created', 'last_modified', 'permission', 'child_permission']
 
-_types = dict((v, k) for (k, v) in _datatypes.items())
+def find_type(value):
+    if isinstance(value, Thing):
+        return thing.type.key
+    elif isinstance(value, Reference):
+        return '/type/object'
+    elif isinstance(value, Text):
+        return '/type/text'
+    elif isinstance(value, datetime.datetime):
+        return '/type/datetime'
+    elif isinstance(value, bool):
+        return '/type/boolean'
+    elif isinstance(value, int):
+        return '/type/int'
+    elif isinstance(value, float):
+        return '/type/float'
+    elif isinstance(value, dict):
+        return '/type/dict'
+    else:
+        return '/type/string'
 
-def type2datatype(type):
-    """Returns datatype from type name.
+def parse_query(d):
+    d = dict(d)
+    key = d.pop('key', None)
     
-        >>> type2datatype('/type/int')
-        'int'
-        >>> type2datatype('/type/page')
-        'ref'
+    data = parse_data(d)
+    if key:
+        data['key'] = key
+    return data
+
+def parse_data(d):
     """
-    return _datatypes.get(type, types.ref)
+        >>> parse_data(1)
+        1
+        >>> text = {'type': '/type/text', 'value': 'foo'}
+        >>> date= {'type': '/type/datetime', 'value': '2009-01-02T03:04:05'}
+        >>> true = {'type': '/type/boolean', 'value': 'true'}
+        
+        >>> parse_data(text)
+        <text: u'foo'>
+        >>> parse_data(date)
+        datetime.datetime(2009, 1, 2, 3, 4, 5)
+        >>> parse_data(true)
+        True
+        >>> parse_data({'key': '/type/type'})
+        <ref: u'/type/type'>
+        
+        >>> parse_data([text, date, true])
+        [<text: u'foo'>, datetime.datetime(2009, 1, 2, 3, 4, 5), True]
+        >>> parse_data({'a': text, 'b': date})
+        {'a': <text: u'foo'>, 'b': datetime.datetime(2009, 1, 2, 3, 4, 5)}
+    """
+    if isinstance(d, dict):
+        if 'value' in d:
+            type = d.get('type', '/type/string')
+            return primitive_types[type](d['value'])
+        elif 'key' in d:
+            return Reference(d['key'])
+        else:
+            return dict((k, parse_data(v)) for k, v in d.iteritems())
+    elif isinstance(d, list):
+        return [parse_data(v) for v in d]
+    else:
+        return d
+
+def format_data(d):
+    """Convert a data to a representation that can be saved.
     
-def datatype2type(datatype):
-    return _types.get(datatype)
-    
+        >>> format_data(1)
+        1
+        >>> format_data('hello')
+        'hello'
+        >>> format_data(Text('hello'))
+        {'type': '/type/text', 'value': 'hello'}
+        >>> format_data(datetime.datetime(2009, 1, 2, 3, 4, 5))
+        {'type': '/type/datetime', 'value': '2009-01-02T03:04:05'}
+        >>> format_data(Reference('/type/type'))
+        {'key': '/type/type'}
+    """
+    if isinstance(d, dict):
+        return dict((k, format_data(v)) for k, v in d.iteritems())
+    elif isinstance(d, list):
+        return [format_data(v) for v in d]
+    elif isinstance(d, Text):
+        return {'type': '/type/text', 'value': str(d)}
+    elif isinstance(d, Reference):
+        return {'key': str(d)}
+    elif isinstance(d, datetime.datetime):
+        return {'type': '/type/datetime', 'value': d.isoformat()}
+    else:
+        return d
+
 def record_exception():
     """This function is called whenever there is any exception in Infobase.
     
@@ -81,187 +117,79 @@ def record_exception():
     import traceback
     traceback.print_exc()
 
-class InfobaseContext:
-	def __init__(self, sitename, user, ip):
-		self.sitename = sitename
-		self.user = user
-		self.ip = ip
-		self.superuser = self.user and (self.user.key == '/user/admin')
-		
-class Event:
-    """Infobase Event.
+def create_test_store():
+    """Creates a test implementation for using in doctests.
     
-    Events are fired when something important happens (write, new account etc.).
-    Some code can listen to the events and do some action (like logging, updating external cache etc.).
+    >>> store = create_test_store()
+    >>> t = store.get('/type/type')
+    >>> t
+    <thing: '/type/type'>
+    >>> t.properties[0]
+    <Storage {'expected_type': <thing: '/type/string'>, 'unique': True, 'name': 'name'}>
+    >>> t.properties[0].expected_type.key
+    '/type/string'
     """
-    def __init__(self, sitename, name, timestamp, ip, username, data):
-        """Creates a new event.
-        
-        sitename - name of the site where the event is triggered.
-        name - name of the event
-        timestamp - timestamp of the event
-        ip - client's ip address
-        username - current user
-        data - additional data of the event
-        """
-        self.sitename = sitename
-        self.name = name
-        self.timestamp = timestamp
-        self.ip = ip
-        self.username = username
-        self.data = data
-
-class Thing:
-    def __init__(self, store, key, metadata=None, data=None):
-        self._store = store
-        self.key = key
-        self._metadata = metadata or web.storage()
-        self._data = data or {}
-        
-    def get_value(self, key, default=None):
-        if key not in self._data:
-            return default
-        datatype, value = self._data[key]
-        if datatype == 'ref':
-            if isinstance(value, list):
-                value = [self._store.get(v) for v in value]
-            else:
-                value = self._store.get(value)
-        return value
-
-    def get_datatype(self, key):
-        datatype, value = self._data[key]
-        return datatype
-        
-    def get(self, name):
-        return self._data[name]
-        
-    def set(self, name, value, datatype):
-        def unthing(x):
-            if isinstance(x, Thing): return x.key
-            else: return x
-            
-        if datatype == 'ref':
-            if isinstance(value, list):
-                value = [unthing(v) for v in value]
-            else:
-                value = unthing(value)
-        self._data[name] = (datatype, value)
-        
-    def copy(self):
-        return Thing(self._store, self.key, self._metadata and self._metadata.copy() or {}, self._data and self._data.copy() or {})
-        
-    def __contains__(self, name):
-        return name == 'key' or name in self._metadata or name in self._data
-        
-    def __getitem__(self, name):
-        return self.get_value(key)
-
-    def __getattr__(self, key):
-        if key.startswith('__'):
-            raise AttributeError, key
-        return self.get_value(key)
-        
-    def __delattr__(self, key):
-        del self._data[key]
-        
-    def __delitem__(self, key):
-        del self._data[key]
-        
-    def to_json(self):
-        d = self._get_data()
-        return simplejson.dumps(d)
-        
-    def __json__(self):
-        d = self._get_data()
-        return simplejson.dumps(d)
-        
-    def _get_data(self):
-        d = {}
-        for key, value in self._data.items():
-            datatype, value = value
-            if datatype == 'ref':
-                if isinstance(value, list):
-                    value = [{'key': v} for v in value]
-                else:
-                    value = {'key': value}
-            elif datatype not in ['int', 'boolean', 'float', 'str', 'key', 'dict']:
-                type = datatype2type(datatype)
-                if isinstance(value, list):
-                    value = [{"type": type, "value": v} for v in value]
-                else:
-                    value = {"type": type, "value": value}
-
-            # ignore empty lists
-            if isinstance(value, list) and len(value) == 0:
-                continue
-
-            d[key] = value
-        return d
+    store = web.storage()
     
-    @staticmethod
-    def from_json(store, key, json):
-        d = simplejson.loads(json)
-        return Thing.from_dict(store, key, d)
+    def add_primitive_type(key):
+        add_object({
+            'key': key,
+            'type': {'key': '/type/type'},
+            'king': 'primitive'
+        })
         
-    @staticmethod
-    def from_dict(store, key, d):
-        def parse(value):
-            if isinstance(value, bool):
-                return 'boolean', value
-            elif isinstance(value, int):
-                return 'int', value
-            elif isinstance(value, float):
-                return 'float', value
-            elif isinstance(value, dict):
-                if 'key' in value:
-                    return 'ref', value['key']
-                elif 'value' in value:
-                    return type2datatype(value['type']), value['value']
-                else:
-                    return 'dict', value
-            elif isinstance(value, list):
-                value = [parse(v) for v in value]
-                if value:
-                    return value[0][0], [v[1] for v in value]
-                else:
-                    return None
-            else:
-                return 'str', value
-                        
-        data = {}
-        for k, v in d.items():
-            v = parse(v)
-            if v:
-                data[k] = v
-        return Thing(store, key, data=data)
-        
-    def get_property(self, name):
-        """Makes sense only when this object is a type object."""
-        def storify(d):
-            if isinstance(d, dict):
-                d = web.storage(d)
-                for k, v in d.items():
-                    d[k] = storify(v)
-                return d
-            elif isinstance(d, list):
-                return [storify(v) for v in d]
-            else:
-                return d
-        
-        if 'properties' in self._data:
-            datatype, properties = self._data['properties']
-            for p in properties:
-                p = storify(p)
-                if p.name == name:
-                    if isinstance(p.expected_type, basestring):
-                        p.expected_type = web.storage(key=p.expected_type)
-                    return p
-        return None
-        
-    def __repr__(self):
-        return "<thing: %s>" % repr(self.key)
-        
+    def add_object(data):
+        key = data.pop('key')
+        store[key] = Thing(store, key, parse_data(data))
+        return store[key]
+    
+    add_object({
+        'key': '/type/type',
+        'type': {'key': '/type/type'},
+        'kind': 'regular',
+        'properties': [{
+            'name': 'name',
+            'expected_type': {'key': '/type/string'},
+            'unique': True
+        }, {
+            'name': 'kind',
+            'expected_type': {'key': '/type/string'},
+            'options': ['primitive', 'regular', 'embeddable'],
+            'unique': True
+        }, {
+            'name': 'properties',
+            'expected_type': {'key': '/type/property'},
+            'unique': False
+        }]
+    })
+    
+    add_object({
+        'key': '/type/property',
+        'type': '/type/type',
+        'kind': 'embeddable',
+        'properties': [{
+            'name': 'name',
+            'expected_type': {'key': '/type/string'},
+            'unique': True
+        }, {
+            'name': 'expected_type',
+            'expected_type': {'key': '/type/type'},
+            'unique': True
+        }, {
+            'name': 'unique',
+            'expected_type': {'key': '/type/boolean'},
+            'unique': True
+        }]    
+    })
+    
+    add_primitive_type('/type/string')
+    add_primitive_type('/type/int')
+    add_primitive_type('/type/float')
+    add_primitive_type('/type/boolean')
+    add_primitive_type('/type/text')
+    add_primitive_type('/type/datetime')
+    return store
+
 class LazyThing:
     def __init__(self, store, key, json):
         self.__dict__['_key'] = key
@@ -283,225 +211,6 @@ class LazyThing:
     def __repr__(self):
         return "<LazyThing: %s>" % repr(self._key)
 
-class Store:
-    """Storage for Infobase.
-    
-    Store manages one or many SiteStores. 
-    """
-    def create(self, sitename):
-        """Creates a new site with the given name and returns store for it."""
-        raise NotImplementedError
-        
-    def get(self, sitename):
-        """Returns store object for the given sitename."""
-        raise NotImplementedError
-    
-    def delete(self, sitename):
-        """Deletes the store for the specified sitename."""
-        raise NotImplementedError
-
-class SiteStore:
-    """Interface for Infobase data storage"""
-    def get(self, key, revision=None):
-        raise NotImplementedError
-        
-    def new_key(self, type, kw):
-        """Generates a new key to create a object of specified type. 
-        The store guarentees that it never returns the same key again.
-        Optional keyword arguments can be specified to give more hints 
-        to the store in generating the new key.
-        """
-        import uuid
-        return '/' + str(uuid.uuid1())
-        
-    def get_many(self, keys):
-        return [self.get(key) for key in keys]
-    
-    def write(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
-        raise NotImplementedError
-        
-    def things(self, query):
-        raise NotImplementedError
-        
-    def versions(self, query):
-        raise NotImplementedError
-        
-    def get_user_details(self, key):
-        """Returns a storage object with user email and encrypted password."""
-        raise NotImplementedError
-        
-    def update_user_details(self, key, email, enc_password):
-        """Update user's email and/or encrypted password.
-        """
-        raise NotImplementedError
-            
-    def find_user(self, email):
-        """Returns the key of the user with the specified email."""
-        raise NotImplementedError
-        
-    def register(self, key, email, encrypted):
-        """Registers a new user.
-        """
-        raise NotImplementedError
-        
-    def transact(self, f):
-        """Executes function f in a transaction."""
-        raise NotImplementedError
-        
-    def initialze(self):
-        """Initialzes the store for the first time.
-        This is called before doing the bootstrap.
-        """
-        pass
-        
-    def set_cache(self, cache):
-        pass
-        
-def create_test_store():
-    """Creates a test implementation with /type/book and /type/author.
-    Used is doctests.
-    
-    >>> store = create_test_store()
-    >>> store.get('/type/type')
-    <thing: '/type/type'>
-    >>> t = store.get('/type/book')
-    >>> t
-    <thing: '/type/book'>
-    >>> t.properties
-    [<thing: '/type/book/title'>, <thing: '/type/book/author'>, <thing: '/type/book/pages'>]
-    >>> t.properties[1].name
-    'author'
-    >>> t.properties[1].expected_type
-    <thing: '/type/author'>
-    """
-    store = web.storage()
-    
-    def add_type(key, *properties):
-        t = Thing(store, key)
-        store[key] = t
-        t.type = store['/type/type']
-        t.set('properties', [], 'ref')
-                
-        for name, expected_type in properties:
-            p = Thing(store, key + '/' + name)
-            p.type = store['/type/property']
-            p.set('name', name, 'str')
-            p.set('expected_type', store[expected_type], 'ref')
-            t.set('properties', t.properties + [p], 'ref')
-            store[p.key] = p
-        return t
-        
-    def add_object(key, type, *values):
-        t = Thing(store, key)
-        t.type = store[type]
-        for name, value, datatype in values:
-            if datatype == "ref":
-                value = store[value]
-            t.set(name, value, datatype)
-
-        store[key] = t
-        return t
-    
-    add_type('/type/type')
-
-    add_type('/type/string')
-    add_type('/type/int')
-
-    add_type('/type/property',
-        ('name', '/type/string'),
-        ('expected_type', '/type/property'),
-    )
-    
-    add_type('/type/author',
-        ('name', '/type/string')
-    )
-
-    add_type('/type/book',
-        ('title', '/type/string'),
-        ('author', '/type/author'),
-        ('pages', '/type/int')
-    )
-    
-    add_object('/author/test', '/type/author',
-        ('name', 'test', 'str')
-    )
-    
-    add_object('/book/test', '/type/book',
-        ('title', 'test', 'str'),
-        ('author', '/author/test', 'ref'),
-        ('pages', 10, 'int')
-    )
-    
-    return store
-    
-def dict_diff(d1, d2):
-    """Compares 2 dictionaries and returns the following.
-    
-        * all keys in d1 whose values are changed in d2
-        * all keys in d1 which have same values in d2
-        * all keys in d2 whose values are changed in d1
-    
-        >>> a, b, c = dict_diff({'x': 1, 'y': 2, 'z': 3}, {'x': 11, 'z': 3, 'w': 23})
-        >>> sorted(a), sorted(b), sorted(c)
-        (['x', 'y'], ['z'], ['w', 'x'])
-    """
-    same = set(k for k in d1 if d1[k] == d2.get(k))
-    left = set(d1.keys()).difference(same)
-    right = set(d2.keys()).difference(same)
-    return left, same, right
-                        
-def pprint(obj):
-    """Pretty prints given object.
-    >>> pprint(1)
-    1
-    >>> pprint("hello")
-    'hello'
-    >>> pprint([1, 2, 3])
-    [1, 2, 3]
-    >>> pprint({'x': 1, 'y': 2})
-    {
-        'x': 1,
-        'y': 2
-    }
-    >>> pprint([dict(x=1, y=2), dict(c=1, a=2)])
-    [{
-        'x': 1,
-        'y': 2
-    }, {
-        'a': 2,
-        'c': 1
-    }]
-    >>> pprint({'x': 1, 'y': {'a': 1, 'b': 2}, 'z': 3})
-    {
-        'x': 1,
-        'y': {
-            'a': 1,
-            'b': 2
-        },
-        'z': 3
-    }
-    >>> pprint({})
-    {
-    }
-    """
-    print prepr(obj)
-    
-def prepr(obj, indent=""):
-    """Pretty representaion."""
-    if isinstance(obj, list):
-        return "[" + ", ".join(prepr(x, indent) for x in obj) + "]"
-    elif isinstance(obj, tuple):
-        return "(" + ", ".join(prepr(x, indent) for x in obj) + ")"
-    elif isinstance(obj, dict):
-        if hasattr(obj, '__prepr__'):
-            return obj.__prepr__()
-        else:
-            indent = indent + "    "
-            items = ["\n" + indent + prepr(k) + ": " + prepr(obj[k], indent) for k in sorted(obj.keys())]
-            return '{' + ",".join(items) + "\n" + indent[4:] + "}"
-    else:
-        return repr(obj)
-        
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

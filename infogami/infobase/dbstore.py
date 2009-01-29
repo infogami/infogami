@@ -23,9 +23,8 @@ class Schema:
         self.sequences = {}
         self.prefixes = set()
         self.multisite = multisite
-        
         self._table_cache = {}
-                
+        
     def add_entry(self, table, type, datatype, name):
         entry = web.storage(table=table, type=type, datatype=datatype, name=name)
         self.entries.append(entry)
@@ -190,19 +189,16 @@ class DBSiteStore(common.SiteStore):
         
     def _update_tables(self, thing_id, key, olddata, newdata):
         def find_datatype(value):
-            if isinstance(value, int):
-                return 'int'
-            elif isinstance(value, float):
+            if isinstance(value, common.Text):
+                return 'text'
+            elif isinstance(value, common.Reference):
+                return 'ref'
+            elif isinstance(value, bool):
+                return 'boolean'
+            elif isinstance('value', float):
                 return 'float'
-            elif isinstance(value, dict):
-                if 'key' in value:
-                    return 'ref'
-                elif 'type' in value:
-                    for t in common._datatypes:
-                        if value['type'] == t:
-                            return common._datatypes[t]
-                else:
-                    raise ValueError, 'Bad data'
+            elif isinstance('value', int):
+                return 'int'
             else:
                 return 'str'
                 
@@ -210,17 +206,15 @@ class DBSiteStore(common.SiteStore):
             if isinstance(value, list):
                 for i, v in enumerate(value):
                     do_action(f, typekey, thing_id, name, v, i)
-            elif isinstance(value, dict) and 'key' not in value and 'value' not in value:
+            elif isinstance(value, dict):
                 for k, v in value.items():
                     do_action(f, typekey, thing_id, name + '.' + k, v, ordering)
             else:
                 datatype = find_datatype(value)
                 if datatype == 'ref':
-                    value = self.get_metadata(value['key']).id
-                elif isinstance(value, dict):
-                    value = value['value']
+                    value = self.get_metadata(value).id
                 elif isinstance(value, bool):
-                    value = int(value)
+                    value = "ft"[int(value)]
                 table = self.schema.find_table(typekey, datatype, name)
                 if table:
                     pid = self.get_property_id(table, name, create=True)
@@ -232,8 +226,8 @@ class DBSiteStore(common.SiteStore):
         def action_insert(table, thing_id, key_id, value, ordering):
             self.db.insert(table, seqname=False, thing_id=thing_id, key_id=key_id, value=value, ordering=ordering)
 
-        old_type = olddata and olddata['type']['key']
-        new_type = newdata['type']['key']
+        old_type = olddata and olddata['type']
+        new_type = newdata['type']
 
         for k in ['id', 'key', 'type', 'last_modified', 'created', 'revision']:
             olddata.pop(k, None)
@@ -261,7 +255,7 @@ class DBSiteStore(common.SiteStore):
         t = self.db.transaction()
         
         thing = self.get(key)
-        typekey = data['type']['key']
+        typekey = data['type']
 
         if thing:
             revision = None
@@ -270,19 +264,31 @@ class DBSiteStore(common.SiteStore):
         else:
             revision = 1
             type_id = self.get(typekey).id
-            thing_id = self.db.insert('thing', last_modified=timestamp, latest_revision=1, key=key, type=type_id)
+            thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
+            
             olddata = {}
             
         revision = self._add_version(thing_id, timestamp=timestamp, 
             comment=comment, machine_comment=machine_comment, 
             ip=ip, author=author, revision=revision)
+            
+        created = olddata and olddata['created']
         
         self._update_tables(thing_id, key, olddata, dict(data))
             
+        data['created'] = created
         data['revision'] = revision
-        data['last_modified'] = {'type': '/type/datetime', 'value': timestamp}
+        data['last_modified'] = timestamp
         data['key'] = key
         data['id'] = thing_id
+        data['latest_revision'] = revision
+        
+        if revision == 1:
+            data['created'] = timestamp
+        else:
+            data['created'] = created
+            
+        data = common.format_data(data)
         
         type_id=self.get_metadata(typekey).id
         self.db.update('thing', where='id=$thing_id', last_modified=timestamp, latest_revision=revision, type=type_id, vars=locals())
@@ -292,113 +298,7 @@ class DBSiteStore(common.SiteStore):
         thing = common.Thing.from_dict(self, key, data.copy())
         web.ctx.new_objects[key] = thing    
         return {'key': key, 'revision': revision}
-        
-    def write(self, queries, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
-        timestamp = timestamp or datetime.datetime.utcnow()
-        versions = {}
-        
-        def add_version(thing_id, revision=None):
-            """Adds a new entry in the version table for the object specified by thing_id and returns the latest revision."""
-            if revision is None:
-                d = self.db.query(
-                    'UPDATE thing set latest_revision=latest_revision+1, last_modified=$timestamp WHERE id=$thing_id;' + \
-                    'SELECT latest_revision FROM thing WHERE id=$thing_id', vars=locals())
-                revision = d[0].latest_revision
-                
-            self.db.insert('version', False, 
-                thing_id=thing_id, 
-                revision=revision, 
-                created=timestamp,
-                comment=comment,
-                machine_comment=machine_comment,
-                ip=ip,
-                author_id=author and self.get_metadata(author).id
-                )
-            versions[thing_id] = revision
-            return versions[thing_id]
-        
-        result = web.storage(created=[], updated=[])
-        t = self.db.transaction()
-        _inserts = {}
-        try:
-            for action, key, data in queries:
-                if action == 'create':
-                    thing = self.create(key, data, timestamp, add_version, _inserts)
-                    web.ctx.new_objects[key] = thing
-                    result.created.append(key)
-                elif action == 'update':
-                    thing = self.update(key, data, timestamp, add_version)
-                    web.ctx.new_objects[key] = thing
-                    result.updated.append(key)
             
-            for table, rows in _inserts.items():
-                self.db.multiple_insert(table, rows, seqname=False)
-        except:
-            web.ctx.new_objects.clear()
-            t.rollback()
-            raise
-        else:
-            t.commit()
-
-        return result
-    
-    def create(self, key, data, timestamp, add_version, _inserts):
-        type = data.pop('type').value
-        type_id = self.get_metadata(type).id
-
-        thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
-        add_version(thing_id, 1)
-        
-        def insert(name, value, datatype, ordering=None):
-            if datatype not in INDEXED_DATATYPES:
-                return
-                
-            if datatype == 'ref':
-                value = self.get_metadata(value).id
-
-            table = self.schema.find_table(type, datatype, name)
-            pid = self.get_property_id(table, name, create=True)
-            
-            if table not in _inserts:
-                _inserts[table] = []
-            
-            row = dict(thing_id=thing_id, key_id=pid, value=value, ordering=ordering)
-            _inserts[table].append(row)
-            
-        d = {}
-        for name, datum in data.items():
-            d[name] = (datum.datatype, datum.value)
-            if isinstance(datum.value, list):
-                for i, v in enumerate(datum.value):
-                    insert(name, v, datum.datatype, ordering=i)
-            else:
-                insert(name, datum.value, datum.datatype)
-                
-        d['key'] = 'key', key
-        d['created'] = ('datetime', timestamp)
-        d['last_modified'] = ('datetime', timestamp)
-        d['id'] = 'int', thing_id
-        d['revision'] = 'int', 1
-        d['type'] = 'ref', type
-        
-        thing = common.Thing(self, key, data=d)
-        row = dict(thing_id=thing_id, revision=1, data=thing.to_json())
-        _inserts.setdefault('data', []).append(row)        
-        return thing
-        
-    def unkey(self, data):
-        """Replace keys with ids.
-        TODO: explain better
-        """
-        for k, v in data.items():
-            if v.datatype == 'ref':
-                if isinstance(v.value, list):
-                    v.xvalue = [self.get_metadata(key).id for key in v.value]
-                else:
-                    v.xvalue = self.get_metadata(v.value).id
-            else:
-                v.xvalue = v.value
-		
     def get_property_id(self, table, name, create=False):
         if table is None:
             return None
@@ -419,67 +319,6 @@ class DBSiteStore(common.SiteStore):
             return self.db.insert(property_table, key=name)
         else:
             return None
-	    
-    def update(self, key, actions, timestamp, add_version):
-        thing = self.get(key).copy()
-        thing_id = thing.id
-        self.unkey(actions)
-        
-        thing.set('last_modified', timestamp, 'datetime')
-        revision = add_version(thing.id)
-        thing.set('revision', revision, 'int')
-        
-        if 'type' in actions:
-            type = self.get(actions['type'].value)
-            self.db.update('thing', where='id=$thing_id', type=type.id, vars=locals())
-        else:
-            type = thing.type
-            
-        for name, a in actions.items():
-            table = self.schema.find_table(type.key, a.datatype, name)
-            if a.connect == 'update':
-                pid = self.get_property_id(table, name, create=True)
-                #@@ TODO: table for delete should be found from the datatype of the existing value 
-                table and self.db.delete(table, where='thing_id=$thing_id and key_id=$pid', vars=locals())
-                
-                if a.value is not None:
-                    table and self.db.insert(table, False, thing_id=thing_id, key_id=pid, value=a.xvalue)
-                    thing.set(name, a.value, a.datatype)    
-                else:
-                    if name in thing:
-                        del thing[name]
-    
-            elif a.connect == 'insert':
-                # using time as ordering so that insert always happens at the end.
-                pid = self.get_property_id(table, name, create=True)
-                d = self.db.query(
-                    'SELECT max(ordering) as ordering FROM %s WHERE thing_id=$thing_id and key_id=$pid GROUP BY thing_id, key_id' % table,
-                    vars=locals())
-                ordering = (d and d[0].ordering + 1) or 0
-                table and self.db.insert(table, False, thing_id=thing_id, key_id=pid, value=a.xvalue, ordering=ordering)
-                value = thing.get_value(name) or []
-                thing.set(name, value + [a.value], a.datatype)
-            elif a.connect == 'delete':
-                pid = self.get_property_id(table, name, create=False)
-                if pid:
-                    #@@ TODO: table for delete should be found from the datatype of the existing value 
-                    table and self.db.delete(table, where='thing_id=$thing_id and key_id=$pid and value=$a.xvalue', vars=locals())
-                    value = [v for v in thing.get_value(name) or [] if v != a.value]
-                    thing.set(name, value, a.datatype)
-            elif a.connect == 'update_list':
-                pid = self.get_property_id(table, name, create=True)
-                
-                #@@ TODO: table for delete should be found from the datatype of the existing value 
-                table and self.db.delete(table, where='thing_id=$thing_id and key_id=$pid', vars=locals())
-                
-                if a.value is not None:
-                    for i, v in enumerate(a.xvalue):
-                        table and self.db.insert(table, False, thing_id=thing_id, key_id=pid, value=v, ordering=i)
-                thing.set(name, a.value, a.datatype)
-                                        
-        data = thing.to_json()
-        self.db.insert('data', False, thing_id=thing_id, revision=revision, data=data)
-        return thing
 
     def things(self, query):
         type = query.get_type()
@@ -664,9 +503,21 @@ class DBSiteStore(common.SiteStore):
         if not self.initialized():
             t = self.db.transaction()
             id = self.new_thing(key='/type/type')
+            last_modified = datetime.datetime.utcnow()
+            
+            data = dict(
+                key='/type/type',
+                type={'key': '/type/type'},
+                last_modified={'type': '/type/datetime', 'value': last_modified},
+                created={'type': '/type/datetime', 'value': last_modified},
+                revision=1,
+                latest_revision=1,
+                id=id
+            )
+            
             self.db.update('thing', type=id, where='id=$id', vars=locals())
             self.db.insert('version', False, thing_id=id, revision=1)
-            self.db.insert('data', False, thing_id=id, revision=1, data='{"key": "/type/type", "id": %d, "revision": 1, "type": {"key": "/type/type"}}' % id)
+            self.db.insert('data', False, thing_id=id, revision=1, data=simplejson.dumps(data))
             t.commit()
             
     def initialized(self):

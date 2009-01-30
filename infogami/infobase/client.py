@@ -184,33 +184,16 @@ class Site:
         else:
             return value
             
-    def _load(self, key, revision=None):
-        data = self._get(key, revision)
+    def _process_dict(self, data):
         for k, v in data.items():
             data[k] = self._process(v)
         return data
+            
+    def _load(self, key, revision=None):
+        data = self._get(key, revision)
+        data = self._process_dict(data)
+        return data
         
-    def _fill_backreferences(self, key, data):
-        def safeint(x):
-            try: return int(x)
-            except ValueError: return 0
-            
-        if 'env' in web.ctx:
-            i = web.input(_method='GET')
-        else:
-            i = web.storage()
-        page_size = 20
-        for p in data.type.backreferences:
-            offset = page_size * safeint(i.get(p.name + '_page') or '0')
-            q = {
-                p.property_name: key, 
-                'offset': offset,
-                'limit': page_size
-            }
-            if p.expected_type:
-                q['type'] = p.expected_type.key
-            data['_backreferences'][p.name] = LazyObject(lambda: [self.get(key, lazy=True) for key in self.things(q)])
-            
     def _get_backreferences(self, thing):
         def safeint(x):
             try: return int(x)
@@ -222,7 +205,7 @@ class Site:
             i = web.storage()
         page_size = 20
         backreferences = {}
-    
+        
         for p in thing.type._getdata().get('backreferences', []):
             offset = page_size * safeint(i.get(p.name + '_page') or '0')
             q = {
@@ -254,7 +237,7 @@ class Site:
         for key, data in result.items():
             data = web.storage(common.parse_query(data))
             self._cache[key, None] = data
-            things.append(Thing(self, key, self._process(copy.deepcopy(data))))
+            things.append(Thing(self, key, self._process_dict(copy.deepcopy(data))))
         return things
 
     def new_key(self, type):
@@ -423,8 +406,14 @@ class Thing:
         self.key = key
         self.revision = revision
         
+        assert data is None or isinstance(data, dict)
+        
         self._data = data
         self._backreferences = None
+        
+        # no back-references for embeddable objects
+        if self.key is None:
+            self._backreferences = {}
         
     def _getdata(self):
         if self._data is None:
@@ -441,6 +430,8 @@ class Thing:
         return [k for k in self._getdata() if k not in special]
 
     def get(self, key, default=None):
+        if self.key is None and key == 'body':
+            doom
         try:
             return self._getdata()[key]
         except KeyError:
@@ -473,7 +464,6 @@ class Thing:
             raise AttributeError, key
 
         return self[key]
-            
     
     def __eq__(self, other):
         return isinstance(other, Thing) and other.key == self.key

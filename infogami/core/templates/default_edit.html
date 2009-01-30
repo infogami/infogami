@@ -88,7 +88,7 @@ $for p in page.type.properties:
         <tbody>
         $for x in page[key]:
             <tr repeat="$i">
-                <td colspan="2" style="padding-left:1.0em"> $:thinginput(x, expected_type=p.expected_type, name=key + "#")</td>
+                <td colspan="2" style="padding-left:1.0em"> $:thinginput(x, expected_type=p.expected_type, name=key + "#" + str(i))</td>
                 <td>
                     <button type="remove" template="row_$key">$_.delete</button>
                     <button type="move-up" template="row_$key" onclick="return moveup.apply(this, [event]);">$_.move_up</button>

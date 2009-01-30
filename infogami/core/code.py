@@ -54,6 +54,40 @@ class edit (delegate.mode):
                 p.type = type 
 
         return render.editpage(p)
+
+
+    def trim(self, d):
+        """Trims empty value from d. 
+        
+        >>> trim = edit().trim
+
+        >>> trim("hello ")
+        'hello'
+        >>> trim(['hello ', '', ' foo'])
+        ['hello', 'foo']
+        >>> trim({'x': '', 'y': 'foo'})
+        {'y': 'foo'}
+        >>> trim({'x': '', 'unique': 'foo'})
+        >>> trim([{'x': '', 'y': 'foo'}, {'x': ''}])
+        [{'y': 'foo'}]
+        """
+        if isinstance(d, list):
+            d = [self.trim(x) for x in d]
+            d = [x for x in d if x]
+            return d
+        elif isinstance(d, dict):
+            for k, v in d.items():
+                d[k] = self.trim(v)
+                if d[k] == '':
+                    del d[k]
+
+            # hack to stop saving empty properties
+            if d.keys() == [] or d.keys() == ['unique']:
+                return None
+            else:
+                return d
+        else:
+            return d.strip()
         
     def POST(self, path):
         i = web.input(_method='post')
@@ -66,22 +100,10 @@ class edit (delegate.mode):
         
         def non_empty(items):
             return [i for i in items if i]
-
-        def trim(d):
-            if isinstance(d, list):
-                return non_empty([trim(x) for x in d if x])
-            elif isinstance(d, dict):
-                for k, v in d.items():
-                    d[k] = trim(v)
-                if non_empty(d.values()):
-                    return d
-                else: 
-                    return None
-            else:
-                return d.strip()
-        
-        i = trim(i)
+            
+        i = self.trim(i)
         q = i
+        
         if action == 'preview':
             p = self.process(i)
             return render.editpage(p, preview=True)

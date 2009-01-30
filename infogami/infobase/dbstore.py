@@ -214,10 +214,12 @@ class DBSiteStore(common.SiteStore):
                 if datatype == 'ref':
                     value = self.get_metadata(value).id
                 elif isinstance(value, bool):
-                    value = "ft"[int(value)]
+                    value = "ft"[int(value)] # convert boolean to 't' or 'f'
                 table = self.schema.find_table(typekey, datatype, name)
+                
                 if table:
                     pid = self.get_property_id(table, name, create=True)
+                    assert pid is not None
                     f(table, thing_id, pid, value, ordering)
         
         def action_delete(table, thing_id, key_id, value, ordering):
@@ -303,10 +305,13 @@ class DBSiteStore(common.SiteStore):
         if table is None:
             return None
         
-        if (table, name) not in self.property_id_cache:
-            self.property_id_cache[table, name] = self._get_property_id(table, name, create)
+        if (table, name) in self.property_id_cache:
+            return self.property_id_cache[table, name]
             
-        return self.property_id_cache[table, name]
+        pid = self._get_property_id(table, name, create)
+        if pid is not None:
+            self.property_id_cache[table, name] = pid
+        return pid
             
     def _get_property_id(self, table, name, create=False):
         if table is None:

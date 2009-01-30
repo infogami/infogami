@@ -1,4 +1,7 @@
 """Infobase client."""
+
+import common
+
 import httplib, urllib
 import _json as simplejson
 import web
@@ -24,7 +27,7 @@ class NotFound(ClientException):
     
 class HTTPError(ClientException):
     pass
-    
+
 def connect(type, **params):
     """Connect to infobase server using the given params.
     """
@@ -157,42 +160,35 @@ class Site:
     def _get(self, key, revision=None):
         """Returns properties of the thing with the specified key."""
         revision = revision and int(revision)
-        data = dict(key=key, revision=revision)
-        result = self._request('/get', data=data)['result']
-        if result is None:
-            raise NotFound, key
+        
+        if (key, revision) not in self._cache:
+            data = dict(key=key, revision=revision)
+            result = self._request('/get', data=data)['result']
+            if result is None:
+                raise NotFound, key
+            else:
+                self._cache[key, revision] = web.storage(common.parse_query(result))
+        import copy
+        return copy.deepcopy(self._cache[key, revision])
+        
+    def _process(self, value):
+        if isinstance(value, list):
+            return [self._process(v) for v in value]
+        elif isinstance(value, dict):
+            d = {}
+            for k, v in value.items():
+                d[k] = self._process(v)
+            return Thing(self, None, d)
+        elif isinstance(value, common.Reference):
+            return Thing(self, unicode(value), None)
         else:
-            return result
+            return value
             
     def _load(self, key, revision=None):
-        def process(value):
-            if isinstance(value, list):
-                return [process(v) for v in value]
-            elif isinstance(value, dict):
-                if 'value' in value:
-                    return value['value']
-                elif 'key' in value:
-                    return Thing(self, value['key'], None)
-                else:
-                    d = web.storage()
-                    for k, v in value.items():
-                        d[k] = process(v)
-                    return Thing(self, None, d)
-            else:
-                return value
-            
-        if (key, revision) not in self._cache:      
-            data = self._get(key, revision)
-            data = web.storage(data)
-            for k, v in data.items():
-                data[k] = process(v)
-            data['last_modified'] = parse_datetime(data['last_modified'])
-            self._cache[key, revision] = data
-            data['_backreferences'] = {}
-            # it is important to call _fill_backreferences after updating the cache.
-            # otherwise, _fill_backreferences is called recursively for type/type.
-            self._fill_backreferences(key, data)
-        return self._cache[key, revision].copy()
+        data = self._get(key, revision)
+        for k, v in data.items():
+            data[k] = self._process(v)
+        return data
         
     def _fill_backreferences(self, key, data):
         def safeint(x):
@@ -215,6 +211,30 @@ class Site:
                 q['type'] = p.expected_type.key
             data['_backreferences'][p.name] = LazyObject(lambda: [self.get(key, lazy=True) for key in self.things(q)])
             
+    def _get_backreferences(self, thing):
+        def safeint(x):
+            try: return int(x)
+            except ValueError: return 0
+            
+        if 'env' in web.ctx:
+            i = web.input(_method='GET')
+        else:
+            i = web.storage()
+        page_size = 20
+        backreferences = {}
+    
+        for p in thing.type._getdata().get('backreferences', []):
+            offset = page_size * safeint(i.get(p.name + '_page') or '0')
+            q = {
+                p.property_name: thing.key, 
+                'offset': offset,
+                'limit': page_size
+            }
+            if p.expected_type:
+                q['type'] = p.expected_type.key
+            backreferences[p.name] = LazyObject(lambda: [self.get(key, lazy=True) for key in self.things(q)])
+        return backreferences
+            
     def get(self, key, revision=None, lazy=False):
         assert key.startswith('/')
         try:
@@ -228,7 +248,13 @@ class Site:
     def get_many(self, keys):
         data = dict(keys=simplejson.dumps(keys))
         result = self._request('/get_many', data=data)['result']
-        things = [Thing(self, key, data) for key, data in result.items()]
+        things = []
+        
+        import copy        
+        for key, data in result.items():
+            data = web.storage(common.parse_query(data))
+            self._cache[key, None] = data
+            things.append(Thing(self, key, self._process(copy.deepcopy(data))))
         return things
 
     def new_key(self, type):
@@ -395,40 +421,34 @@ class Thing:
     def __init__(self, site, key, data=None, revision=None):
         self._site = site
         self.key = key
-        if data is False:
-            data = {}
-        
-        self._backreferences = {}
         self.revision = revision
-        self.latest_revision = self.revision
         
-        self._process_data(data)
+        self._data = data
+        self._backreferences = None
         
     def _getdata(self):
         if self._data is None:
-            data = self._site._load(self.key, self.revision)
-            self._process_data(data)
+            self._data = self._site._load(self.key, self.revision)
         return self._data
         
-    def _process_data(self, data):
-        self._data = data
-        if data is None:
-            return
-            
-        self.revision = self._data.pop('revision', None) or self.revision
-        self.latest_revision = self.revision
-
-        self._backreferences = self._data.pop('_backreferences', {})
-        self.created = self._data.pop('created', None)
-        self.last_modified = self._data.pop('last_modified', None)
-                    
+    def _get_backreferences(self):
+        if self._backreferences is None:
+            self._backreferences = self._site._get_backreferences(self)
+        return self._backreferences
+    
     def keys(self):
-        #print 'Thing.keys', self.key, self.revision, self._getdata().keys()
-        return self._getdata().keys()
-        
+        special = ['revision', 'latest_revision', 'last_modified', 'created']
+        return [k for k in self._getdata() if k not in special]
+
+    def get(self, key, default=None):
+        try:
+            return self._getdata()[key]
+        except KeyError:
+            return self._get_backreferences().get(key, default) 
+
     def __getitem__(self, key):
         return self.get(key, nothing)
-        
+    
     def __setitem__(self, key, value):
         self._getdata()[key] = value
     
@@ -437,49 +457,23 @@ class Thing:
             self.__dict__[key] = value
         else:
             self._getdata()[key] = value
-        
+
     def __iter__(self):
         return iter(self._data)
         
-    def get(self, key, default=None):
-        try:
-            return self._getdata()[key]
-        except KeyError:
-            return self._backreferences.get(key, default)            
-    
-    def save(self, comment=None):
+    def _save(self, comment=None):
         d = self.dict()
-        d['create'] = 'unless_exists'
-        d['key'] = self.key
-        result = self._site.write(d, comment)
-        if self.key in result.created:
-            return 'created'
-        elif self.key in result.updated:
-            return 'updated'
-        else:
-            return result
+        return self._site.save(d, comment)
         
     def dict(self):
-        def unthingify(thing):
-            if isinstance(thing, list):
-                return [unthingify(x) for x in thing]
-            elif isinstance(thing, Thing):
-                return {'key': thing.key}
-            else:
-                return thing
-
-        d = {}
-        for k, v in self._data.items():
-            d[k] = unthingify(v)
-            
-        d.pop('last_modified', None)
-        return d
+        return common.format_data(self._getdata(), Thing)
         
     def __getattr__(self, key):
         if key.startswith('__'):
             raise AttributeError, key
 
         return self[key]
+            
     
     def __eq__(self, other):
         return isinstance(other, Thing) and other.key == self.key

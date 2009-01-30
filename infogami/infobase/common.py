@@ -38,16 +38,16 @@ def find_type(value):
     else:
         return '/type/string'
 
-def parse_query(d):
+def parse_query(d, reference_type=None):
     d = dict(d)
     key = d.pop('key', None)
     
-    data = parse_data(d)
+    data = parse_data(d, reference_type)
     if key:
         data['key'] = key
     return data
 
-def parse_data(d):
+def parse_data(d, reference_type=None):
     """
         >>> parse_data(1)
         1
@@ -67,22 +67,23 @@ def parse_data(d):
         >>> parse_data([text, date, true])
         [<text: u'foo'>, datetime.datetime(2009, 1, 2, 3, 4, 5), True]
         >>> parse_data({'a': text, 'b': date})
-        {'a': <text: u'foo'>, 'b': datetime.datetime(2009, 1, 2, 3, 4, 5)}
+        <Storage {'a': <text: u'foo'>, 'b': datetime.datetime(2009, 1, 2, 3, 4, 5)}>
     """
+    reference_type = reference_type or Reference
     if isinstance(d, dict):
         if 'value' in d:
             type = d.get('type', '/type/string')
             return primitive_types[type](d['value'])
         elif 'key' in d:
-            return Reference(d['key'])
+            return reference_type(d['key'])
         else:
-            return dict((k, parse_data(v)) for k, v in d.iteritems())
+            return web.storage((k, parse_data(v, reference_type)) for k, v in d.iteritems())
     elif isinstance(d, list):
-        return [parse_data(v) for v in d]
+        return [parse_data(v, reference_type) for v in d]
     else:
         return d
 
-def format_data(d):
+def format_data(d, reference_type=None):
     """Convert a data to a representation that can be saved.
     
         >>> format_data(1)
@@ -96,14 +97,15 @@ def format_data(d):
         >>> format_data(Reference('/type/type'))
         {'key': '/type/type'}
     """
+    reference_type = reference_type or Reference
     if isinstance(d, dict):
-        return dict((k, format_data(v)) for k, v in d.iteritems())
+        return dict((k, format_data(v, reference_type)) for k, v in d.iteritems())
     elif isinstance(d, list):
-        return [format_data(v) for v in d]
+        return [format_data(v, reference_type) for v in d]
     elif isinstance(d, Text):
         return {'type': '/type/text', 'value': str(d)}
-    elif isinstance(d, Reference):
-        return {'key': str(d)}
+    elif isinstance(d, reference_type):
+        return {'key': unicode(d)}
     elif isinstance(d, datetime.datetime):
         return {'type': '/type/datetime', 'value': d.isoformat()}
     else:

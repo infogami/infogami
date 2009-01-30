@@ -1,6 +1,7 @@
 """Generic utilities.
 """
 import datetime
+import re
 
 try:
     from __builtin__ import any, all
@@ -25,18 +26,9 @@ def parse_datetime(value):
     """
     if isinstance(value, datetime.datetime):
         return value
-        
-    #@@ python datetime module is ugly. 
-    #@@ It takes so much of work to create datetime from isoformat.
-    date, time = value.split('T', 1)
-    y, m, d = date.split('-')
-    H, M, S = time.split(':')
-    
-    if '.' in S:
-        S, ms = S.split('.')
     else:
-        ms = 0
-    return datetime.datetime(*map(int, [y, m, d, H, M, S, ms]))
+        tokens = re.split('-|T|:|\.| ', value)
+        return datetime.datetime(*map(int, tokens))
     
 def parse_boolean(value):
     return str(value).lower() in ["1", "true"]

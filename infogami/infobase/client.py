@@ -361,9 +361,16 @@ def parse_datetime(datestring):
     return datetime.datetime(*map(int, tokens))
 
 class Nothing:
-    """For representing missing values."""
+    """For representing missing values.
+    
+    >>> n = Nothing()
+    >>> str(n)
+    ''
+    >>> web.utf8(n)
+    ''
+    """
     def __getattr__(self, name):
-        if name.startswith('__'):
+        if name.startswith('__') or name == 'next':
             raise AttributeError, name
         else:
             return self

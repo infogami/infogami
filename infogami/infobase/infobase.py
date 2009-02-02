@@ -103,6 +103,7 @@ class Site:
         p = writequery.WriteQueryProcessor(self.store, author)
         
         items = p.process(query)
+        items = (item for item in items if item)
         result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
         
         for item in items:
@@ -139,7 +140,7 @@ class Site:
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
-
+        
         p = writequery.SaveProcessor(self.store, author)        
         items = (p.process(item['key'], item) for item in items)
         items = (item for item in items if item)

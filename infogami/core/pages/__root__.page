@@ -1,5 +1,4 @@
 {
-    'create': 'unless_exists',
     'key': '/',
     'type': '/type/page',
     'title': 'Welcome', 

@@ -323,11 +323,9 @@ def move(dir, extension, recursive=False, readfunc=None):
                 pages.append(type)
 
     delegate.admin_login()
-    result = web.ctx.site.write(pages, "install")
-    for key in sorted(result.created):
-        print 'created', key
-    for key in sorted(result.updated):
-        print 'updated', key
+    result = web.ctx.site.save_many(pages, "install")
+    for r in result:
+        print r
 
 @infogami.action
 def write(filename):

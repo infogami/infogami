@@ -1,5 +1,4 @@
 {
-    'create': 'unless_exists',
     'key': '/pagelist', 
     'type': '/type/page',
     'title': 'Page List', 

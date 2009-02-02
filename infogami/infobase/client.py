@@ -440,8 +440,6 @@ class Thing:
         return [k for k in self._getdata() if k not in special]
 
     def get(self, key, default=None):
-        if self.key is None and key == 'body':
-            doom
         try:
             return self._getdata()[key]
         except KeyError:

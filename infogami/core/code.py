@@ -102,42 +102,24 @@ class edit (delegate.mode):
             return [i for i in items if i]
             
         i = self.trim(i)
-        q = i
+    
+        p = web.ctx.site.get(path) or web.ctx.site.new(path, {})
+        p.update(i)
         
         if action == 'preview':
-            p = self.process(i)
             return render.editpage(p, preview=True)
         elif action == 'save':
             try:
-                web.ctx.site.save(q, comment)
+                p._save(comment)
                 path = web.input(_method='GET', redirect=None).redirect or web.changequery(query={})
                 raise web.seeother(path)
             except ClientException, e:
                 utils.view.set_error(str(e))
-                p = self.process(i)
                 return render.editpage(p)
         elif action == 'delete':
             q = dict(key=q['key'], type=dict(key='/type/delete'))
             web.ctx.site.save(q, comment)
             raise web.seeother(web.changequery(query={}))
-
-    def process(self, data):
-        """Updates thing with given data recursively."""
-        def new_version(data):
-            thing = db.get_version(data['key'])
-            if not thing:
-                thing = web.ctx.site.new(data['key'], data)
-            return thing
-                
-        if isinstance(data, dict) and 'key' in data:
-            thing = new_version(data)
-            for k, v in data.items():
-                thing[k] = self.process(v)
-            return thing
-        elif isinstance(data, list):
-            return [self.process(d) for d in data]
-        else:
-            return data
     
     def get_action(self, i):
         """Finds the action from input."""

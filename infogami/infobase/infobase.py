@@ -121,13 +121,18 @@ class Site:
         
         p = writequery.SaveProcessor(self.store, author)
         data = p.process(key, data)
-        result = self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
         
-        self._fire_event("save", timestamp, ip, author and author.key, data)
+        if data:
+            result = self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
+        else:
+            result = {}
         
-        created = [r['key'] for r in [result] if r['revision'] == 1]
-        updated = [r['key'] for r in [result] if r['revision'] != 1]
-        self._fire_triggers(created=created, updated=updated)        
+        if result:
+            self._fire_event("save", timestamp, ip, author and author.key, data)
+        
+            created = [r['key'] for r in [result] if r['revision'] == 1]
+            updated = [r['key'] for r in [result] if r['revision'] != 1]
+            self._fire_triggers(created=created, updated=updated)        
         return result
     
     def save_many(self, items, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
@@ -137,6 +142,7 @@ class Site:
 
         p = writequery.SaveProcessor(self.store, author)        
         items = (p.process(item['key'], item) for item in items)
+        items = (item for item in items if item)
         result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
         
         for item in items:

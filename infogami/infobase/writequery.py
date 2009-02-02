@@ -12,6 +12,8 @@ class SaveProcessor:
     def process(self, key, data):
         if 'key' not in data:
             data['key'] = key
+            
+        assert data['key'] == key
     
         data = common.parse_query(data)
     
@@ -23,7 +25,19 @@ class SaveProcessor:
             raise common.InfobaseException("missing type")    
         type = self.process_value(type, self.get_property(None, 'type'))
         type = self.store.get(type)
-        return self.process_data(data, type)
+        data = self.process_data(data, type)
+        
+        thing = self.store.get(key)
+        prev_data = thing and thing._get_data()
+        
+        for k in common.READ_ONLY_PROPERTIES:
+            data.pop(k, None)
+            prev_data and prev_data.pop(k, None)
+            
+        if data == prev_data:
+            return None
+        else:
+            return data
 
     def get_property(self, type, name):
         if name == 'type':

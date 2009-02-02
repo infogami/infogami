@@ -270,8 +270,9 @@ class Site:
     def save(self, query, comment=None):
         _query = simplejson.dumps(query)
         result = self._request('/save', 'POST', dict(key=query['key'], data=_query, comment=comment))['result']
-        self._invalidate_cache([result['key']])
-        self._run_hooks('on_new_version', query)
+        if result:
+            self._invalidate_cache([result['key']])
+            self._run_hooks('on_new_version', query)
         return result
         
     def save_many(self, query, comment=None):
@@ -344,9 +345,11 @@ class Site:
         user = data and Thing(self, data['key'], data)
         return user
 
-    def new(self, key, data=False):
+    def new(self, key, data=None):
         """Creates a new thing in memory.
         """
+        data = common.parse_query(data)
+        data = self._process_dict(data or {})
         return Thing(self, key, data)
         
 def parse_datetime(datestring):
@@ -459,6 +462,11 @@ class Thing:
     def dict(self):
         return common.format_data(self._getdata(), Thing)
         
+    def update(self, data):
+        data = common.parse_query(data)
+        data = self._site._process_dict(data)
+        self._data.update(data)
+
     def __getattr__(self, key):
         if key.startswith('__'):
             raise AttributeError, key

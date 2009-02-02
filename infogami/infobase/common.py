@@ -17,6 +17,7 @@ primitive_types = {
 
 # properties present for every type of object.
 COMMON_PROPERTIES = ['key', 'type', 'created', 'last_modified', 'permission', 'child_permission']
+READ_ONLY_PROPERTIES = ["id", "created", "last_modified", "revision", "latest_revision"]
 
 def find_type(value):
     if isinstance(value, Thing):

@@ -180,8 +180,7 @@ class diff (delegate.mode):
         
         def get(path, revision):
             if revision == 0:
-                page = web.ctx.site.new(path, {})
-                page.revision = 0
+                page = web.ctx.site.new(path, {'revision': 0, 'type': {'key': '/type/object'}, 'key': path})
             else:
                 page = web.ctx.site.get(path, revision)
             return page

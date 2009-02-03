@@ -156,7 +156,7 @@ def make_versions_query(store, query):
         q.limit = 1000
     q.sort = query.pop('sort', None)
     
-    columns = ['key', 'revision', 'author', 'comment', 'machine_comment', 'ip', 'created']
+    columns = ['key', 'type', 'revision', 'author', 'comment', 'machine_comment', 'ip', 'created']
     
     for k, v in query.items():
         assert k in columns

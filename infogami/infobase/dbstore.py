@@ -439,6 +439,9 @@ class DBSiteStore(common.SiteStore):
             if key == 'key':
                 key = 'thing_id'
                 value = self.get_metadata(value).id
+            elif key == 'type':
+                key = 'thing.type'
+                value = self.get_metadata(value).id
             elif key == 'author':
                 key = 'author_id'
                 value = self.get_metadata(value).id

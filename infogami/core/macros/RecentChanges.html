@@ -1,7 +1,10 @@
-$def with (author=None, limit=50)
+$def with (author=None, type=None, limit=50)
 
-$ page = safeint(query_param('rc_page', '0'))
-$ changes = get_recent_changes(author=author, limit=limit, offset=page * limit)
+$ page = safeint(query_param('page', '0'))
+$ ip = query_param('ip', None)
+$ type = type or query_param('type', None)
+$ changes = get_recent_changes(author=author, ip=ip, type=type, limit=limit, offset=page * limit)
+
 <br/>
 
 $var title: $_.RECENT_CHANGES

@@ -164,6 +164,9 @@ def delegate(path):
             out = web.template.Stowage(_str=out, title=path)
         elif 'title' not in out:
             out.title = path
+
+        if 'content_type' in out:
+            web.header('Content-Type', out.content_type)
             
         if hasattr(out, 'rawtext'):
             return out.rawtext

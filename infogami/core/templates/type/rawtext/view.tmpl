@@ -1,0 +1,11 @@
+$def with (page)
+
+$ format = query_param('format')
+
+$if format == 'raw'
+    $var content_type: $page.content_type
+    $var rawtext: $page.body
+$else:
+    $var title: $page.title
+
+    <pre>$page.body</pre>

@@ -6,6 +6,12 @@ $ view = thingview(page)
 
 $var title: $view.title
 
+$if 'content_type' in view:
+    $var content_type = view.content_type
+
+$if 'rawtext' in view:
+    $var rawtext = view.rawtext
+
 $:view
 
 <div id="dateline">

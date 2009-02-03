@@ -1,0 +1,22 @@
+{
+    'key': '/type/rawtext',
+    'type': {'key': '/type/type'},
+    'name': 'Raw Text',
+    'kind': 'regular',
+    'properties': [{
+        'name': 'title',
+        'type': '/type/property',
+        'expected_type': '/type/string',
+        'unique': True
+    }, {
+        'name': 'content_type',
+        'type': '/type/property',
+        'expected_type': '/type/string',
+        'unique': True
+    }, {
+        'name': 'body',
+        'type': '/type/property',
+        'expected_type': '/type/text',
+        'unique': True
+    }]
+}

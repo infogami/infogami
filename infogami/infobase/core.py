@@ -58,7 +58,7 @@ class Thing:
         return "<thing: %s>" % repr(self.key)
         
     def copy(self):
-        return Thing(self._store, self.key, self.data.copy())
+        return Thing(self._store, self.key, self._data.copy())
         
     def _get_data(self):
         import copy

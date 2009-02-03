@@ -6,6 +6,7 @@ import httplib, urllib
 import _json as simplejson
 import web
 import socket
+import datetime
 
 DEBUG = False
 
@@ -414,7 +415,7 @@ class Thing:
     def __init__(self, site, key, data=None, revision=None):
         self._site = site
         self.key = key
-        self.revision = revision
+        self._revision = revision
         
         assert data is None or isinstance(data, dict)
         
@@ -427,7 +428,7 @@ class Thing:
         
     def _getdata(self):
         if self._data is None:
-            self._data = self._site._load(self.key, self.revision)
+            self._data = self._site._load(self.key, self._revision)
         return self._data
         
     def _get_backreferences(self):
@@ -443,6 +444,8 @@ class Thing:
         try:
             return self._getdata()[key]
         except KeyError:
+            if 'type' not in self._data:
+                raise
             return self._get_backreferences().get(key, default) 
 
     def __getitem__(self, key):
@@ -464,9 +467,29 @@ class Thing:
         d = self.dict()
         return self._site.save(d, comment)
         
+    def _format(self, d):
+        if isinstance(d, dict):
+            return dict((k, self._format(v)) for k, v in d.iteritems())
+        elif isinstance(d, list):
+            return [self._format(v) for v in d]
+        elif isinstance(d, common.Text):
+            return {'type': '/type/text', 'value': str(d)}
+        elif isinstance(d, Thing):
+            return d._dictrepr()
+        elif isinstance(d, datetime.datetime):
+            return {'type': '/type/datetime', 'value': d.isoformat()}
+        else:
+            return d
+    
     def dict(self):
-        return common.format_data(self._getdata(), Thing)
-        
+        return self._format(self._getdata())
+    
+    def _dictrepr(self):
+        if self.key is None:
+            return self.dict()
+        else:
+            return {'key': self.key}
+    
     def update(self, data):
         data = common.parse_query(data)
         data = self._site._process_dict(data)

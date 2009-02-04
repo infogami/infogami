@@ -153,6 +153,12 @@ class DBSiteStore(common.SiteStore):
         if not data:
             return None
         thing = common.Thing.from_json(self, key, data)
+
+        # just to be careful about the old data
+        for k in common.READ_ONLY_PROPERTIES:
+            if k not in thing:
+                thing._data[k] = metadata[k]
+
         return thing
         
     def get_many(self, keys):
@@ -195,9 +201,9 @@ class DBSiteStore(common.SiteStore):
                 return 'ref'
             elif isinstance(value, bool):
                 return 'boolean'
-            elif isinstance('value', float):
+            elif isinstance(value, float):
                 return 'float'
-            elif isinstance('value', int):
+            elif isinstance(value, int):
                 return 'int'
             else:
                 return 'str'
@@ -213,6 +219,8 @@ class DBSiteStore(common.SiteStore):
                 datatype = find_datatype(value)
                 if datatype == 'ref':
                     value = self.get_metadata(value).id
+                elif datatype == 'str':
+                    value = value[:2048] # truncate long strings
                 elif isinstance(value, bool):
                     value = "ft"[int(value)] # convert boolean to 't' or 'f'
                 table = self.schema.find_table(typekey, datatype, name)
@@ -255,7 +263,7 @@ class DBSiteStore(common.SiteStore):
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         t = self.db.transaction()
-        
+
         thing = self.get(key)
         typekey = data['type']
 

@@ -39,6 +39,9 @@ class Thing:
         else:
             return value
 
+    def __contains__(self, key):
+        return key in self._data
+
     def __getitem__(self, key):
         return self._process(self._data[key])
 

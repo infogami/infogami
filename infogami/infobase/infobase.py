@@ -105,20 +105,29 @@ class Site:
         items = p.process(query)
         items = (item for item in items if item)
         result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
-        
-        for item in items:
-            self._fire_event("save", timestamp, ip, author and author.key, item)
+
 
         created = [r['key'] for r in result if r['revision'] == 1]
         updated = [r['key'] for r in result if r['revision'] != 1]
-        self._fire_triggers(created=created, updated=updated)
+
+        result2 = web.storage(created=created, updated=updated)
         
-        return dict(created=created, updated=updated)
+
+        if not _internal:
+            data = dict(comment=comment, machine_comment=machine_comment, query=query, result=result2)
+            self._fire_event("write", timestamp, ip, author and author.key, data)
+            
+        self._fire_triggers(result)
+
+        return result2
     
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
+        
+        #@@ why to have key argument at all?
+        data['key'] = key
         
         p = writequery.SaveProcessor(self.store, author)
         data = p.process(key, data)
@@ -128,12 +137,9 @@ class Site:
         else:
             result = {}
         
-        if result:
-            self._fire_event("save", timestamp, ip, author and author.key, data)
-        
-            created = [r['key'] for r in [result] if r['revision'] == 1]
-            updated = [r['key'] for r in [result] if r['revision'] != 1]
-            self._fire_triggers(created=created, updated=updated)        
+        event_data = dict(comment=comment, machine_comment=machine_comment, key=key, query=data, result=result)
+        self._fire_event("save", timestamp, ip, author and author.key, event_data)
+        self._fire_triggers([result])
         return result
     
     def save_many(self, items, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
@@ -146,13 +152,10 @@ class Site:
         items = (item for item in items if item)
         result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
         
-        for item in items:
-            self._fire_event("save", timestamp, ip, author and author.key, item)
+        event_data = dict(comment=comment, machine_comment=machine_comment, query=items, result=result)
+        self._fire_event("save_many", timestamp, ip, author and author.key, event_data)
 
-        created = [r['key'] for r in result if r['revision'] == 1]
-        updated = [r['key'] for r in result if r['revision'] != 1]
-        self._fire_triggers(created=created, updated=updated)
-        
+        self._fire_triggers(result)
         return result
 
     def _fire_event(self, name, timestamp, ip, username, data):
@@ -193,7 +196,7 @@ class Site:
         """
         self._triggers.setdefault(type, []).append(func)
                 
-    def _fire_triggers(self, created, updated):
+    def _fire_triggers(self, result):
         """Executes all required triggers on write."""
         def fire_trigger(type, old, new):
             triggers = self._triggers.get(type.key, [])
@@ -204,6 +207,9 @@ class Site:
                     print >> web.debug, 'Failed to execute trigger', t
                     import traceback
                     traceback.print_exc()
+                    
+        created = [r['key'] for r in result if r['revision'] == 1]
+        updated = [r['key'] for r in result if r['revision'] != 1]
         
         for key in created:
             thing = self.get(key)
@@ -217,7 +223,7 @@ class Site:
             else:
                 fire_trigger(old.type, old, thing)
                 fire_trigger(thing.type, old, thing)
-        
+
 if __name__ == '__main__':
     web.config.db_parameters = dict(dbn='postgres', db='infobase2', user='anand', pw='')
     web.config.db_printing = True

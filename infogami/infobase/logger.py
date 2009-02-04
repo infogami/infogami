@@ -78,8 +78,8 @@ class Logger:
     def __call__(self, event):
         import web
         data = event.data.copy()
-        if event.name == 'write':
-            name = "write"
+        if event.name in ['write', 'save', 'save_many']:
+            name = event.name
             data['ip'] = event.ip
             data['author'] = event.username
         elif event.name == 'register':

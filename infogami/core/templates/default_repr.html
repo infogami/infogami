@@ -1,4 +1,4 @@
-$def with (thing)
+$def with (thing, property=None)
 $if thing.is_primitive: $thing.value
 $elif thing.type.kind == 'embeddable' or thing.key is None:
     <table>

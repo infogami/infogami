@@ -142,17 +142,19 @@ class Site:
         self._fire_triggers([result])
         return result
     
-    def save_many(self, items, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
+    def save_many(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
         
         p = writequery.SaveProcessor(self.store, author)        
+
+        items = query
         items = (p.process(item['key'], item) for item in items)
         items = (item for item in items if item)
         result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
         
-        event_data = dict(comment=comment, machine_comment=machine_comment, query=items, result=result)
+        event_data = dict(comment=comment, machine_comment=machine_comment, query=query, result=result)
         self._fire_event("save_many", timestamp, ip, author and author.key, event_data)
 
         self._fire_triggers(result)

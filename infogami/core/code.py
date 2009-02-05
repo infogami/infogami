@@ -71,7 +71,9 @@ class edit (delegate.mode):
         >>> trim([{'x': '', 'y': 'foo'}, {'x': ''}])
         [{'y': 'foo'}]
         """
-        if isinstance(d, list):
+        if d is None:
+            return d
+        elif isinstance(d, list):
             d = [self.trim(x) for x in d]
             d = [x for x in d if x]
             return d

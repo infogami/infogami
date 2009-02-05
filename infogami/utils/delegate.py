@@ -11,7 +11,7 @@ urls = (
   '(/.*)', 'item'
 )
 
-app = web.application(urls, globals())
+app = web.application(urls, globals(), autoreload=False)
 web._loadhooks = {}
 web.unloadhooks = {}
 web.load = lambda: None

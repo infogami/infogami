@@ -445,7 +445,7 @@ class Thing:
             return self._getdata()[key]
         except KeyError:
             if 'type' not in self._data:
-                raise
+                return default
             return self._get_backreferences().get(key, default) 
 
     def __getitem__(self, key):

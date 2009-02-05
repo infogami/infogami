@@ -51,7 +51,7 @@ class SaveProcessor:
 
     def process_data(self, d, type):
         for k, v in d.items():
-            if v is None or v == [] or str(v).strip() == '':
+            if v is None or v == [] or web.safeunicode(v).strip() == '':
                 del d[k]
             else:
                 p = self.get_property(type, k)

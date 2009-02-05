@@ -7,7 +7,7 @@ class InfobaseException(Exception):
     
 class NotFound(InfobaseException):
     def __init__(self, key):
-        InfobaseException.__init__(self, 'Not Found: %s' % repr(str(key)))
+        InfobaseException.__init__(self, 'Not Found: %s' % repr(web.safeunicode(key)))
     
 class TypeMismatch(InfobaseException):
     def __init__(self, type_expected, type_found):

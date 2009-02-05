@@ -2,6 +2,7 @@
 """
 import datetime
 import re
+import web
 
 try:
     from __builtin__ import any, all
@@ -31,7 +32,7 @@ def parse_datetime(value):
         return datetime.datetime(*map(int, tokens))
     
 def parse_boolean(value):
-    return str(value).lower() in ["1", "true"]
+    return web.safeunicode(value).lower() in ["1", "true"]
 
 def dict_diff(d1, d2):
     """Compares 2 dictionaries and returns the following.

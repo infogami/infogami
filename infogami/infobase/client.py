@@ -473,7 +473,7 @@ class Thing:
         elif isinstance(d, list):
             return [self._format(v) for v in d]
         elif isinstance(d, common.Text):
-            return {'type': '/type/text', 'value': str(d)}
+            return {'type': '/type/text', 'value': web.safeunicode(d)}
         elif isinstance(d, Thing):
             return d._dictrepr()
         elif isinstance(d, datetime.datetime):

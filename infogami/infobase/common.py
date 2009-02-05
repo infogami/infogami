@@ -104,7 +104,7 @@ def format_data(d, reference_type=None):
     elif isinstance(d, list):
         return [format_data(v, reference_type) for v in d]
     elif isinstance(d, Text):
-        return {'type': '/type/text', 'value': str(d)}
+        return {'type': '/type/text', 'value': web.safeunicode(d)}
     elif isinstance(d, reference_type):
         return {'key': unicode(d)}
     elif isinstance(d, datetime.datetime):

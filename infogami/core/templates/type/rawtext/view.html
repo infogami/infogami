@@ -1,0 +1,11 @@
+$def with (page)
+
+$var title: $page.title
+
+$ format = query_param('format')
+$if format == 'raw':
+    $var content_type: $page.content_type
+    $var rawtext: $page.body
+$else:
+    <div>View as <a href="$page.key?format=raw">rawtext</a>.<div>
+    <pre>$page.body</pre>

@@ -366,10 +366,14 @@ class DBSiteStore(common.SiteStore):
                 label = 'd%d' % len(tables)
                 tables[key] = DBTable(table, label)
             return tables[key]
-                    
+            
         wheres = []
         
         def process(c, ordering_func=None):
+            # ordering_func is used when the query contains emebbabdle objects
+            #
+            # example: {'links': {'title: 'foo', 'url': 'http://example.com/foo'}}
+            
             if c.datatype == 'ref':
                 metadata = self.get_metadata(c.value)
                 assert metadata is not None, 'Not found: ' + str(c.value)
@@ -396,7 +400,7 @@ class DBSiteStore(common.SiteStore):
                     xwheres.append(ordering_func(table))
             wheres.extend(xwheres)
             return table
-        
+            
         def make_ordering_func():
             d = web.storage(table=None)
             def f(table):
@@ -411,27 +415,47 @@ class DBSiteStore(common.SiteStore):
                     process_query(c, ordering_func or make_ordering_func())
                 else:
                     process(c, ordering_func)
+                    
+        def process_sort(query):
+            """Process sort field in the query and returns the db column to order by."""
+            if query.sort:
+                if query.sort.key in ['key', 'type', 'created', 'last_modified']:
+                    order = 'thing.' + query.sort.key # make sure c.key is valid
+                else:
+                    table = get_table(query.sort.datatype, query.sort.key)
+                    key_id = self.get_property_id(table.name, query.sort.key)
+                    if key_id is None:
+                        raise StopIteration
+                    q = '%(table)s.thing_id = thing.id AND %(table)s.key_id=$key_id' % {'table': table}
+                    wheres.append(web.reparam(q, locals()))
+                    return table.label + '.value'
+            else:
+                return None
+        
         try:
             process_query(query)
+            order = process_sort(query)
         except StopIteration:
             return []
-                                
+                                        
         wheres = wheres or ['1 = 1']
         tables = ['thing'] + [t.sql() for t in tables.values()]
 
         t = self.db.transaction()
         if config.query_timeout:
             self.db.query("SELECT set_config('statement_timeout', $query_timeout, false)", dict(query_timeout=config.query_timeout))
-                        
+    
         result = self.db.select(
             what='thing.key', 
             tables=tables, 
             where=self.sqljoin(wheres, ' AND '), 
+            order=order,
             limit=query.limit, 
-            offset=query.offset)
+            offset=query.offset,
+            )
+            
         result = [r.key for r in result]
         t.commit()
-        
         return result
         
     def sqljoin(self, queries, delim):
@@ -630,5 +654,5 @@ class MultiDBSiteStore(DBSiteStore):
         return thing_id and self.get_metadata_from_id(thing_id).key
                     
 if __name__ == "__main__":
-    schema = Schema()
-    print schema.sql()
+    import doctest
+    doctest.testmod()

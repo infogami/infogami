@@ -1,6 +1,7 @@
 import common
 from common import all, any
 import web
+import re
 
 class Query:
     """Query is a list of conditions.
@@ -63,7 +64,7 @@ def make_query(store, query, nested=False):
     q.limit = query.pop('limit', 1000)
     if q.limit > 1000:
         q.limit = 1000
-    q.sort = query.pop('sort', None)
+    sort = query.pop('sort', None)
     
     for k, v in query.items():
         if isinstance(v, dict):
@@ -82,7 +83,13 @@ def make_query(store, query, nested=False):
     for c in q.conditions:
         if not isinstance(c, Query):
             c.datatype = find_datatype(type, c.key, c.value)
-    
+            
+    if sort:
+        parse_key(sort) # to validate key
+        q.sort = web.storage(key=sort, datatype=find_datatype(type, sort, None))
+    else:
+        q.sort = None
+            
     return q
     
 def find_datatype(type, key, value):
@@ -143,6 +150,10 @@ def parse_key(key):
         if key.endswith(op):
             key = key[:-len(op)]
             return key, op
+
+    if not re.match('^[a-zA-Z0-9_]*$', key):
+        raise common.InfobaseException("Invalid property: %s" % repr(key))
+
     return key, "="
     
 def make_versions_query(store, query):
@@ -163,7 +174,6 @@ def make_versions_query(store, query):
         q.add_condition(k, '=', None, v)
         
     return q
-
     
 if __name__ == "__main__":
     import doctest

@@ -59,6 +59,9 @@ class SaveProcessor:
                     d[k] = self.process_value(v, p)
                 else:
                     d[k] = v
+        if type:
+            d['type'] = common.Reference(type.key)
+            
         return d
 
     def process_value(self, value, property):

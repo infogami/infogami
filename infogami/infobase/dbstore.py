@@ -385,17 +385,26 @@ class DBSiteStore(common.SiteStore):
                 op = Literal(c.op)
                 
             if c.key in ['key', 'type', 'created', 'last_modified']:
-                q = 'thing.%s %s $c.value' % (c.key, op)
-                xwheres = [web.reparam(q, locals())]
+                if isinstance(c.value, list):
+                    q = web.sqlors('thing.%s %s ' % (c.key, op), c.value)
+                else:
+                    q = web.reparam('thing.%s %s $c.value' % (c.key, op), locals())
+                xwheres = [q]
                 table = None
             else:
                 table = get_table(c.datatype, c.key)
                 key_id = self.get_property_id(table.name, c.key)
                 if not key_id:
                     raise StopIteration
+                    
+                q1 = web.reparam('%(table)s.thing_id = thing.id AND %(table)s.key_id=$key_id' % {'table': table}, locals())
                 
-                q = '%(table)s.thing_id = thing.id AND %(table)s.key_id=$key_id AND %(table)s.value %(op)s $c.value' % {'table': table, 'op': op}
-                xwheres = [web.reparam(q, locals())]
+                if isinstance(c.value, list):
+                    q2 = web.sqlors('%s.value %s ' % (table, op), c.value)
+                else:
+                    q2 = web.reparam('%s.value %s $c.value' % (table, op), locals())
+                
+                xwheres = [q1, q2]
                 if ordering_func:
                     xwheres.append(ordering_func(table))
             wheres.extend(xwheres)

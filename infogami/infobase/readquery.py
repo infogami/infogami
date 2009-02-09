@@ -57,6 +57,8 @@ def make_query(store, query, nested=False):
         <query: ['type = ref:/type/page']>
         >>> make_query(store, {'type': '/type/page', 'title~': 'foo', 'life': 42})
         <query: ['life = int:42', 'type = ref:/type/page', 'title ~ str:foo']>
+        >>> make_query(store, {'type': '/type/page', 'title~': 'foo', 'a:life<': 42, "b:life>": 420})        
+        <query: ['life < int:42', 'type = ref:/type/page', 'title ~ str:foo', 'life > int:420']>
     """
     query = common.parse_query(query)
     q = Query()
@@ -146,15 +148,18 @@ def parse_key(key):
         ('foo', '~')
     """
     operators = ["=", "!=", "<", "<=", ">=", ">", "~"]
+    operator = "="
     for op in operators:
         if key.endswith(op):
             key = key[:-len(op)]
-            return key, op
+            operator = op
+            break
+            
+    # key foo can be specified as a:foo
+    if ':' in key:
+        key = key.split(":")[-1]
 
-    if not re.match('^[a-zA-Z0-9_]*$', key):
-        raise common.InfobaseException("Invalid property: %s" % repr(key))
-
-    return key, "="
+    return key, operator
     
 def make_versions_query(store, query):
     """Creates a versions query object from query dict.

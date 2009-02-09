@@ -6,40 +6,53 @@ import re
 def run_things_query(store, query):
     query = make_query(store, query)
     keys = store.things(query)
+        
+    xthings = {}
+    def load_things(keys, query):
+        _things = dict((k, t.format_data()) for k, t in store.get_many(keys).items())
+        xthings.update(_things)
+        
+        for k, v in query.requested.items():
+            k = web.lstrips(k, query.prefix)
+            if isinstance(v, Query):
+                keys2 = common.flatten([d.get(k) for d in _things.values() if d.get(k)])
+                keys2 = [k['key'] for k in keys2]
+                load_things(set(keys2), v)
     
     def get_nested_data(value, query):
         if isinstance(value, list):
             return [get_nested_data(v, query) for v in value]
         elif isinstance(value, dict) and 'key' in value:
-            thing = store.get(value['key'])
-            fields = dict((web.lstrips(k, query.prefix), v) for k, v in query.requested.items())
-            return get_data(thing, fields)
+            thingdata = xthings[value['key']]
+            return get_data(thingdata, query)
         else:
             return value
     
-    def get_data(thing, fields):
-        data = thing.format_data()
+    def get_data(thingdata, query):
+        fields = dict((web.lstrips(k, query.prefix), v) for k, v in query.requested.items())
         
+        # special care for '*'
         if '*' in fields:
-            f = dict((k, None) for k in data.keys())
+            f = dict((k, None) for k in thingdata.keys())
             fields.pop('*')
             f.update(fields)
             fields = f
         
         d = {}
         for k, v in fields.items():
-            value = data.get(k)
+            value = thingdata.get(k)
             if isinstance(v, Query):
                 d[k] = get_nested_data(value, v)
             else:
                 d[k] = value
         return d
     
+    data = [{'key': key} for key in keys]
     if query.requested == ['keys']:
-        return [{'key': key} for key in keys]
+        return data
     else:
-        things = store.get_many(keys)
-        return [get_data(things[k], query.requested) for k in keys]
+        load_things(keys, query)
+        return get_nested_data(data, query)
 
 class Query:
     """Query is a list of conditions.

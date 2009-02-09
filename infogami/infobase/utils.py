@@ -101,3 +101,19 @@ def prepr(obj, indent=""):
             return '{' + ",".join(items) + "\n" + indent[4:] + "}"
     else:
         return repr(obj)
+
+def flatten(nested_list, result=None):
+    """Flattens a nested list.
+    
+        >>> flatten([1, [2, 3], [4, [5, 6]]])
+        [1, 2, 3, 4, 5, 6]
+    """
+    if result is None:
+        result = []
+        
+    for x in nested_list:
+        if isinstance(x, list):
+            flatten(x, result)
+        else:
+            result.append(x)
+    return result

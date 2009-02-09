@@ -198,9 +198,14 @@ class things:
     @jsonify
     def GET(self, sitename):
         site = get_site(sitename)
-        i = input('query')
+        i = input('query', details="false")
         q = from_json(i.query)
-        return site.things(q)
+        result = site.things(q)
+        
+        if i.details == "false":
+            return [r['key'] for r in result]
+        else:
+            return result
 
 class versions:
     @jsonify

@@ -165,8 +165,7 @@ class Site:
         self._infobase.fire_event(event)
         
     def things(self, query):
-        q = readquery.make_query(self.store, query)
-        return self.store.things(q)
+        return readquery.run_things_query(self.store, query)
         
     def versions(self, query):
         q = readquery.make_versions_query(self.store, query)

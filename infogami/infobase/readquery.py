@@ -3,6 +3,26 @@ from common import all, any
 import web
 import re
 
+def run_things_query(store, query):
+    query = make_query(store, query)
+    keys = store.things(query)
+    
+    def get_data(thing, fields):
+        data = thing.format_data()
+        
+        if fields is None:
+            return data
+        else:
+            return dict((k, data.get(k)) for k in fields)
+    
+    if query.requested == ['keys']:
+        return [{'key': key} for key in keys]
+    else:
+        things = store.get_many(keys)
+        if '*' in query.requested:
+            query.requested = None
+        return [get_data(things[k], query.requested) for k in keys]
+
 class Query:
     """Query is a list of conditions.
     Each condition is a storage object with ("key", "op", "datatype", "value") as keys.
@@ -24,6 +44,7 @@ class Query:
         self.sort = None
         self.limit = None
         self.offset = None
+        self.requested = ["key"]
         
     def get_type(self):
         """Returns the value of the condition for type if there is any.
@@ -69,7 +90,9 @@ def make_query(store, query, nested=False):
     sort = query.pop('sort', None)
     
     for k, v in query.items():
-        if isinstance(v, dict):
+        if v is None:
+            q.requested.append(k)
+        elif isinstance(v, dict):
             # make sure op is ==
             v = dict((k + '.' + key, value) for key, value in v.items())
             q.conditions.append(make_query(store, v, nested=True))

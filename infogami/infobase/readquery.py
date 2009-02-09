@@ -7,20 +7,38 @@ def run_things_query(store, query):
     query = make_query(store, query)
     keys = store.things(query)
     
+    def get_nested_data(value, query):
+        if isinstance(value, list):
+            return [get_nested_data(v, query) for v in value]
+        elif isinstance(value, dict) and 'key' in value:
+            thing = store.get(value['key'])
+            fields = dict((web.lstrips(k, query.prefix), v) for k, v in query.requested.items())
+            return get_data(thing, fields)
+        else:
+            return value
+    
     def get_data(thing, fields):
         data = thing.format_data()
         
-        if fields is None:
-            return data
-        else:
-            return dict((k, data.get(k)) for k in fields)
+        if '*' in fields:
+            f = dict((k, None) for k in data.keys())
+            fields.pop('*')
+            f.update(fields)
+            fields = f
+        
+        d = {}
+        for k, v in fields.items():
+            value = data.get(k)
+            if isinstance(v, Query):
+                d[k] = get_nested_data(value, v)
+            else:
+                d[k] = value
+        return d
     
     if query.requested == ['keys']:
         return [{'key': key} for key in keys]
     else:
         things = store.get_many(keys)
-        if '*' in query.requested:
-            query.requested = None
         return [get_data(things[k], query.requested) for k in keys]
 
 class Query:
@@ -44,7 +62,8 @@ class Query:
         self.sort = None
         self.limit = None
         self.offset = None
-        self.requested = ["key"]
+        self.prefix = None
+        self.requested = {"key": None}
         
     def get_type(self):
         """Returns the value of the condition for type if there is any.
@@ -71,7 +90,7 @@ class Query:
         conditions = [f(c) for c in self.conditions]
         return "<query: %s>" % repr(conditions)
 
-def make_query(store, query, nested=False):
+def make_query(store, query, prefix=""):
     """Creates a query object from query dict.
         >>> store = common.create_test_store()
         >>> make_query(store, {'type': '/type/page'})
@@ -83,23 +102,32 @@ def make_query(store, query, nested=False):
     """
     query = common.parse_query(query)
     q = Query()
+    q.prefix = prefix
     q.offset = query.pop('offset', None)
     q.limit = query.pop('limit', 1000)
     if q.limit > 1000:
         q.limit = 1000
     sort = query.pop('sort', None)
     
+    nested = (prefix != "")
+    
     for k, v in query.items():
+        # key foo can also be written as label:foo
+        k = k.split(':')[-1]
         if v is None:
-            q.requested.append(k)
+            q.requested[k] = v
         elif isinstance(v, dict):
             # make sure op is ==
             v = dict((k + '.' + key, value) for key, value in v.items())
-            q.conditions.append(make_query(store, v, nested=True))
+            q2 = make_query(store, v, prefix=prefix + k + ".") 
+            if q2.conditions:
+                q.conditions.append(q2)
+            else:
+                q.requested[k] = q2
         else:
             k, op = parse_key(k)
             q.add_condition(k, op, None, v)
-            
+             
     if not nested:
         q.assert_type_required()
         
@@ -177,10 +205,6 @@ def parse_key(key):
             key = key[:-len(op)]
             operator = op
             break
-            
-    # key foo can be specified as a:foo
-    if ':' in key:
-        key = key.split(":")[-1]
 
     return key, operator
     

@@ -99,7 +99,7 @@ class hooks(client.hook):
                 del wikitemplates[page.key]
             if page.name in wikimacros:
                 del wikimacros[page.key]
-                
+    
     def before_new_version(self, page):
         """Validates template/macro, before it is saved, by compiling it."""
         if page.type.key == '/type/template':
@@ -262,7 +262,7 @@ def monkey_patch_debugerror():
             if page is None:
                 raise IOError("not found: " + filename)
             from StringIO import StringIO
-            return StringIO(page.body)
+            return StringIO(page.body + "\n" * 100)
         else:
             return open(filename)
             

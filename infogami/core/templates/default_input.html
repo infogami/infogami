@@ -6,14 +6,15 @@ $if kind == "primitive" or kind == "basic":
     $if property.get('options'):
         $:Dropdown(property.name, property.options, value=thing.value).render()
     $else:
-        <input type="text" id="input_$property.name" name="$property.name" value="$thing.value" />
+        <input type="text" id="input_$property.name" name="$property.name" value="$thing.value"/>
 $elif kind == 'embeddable':
     <table>
     $for p in property.expected_type.properties:
         <tr>
             <td>$p.name</td>
-            <td>$:thinginput(p.expected_type, property.name + '.' + p.name, thing[p.name])</td>
+            <td>$:thinginput(thing[p.name], expected_type=p.expected_type, name=property.name + '.' + p.name)</td>
         </tr>
     </table>
 $else:
     $:macros.ThingReference(thing.type, property.name, thing)
+

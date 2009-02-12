@@ -166,6 +166,7 @@ def delegate(path):
             out.title = path
 
         if 'content_type' in out:
+            web.ctx.headers = [h for h in web.ctx.headers if h.lower() != 'content_type']
             web.header('Content-Type', out.content_type)
             
         if hasattr(out, 'rawtext'):

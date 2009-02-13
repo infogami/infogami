@@ -7,77 +7,15 @@ import template
 import macro
 from context import context
 
+from app import *
+
 urls = (
   '(/.*)', 'item'
 )
 
-app = web.application(urls, globals(), autoreload=False)
-web._loadhooks = {}
-web.unloadhooks = {}
-web.load = lambda: None
-
-def hook_processor(handler):
-    for h in web._loadhooks.values():
-        h()
-    try:
-        return handler()
-    finally:
-        for h in web.unloadhooks.values():
-            h()
-            
-app.add_processor(hook_processor)
-
 import view
 import i18n
 
-modes = {}
-pages = {}
-
-# I'm going to hell for this...
-
-# Basically, what it does is it fills `modes` up so that
-# `modes['edit']` returns the edit class and fills `hooks`
-# so that `hooks['on_new_version']` returns a list of 
-# functions registered like that.
-
-class metamode (type):
-    def __init__(self, *a, **kw):
-        type.__init__(self, *a, **kw)
-        modes[self.__name__] = self
-
-class mode:
-    __metaclass__ = metamode
-
-class metapage(type):
-    def __init__(self, *a, **kw):
-        type.__init__(self, *a, **kw)
-        path = getattr(self, 'path', '/' + self.__name__)
-        pages[path] = self
-
-class page:
-    __metaclass__ = metapage
-
-# mode and page are just base classes.
-del modes['mode']
-del pages['/page']
-
-def _keyencode(text): return text.replace(' ', '_')
-def _changepath(new_path):
-    return new_path + web.ctx.query
-
-def initialize_context():
-    web.ctx.site = create_site()
-    context.load()
-    context.error = None
-    context.stylesheets = []
-    context.javascripts = []
-    context.user = web.ctx.site.get_user()
-    context.site = config.site
-    context.path = web.ctx.path
-    
-    i = web.input(_method='GET', rescue="false")
-    context.rescue_mode = (i.rescue.lower() == 'true')
-    
 def create_site():
     from infogami.infobase import client
     
@@ -112,73 +50,46 @@ def fakeload():
     
     context.user = None
     web.ctx.site = create_site()
-    
-def normpath(path):
-    try:
-        # take care of bad unicode values in urls
-        path.decode('utf-8')
-    except UnicodeDecodeError:
-        return '/'
 
-    path = os.path.normpath(path) # correct multiple /'s and trailing /
-    path = path.replace(' ', '_') # replace space with underscore
-    return path
+def initialize_context():
+    web.ctx.site = create_site()
+    context.load()
+    context.error = None
+    context.stylesheets = []
+    context.javascripts = []
+    context.user = web.ctx.site.get_user()
+    context.site = config.site
+    context.path = web.ctx.path
     
-def delegate(path):
-    method = web.ctx.method
-    if method == 'HEAD': 
-        method = 'GET'
-    
-    initialize_context()
-    if not path.startswith('/api'):
-        normalized = normpath(path)
-        if path != normalized:
-            if method == 'GET':
-                raise web.seeother(_changepath(normalized))
-            elif method == 'POST':
-                raise web.notfound()
-
-    for p in pages:
-        m = re.match('^' + p + '$', path)
-        if m:
-            cls = pages[p]
-            if not hasattr(cls, method):
-                raise web.nomethod(method)
-            out = getattr(cls(), method)(*m.groups())
-            break
-    else: # mode
-        what = web.input(_method='GET').get('m', 'view')
+    i = web.input(_method='GET', rescue="false")
+    context.rescue_mode = (i.rescue.lower() == 'true')
         
-        if what not in modes:
-            raise web.seeother(web.changequery(m=None))
-        
-        if what == 'edit' and not web.ctx.site.can_write(path):
-            out = view.permission_denied(error="You don't have permission to edit " + path + ".")
-        else:
-            cls = modes[what]            
-            if not hasattr(cls, method):
-                return web.nomethod(method)
-            out = getattr(cls(), method)(path)
-    if out is not None:
-        if isinstance(out, basestring):
-            out = web.template.Stowage(_str=out, title=path)
-        elif 'title' not in out:
-            out.title = path
+def layout_processor(handler):
+    """Processor to wrap the output in site template."""
+    out = handler()
+    
+    path = web.ctx.path[1:]
+    
+    if isinstance(out, basestring):
+        out = web.template.TemplateResult(__body__=out)
+     
+    if 'title' not in out:
+        out.title = path
 
-        if 'content_type' in out:
-            web.ctx.headers = [h for h in web.ctx.headers if h[0].lower() != 'content_type']
-            web.header('Content-Type', out.content_type)
-            
-        if hasattr(out, 'rawtext'):
-            return out.rawtext
-        else:
-            return view.render_site(config.site, out)
-            
-class item:
-    GET = POST = lambda self, path: delegate(path)
+    # overwrite the content_type of content_type is specified in the template
+    if 'content_type' in out:
+        web.ctx.headers = [h for h in web.ctx.headers if h[0].lower() != 'content_type']
+        web.header('Content-Type', out.content_type)
+        
+    if hasattr(out, 'rawtext'):
+        return out.rawtext
+    else:
+        return view.render_site(config.site, out)
+
+app.add_processor(web.loadhook(initialize_context))
+app.add_processor(layout_processor)
 
 plugins = []
-
 @view.public
 def get_plugins():
     """Return names of all the plugins."""

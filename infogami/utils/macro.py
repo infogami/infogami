@@ -39,7 +39,8 @@ def safeeval_args(args):
     result = [None]
     def f(*args, **kwargs):
         result[0] = args, kwargs
-    web.template.Template("$def with (f)\n$f(%s)" % args)(f)
+    code = "$def with (f)\n$f(%s)" % args
+    web.template.Template(web.utf8(code))(f)
     return result[0]
     
 def call_macro(name, args):

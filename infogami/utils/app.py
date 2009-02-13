@@ -13,6 +13,9 @@ app = web.application(urls, globals(), autoreload=False)
 modes = {}
 pages = {}
 
+encodings = set()
+media_types = {"application/json": "json"}
+
 class metapage(type):
     def __init__(self, *a, **kw):
         type.__init__(self, *a, **kw)
@@ -22,7 +25,13 @@ class metapage(type):
 class metamode (type):
     def __init__(self, *a, **kw):
         type.__init__(self, *a, **kw)
-        modes[self.__name__] = self
+
+        encoding = getattr(self, 'encoding', None)        
+        name = getattr(self, 'name', self.__name__)
+        
+        encodings.add(encoding)
+        modes.setdefault(encoding, {})
+        modes[encoding][name] = self
         
 class mode:
     __metaclass__ = metamode
@@ -40,10 +49,44 @@ class page:
         return self.GET(*a)
         
     def GET(self, *a):
-        return web.nomethod(web.ctx.method)        
+        return web.nomethod(web.ctx.method)
+        
+def find_page():
+    for p in pages:
+        m = re.match('^' + p + '$', web.ctx.path)
+        if m:
+            cls = pages[p]
+            args = m.groups()
+            return cls, args
+    return None, None
+
+def find_mode():
+    what = web.input(_method='GET').get('m', 'view')
+    
+    path = web.ctx.path
+    encoding = web.ctx.get('encoding')
+    
+    # I don't about this mode.
+    if encoding not in modes:
+        raise web.HTTPError("406 Not Acceptable", {})
+    
+    # encoding can be specified as part of path, strip the encoding part of path.
+    if encoding:
+        path = web.rstrips(path, "." + encoding)
+        
+    # mode present for requested encoding
+    if what in modes[encoding]:
+        cls = modes[encoding][what]
+        args = [path]
+        return cls, args
+    # mode is available, but not for the requested encoding
+    elif what in modes[None]:    
+        raise web.HTTPError("406 Not Acceptable", {})
+    else:
+        return None, None
 
 # mode and page are just base classes.
-del modes['mode']
+del modes[None]['mode']
 del pages['/page']
 
 class item:
@@ -55,23 +98,16 @@ def delegate():
     method = web.ctx.method
 
     # look for special pages
-    for p in pages:
-        m = re.match('^' + p + '$', path)
-        if m:
-            cls = pages[p]
-            args = m.groups()
-            break
-    else:
-        # look for modes
-        what = web.input(_method='GET').get('m', 'view')
-        if what not in modes:
-            raise web.seeother(web.changequery(m=None))        
-        cls = modes[what]
-        args = [path]
+    cls, args = find_page()
+    if cls is None:
+        cls, args = find_mode()
 
-    if not hasattr(cls, method):
+    if cls is None:
+        raise web.seeother(web.changequery(m=None))
+    elif not hasattr(cls, method):
         raise web.nomethod(method)
-    return getattr(cls(), method)(*args)
+    else:
+        return getattr(cls(), method)(*args)
 
 ##  processors
 
@@ -122,10 +158,49 @@ def hook_processor(handler):
     finally:
         for h in web.unloadhooks.values():
             h()
+            
+def parse_accept(header):
+    """Parses Accept: header.
+    
+        >>> parse_accept("text/plain; q=0.5, text/html")
+        [{'type': 'text/html'}, {'type': 'text/plain', 'q': 0.5}]
+    """
+    result= []
+    for media_range in header.split(','):
+        parts = media_range.split(';')
+        media_type = parts.pop(0)
+        d = {'media_type': media_type}
+        for part in parts:
+            try:
+                k, v = part.split('=')
+                d[k.strip()] = v.strip()
+            except IndexError:
+                pass
+                
+        if 'q' in d:
+            d['q'] = float(d['q'])
+        result.append(d)
+    result.sort(key=lambda m: m.get('q', 1.0))
+    return result
+            
+def find_encoding():
+    if 'HTTP_ACCEPT' in web.ctx.environ:
+        accept = parse_accept(web.ctx.environ['HTTP_ACCEPT'])
+        media_type = accept[0]['media_type']
+        if media_type in media_types:
+            return media_types[media_type]
+    for enc in encodings:
+        if enc is None: continue
+        if web.ctx.path.endswith('.' + enc):
+            return enc
+
+def encoding_processor(handler):
+    web.ctx.encoding = find_encoding()
+    return handler()
 
 app.add_processor(hook_processor)
 app.add_processor(path_processor)
-
+app.add_processor(encoding_processor)
 if __name__ == '__main__':
     import doctest
     doctest.testmod()

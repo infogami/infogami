@@ -4,7 +4,9 @@ Infogami read/write API.
 import web
 import infogami
 from infogami.utils import delegate
+from infogami.utils.view import safeint
 from infogami.infobase import client
+import simplejson
 
 hooks = {}        
 def add_hook(name, cls):
@@ -51,3 +53,34 @@ add_hook("get", infobase_request)
 add_hook("things", infobase_request)
 add_hook("versions", infobase_request)
 
+class view(delegate.mode):
+    encoding = "json"
+    
+    def GET(self, path):
+        i = web.input(v=None, callback=None)
+        v = safeint(i.v, None)
+        
+        page = web.ctx.site.get(path, v)
+        if page is None:
+            raise web.notfound("")
+        else:
+            out = simplejson.dumps(page.dict())
+            if i.callback:
+                out = i.callback + "(" + out + ");"
+            return delegate.RawText(out, content_type="application/json")
+            
+class history(delegate.mode):
+    encoding = "json"
+    
+    def GET(self, path):
+        i = web.input(callback=None)
+        page = web.ctx.site.get(path)
+        if page is None:
+            raise web.notfound("")
+        else:
+            query = {"key": path, "sort": "-created", "limit": 20}
+            data = web.ctx.site._request('/versions', 'GET', {'query': simplejson.dumps(query)})['result']            
+            out = simplejson.dumps(data)
+            if i.callback:
+                out = i.callback + "(" + out + ");"
+            return delegate.RawText(out, content_type="application/json")

@@ -78,7 +78,7 @@ def layout_processor(handler):
 
     # overwrite the content_type of content_type is specified in the template
     if 'content_type' in out:
-        web.ctx.headers = [h for h in web.ctx.headers if h[0].lower() != 'content_type']
+        web.ctx.headers = [h for h in web.ctx.headers if h[0].lower() != 'content-type']
         web.header('Content-Type', out.content_type)
         
     if hasattr(out, 'rawtext'):
@@ -88,6 +88,10 @@ def layout_processor(handler):
 
 app.add_processor(web.loadhook(initialize_context))
 app.add_processor(layout_processor)
+
+class RawText(web.storage):
+    def __init__(self, text, **kw):
+        web.storage.__init__(self, rawtext=text, **kw)
 
 plugins = []
 @view.public

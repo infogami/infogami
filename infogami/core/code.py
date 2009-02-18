@@ -156,12 +156,13 @@ class permission(delegate.mode):
         
         try:
             web.ctx.site.write(q)
-            raise web.seeother(web.changequery({}, m='permission'))
         except Exception, e:
             import traceback
             traceback.print_exc(e)
             delegate.view.set_error(str(e))
             return render.permission(p)
+    
+        raise web.seeother(web.changequery({}, m='permission'))
             
 class history (delegate.mode):
     def GET(self, path):

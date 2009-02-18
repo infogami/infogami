@@ -21,14 +21,14 @@ def storify(d):
         return d
 
 class ClientException(Exception):
-    pass
+    def __init__(self, status, msg):
+        self.status = status
+        Exception.__init__(self, msg)
 
 class NotFound(ClientException):
-    pass
+    def __init__(self, msg):
+        ClientException.__init__(self, "404 Not Found", msg)
     
-class HTTPError(ClientException):
-    pass
-
 def connect(type, **params):
     """Connect to infobase server using the given params.
     """
@@ -60,9 +60,12 @@ class LocalConnection(Connection):
         import server
         path = "/" + sitename + path
         web.ctx.infobase_auth_token = self.get_auth_token()
-        out = server.request(path, method, data)
-        if 'infobase_auth_token' in web.ctx:
-            self.set_auth_token(web.ctx.infobase_auth_token)
+        try:
+            out = server.request(path, method, data)
+            if 'infobase_auth_token' in web.ctx:
+                self.set_auth_token(web.ctx.infobase_auth_token)
+        except common.InfobaseException, e:
+            raise ClientException(e.status, str(e))
         return out
                 
 class RemoteConnection(Connection):
@@ -105,7 +108,7 @@ class RemoteConnection(Connection):
             conn.request(method, path, data, headers=headers)
             response = conn.getresponse()
         except socket.error:
-            return simplejson.dumps({'status': 'fail', 'message': 'unable to connect to the infobase server'})
+            raise ClientException("503 Service Unavailable", "Unable to connect to infobase server")
 
         cookie = response.getheader('Set-Cookie')
         if cookie:
@@ -117,7 +120,7 @@ class RemoteConnection(Connection):
         if response.status == 200:
             return response.read()
         else:
-            return simplejson.dumps({'status': 'fail', 'message': 'HTTP Error: %d - %s' % (response.status, response.reason)})    
+            raise ClientException("%d %s" % (response.status, response.reason), response.read())
 
 _connection_types = {
     'local': LocalConnection,
@@ -152,11 +155,7 @@ class Site:
     def _request(self, path, method='GET', data=None):
         out = self._conn.request(self.name, path, method, data)
         out = simplejson.loads(out)
-        out = storify(out)
-        if out.status == 'fail':
-            raise ClientException(out['message'])
-        else:
-            return out
+        return storify(out)
         
     def _get(self, key, revision=None):
         """Returns properties of the thing with the specified key."""
@@ -164,11 +163,14 @@ class Site:
         
         if (key, revision) not in self._cache:
             data = dict(key=key, revision=revision)
-            result = self._request('/get', data=data)['result']
-            if result is None:
-                raise NotFound, key
-            else:
-                self._cache[key, revision] = web.storage(common.parse_query(result))
+            try:
+                result = self._request('/get', data=data)
+            except ClientException, e:
+                if e.status.startswith('404'):
+                    raise NotFound, key
+                else:
+                    raise
+            self._cache[key, revision] = web.storage(common.parse_query(result))
         import copy
         return copy.deepcopy(self._cache[key, revision])
         
@@ -231,7 +233,7 @@ class Site:
 
     def get_many(self, keys):
         data = dict(keys=simplejson.dumps(keys))
-        result = self._request('/get_many', data=data)['result']
+        result = self._request('/get_many', data=data)
         things = []
         
         import copy        
@@ -243,12 +245,12 @@ class Site:
 
     def new_key(self, type):
         data = {'type': type}
-        result = self._request('/new_key', data=data)['result']
+        result = self._request('/new_key', data=data)
         return result
 
     def things(self, query):
         query = simplejson.dumps(query)
-        return self._request('/things', 'GET', {'query': query})['result']
+        return self._request('/things', 'GET', {'query': query})
                 
     def versions(self, query):
         def process(v):
@@ -257,20 +259,20 @@ class Site:
             v.author = v.author and self.get(v.author, lazy=True)
             return v
         query = simplejson.dumps(query)
-        versions =  self._request('/versions', 'GET', {'query': query})['result']
+        versions =  self._request('/versions', 'GET', {'query': query})
         return [process(v) for v in versions]
 
     def write(self, query, comment=None):
         self._run_hooks('before_new_version', query)
         _query = simplejson.dumps(query)
-        result = self._request('/write', 'POST', dict(query=_query, comment=comment))['result']
+        result = self._request('/write', 'POST', dict(query=_query, comment=comment))
         self._run_hooks('on_new_version', query)
         self._invalidate_cache(result.created + result.updated)
         return result
     
     def save(self, query, comment=None):
         _query = simplejson.dumps(query)
-        result = self._request('/save', 'POST', dict(key=query['key'], data=_query, comment=comment))['result']
+        result = self._request('/save', 'POST', dict(key=query['key'], data=_query, comment=comment))
         if result:
             self._invalidate_cache([result['key']])
             self._run_hooks('on_new_version', query)
@@ -278,7 +280,7 @@ class Site:
         
     def save_many(self, query, comment=None):
         _query = simplejson.dumps(query)
-        result = self._request('/save_many', 'POST', dict(query=_query, comment=comment))['result']
+        result = self._request('/save_many', 'POST', dict(query=_query, comment=comment))
         self._invalidate_cache([r['key'] for r in result])
         for q in query:
             self._run_hooks('on_new_version', q)
@@ -292,7 +294,7 @@ class Site:
                 pass
     
     def can_write(self, key):
-        perms = self._request('/permission', 'GET', dict(key=key))['result']
+        perms = self._request('/permission', 'GET', dict(key=key))
         return perms['write']
 
     def _run_hooks(self, name, query):
@@ -326,10 +328,10 @@ class Site:
         This called to send forgot password email. 
         This should be called after logging in as admin.
         """
-        return self._request('/account/get_reset_code', 'GET', dict(email=email))['result']
+        return self._request('/account/get_reset_code', 'GET', dict(email=email))
         
     def get_user_email(self, username):
-        return self._request('/account/get_user_email', 'GET', dict(username=username))['result']
+        return self._request('/account/get_user_email', 'GET', dict(username=username))
         
     def reset_password(self, username, code, password):
         return self._request('/account/reset_password', 'POST', dict(username=username, code=code, password=password))
@@ -340,7 +342,7 @@ class Site:
         if web.cookies().get(config.login_cookie_name) is None:
             return None
         try:
-            data = self._request('/account/get_user')['result']
+            data = self._request('/account/get_user')
         except ClientException:
             return None
         user = data and Thing(self, data['key'], data)

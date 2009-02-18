@@ -43,44 +43,52 @@ class infobase_request:
         method = web.ctx.method
         data = web.input()
         
-        conn = client.connect(**infogami.config.infobase_parameters)            
-        out = conn.request(sitename, path, method, data)
-        return out
+        conn = client.connect(**infogami.config.infobase_parameters)
         
+        try:
+            out = conn.request(sitename, path, method, data)
+            return '{"status": "ok", "result": %s}' % out
+        except client.InfobaseException, e:
+            return '{"status": "fail", "message": "%s"}' % str(e)
+    
     GET = delegate
 
 add_hook("get", infobase_request)
 add_hook("things", infobase_request)
 add_hook("versions", infobase_request)
 
+def jsonapi(f):
+    def g(*a, **kw):
+        try:
+            out = f(*a, **kw)
+        except client.ClientException, e:
+            raise web.HTTPError(e.status, {}, str(e))
+        
+        i = web.input(_method='GET', callback=None)
+        
+        if i.callback:
+            out = '%s(%s)' % (i.callback, out)
+            
+        return delegate.RawText(out, content_type="application/json")
+    return g
+        
+def request(path, method='GET', data=None):
+    return web.ctx.site._conn.request(web.ctx.site.name, path, method=method, data=data)
+
 class view(delegate.mode):
     encoding = "json"
     
+    @jsonapi
     def GET(self, path):
-        i = web.input(v=None, callback=None)
-        v = safeint(i.v, None)
-        
-        page = web.ctx.site.get(path, v)
-        if page is None:
-            raise web.notfound("")
-        else:
-            out = simplejson.dumps(page.dict())
-            if i.callback:
-                out = i.callback + "(" + out + ");"
-            return delegate.RawText(out, content_type="application/json")
+        i = web.input(v=None)
+        v = safeint(i.v, None)        
+        data = dict(key=path, revision=v)
+        return request('/get', data=data)
             
 class history(delegate.mode):
     encoding = "json"
-    
+
+    @jsonapi
     def GET(self, path):
-        i = web.input(callback=None)
-        page = web.ctx.site.get(path)
-        if page is None:
-            raise web.notfound("")
-        else:
-            query = {"key": path, "sort": "-created", "limit": 20}
-            data = web.ctx.site._request('/versions', 'GET', {'query': simplejson.dumps(query)})['result']            
-            out = simplejson.dumps(data)
-            if i.callback:
-                out = i.callback + "(" + out + ");"
-            return delegate.RawText(out, content_type="application/json")
+        query = {"key": path, "sort": "-created", "limit": 20}
+        return request('/versions', data=dict(query=simplejson.dumps(query)))

@@ -3,15 +3,25 @@
 import web
 
 class InfobaseException(Exception):
+    status = "500 Internal Server Error"
     pass
     
 class NotFound(InfobaseException):
+    status = "404 Not Found"
     def __init__(self, key):
         InfobaseException.__init__(self, 'Not Found: %s' % repr(web.safeunicode(key)))
+        
+class PermissionDenied(InfobaseException):
+    status = "403 Forbidden"
+    pass
+
+class BadData(InfobaseException):
+    status = "400 Bad Request"
+    pass
     
-class TypeMismatch(InfobaseException):
+class TypeMismatch(BadData):
     def __init__(self, type_expected, type_found):
-        InfobaseException.__init__(self, "Expected %s, found %s" % (repr(type_expected), repr(type_found)))
+        BadData.__init__(self, "Expected %s, found %s" % (repr(type_expected), repr(type_found)))
 
 class Text(unicode):
     """Python type for /type/text."""

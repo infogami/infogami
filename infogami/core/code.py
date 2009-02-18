@@ -24,9 +24,8 @@ class view (delegate.mode):
 
         if i.v is not None and safeint(i.v, None) is None:
             raise web.seeother(web.changequery(v=None))
-		
+        
         p = db.get_version(path, i.v)
-
         if p is None:
             return notfound(path)
         elif p.type.key == '/type/delete':

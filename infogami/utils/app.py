@@ -26,13 +26,13 @@ class metamode (type):
     def __init__(self, *a, **kw):
         type.__init__(self, *a, **kw)
 
-        encoding = getattr(self, 'encoding', None)        
+        enc = getattr(self, 'encoding', None)        
         name = getattr(self, 'name', self.__name__)
         
-        encodings.add(encoding)
-        modes.setdefault(encoding, {})
-        modes[encoding][name] = self
-        
+        encodings.add(enc)
+        modes.setdefault(enc, {})
+        modes[enc][name] = self
+
 class mode:
     __metaclass__ = metamode
     

@@ -7,7 +7,6 @@ import time
 from infobase import config
 
 import common
-from common import NotFound, InfobaseException
 import cache
 
 def setup_remoteip():
@@ -32,24 +31,14 @@ app.add_processor(web.loadhook(setup_remoteip))
 app.add_processor(web.loadhook(cache.loadhook))
 app.add_processor(web.loadhook(cache.unloadhook))
 
-MISSING_PARAM = 10
-BAD_PARAM = 11
-BAD_JSON = 20
-INTERNAL_ERROR = 90
-UNKNOWN = 99
+def process_exception(e):
+    if isinstance(e, common.InfobaseException):
+        status = e.status
+    else:
+        status = "500 Internal Server Error"
 
-class APIException(InfobaseException):
-    def __init__(self, code, msg):
-        InfobaseException.__init__(self, msg)
-        self.code = code
-    
-class MissingArgument(APIException):
-    def __init__(self, key):
-        APIException.__init__(self, MISSING_PARAM , "Missing argument: " + key)
-        
-class BadJSON(APIException):
-    def __init__(self, error):
-        APIException.__init__(self, BAD_JSON, "Bad JSON: %s" % error)
+    msg = str(e)
+    raise web.HTTPError(status, {}, msg)
 
 def jsonify(f):
     def g(self, *a, **kw):
@@ -59,33 +48,28 @@ def jsonify(f):
             cookies = web.cookies(infobase_auth_token=None)
             web.ctx.infobase_auth_token = cookies.infobase_auth_token
                 
-        d = {'status': 'ok'}
         try:
-            d['result'] = f(self, *a, **kw)
-        except APIException, e:
-            d['status'] = 'fail'
-            d['message'] = str(e)
-            d['code'] = e.code
-        except InfobaseException, e:
-            common.record_exception()
-            d['status'] = 'fail'
-            d['message'] = str(e)
-            d['code'] = UNKNOWN
+            d = f(self, *a, **kw)
+        except common.InfobaseException, e:
+            if web.ctx.get('infobase_localmode'):
+                raise
+            
+            process_exception(e)
         except Exception, e:
             common.record_exception()
-            d['status'] = 'fail'
-            d['message'] = 'InternalError: %s' % str(e)
-            d['code'] = INTERNAL_ERROR
-            
             # call web.internalerror to send email when web.internalerror is set to web.emailerrors
             web.internalerror()
-            web.ctx.output = ""
+            
+            if web.ctx.get('infobase_localmode'):
+                raise common.InfobaseException(str(e))
+            else:
+                process_exception(e)
         
         t2 = time.time()
         i = input(prettyprint=None, stats=None)
         
         if i.stats:
-            d['stats'] = dict(time_taken=t2-t1)
+            web.header('X-Infobase-Stats', str(t2-t1))
 
         if i.prettyprint:
             result = simplejson.dumps(d, indent=4)
@@ -119,18 +103,18 @@ def to_int(value, key):
     try:
         return int(value)
     except:
-        raise APIException(BAD_PARAM, "Bad integer value for %s: %s" % (repr(key), repr(value)))
+        raise common.BadData("Bad integer value for %s: %s" % (repr(key), repr(value)))
         
 def assert_key(key):
     rx = web.re_compile(r'^/([^ ]*[^/])?$')
     if not rx.match(key):
-        raise APIException(BAD_PARAM, "Invalid key: %s" % repr(key))
+        raise common.BadData("Invalid key: %s" % repr(key))
         
 def from_json(s):
     try:
         return simplejson.loads(s)
     except ValueError, e:
-        raise BadJSON(str(e))
+        raise common.BadData("Bad JSON: " + str(e))
         
 _infobase = None
 def get_site(sitename):
@@ -160,7 +144,9 @@ class withkey:
         revision = i.revision and to_int(i.revision, "revision")
         assert_key(i.key)
         thing = site.withKey(i.key, revision=revision)
-        return thing and thing.format_data()
+        if not thing:
+            raise common.NotFound(i.key)
+        return thing.format_data()
 
 class get_many:
     @jsonify
@@ -250,7 +236,7 @@ class account:
         if user:
             return user.format_data()
         else:
-            raise InfobaseException('Invalid username or password')
+            raise common.BadData('Invalid username or password')
 
     def POST_register(self, site):
         i = input('username', 'password', 'email')
@@ -317,4 +303,3 @@ def request(path, method, data):
         
 def run():
     app.run()
-    

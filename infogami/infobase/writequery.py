@@ -18,11 +18,11 @@ class SaveProcessor:
         data = common.parse_query(data)
     
         if not web.ctx.get('disable_permission_check', False) and not has_permission(self.store, self.author, key):
-            raise common.InfobaseException('Permission denied to modify %s' % repr(key))
+            raise common.PermissionDenied('Permission denied to modify %s' % repr(key))
         
         type = data.get('type')
         if type is None:
-            raise common.InfobaseException("missing type")    
+            raise common.BadData("missing type")
         type = self.process_value(type, self.get_property(None, 'type'))
         type = self.store.get(type)
         data = self.process_data(data, type)
@@ -80,15 +80,15 @@ class SaveProcessor:
             >>> p.process_value('x', property('/type/int'))
             Traceback (most recent call last):
                 ... 
-            InfobaseException: invalid literal for int() with base 10: 'x'
+            BadData: invalid literal for int() with base 10: 'x'
             >>> p.process_value('1', property('/type/int', unique=False))
             Traceback (most recent call last):
                 ... 
-            InfobaseException: expected list, found atom
+            BadData: expected list, found atom
             >>> p.process_value(['1'], property('/type/int'))
             Traceback (most recent call last):
                 ... 
-            InfobaseException: expected atom, found list
+            BadData: expected atom, found list
         
             >>> p.process_value('/type/string', property('/type/type'))
             <ref: u'/type/string'>
@@ -98,14 +98,14 @@ class SaveProcessor:
 
         if isinstance(value, list):
             if unique is True:
-                raise common.InfobaseException('expected atom, found list')
+                raise common.BadData('expected atom, found list')
             
             p = web.storage(property.copy())
             p.unique = True
             return [self.process_value(v, p) for v in value]
     
         if unique is False:    
-            raise common.InfobaseException('expected list, found atom')
+            raise common.BadData('expected list, found atom')
 
         type_found = common.find_type(value)
     
@@ -117,7 +117,7 @@ class SaveProcessor:
                 elif type_found == '/type/int' and expected_type == '/type/float':
                     value = float(value)
             except ValueError, e:
-                raise common.InfobaseException(str(e))
+                raise common.BadData(str(e))
         elif property.expected_type.kind == 'embeddable':
             if isinstance(value, dict):
                 return self.process_data(value, property.expected_type)
@@ -136,7 +136,7 @@ class SaveProcessor:
             type_found = thing.type.key
 
         if expected_type != type_found:
-            raise common.InfobaseException('expected %s, found %s' % (repr(property.expected_type.key), repr(type_found)))
+            raise common.BadData('expected %s, found %s' % (repr(property.expected_type.key), repr(type_found)))
         return value
 
 class WriteQueryProcessor:

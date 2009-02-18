@@ -84,10 +84,12 @@ class RemoteConnection(Connection):
         if DEBUG: 
             print >>web.debug, path, data
         
-        data = data and urllib.urlencode(data)
-        if data and method == 'GET':
-            path += '?' + data
-            data = None
+        if data:
+            if isinstance(data, dict):
+                data = urllib.urlencode(data)
+            if method == 'GET':
+                path += '?' + data
+                data = None
         
         conn = httplib.HTTPConnection(self.base_url)
         env = web.ctx.get('env') or {}
@@ -271,8 +273,13 @@ class Site:
         return result
     
     def save(self, query, comment=None):
-        _query = simplejson.dumps(query)
-        result = self._request('/save', 'POST', dict(key=query['key'], data=_query, comment=comment))
+        query = dict(query)
+        query['_comment'] = comment
+        key = query['key']
+        
+        #@@ save sends payload of application/json instead of form data
+        data = simplejson.dumps(query)
+        result = self._request('/save' + key, 'POST', data)
         if result:
             self._invalidate_cache([result['key']])
             self._run_hooks('on_new_version', query)

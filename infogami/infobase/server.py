@@ -15,7 +15,7 @@ def setup_remoteip():
 urls = (
     "/([^/]*)/get", "withkey",
     "/([^/]*)/get_many", "get_many",
-    '/([^/]*)/save', 'save',
+    '/([^/]*)/save(/.*)', 'save',
     '/([^/]*)/save_many', 'save_many',
     "/([^/]*)/new_key", "new_key",
     "/([^/]*)/things", "things",
@@ -42,8 +42,6 @@ def process_exception(e):
 
 def jsonify(f):
     def g(self, *a, **kw):
-        t1 = time.time()
-
         if not web.ctx.get('infobase_localmode'):
             cookies = web.cookies(infobase_auth_token=None)
             web.ctx.infobase_auth_token = cookies.infobase_auth_token
@@ -65,16 +63,7 @@ def jsonify(f):
             else:
                 process_exception(e)
         
-        t2 = time.time()
-        i = input(prettyprint=None, stats=None)
-        
-        if i.stats:
-            web.header('X-Infobase-Stats', str(t2-t1))
-
-        if i.prettyprint:
-            result = simplejson.dumps(d, indent=4)
-        else:
-            result = simplejson.dumps(d)
+        result = simplejson.dumps(d)
 
         if web.ctx.get('infobase_localmode'):
             return result
@@ -83,7 +72,7 @@ def jsonify(f):
             if web.ctx.get('infobase_auth_token'):
                 web.setcookie('infobase_auth_token', web.ctx.infobase_auth_token)
             return result
-    return g
+    return g    
     
 def input(*required, **defaults):
     if 'infobase_input' in web.ctx:
@@ -159,11 +148,15 @@ class get_many:
 
 class save:
     @jsonify
-    def POST(self, sitename):
-        i = input('key', 'data', comment=None, machine_comment=None)
-        data = from_json(i.data)
+    def POST(self, sitename, key):
+        #@@ This takes payload of json instead of form encoded data.
+        data = web.ctx.infobase_input
+        data = from_json(data)
+
+        comment = data.pop('_comment', None)
+        machine_comment = data.pop('_machine_comment', None)
         site = get_site(sitename)
-        return site.save(i.key, data, comment=i.comment, machine_comment=i.machine_comment)
+        return site.save(key, data, comment=comment, machine_comment=machine_comment)
 
 class save_many:
     @jsonify

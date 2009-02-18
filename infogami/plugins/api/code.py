@@ -74,7 +74,11 @@ def jsonapi(f):
         
 def request(path, method='GET', data=None):
     return web.ctx.site._conn.request(web.ctx.site.name, path, method=method, data=data)
-
+    
+class Forbidden(web.HTTPError):
+    def __init__(self, msg=""):
+        web.HTTPError(self, "403 Forbidden", {}, msg)
+        
 class view(delegate.mode):
     encoding = "json"
     
@@ -84,7 +88,14 @@ class view(delegate.mode):
         v = safeint(i.v, None)        
         data = dict(key=path, revision=v)
         return request('/get', data=data)
+        
+    @jsonapi
+    def PUT(self, path):
+        if web.ctx.ip not in ['127.0.0.1']:
+            raise Forbidden("Permission Denied.")
             
+        return request('/save' + path, 'POST', web.data())
+        
 class history(delegate.mode):
     encoding = "json"
 

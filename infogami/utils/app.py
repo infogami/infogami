@@ -101,7 +101,7 @@ def delegate():
     cls, args = find_page()
     if cls is None:
         cls, args = find_mode()
-
+        
     if cls is None:
         raise web.seeother(web.changequery(m=None))
     elif not hasattr(cls, method):
@@ -163,12 +163,12 @@ def parse_accept(header):
     """Parses Accept: header.
     
         >>> parse_accept("text/plain; q=0.5, text/html")
-        [{'type': 'text/html'}, {'type': 'text/plain', 'q': 0.5}]
+        [{'media_type': 'text/html'}, {'q': 0.5, 'media_type': 'text/plain'}]
     """
     result= []
     for media_range in header.split(','):
         parts = media_range.split(';')
-        media_type = parts.pop(0)
+        media_type = parts.pop(0).strip()
         d = {'media_type': media_type}
         for part in parts:
             try:
@@ -180,19 +180,24 @@ def parse_accept(header):
         if 'q' in d:
             d['q'] = float(d['q'])
         result.append(d)
-    result.sort(key=lambda m: m.get('q', 1.0))
+    result.sort(key=lambda m: m.get('q', 1.0), reverse=True)
     return result
             
 def find_encoding():
-    if 'HTTP_ACCEPT' in web.ctx.environ:
-        accept = parse_accept(web.ctx.environ['HTTP_ACCEPT'])
-        media_type = accept[0]['media_type']
-        if media_type in media_types:
-            return media_types[media_type]
-    for enc in encodings:
-        if enc is None: continue
-        if web.ctx.path.endswith('.' + enc):
-            return enc
+    if web.ctx.method == 'GET':
+        if 'HTTP_ACCEPT' in web.ctx.environ:
+            accept = parse_accept(web.ctx.environ['HTTP_ACCEPT'])
+            media_type = accept[0]['media_type']
+            if media_type in media_types:
+                return media_types[media_type]
+    
+        for enc in encodings:
+            if enc is None: continue
+            if web.ctx.path.endswith('.' + enc):
+                return enc
+    else:
+        content_type = web.ctx.env.get('CONTENT_TYPE')
+        return media_types.get(content_type)
 
 def encoding_processor(handler):
     web.ctx.encoding = find_encoding()

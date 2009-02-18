@@ -107,8 +107,8 @@ class Site:
         result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
 
 
-        created = [r['key'] for r in result if r['revision'] == 1]
-        updated = [r['key'] for r in result if r['revision'] != 1]
+        created = [r['key'] for r in result if r and r['revision'] == 1]
+        updated = [r['key'] for r in result if r and r['revision'] != 1]
 
         result2 = web.storage(created=created, updated=updated)
         
@@ -209,8 +209,8 @@ class Site:
                     import traceback
                     traceback.print_exc()
                     
-        created = [r['key'] for r in result if r['revision'] == 1]
-        updated = [r['key'] for r in result if r['revision'] != 1]
+        created = [r['key'] for r in result if r and r['revision'] == 1]
+        updated = [r['key'] for r in result if r and r['revision'] != 1]
         
         for key in created:
             thing = self.get(key)

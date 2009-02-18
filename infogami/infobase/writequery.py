@@ -12,7 +12,7 @@ class SaveProcessor:
     def process(self, key, data):
         if 'key' not in data:
             data['key'] = key
-            
+
         assert data['key'] == key
     
         data = common.parse_query(data)
@@ -150,7 +150,10 @@ class WriteQueryProcessor:
         for q in serialize(query):
             q = common.parse_query(q)
             
-            key = q['key']
+            if not isinstance(q, dict) or q.get('key') is None:
+                continue
+
+            key = q['key']                
             thing = self.store.get(key)
             create = q.pop('create', None)
             
@@ -167,7 +170,11 @@ class WriteQueryProcessor:
     def remove_connects(self, query):
         for k, v in query.items():
             if isinstance(v, dict) and 'connect' in v:
-                query[k] = v['value']
+                if 'key' in v:
+                    value = common.Reference(v['key'])
+                else:
+                    value = v['value']
+                query[k] = value
         return query
             
     def connect_all(self, data, query):
@@ -194,7 +201,11 @@ class WriteQueryProcessor:
         for k, v in query.items():
             if isinstance(v, dict):
                 if 'connect' in v:
-                    self.connect(data, k, v['connect'], v['value'])
+                    if 'key' in v:
+                        value = common.Reference(v['key'])
+                    else:
+                        value = v['value']            
+                    self.connect(data, k, v['connect'], value)
         return data
         
     def connect(self, data, name, connect, value):
@@ -361,7 +372,7 @@ def get_permission(store, key):
         return permission or _get_permission(parent(key), child_permission=True)
 
     return _get_permission(key)
-
+    
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

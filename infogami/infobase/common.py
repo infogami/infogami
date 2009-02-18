@@ -40,13 +40,7 @@ def find_type(value):
         return '/type/string'
 
 def parse_query(d, reference_type=None):
-    d = dict(d)
-    key = d.pop('key', None)
-    
-    data = parse_data(d, reference_type)
-    if key:
-        data['key'] = key
-    return data
+    return parse_data(d, reference_type)
 
 def parse_data(d, reference_type=None):
     """
@@ -64,18 +58,21 @@ def parse_data(d, reference_type=None):
         True
         >>> parse_data({'key': '/type/type'})
         <ref: u'/type/type'>
-        
         >>> parse_data([text, date, true])
         [<text: u'foo'>, datetime.datetime(2009, 1, 2, 3, 4, 5), True]
         >>> parse_data({'a': text, 'b': date})
         <Storage {'a': <text: u'foo'>, 'b': datetime.datetime(2009, 1, 2, 3, 4, 5)}>
+
+        >>> parse_query({'works': {'connect': 'update_list', 'value': [{'key': '/w/OL1W'}]}, 'key': '/b/OL1M'})
+        <Storage {'works': <Storage {'connect': 'update_list', 'value': [<ref: u'/w/OL1W'>]}>, 'key': '/b/OL1M'}>
     """
     reference_type = reference_type or Reference
     if isinstance(d, dict):
-        if 'value' in d:
-            type = d.get('type', '/type/string')
-            return primitive_types[type](d['value'])
-        elif 'key' in d:
+        if 'value' in d and 'type' in d:
+            type = d['type']
+            value = parse_data(d['value'])
+            return primitive_types[type](value)
+        elif 'key' in d and len(d) == 1:
             return reference_type(d['key'])
         else:
             return web.storage((k, parse_data(v, reference_type)) for k, v in d.iteritems())
@@ -92,11 +89,11 @@ def format_data(d, reference_type=None):
         >>> format_data('hello')
         'hello'
         >>> format_data(Text('hello'))
-        {'type': '/type/text', 'value': 'hello'}
+        {'type': '/type/text', 'value': u'hello'}
         >>> format_data(datetime.datetime(2009, 1, 2, 3, 4, 5))
         {'type': '/type/datetime', 'value': '2009-01-02T03:04:05'}
         >>> format_data(Reference('/type/type'))
-        {'key': '/type/type'}
+        {'key': u'/type/type'}
     """
     reference_type = reference_type or Reference
     if isinstance(d, dict):
@@ -104,7 +101,7 @@ def format_data(d, reference_type=None):
     elif isinstance(d, list):
         return [format_data(v, reference_type) for v in d]
     elif isinstance(d, Text):
-        return {'type': '/type/text', 'value': web.safeunicode(d)}
+        return {'type': '/type/text', 'value': unicode(d)}
     elif isinstance(d, reference_type):
         return {'key': unicode(d)}
     elif isinstance(d, datetime.datetime):

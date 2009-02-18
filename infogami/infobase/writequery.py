@@ -171,7 +171,7 @@ class WriteQueryProcessor:
         for k, v in query.items():
             if isinstance(v, dict) and 'connect' in v:
                 if 'key' in v:
-                    value = common.Reference(v['key'])
+                    value = v['key'] and common.Reference(v['key'])
                 else:
                     value = v['value']
                 query[k] = value
@@ -202,7 +202,7 @@ class WriteQueryProcessor:
             if isinstance(v, dict):
                 if 'connect' in v:
                     if 'key' in v:
-                        value = common.Reference(v['key'])
+                        value = v['key'] and common.Reference(v['key'])
                     else:
                         value = v['value']            
                     self.connect(data, k, v['connect'], value)

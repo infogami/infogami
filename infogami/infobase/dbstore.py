@@ -428,16 +428,24 @@ class DBSiteStore(common.SiteStore):
         def process_sort(query):
             """Process sort field in the query and returns the db column to order by."""
             if query.sort:
-                if query.sort.key in ['key', 'type', 'created', 'last_modified']:
-                    order = 'thing.' + query.sort.key # make sure c.key is valid
+                sort_key = query.sort.key
+                if sort_key.startswith('-'):
+                    ascending = " desc"
+                    sort_key = sort_key[1:]
                 else:
-                    table = get_table(query.sort.datatype, query.sort.key)
-                    key_id = self.get_property_id(table.name, query.sort.key)
+                    ascending = ""
+                    
+                if sort_key in ['key', 'type', 'created', 'last_modified']:
+                    order = 'thing.' + sort_key # make sure c.key is valid
+                else:
+                    table = get_table(query.sort.datatype, sort_key)
+                    key_id = self.get_property_id(table.name, sort_key)
                     if key_id is None:
                         raise StopIteration
                     q = '%(table)s.thing_id = thing.id AND %(table)s.key_id=$key_id' % {'table': table}
                     wheres.append(web.reparam(q, locals()))
-                    return table.label + '.value'
+                    order = table.label + '.value'
+                return order + ascending
             else:
                 return None
         

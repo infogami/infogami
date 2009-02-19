@@ -166,7 +166,7 @@ class WriteQueryProcessor:
                 q = self.connect_all(thing._data, q)
             
             yield p.process(key, q)
-            
+    
     def remove_connects(self, query):
         for k, v in query.items():
             if isinstance(v, dict) and 'connect' in v:

@@ -77,7 +77,12 @@ def request(path, method='GET', data=None):
     
 class Forbidden(web.HTTPError):
     def __init__(self, msg=""):
-        web.HTTPError(self, "403 Forbidden", {}, msg)
+        web.HTTPError.__init__(self, "403 Forbidden", {}, msg)
+        
+class BadRequest(web.HTTPError):
+    def __init__(self, msg=""):
+        web.HTTPError.__init__(self, "400 Bad Request", {}, msg)
+
         
 class view(delegate.mode):
     encoding = "json"
@@ -103,3 +108,15 @@ class history(delegate.mode):
     def GET(self, path):
         query = {"key": path, "sort": "-created", "limit": 20}
         return request('/versions', data=dict(query=simplejson.dumps(query)))
+
+class login(delegate.page):
+    encoding = "json"
+    path = "/account/login"
+    
+    def POST(self):
+        try:
+            d = simplejson.loads(web.data())
+            web.ctx.site.login(d['username'], d['password'])
+            web.setcookie(infogami.config.login_cookie_name, web.ctx.conn.get_auth_token())
+        except Exception, e:
+            raise BadRequest(str(e))

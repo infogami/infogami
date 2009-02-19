@@ -19,8 +19,13 @@ media_types = {"application/json": "json"}
 class metapage(type):
     def __init__(self, *a, **kw):
         type.__init__(self, *a, **kw)
+        
+        enc = getattr(self, 'encoding', None)        
         path = getattr(self, 'path', '/' + self.__name__)
-        pages[path] = self
+        
+        encodings.add(enc)
+        pages.setdefault(path, {})
+        pages[path][enc] = self
 
 class metamode (type):
     def __init__(self, *a, **kw):
@@ -30,8 +35,8 @@ class metamode (type):
         name = getattr(self, 'name', self.__name__)
         
         encodings.add(enc)
-        modes.setdefault(enc, {})
-        modes[enc][name] = self
+        modes.setdefault(name, {})
+        modes[name][enc] = self
 
 class mode:
     __metaclass__ = metamode
@@ -52,10 +57,21 @@ class page:
         return web.nomethod(web.ctx.method)
         
 def find_page():
+    path = web.ctx.path
+    encoding = web.ctx.get('encoding')
+    
+    # I don't about this mode.
+    if encoding not in encodings:
+        raise web.HTTPError("406 Not Acceptable", {})
+
+    # encoding can be specified as part of path, strip the encoding part of path.
+    if encoding:
+        path = web.rstrips(path, "." + encoding)
+    
     for p in pages:
-        m = re.match('^' + p + '$', web.ctx.path)
+        m = re.match('^' + p + '$', path)
         if m:
-            cls = pages[p]
+            cls = pages[p].get(encoding) or pages[p].get(None)
             args = m.groups()
             return cls, args
     return None, None
@@ -67,26 +83,27 @@ def find_mode():
     encoding = web.ctx.get('encoding')
     
     # I don't about this mode.
-    if encoding not in modes:
+    if encoding not in encodings:
         raise web.HTTPError("406 Not Acceptable", {})
     
     # encoding can be specified as part of path, strip the encoding part of path.
     if encoding:
         path = web.rstrips(path, "." + encoding)
         
-    # mode present for requested encoding
-    if what in modes[encoding]:
-        cls = modes[encoding][what]
+    if what in modes:
+        cls = modes[what].get(encoding)
+
+        # mode is available, but not for the requested encoding
+        if cls is None:
+            raise web.HTTPError("406 Not Acceptable", {})
+            
         args = [path]
         return cls, args
-    # mode is available, but not for the requested encoding
-    elif what in modes[None]:    
-        raise web.HTTPError("406 Not Acceptable", {})
     else:
         return None, None
 
 # mode and page are just base classes.
-del modes[None]['mode']
+del modes['mode']
 del pages['/page']
 
 class item:

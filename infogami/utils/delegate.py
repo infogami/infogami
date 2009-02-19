@@ -70,6 +70,9 @@ def layout_processor(handler):
     
     path = web.ctx.path[1:]
     
+    if out is None:
+        out = RawText("")
+    
     if isinstance(out, basestring):
         out = web.template.TemplateResult(__body__=out)
      

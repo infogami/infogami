@@ -52,7 +52,7 @@ class infobase_request:
             return '{"status": "fail", "message": "%s"}' % str(e)
     
     GET = delegate
-
+    
 add_hook("get", infobase_request)
 add_hook("things", infobase_request)
 add_hook("versions", infobase_request)
@@ -123,6 +123,24 @@ class recentchanges(delegate.page):
                     query[key] = i[key]
             query = simplejson.dumps(query)
         return request('/versions', data=dict(query=query))
+
+class query(delegate.page):
+    encoding = "json"
+    
+    @jsonapi
+    def GET(self):
+        i = web.input(query=None)
+        query = i.pop('query')
+        if not query:
+            query = {}
+            for k, v in i.items():
+                if v.strip() == '':
+                    v = None
+                if not k.startswith('_'):
+                    query[k] = v
+                    
+            query = simplejson.dumps(query)
+        return request('/things', data=dict(query=query, details="true"))
 
 class login(delegate.page):
     encoding = "json"

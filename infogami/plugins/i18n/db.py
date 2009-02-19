@@ -6,7 +6,7 @@ def get_all_strings(site):
     if t is None:
         return []
     else:
-        q = {'type': '/type/i18n'}
+        q = {'type': '/type/i18n', 'limit': 1000}
         return site.get_many(site.things(q))
 
 def get_all_sites():

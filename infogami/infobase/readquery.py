@@ -117,7 +117,7 @@ def make_query(store, query, prefix=""):
     q = Query()
     q.prefix = prefix
     q.offset = query.pop('offset', None)
-    q.limit = query.pop('limit', 1000)
+    q.limit = query.pop('limit', 20)
     if q.limit > 1000:
         q.limit = 1000
     sort = query.pop('sort', None)
@@ -227,7 +227,7 @@ def make_versions_query(store, query):
     q = Query()
     
     q.offset = query.pop('offset', None)
-    q.limit = query.pop('limit', 1000)
+    q.limit = query.pop('limit', 20)
     if q.limit > 1000:
         q.limit = 1000
     q.sort = query.pop('sort', '-created')

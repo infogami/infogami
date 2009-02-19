@@ -8,6 +8,19 @@ from infogami.utils.view import safeint
 from infogami.infobase import client
 import simplejson
 
+def get_localhosts():
+    import socket
+    hosts = ['127.0.0.1']
+    
+    try:
+        ip = socket.gethostbyname(socket.gethostname())
+        hosts.append(ip)
+    except socket.error:
+        pass
+    return hosts
+
+localhosts = get_localhosts()
+
 hooks = {}        
 def add_hook(name, cls):
     hooks[name] = cls
@@ -53,9 +66,18 @@ class infobase_request:
     
     GET = delegate
     
+    def POST(self):
+        if web.ctx.ip not in localhosts:
+            raise Forbidden("Permission Denied.")
+        return self.delegate()
+
 add_hook("get", infobase_request)
 add_hook("things", infobase_request)
 add_hook("versions", infobase_request)
+
+# for internal use
+add_hook("write", infobase_request)
+add_hook("save_many", infobase_request)
 
 def jsonapi(f):
     def g(*a, **kw):
@@ -83,7 +105,6 @@ class BadRequest(web.HTTPError):
     def __init__(self, msg=""):
         web.HTTPError.__init__(self, "400 Bad Request", {}, msg)
 
-        
 class view(delegate.mode):
     encoding = "json"
     
@@ -96,17 +117,37 @@ class view(delegate.mode):
         
     @jsonapi
     def PUT(self, path):
-        if web.ctx.ip not in ['127.0.0.1']:
+        if web.ctx.ip not in localhosts:
             raise Forbidden("Permission Denied.")
             
         return request('/save' + path, 'POST', web.data())
+        
+        
+def make_query(i, required_keys=None):
+    """Removes keys starting with _ and limits the keys to required_keys, if it is specified.
+    
+    >>> make_query(dict(a=1, _b=2))
+    {'a': 1}
+    >>> make_query(dict(a=1, _b=2, c=3), required_keys=['a'])
+    {'a': 1}
+    """
+    query = {}
+    for k in i:
+        if k.startswith('_'):
+            continue
+        if required_keys and k not in required_keys:
+            continue
+        query[k] = i[k]
+    return query
         
 class history(delegate.mode):
     encoding = "json"
 
     @jsonapi
     def GET(self, path):
-        query = {"key": path, "sort": "-created", "limit": 20}
+        query = make_query(web.input(), required_keys=['author', 'ip', 'offset', 'limit'])
+        query['key'] = path
+        query['sort'] = '-created'
         return request('/versions', data=dict(query=simplejson.dumps(query)))
         
 class recentchanges(delegate.page):
@@ -115,13 +156,9 @@ class recentchanges(delegate.page):
     @jsonapi
     def GET(self):
         i = web.input(query=None)
-        if not i.query:
-            query = {}
-            keys = ['key', 'author', 'type', 'ip', 'offset', 'limit']
-            for key in keys:
-                if key in i:
-                    query[key] = i[key]
-            query = simplejson.dumps(query)
+        query = i.pop('query')
+        if not query:
+            query = simplejson.dumps(make_query(i, required_keys=["key", "type", "author", "ip", "offset", "limit"]))
         return request('/versions', data=dict(query=query))
 
 class query(delegate.page):
@@ -132,14 +169,7 @@ class query(delegate.page):
         i = web.input(query=None)
         query = i.pop('query')
         if not query:
-            query = {}
-            for k, v in i.items():
-                if v.strip() == '':
-                    v = None
-                if not k.startswith('_'):
-                    query[k] = v
-                    
-            query = simplejson.dumps(query)
+            query = simplejson.dumps(make_query(i))
         return request('/things', data=dict(query=query, details="true"))
 
 class login(delegate.page):

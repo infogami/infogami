@@ -124,10 +124,12 @@ def safeint(value, default):
         1
         >>> safeint("foo", 0)
         0
+        >>> safeint(None, 0)
+        0
     """
     try:
         return int(value)
-    except ValueError:
+    except (ValueError, TypeError):
         return default
 
 if __name__ == "__main__":

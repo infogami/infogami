@@ -117,3 +117,19 @@ def flatten(nested_list, result=None):
         else:
             result.append(x)
     return result
+
+def safeint(value, default):
+    """
+        >>> safeint("1", 0)
+        1
+        >>> safeint("foo", 0)
+        0
+    """
+    try:
+        return int(value)
+    except ValueError:
+        return default
+
+if __name__ == "__main__":
+    import doctest
+    doctest.testmod()

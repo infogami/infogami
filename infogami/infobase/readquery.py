@@ -230,7 +230,7 @@ def make_versions_query(store, query):
     q.limit = query.pop('limit', 1000)
     if q.limit > 1000:
         q.limit = 1000
-    q.sort = query.pop('sort', None)
+    q.sort = query.pop('sort', '-created')
     
     columns = ['key', 'type', 'revision', 'author', 'comment', 'machine_comment', 'ip', 'created']
     

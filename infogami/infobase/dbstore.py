@@ -506,6 +506,7 @@ class DBSiteStore(common.SiteStore):
         
         for r in result:
             r.author = r.author_id and authors[r.author_id].key
+            del r.thing_id
         return result
     
     def get_user_details(self, key):

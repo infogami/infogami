@@ -1,7 +1,0 @@
-{
-    'key': '/recentchanges', 
-    'type': '/type/page', 
-    'title': 'Recent Changes', 
-    'body': '{{RecentChanges()}}'
-}
-

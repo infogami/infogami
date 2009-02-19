@@ -174,6 +174,10 @@ class history (delegate.mode):
         limit = 20
         history = db.get_recent_changes(key=path, limit=limit, offset=offset)
         return render.history(page, history)
+        
+class recentchanges(delegate.page):
+    def GET(self):
+        return render.recentchanges()
                 
 class diff (delegate.mode):
     def GET(self, path):  

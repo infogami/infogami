@@ -108,6 +108,21 @@ class history(delegate.mode):
     def GET(self, path):
         query = {"key": path, "sort": "-created", "limit": 20}
         return request('/versions', data=dict(query=simplejson.dumps(query)))
+        
+class recentchanges(delegate.page):
+    encoding = "json"
+    
+    @jsonapi
+    def GET(self):
+        i = web.input(query=None)
+        if not i.query:
+            query = {}
+            keys = ['key', 'author', 'type', 'ip', 'offset', 'limit']
+            for key in keys:
+                if key in i:
+                    query[key] = i[key]
+            query = simplejson.dumps(query)
+        return request('/versions', data=dict(query=query))
 
 class login(delegate.page):
     encoding = "json"

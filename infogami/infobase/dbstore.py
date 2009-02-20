@@ -247,6 +247,7 @@ class DBSiteStore(common.SiteStore):
                 
         if old_type != new_type:
             removed = olddata.keys()
+            added = newdata.keys()
         
         for k in removed:
             do_action(action_delete, old_type, thing_id, k, olddata[k])

@@ -13,7 +13,7 @@ logroot = None
 compress_log = False
 
 # query_timeout in milli seconds.
-query_timeout = None
+query_timeout = 60000
 
 #@@ Hack to execute some code when infobase is created. 
 #@@ This will be replaced with a better method soon.

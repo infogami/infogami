@@ -36,6 +36,19 @@ create table version (
     created timestamp default (current_timestamp at time zone 'utc'),
     UNIQUE (thing_id, revision)
 );
+
+create table property (
+    id serial primary key,
+    type int references thing,
+    name text,
+    UNIQUE (type, name)
+);
+
+CREATE FUNCTION get_property_name(integer, integer) 
+RETURNS text AS 
+'select property.name FROM property, thing WHERE thing.type = property.type AND thing.id=$$1 AND property.id=$$2;'
+LANGUAGE SQL;
+
 $for name in ['author_id', 'ip', 'created']:
     create index version_${name}_idx ON version($name);
 
@@ -63,17 +76,11 @@ $ sqltypes = dict(int="int", float="float", boolean="boolean", str="varchar(2048
 
 $for prefix in prefixes:
     -- $prefix tables --
-    $ keys_table = prefix + '_keys'
-    create table $keys_table (
-        id serial primary key,
-        key text
-    );
-    CREATE FUNCTION get_${prefix}_key(integer) RETURNS text AS 'select key FROM ${prefix}_keys where id=$$1;' LANGUAGE SQL;
     $for datatype in sqltypes:
         $ name = prefix + "_" + datatype
         create table $name (
             thing_id int references thing,
-            key_id int references $keys_table,
+            key_id int references property,
             value $sqltypes[datatype],
             ordering int default NULL
         );
@@ -85,11 +92,10 @@ $for prefix in prefixes:
         $if i:
             UNION \
         $if datatype == 'boolean':
-            SELECT thing_id, get_${prefix}_key(key_id) as key, '$datatype' as datatype, cast(cast(value as int) as text), ordering FROM ${prefix}_${datatype}
+            SELECT thing_id, get_property_name(thing_id, key_id) as key, '$datatype' as datatype, cast(cast(value as int) as text), ordering FROM ${prefix}_${datatype}
         $else:
-            SELECT thing_id, get_${prefix}_key(key_id) as key, '$datatype' as datatype, cast(value as text), ordering FROM ${prefix}_${datatype}
+            SELECT thing_id, get_property_name(thing_id, key_id) as key, '$datatype' as datatype, cast(value as text), ordering FROM ${prefix}_${datatype}
     ;
-        
 
 -- sequences --
 $for seq in sequences:

@@ -226,7 +226,7 @@ class DBSiteStore(common.SiteStore):
                 table = self.schema.find_table(typekey, datatype, name)
                 
                 if table:
-                    pid = self.get_property_id(table, name, create=True)
+                    pid = self.get_property_id(type_id, name, create=True)
                     assert pid is not None
                     f(table, thing_id, pid, value, ordering)
         
@@ -310,32 +310,27 @@ class DBSiteStore(common.SiteStore):
         web.ctx.new_objects[key] = thing    
         return {'key': key, 'revision': revision}
             
-    def get_property_id(self, table, name, create=False):
-        if table is None:
-            return None
-        
-        if (table, name) in self.property_id_cache:
-            return self.property_id_cache[table, name]
+    def get_property_id(self, type_id, name, create=False):
+        if (type_id, name) in self.property_id_cache:
+            return self.property_id_cache[type_id, name]
             
-        pid = self._get_property_id(table, name, create)
+        pid = self._get_property_id(type_id, name, create)
         if pid is not None:
-            self.property_id_cache[table, name] = pid
+            self.property_id_cache[type_id, name] = pid
         return pid
             
-    def _get_property_id(self, table, name, create=False):
-        if table is None:
-            return None
-        property_table = table.split('_')[0] + '_keys'
-        d = self.db.select(property_table, where='key=$name', vars=locals())
+    def _get_property_id(self, type_id, name, create=False):
+        d = self.db.select('property', where='name=$name AND type=$type_id', vars=locals())
         if d:
             return d[0].id
         elif create:
-            return self.db.insert(property_table, key=name)
+            return self.db.insert('property', key=name)
         else:
             return None
 
     def things(self, query):
         type = query.get_type()
+        type_id = self.get_metadata(type).id
         
         class DBTable:
             def __init__(self, name, label=None):
@@ -394,7 +389,7 @@ class DBSiteStore(common.SiteStore):
                 table = None
             else:
                 table = get_table(c.datatype, c.key)
-                key_id = self.get_property_id(table.name, c.key)
+                key_id = self.get_property_id(type_id, c.key)
                 if not key_id:
                     raise StopIteration
                     
@@ -440,7 +435,7 @@ class DBSiteStore(common.SiteStore):
                     order = 'thing.' + sort_key # make sure c.key is valid
                 else:
                     table = get_table(query.sort.datatype, sort_key)
-                    key_id = self.get_property_id(table.name, sort_key)
+                    key_id = self.get_property_id(type_id, sort_key)
                     if key_id is None:
                         raise StopIteration
                     q = '%(table)s.thing_id = thing.id AND %(table)s.key_id=$key_id' % {'table': table}

@@ -1,6 +1,6 @@
 """Infogami: Structured Wiki (http://infogami.org)"""
 
-__version__ = "0.4"
+__version__ = "0.5dev"
 
 import web
 import config

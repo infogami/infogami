@@ -122,7 +122,6 @@ class view(delegate.mode):
             
         return request('/save' + path, 'POST', web.data())
         
-        
 def make_query(i, required_keys=None):
     """Removes keys starting with _ and limits the keys to required_keys, if it is specified.
     
@@ -132,12 +131,14 @@ def make_query(i, required_keys=None):
     {'a': 1}
     """
     query = {}
-    for k in i:
+    for k, v in i.items():
         if k.startswith('_'):
             continue
         if required_keys and k not in required_keys:
             continue
-        query[k] = i[k]
+        if v == '':
+            v = None
+        query[k] = v
     return query
         
 class history(delegate.mode):

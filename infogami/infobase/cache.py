@@ -29,6 +29,7 @@ of that request and then they are added to the global cache.
 """
 
 import web
+import lru
 
 class NoneDict:
     def __getitem__(self, key):
@@ -41,7 +42,7 @@ class NoneDict:
         pass
 
 special_cache = {}
-global_cache = NoneDict()
+global_cache = lru.LRU(200)
 
 def loadhook():
     web.ctx.new_objects = {}

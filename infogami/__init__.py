@@ -1,3 +1,7 @@
+"""Infogami: Structured Wiki (http://infogami.org)"""
+
+__version__ = "0.4"
+
 import web
 import config
 import sys

@@ -226,6 +226,7 @@ class DBSiteStore(common.SiteStore):
                 table = self.schema.find_table(typekey, datatype, name)
                 
                 if table:
+                    type_id = self.get_metadata(typekey).id
                     pid = self.get_property_id(type_id, name, create=True)
                     assert pid is not None
                     f(table, thing_id, pid, value, ordering)
@@ -330,7 +331,14 @@ class DBSiteStore(common.SiteStore):
 
     def things(self, query):
         type = query.get_type()
-        type_id = self.get_metadata(type).id
+        type_id = type and self.get_metadata(type).id
+        
+        # type is required if there are conditions/sort on keys other than [key, type, created, last_modified]
+        common_properties = ['key', 'type', 'created', 'last_modified']
+        type_required = bool([c for c in query.conditions if c.key not in common_properties]) or (query.sort and query.sort.key not in common_properties)
+        
+        if type_required and type is None:
+            raise common.BadData("Type Required")
         
         class DBTable:
             def __init__(self, name, label=None):
@@ -381,19 +389,27 @@ class DBSiteStore(common.SiteStore):
                 op = Literal(c.op)
                 
             if c.key in ['key', 'type', 'created', 'last_modified']:
+                #@@ special optimization to avoid join with thing.type when there are non-common properties in the query.
+                #@@ Since type information is already present in property table, 
+                #@@ getting property id is equivalent to join with type.
+                if c.key == 'type' and type_required:
+                    return
+                    
                 if isinstance(c.value, list):
                     q = web.sqlors('thing.%s %s ' % (c.key, op), c.value)
                 else:
                     q = web.reparam('thing.%s %s $c.value' % (c.key, op), locals())
                 xwheres = [q]
-                table = None
+                
+                # Add thing table explicitly because get_table is not called
+                tables['_thing'] = DBTable("thing")
             else:
                 table = get_table(c.datatype, c.key)
                 key_id = self.get_property_id(type_id, c.key)
                 if not key_id:
                     raise StopIteration
                     
-                q1 = web.reparam('%(table)s.thing_id = thing.id AND %(table)s.key_id=$key_id' % {'table': table}, locals())
+                q1 = web.reparam('%(table)s.key_id=$key_id' % {'table': table}, locals())
                 
                 if isinstance(c.value, list):
                     q2 = web.sqlors('%s.value %s ' % (table, op), c.value)
@@ -404,7 +420,6 @@ class DBSiteStore(common.SiteStore):
                 if ordering_func:
                     xwheres.append(ordering_func(table))
             wheres.extend(xwheres)
-            return table
             
         def make_ordering_func():
             d = web.storage(table=None)
@@ -433,12 +448,14 @@ class DBSiteStore(common.SiteStore):
                     
                 if sort_key in ['key', 'type', 'created', 'last_modified']:
                     order = 'thing.' + sort_key # make sure c.key is valid
+                    # Add thing table explicitly because get_table is not called
+                    tables['_thing'] = DBTable("thing")                
                 else:
                     table = get_table(query.sort.datatype, sort_key)
                     key_id = self.get_property_id(type_id, sort_key)
                     if key_id is None:
                         raise StopIteration
-                    q = '%(table)s.thing_id = thing.id AND %(table)s.key_id=$key_id' % {'table': table}
+                    q = '%(table)s.key_id=$key_id' % {'table': table}
                     wheres.append(web.reparam(q, locals()))
                     order = table.label + '.value'
                 return order + ascending
@@ -450,23 +467,45 @@ class DBSiteStore(common.SiteStore):
             order = process_sort(query)
         except StopIteration:
             return []
-                                        
+            
+        def add_joins():
+            labels = [t.label for t in tables.values()]
+            def get_column(table):
+                if table == 'thing': return 'thing.id'
+                else: return table + '.thing_id'
+                
+            if len(labels) > 1:
+                x = labels[0]
+                xwheres = [get_column(x) + ' = ' + get_column(y) for y in labels[1:]]
+                wheres.extend(xwheres)
+            
+        add_joins()
         wheres = wheres or ['1 = 1']
-        tables = ['thing'] + [t.sql() for t in tables.values()]
+        table_names = [t.sql() for t in tables.values()]
 
         t = self.db.transaction()
         if config.query_timeout:
             self.db.query("SELECT set_config('statement_timeout', $query_timeout, false)", dict(query_timeout=config.query_timeout))
-    
-        result = self.db.select(
-            what='thing.key', 
-            tables=tables, 
-            where=self.sqljoin(wheres, ' AND '), 
-            order=order,
-            limit=query.limit, 
-            offset=query.offset,
-            )
             
+        if 'thing' in table_names:
+            result = self.db.select(
+                what='thing.key', 
+                tables=table_names, 
+                where=self.sqljoin(wheres, ' AND '), 
+                order=order,
+                limit=query.limit, 
+                offset=query.offset,
+                )
+        else:
+            result = self.db.select(
+                what='d0.thing_id', 
+                tables=table_names, 
+                where=self.sqljoin(wheres, ' AND '), 
+                order=order,
+                limit=query.limit, 
+                offset=query.offset,
+            )
+            result = self.db.query('SELECT key FROM thing where ' + web.sqlors('id = ', [r.thing_id for r in result]))
         result = [r.key for r in result]
         t.commit()
         return result

@@ -379,7 +379,7 @@ def datestr(then, now=None):
 
 @public
 def get_types(regular=True):
-    q = {'type': "/type/type", "sort": "key"}
+    q = {'type': "/type/type", "sort": "key", "limit": 1000}
     if regular:
         q['kind'] = 'regular'
     return sorted(web.ctx.site.things(q))

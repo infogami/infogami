@@ -325,7 +325,7 @@ class DBSiteStore(common.SiteStore):
         if d:
             return d[0].id
         elif create:
-            return self.db.insert('property', key=name)
+            return self.db.insert('property', type=type_id, name=name)
         else:
             return None
 

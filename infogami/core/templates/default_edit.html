@@ -62,6 +62,67 @@ function swap(a, b) {
 
 </script>
 
+$def display_multiple_row(property, value, index):
+    $if index is None:
+        $ attrs = 'id="row_%s" repeat="template"' % property.name
+        $ prefix = '%s#[row_%s]' % (property.name, property.name)
+    $else:
+        $ attrs = 'repeat="%d""' % index
+        $ prefix = '%s#%d' % (property.name, index)
+    <tr $:attrs>
+        $if property.expected_type.kind == "embeddable":
+            $for p in property.expected_type.properties:
+                <td>$:thinginput(value and value[p.name], name=prefix + "." + p.name, expected_type=p.expected_type)</td>
+        $else:
+            <td>$:thinginput(value, name=prefix, expected_type=property.expected_type)</td>
+        $:move_buttons(property.name)
+    </tr>
+$def display_header(property):
+    $if property.expected_type.kind == "embeddable":
+        <tr>
+            $for p in property.expected_type.properties:
+                <th>$i18n.get(p.expected_type.key, p.name)</th>
+        </tr>
+
+$def display_multiple(property, value):
+    <table>
+        <tbody>
+        $:display_header(property)
+        </tbody>
+        <tbody>
+        $for i, v in enumerate(value):
+            $:display_multiple_row(property, v, i)
+        $:display_multiple_row(property, None, None)
+        $:add_button(property)
+        </tbody>
+    </table>
+
+$def display_regular(p, value):
+    $:thinginput(value, p)
+    
+$def display(property, value):
+    $if property.unique:
+        $:display_regular(property, value)
+    $else:
+        $:display_multiple(property, value)
+        
+$def move_buttons(key):
+    <td>
+        <button type="remove" template="row_$key">-</button>
+    	<button type="move-up" template="row_$key" onclick="return moveup.apply(this, [event]);">&uarr;</button>
+    	<button type="move-down" template="row_$key" onclick="return movedown.apply(this, [event]);">&darr;</button>
+    </td>
+
+$def add_button(property):
+    <tr>
+    $if property.expected_type.kind == "embeddable":
+        $for p in property.expected_type.properties:
+            <td></td>
+    $else:
+        <td></td>
+    <td><button type="add" template="row_$property.name">+</button></td>
+    </tr>
+
 <form name="edit" method="POST">
 <table>
 <tbody>
@@ -69,56 +130,20 @@ function swap(a, b) {
     <tr>
         <td>&nbsp;</td>
         <td>&nbsp;</td>
-        <td>&nbsp;</td>
     </tr>            
 </tbody>
 
 $for p in page.type.properties:
-    $ key = p.name
-    $ label = _t[key]
+    $ label = _t[p.name]
+    $ value = page[p.name]
     <tbody>
-    $if not p.unique:
-        $ i = 0
         <tr>
-            <td>$label</td>
-            <td></td>
-            <td></td>
-        </tr>
-        </tbody>
-        <tbody>
-        $for x in page[key]:
-            <tr repeat="$i">
-                <td colspan="2" style="padding-left:1.0em"> $:thinginput(x, expected_type=p.expected_type, name=key + "#" + str(i))</td>
-                <td>
-                    <button type="remove" template="row_$key">$_.delete</button>
-                    <button type="move-up" template="row_$key" onclick="return moveup.apply(this, [event]);">$_.move_up</button>
-                    <button type="move-down" template="row_$key" onclick="return movedown.apply(this, [event]);">$_.move_down</button>
-                </td>
-            </tr>
-            $ i = i + 1
-        <tr id="row_$key" repeat="template">
-            <td colspan="2" style="padding-left:1.0em">
-                $:thinginput("", expected_type=p.expected_type, name=key + '#[row_' + key + ']')
-            </td>
-            <td>
-                <button type="remove" template="row_$key">$_.delete</button>
-            	<button type="move-up" template="row_$key" onclick="return moveup.apply(this, [event]);">$_.move_up</button>
-            	<button type="move-down" template="row_$key" onclick="return movedown.apply(this, [event]);">$_.move_down</button>
-            </td>
-        </tr>
-        <tr>
-            <td></td>
-            <td></td>
-            <td><button type="add" template="row_$key">$_.add_property(label)</button></td>
-        </tr>
-    $else:
-        <tr>
-            <td>$label</td>
-            <td>$:thinginput(page[key], p)</td>
-            <td></td>
+            <th style="vertical-align: top;">$label</th>
+            <td>$:display(p, value)</td>
         </tr>
     </tbody>
 </table>
+    
 <p>$:_.edit_summary<br />
 <input type="text" name="_comment" value="" />
 </p>

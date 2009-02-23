@@ -82,6 +82,11 @@ def _list_pages(path, limit, offset):
     q = {}
     if path != '/':
         q['key~'] = path + '/*'
+    
+    # don't show /type/delete and /type/redirect
+    q['a:type!='] = '/type/delete'
+    q['b:type!='] = '/type/redirect'
+    
     q['sort'] = 'key'
     q['limit'] = limit
     q['offset'] = offset

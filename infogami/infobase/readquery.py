@@ -210,8 +210,10 @@ def parse_key(key):
         ('foo', '<')
         >>> parse_key('foo~')
         ('foo', '~')
+        >>> parse_key('foo!=')
+        ('foo', '!=')
     """
-    operators = ["=", "!=", "<", "<=", ">=", ">", "~"]
+    operators = ["!=", "=", "<", "<=", ">=", ">", "~"]
     operator = "="
     for op in operators:
         if key.endswith(op):

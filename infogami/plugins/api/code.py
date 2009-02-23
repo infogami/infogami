@@ -61,7 +61,7 @@ class infobase_request:
         try:
             out = conn.request(sitename, path, method, data)
             return '{"status": "ok", "result": %s}' % out
-        except client.InfobaseException, e:
+        except client.ClientException, e:
             return '{"status": "fail", "message": "%s"}' % str(e)
     
     GET = delegate

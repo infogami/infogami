@@ -66,6 +66,9 @@ def get_user_preferences():
     return web.ctx.user_preferences
 
 def get_user_root():
+    i = web.input(_method='GET')
+    if 'template_root' in i:
+        return i.template_root.strip()
     preferences = get_user_preferences()
     return preferences and preferences.get("template_root", None)
     

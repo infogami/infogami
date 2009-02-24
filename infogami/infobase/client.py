@@ -220,7 +220,8 @@ class Site:
             }
             if p.expected_type:
                 q['type'] = p.expected_type.key
-            backreferences[p.name] = LazyObject(lambda: [self.get(key, lazy=True) for key in self.things(q)])
+
+            backreferences[p.name] = LazyObject(lambda q=q: [self.get(key, lazy=True) for key in self.things(q)])
         return backreferences
             
     def get(self, key, revision=None, lazy=False):

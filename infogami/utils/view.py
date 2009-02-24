@@ -49,6 +49,8 @@ web.template.Template.globals.update(dict(
   # common utilities
   int = int,
   str = str,
+  basestring=basestring,
+  unicode=unicode,
   bool=bool,
   list = list,
   set = set,

@@ -140,8 +140,8 @@ def normpath(path):
     """
     try:
         # take care of bad unicode values in urls
-        path.decode('utf-8')
-    except UnicodeDecodeError:
+        path.encode('utf-8')
+    except UnicodeEncodeError:
         return '/'
 
     # correct trailing / and ..s in the path

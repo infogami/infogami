@@ -96,7 +96,7 @@ class Site:
     def new_key(self, type, kw=None):
         return self.store.new_key(type, kw or {})
         
-    def write(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, _internal=False):
+    def write(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, action=None, _internal=False):
         timestamp = timestamp or datetime.datetime.utcnow()
         
         author = author or self.get_account_manager().get_user()
@@ -104,7 +104,7 @@ class Site:
         
         items = p.process(query)
         items = (item for item in items if item)
-        result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
+        result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key, action=action)
 
 
         created = [r['key'] for r in result if r and r['revision'] == 1]
@@ -142,7 +142,7 @@ class Site:
         self._fire_triggers([result])
         return result
     
-    def save_many(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
+    def save_many(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, action=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
@@ -152,7 +152,7 @@ class Site:
         items = query
         items = (p.process(item['key'], item) for item in items)
         items = (item for item in items if item)
-        result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key)
+        result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key, action=action)
         
         event_data = dict(comment=comment, machine_comment=machine_comment, query=query, result=result)
         self._fire_event("save_many", timestamp, ip, author and author.key, event_data)

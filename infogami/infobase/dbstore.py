@@ -175,22 +175,27 @@ class DBSiteStore(common.SiteStore):
             result[r.key] = common.LazyThing(self, r.key, r.data)
         return result
         
-    def _add_version(self, thing_id, revision=None, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
+    def _add_transaction(self, action, author, ip, comment, created):
+        return self.db.insert('transaction', 
+            action=action,
+            author_id=author and self.get_metadata(author).id,
+            ip=ip,
+            created=created,
+            comment=comment
+        )
+        
+    def _add_version(self, thing_id, revision, transaction_id, created):
         if revision is None:
             d = self.db.query(
-                'UPDATE thing set latest_revision=latest_revision+1, last_modified=$timestamp WHERE id=$thing_id;' + \
+                'UPDATE thing set latest_revision=latest_revision+1, last_modified=$created WHERE id=$thing_id;' + \
                 'SELECT latest_revision FROM thing WHERE id=$thing_id', vars=locals())
             revision = d[0].latest_revision
             
         self.db.insert('version', False, 
             thing_id=thing_id, 
             revision=revision, 
-            created=timestamp,
-            comment=comment,
-            machine_comment=machine_comment,
-            ip=ip,
-            author_id=author and self.get_metadata(author).id
-            )
+            transaction_id=transaction_id
+        )
         return revision
         
     def _update_tables(self, thing_id, key, olddata, newdata):
@@ -256,13 +261,15 @@ class DBSiteStore(common.SiteStore):
         for k in added:
             do_action(action_insert, new_type, thing_id, k, newdata[k])
                     
-    def save_many(self, items, timestamp, comment, machine_comment, ip, author):
+    def save_many(self, items, timestamp, comment, machine_comment, ip, author, action=None):
+        action = action or "bulk_update"
         t = self.db.transaction()
-        result = [self.save(d['key'], d, timestamp, comment, machine_comment, ip, author) for d in items]
+        transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
+        result = [self.save(d['key'], d, transaction_id=transaction_id, timestamp=timestamp) for d in items]
         t.commit()
         return result
 
-    def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
+    def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         t = self.db.transaction()
 
@@ -273,16 +280,17 @@ class DBSiteStore(common.SiteStore):
             revision = None
             thing_id = thing.id
             olddata = thing._get_data()
+            action = "update"
         else:
             revision = 1
             type_id = self.get(typekey).id
             thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
-            
             olddata = {}
-            
-        revision = self._add_version(thing_id, timestamp=timestamp, 
-            comment=comment, machine_comment=machine_comment, 
-            ip=ip, author=author, revision=revision)
+            action = "create"
+        
+        if transaction_id is None:
+            transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
+        revision = self._add_version(thing_id=thing_id, revision=revision, transaction_id=transaction_id, created=timestamp)
             
         created = olddata and olddata['created']
         
@@ -514,11 +522,12 @@ class DBSiteStore(common.SiteStore):
         return web.SQLQuery.join(queries, delim)
         
     def versions(self, query):
-        what = 'thing.key, version.*'
-        where = 'version.thing_id = thing.id'
+        what = 'thing.key, version.revision, transaction.*'
+        where = 'version.thing_id = thing.id AND version.transaction_id = transaction.id'
         
         for c in query.conditions:
             key, value = c.key, c.value
+            assert key in ['key', 'type', 'author', 'ip', 'comment', 'created']
             
             if key == 'key':
                 key = 'thing_id'
@@ -527,8 +536,10 @@ class DBSiteStore(common.SiteStore):
                 key = 'thing.type'
                 value = self.get_metadata(value).id
             elif key == 'author':
-                key = 'author_id'
+                key = 'transaction.author_id'
                 value = self.get_metadata(value).id
+            else:
+                key = 'transaction.' + key
                 
             where += web.reparam(' AND %s=$value' % key, locals())
             
@@ -540,7 +551,7 @@ class DBSiteStore(common.SiteStore):
         if config.query_timeout:
             self.db.query("SELECT set_config('statement_timeout', $query_timeout, false)", dict(query_timeout=config.query_timeout))
                 
-        result = self.db.select(['thing','version'], what=what, where=where, offset=query.offset, limit=query.limit, order=sort)
+        result = self.db.select(['thing','version', 'transaction'], what=what, where=where, offset=query.offset, limit=query.limit, order=sort)
         result = result.list()
         author_ids = list(set(r.author_id for r in result if r.author_id))
         authors = self.get_metadata_list_from_ids(author_ids)
@@ -549,7 +560,6 @@ class DBSiteStore(common.SiteStore):
         
         for r in result:
             r.author = r.author_id and authors[r.author_id].key
-            del r.thing_id
         return result
     
     def get_user_details(self, key):

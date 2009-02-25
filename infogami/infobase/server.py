@@ -120,9 +120,9 @@ class write:
     @jsonify
     def POST(self, sitename):
         site = get_site(sitename)
-        i = input('query', comment=None, machine_comment=None)
+        i = input('query', comment=None, machine_comment=None, action=None)
         query = from_json(i.query)
-        result = site.write(query, comment=i.comment, machine_comment=i.machine_comment)
+        result = site.write(query, comment=i.comment, machine_comment=i.machine_comment, action=i.action)
         return result
 
 class withkey:
@@ -161,10 +161,10 @@ class save:
 class save_many:
     @jsonify
     def POST(self, sitename):
-        i = input('query', comment=None, machine_comment=None)
+        i = input('query', comment=None, machine_comment=None, action=None)
         data = from_json(i.query)
         site = get_site(sitename)
-        return site.save_many(data, comment=i.comment, machine_comment=i.machine_comment)
+        return site.save_many(data, comment=i.comment, machine_comment=i.machine_comment, action=i.action)
         
 class new_key:
     @jsonify

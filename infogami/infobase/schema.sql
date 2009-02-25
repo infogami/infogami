@@ -25,15 +25,24 @@ $for name in ['key', 'type', 'latest_revision', 'last_modified', 'created']:
 $if multisite:
     create index thing_site_id_idx ON thing(site_id);
 
-create table version (
+create table transaction (
     id serial primary key,
-    thing_id int references thing,
-    revision int,
+    action varchar(256),
     author_id int references thing,
     ip inet,
     comment text,
     machine_comment text,
-    created timestamp default (current_timestamp at time zone 'utc'),
+    created timestamp default (current_timestamp at time zone 'utc')    
+);
+
+$for name in ['author_id', 'ip', 'created']:
+    create index transaction_${name}_idx ON transaction($name);
+
+create table version (
+    id serial primary key,
+    thing_id int references thing,
+    revision int,
+    txn_id int references transaction,
     UNIQUE (thing_id, revision)
 );
 
@@ -48,9 +57,6 @@ CREATE FUNCTION get_property_name(integer, integer)
 RETURNS text AS 
 'select property.name FROM property, thing WHERE thing.type = property.type AND thing.id=$$1 AND property.id=$$2;'
 LANGUAGE SQL;
-
-$for name in ['author_id', 'ip', 'created']:
-    create index version_${name}_idx ON version($name);
 
 create table account (
     $if multisite:

@@ -32,10 +32,35 @@ create table property (
 );
 """
 
+TRANSACTION_TABLE = """
+create table transaction (
+    id serial primary key,
+    action varchar(256),
+    author_id int references thing,
+    ip inet,
+    comment text,
+    created timestamp default (current_timestamp at time zone 'utc')    
+);
+"""
+
+TRANSACTION_INDEXES = """
+create index transaction_author_id_idx ON transaction(author_id);
+create index transaction_ip_idx ON transaction(ip);
+create index transaction_created_idx ON transaction(created);
+"""
+
 #@@ type to table prefix mappings. 
 #@@ If there are any special tables in your schema, this should be updated.
 type2table = {
 
+}
+
+# exclusive properties. They are some property names, which can't occur with any other type.
+exclusive_properties = {
+    '/type/type': ['properties.name', 'properties.expected_type', 'properties.unique', 'properties.description', 'kind'],
+    '/type/user': ['displayname'],
+    '/type/usergroup': ['members'],
+    '/type/permission': ['readers', 'writers', 'admins']
 }
 
 def get_table_prefix(type):
@@ -60,8 +85,23 @@ def fix_property_keys():
         keys_table = prefix + "_keys"
         keys = dict((r.key, r.id) for r in db.query('SELECT * FROM ' + keys_table))
         newkeys = {}
+        
+        #@@ There is a chance that we may overwrite one update with another when new id is in the same range of old ids.
+        #@@ Example:
+        #@@     UPDATE datum_str SET key_id=4 FROM thing WHERE thing.id = property.type AND key_id=1;
+        #@@     UPDATE datum_str SET key_id=6 FROM thing WHERE thing.id = property.type AND key_id=4;
+        #@@ In the above example, the second query overwrites the result of first query.
+        #@@ Making id of property table more than max_id of datum_keys makes sure that this case never happen.
+        id1 = db.query('SELECT max(id) as x FROM ' + keys_table)[0].x
+        id2 = db.query('SELECT max(id) as x FROM property')[0].x
+        print >> web.debug, 'max ids', id1, id2
+        if id1 > id2:
+            db.query("SELECT setval('property_id_seq', $id1)", vars=locals())
+        
         for key in keys:
             newkeys[key] = db.insert('property', type=type_id, name=key)
+        
+        total_updated = {}
         
         for d in ['str', 'int', 'float', 'boolean', 'ref']:
             table = prefix + '_' + d            
@@ -70,9 +110,16 @@ def fix_property_keys():
                 old_key_id = keys[key]
                 new_key_id = newkeys[key]
                 if multiple_types:
-                    db.query('UPDATE %s SET key_id=$new_key_id FROM thing WHERE thing.id = %s.thing_id AND thing.type=$type_id AND key_id=$old_key_id' % (table, table), vars=locals())
+                    updated = db.query('UPDATE %s SET key_id=$new_key_id FROM thing WHERE thing.id = %s.thing_id AND thing.type=$type_id AND key_id=$old_key_id' % (table, table), vars=locals())
                 else:
-                    db.update(table, key_id=new_key_id, where='key_id=$old_key_id', vars=locals())    
+                    updated = db.update(table, key_id=new_key_id, where='key_id=$old_key_id', vars=locals())
+                
+                total_updated[key] = total_updated.get(key, 0) + updated
+                print >> web.debug, 'updated', updated
+                
+        unused = [k for k in total_updated if total_updated[k] == 0]
+        print >> web.debug, 'unused', unused
+        db.delete('property', where=web.sqlors('id =', [newkeys[k] for k in unused]))
                 
     primitive = ['/type/key', '/type/int', '/type/float', '/type/boolean', '/type/string', '/type/datetime']
     # add embeddable types too
@@ -112,6 +159,21 @@ def process_keys(table):
         
     for r in result:
         print r
+        
+def fix_version_table():
+    """Add transaction table and move columns from version table to transaction table."""
+    filename = '/tmp/version.%d.txt' % os.getpid()
+    new_filename = filename + ".new"
+    db.query('copy version to $filename', vars=locals());
+    cmd = """awk -F'\t' 'BEGIN {OFS="\t"}{if ($3 == 1) action = "create"; else action="update"; print $1,action, $4,$5,$6,$8; }' < %s > %s""" % (filename, new_filename)
+    os.system(cmd)
+    db.query(TRANSACTION_TABLE)
+    db.query("copy transaction from $new_filename", vars=locals())
+    db.query("SELECT setval('transaction_id_seq', (SELECT max(id) FROM transaction))")
+    db.query('ALTER TABLE version add column transaction_id int references transaction')
+    db.query('UPDATE version set transaction_id=id')
+    db.query(TRANSACTION_INDEXES)
+    os.system('rm %s %s' % (filename, new_filename))
 
 def main():
     parse_args()
@@ -121,11 +183,11 @@ def main():
     
     t = db.transaction()
     db.query(PROPERTY_TABLE)
+    fix_version_table()
     
     drop_key_id_foreign_key()
     fix_property_keys()
     add_key_id_foreign_key()
-    
     t.commit()
 
 if __name__ == "__main__":

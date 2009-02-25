@@ -69,7 +69,7 @@ class AccountManager:
         def f():
             web.ctx.disable_permission_check = True
             q = make_query(key, data)
-            self.site.write(q, ip=ip, timestamp=timestamp, _internal=True)
+            self.site.write(q, ip=ip, timestamp=timestamp, _internal=True, author=None, action='register')
             self.site.store.register(key, email, enc_password)
         
         timestamp = timestamp or datetime.datetime.utcnow()

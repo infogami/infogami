@@ -1,4 +1,4 @@
-$def with (prefixes, sequences, multisite=False)
+$def with (tables, sequences, multisite=False)
 
 BEGIN;
 
@@ -80,29 +80,16 @@ create index data_thing_id_revision_idx ON data(thing_id, revision);
 
 $ sqltypes = dict(int="int", float="float", boolean="boolean", str="varchar(2048)", ref="int references thing")
 
-$for prefix in prefixes:
-    -- $prefix tables --
-    $for datatype in sqltypes:
-        $ name = prefix + "_" + datatype
-        create table $name (
-            thing_id int references thing,
-            key_id int references property,
-            value $sqltypes[datatype],
-            ordering int default NULL
-        );
-        create index ${name}_idx ON ${name}(key_id, value);
-        create index ${name}_thing_id_idx ON ${name}(thing_id);
-        
-    CREATE VIEW ${prefix}_view AS 
-    $for i, datatype in enumerate(sqltypes):
-        $if i:
-            UNION \
-        $if datatype == 'boolean':
-            SELECT thing_id, get_property_name(thing_id, key_id) as key, '$datatype' as datatype, cast(cast(value as int) as text), ordering FROM ${prefix}_${datatype}
-        $else:
-            SELECT thing_id, get_property_name(thing_id, key_id) as key, '$datatype' as datatype, cast(value as text), ordering FROM ${prefix}_${datatype}
-    ;
-
+$for table, datatype in tables:
+    create table $table (
+        thing_id int references thing,
+        key_id int references property,
+        value $sqltypes[datatype],
+        ordering int default NULL
+    );
+    create index ${table}_idx ON ${table}(key_id, value);
+    create index ${table}_thing_id_idx ON ${table}(thing_id);
+    
 -- sequences --
 $for seq in sequences:
     CREATE SEQUENCE $seq;

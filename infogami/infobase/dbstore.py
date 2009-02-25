@@ -38,8 +38,9 @@ class Schema:
             name = type[1:].replace('/', '_') + '_seq'
             return web.storage(type=type, pattern=self.sequences[type], name=name)
         
-    def add_table_group(self, prefix, type):
-        for d in INDEXED_DATATYPES:
+    def add_table_group(self, prefix, type, datatypes=None):
+        datatypes = datatypes or INDEXED_DATATYPES
+        for d in datatypes:
             self.add_entry(prefix + "_" + d, type, d, None)
             
         self.prefixes.add(prefix)
@@ -72,9 +73,10 @@ class Schema:
         path = os.path.join(os.path.dirname(__file__), 'schema.sql')
         t = web.template.frender(path)
         
+        tables = [(e.table, e.datatype) for e in self.entries]
         web.template.Template.globals['dict'] = dict
         web.template.Template.globals['enumerate'] = enumerate
-        return t(prefixes, sequences, self.multisite)
+        return t(tables, sequences, self.multisite)
         
     def __str__(self):
         lines = ["%s\t%s\t%s\t%s" % (e.table, e.type, e.datatype, e.name) for e in self.entries]

@@ -8,19 +8,6 @@ from infogami.utils.view import safeint
 from infogami.infobase import client
 import simplejson
 
-def get_localhosts():
-    import socket
-    hosts = ['127.0.0.1']
-    
-    try:
-        ip = socket.gethostbyname(socket.gethostname())
-        hosts.append(ip)
-    except socket.error:
-        pass
-    return hosts
-
-localhosts = get_localhosts()
-
 hooks = {}        
 def add_hook(name, cls):
     hooks[name] = cls
@@ -67,8 +54,8 @@ class infobase_request:
     GET = delegate
     
     def POST(self):
-        if web.ctx.ip not in localhosts:
-            raise Forbidden("Permission Denied.")
+        if not can_write():
+            return '{"status": "fail", "message": "Permssion Denied"}'
         return self.delegate()
 
 add_hook("get", infobase_request)
@@ -104,7 +91,12 @@ class Forbidden(web.HTTPError):
 class BadRequest(web.HTTPError):
     def __init__(self, msg=""):
         web.HTTPError.__init__(self, "400 Bad Request", {}, msg)
-
+        
+def can_write():
+    user = delegate.context.user and delegate.context.user.key
+    usergroup = web.ctx.site.get('/usergroup/api')
+    return usergroup and user in [u.key for u in usergroup.members]
+    
 class view(delegate.mode):
     encoding = "json"
     
@@ -117,7 +109,7 @@ class view(delegate.mode):
         
     @jsonapi
     def PUT(self, path):
-        if web.ctx.ip not in localhosts:
+        if not can_write():
             raise Forbidden("Permission Denied.")
             
         return request('/save' + path, 'POST', web.data())

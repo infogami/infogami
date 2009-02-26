@@ -181,7 +181,7 @@ class things:
         q = from_json(i.query)
         result = site.things(q)
         
-        if i.details == "false":
+        if i.details.lower() == "false":
             return [r['key'] for r in result]
         else:
             return result

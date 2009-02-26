@@ -251,9 +251,9 @@ class Site:
         result = self._request('/new_key', data=data)
         return result
 
-    def things(self, query):
+    def things(self, query, details=False):
         query = simplejson.dumps(query)
-        return self._request('/things', 'GET', {'query': query})
+        return self._request('/things', 'GET', {'query': query, "details": str(details)})
                 
     def versions(self, query):
         def process(v):

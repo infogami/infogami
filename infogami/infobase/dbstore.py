@@ -548,6 +548,8 @@ class DBSiteStore(common.SiteStore):
         sort = query.sort
         if sort and sort.startswith('-'):
             sort = sort[1:] + ' desc'
+
+        sort = 'transaction.' + sort
         
         t = self.db.transaction()
         if config.query_timeout:

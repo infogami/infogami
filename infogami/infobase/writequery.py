@@ -16,7 +16,8 @@ class SaveProcessor:
         assert data['key'] == key
     
         data = common.parse_query(data)
-    
+        self.validate_properties(data)
+        
         if not web.ctx.get('disable_permission_check', False) and not has_permission(self.store, self.author, key):
             raise common.PermissionDenied('Permission denied to modify %s' % repr(key))
         
@@ -48,6 +49,12 @@ class SaveProcessor:
             for p in type.get('properties', []):
                 if p.get('name') == name:
                     return p
+                    
+    def validate_properties(self, data):
+        rx = web.re_compile('^[a-z][a-z_]*$')
+        for key in data:
+            if not rx.match(key):
+                raise common.BadData("Bad Property: %s" % repr(key))
 
     def process_data(self, d, type):
         for k, v in d.items():

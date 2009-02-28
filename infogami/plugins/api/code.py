@@ -36,6 +36,10 @@ class api(delegate.page):
             
     GET = POST = delegate
 
+def get_special_header(name):
+    header_prefix = infogami.config.get('http_header_prefix', 'infogami').upper()
+    return web.ctx.env.get('HTTP_X_%s_%s' % (header_prefix, name.upper()))
+
 class infobase_request:
     def delegate(self):
         sitename = web.ctx.site.name
@@ -54,15 +58,32 @@ class infobase_request:
     GET = delegate
     
     def POST(self):
+        """RESTful write API."""
         if not can_write():
-            return '{"status": "fail", "message": "Permssion Denied"}'
-        return self.delegate()
+            raise Forbidden("Permission Denied")
+        
+        sitename = web.ctx.site.name
+        path = web.lstrips(web.ctx.path, "/api")
+        method = "POST"
+            
+        query = web.data()
+        comment = get_special_header('comment')
+        action = get_special_header('action')
+        data = dict(query=query, comment=comment, action=action)
+        
+        conn = client.connect(**infogami.config.infobase_parameters)
+        try:
+            out = conn.request(sitename, path, method, data)
+        except client.ClientException, e:
+            raise BadRequest(str(e))
+        return out
 
+# Earlier read API, for backward-compatability
 add_hook("get", infobase_request)
 add_hook("things", infobase_request)
 add_hook("versions", infobase_request)
 
-# for internal use
+# RESTful write API.
 add_hook("write", infobase_request)
 add_hook("save_many", infobase_request)
 
@@ -80,14 +101,14 @@ def jsonapi(f):
             
         return delegate.RawText(out, content_type="application/json")
     return g
-        
+
 def request(path, method='GET', data=None):
     return web.ctx.site._conn.request(web.ctx.site.name, path, method=method, data=data)
     
 class Forbidden(web.HTTPError):
     def __init__(self, msg=""):
         web.HTTPError.__init__(self, "403 Forbidden", {}, msg)
-        
+            
 class BadRequest(web.HTTPError):
     def __init__(self, msg=""):
         web.HTTPError.__init__(self, "400 Bad Request", {}, msg)

@@ -524,7 +524,7 @@ class DBSiteStore(common.SiteStore):
         return web.SQLQuery.join(queries, delim)
         
     def versions(self, query):
-        what = 'thing.key, version.revision, transaction.*'
+        what = 'thing.key, version.revision, version.machine_comment, transaction.*'
         where = 'version.thing_id = thing.id AND version.transaction_id = transaction.id'
         
         for c in query.conditions:

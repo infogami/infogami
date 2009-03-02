@@ -67,7 +67,7 @@ class LocalConnection(Connection):
         except common.InfobaseException, e:
             raise ClientException(e.status, str(e))
         return out
-                
+        
 class RemoteConnection(Connection):
     """Connection to remote Infobase server."""
     def __init__(self, base_url):
@@ -265,16 +265,18 @@ class Site:
         versions =  self._request('/versions', 'GET', {'query': query})
         return [process(v) for v in versions]
 
-    def write(self, query, comment=None):
+    def write(self, query, comment=None, action=None):
         self._run_hooks('before_new_version', query)
         _query = simplejson.dumps(query)
-        result = self._request('/write', 'POST', dict(query=_query, comment=comment))
+        result = self._request('/write', 'POST', dict(query=_query, comment=comment, action=action))
         self._run_hooks('on_new_version', query)
         self._invalidate_cache(result.created + result.updated)
         return result
     
     def save(self, query, comment=None):
         query = dict(query)
+        self._run_hooks('before_new_version', query)
+        
         query['_comment'] = comment
         key = query['key']
         
@@ -286,9 +288,11 @@ class Site:
             self._run_hooks('on_new_version', query)
         return result
         
-    def save_many(self, query, comment=None):
+    def save_many(self, query, comment=None, action=None):
         _query = simplejson.dumps(query)
-        result = self._request('/save_many', 'POST', dict(query=_query, comment=comment))
+        for q in query:
+            self._run_hooks('before_new_version', q)
+        result = self._request('/save_many', 'POST', dict(query=_query, comment=comment, action=action))
         self._invalidate_cache([r['key'] for r in result])
         for q in query:
             self._run_hooks('on_new_version', q)

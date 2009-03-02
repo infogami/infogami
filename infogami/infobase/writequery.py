@@ -51,7 +51,7 @@ class SaveProcessor:
                     return p
                     
     def validate_properties(self, data):
-        rx = web.re_compile('^[a-z][a-z_]*$')
+        rx = web.re_compile('^[a-z][a-z0-9_]*$')
         for key in data:
             if not rx.match(key):
                 raise common.BadData("Bad Property: %s" % repr(key))

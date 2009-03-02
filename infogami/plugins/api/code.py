@@ -36,9 +36,23 @@ class api(delegate.page):
             
     GET = POST = delegate
 
-def get_special_header(name):
-    header_prefix = infogami.config.get('http_header_prefix', 'infogami').upper()
-    return web.ctx.env.get('HTTP_X_%s_%s' % (header_prefix, name.upper()))
+def get_custom_headers():
+    opt = web.ctx.env.get('HTTP_OPT')
+    if opt is None:
+        return {}
+        
+    import re
+    rx = web.re_compile(r'"(.*)"; ns=(\d\d)')
+    m = rx.match(opt.strip())
+    
+    if m:
+        decl_uri, ns = m.groups()
+        expected_decl_uri = infogami.config.get('http_ext_header_uri', 'http://infogami.org/api')
+        if expected_decl_uri == decl_uri:
+            prefix = 'HTTP_%s_' % ns
+            return dict((web.lstrips(k, prefix).lower(), v) for k, v in web.ctx.env.items() if k.startswith(prefix))
+    else:
+        return {}
 
 class infobase_request:
     def delegate(self):
@@ -67,8 +81,9 @@ class infobase_request:
         method = "POST"
             
         query = web.data()
-        comment = get_special_header('comment')
-        action = get_special_header('action')
+        h = get_custom_headers()
+        comment = h.get('comment')
+        action = h.get('action')
         data = dict(query=query, comment=comment, action=action)
         
         conn = client.connect(**infogami.config.infobase_parameters)

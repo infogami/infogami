@@ -148,7 +148,15 @@ class view(delegate.mode):
         if not can_write():
             raise Forbidden("Permission Denied.")
             
-        return request('/save' + path, 'POST', web.data())
+        data = web.data()
+        h = get_custom_headers()
+        comment = h.get('comment')
+        if comment:
+            data = simplejson.loads(data)
+            data['_comment'] = comment
+            data = simplejson.dumps(data)
+            
+        return request('/save' + path, 'POST', data)
         
 def make_query(i, required_keys=None):
     """Removes keys starting with _ and limits the keys to required_keys, if it is specified.

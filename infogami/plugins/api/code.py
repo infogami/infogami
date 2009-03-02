@@ -91,6 +91,19 @@ class infobase_request:
             out = conn.request(sitename, path, method, data)
         except client.ClientException, e:
             raise BadRequest(str(e))
+            
+        #@@ this should be done in the connection.
+        try:
+            if path == "/save_many":
+                for q in simplejson.loads(query):
+                    web.ctx.site._run_hooks("on_new_version", q)
+            elif path == "/write":
+                result = simplejson.loads(out)
+                for k in result.get('created', []) + result.get('updated', []):
+                    web.ctx.site._run_hooks("on_new_version", request("/get", dict(key=k)))
+        except Exception, e:
+            import traceback
+            traceback.print_exc()
         return out
 
 # Earlier read API, for backward-compatability
@@ -156,7 +169,11 @@ class view(delegate.mode):
             data['_comment'] = comment
             data = simplejson.dumps(data)
             
-        return request('/save' + path, 'POST', data)
+        result = request('/save' + path, 'POST', data)
+        
+        #@@ this should be done in the connection.
+        web.ctx.site._run_hooks("on_new_version", data)
+        return result
         
 def make_query(i, required_keys=None):
     """Removes keys starting with _ and limits the keys to required_keys, if it is specified.

@@ -39,10 +39,10 @@ def find_type(value):
     else:
         return '/type/string'
 
-def parse_query(d, reference_type=None):
-    return parse_data(d, reference_type)
+def parse_query(d):
+    return parse_data(d, level=0)
 
-def parse_data(d, reference_type=None):
+def parse_data(d, level=0):
     """
         >>> parse_data(1)
         1
@@ -57,6 +57,8 @@ def parse_data(d, reference_type=None):
         >>> parse_data(true)
         True
         >>> parse_data({'key': '/type/type'})
+        <Storage {'key': '/type/type'}>
+        >>> parse_data({'key': '/type/type'}, level=1)
         <ref: u'/type/type'>
         >>> parse_data([text, date, true])
         [<text: u'foo'>, datetime.datetime(2009, 1, 2, 3, 4, 5), True]
@@ -66,22 +68,21 @@ def parse_data(d, reference_type=None):
         >>> parse_query({'works': {'connect': 'update_list', 'value': [{'key': '/w/OL1W'}]}, 'key': '/b/OL1M'})
         <Storage {'works': <Storage {'connect': 'update_list', 'value': [<ref: u'/w/OL1W'>]}>, 'key': '/b/OL1M'}>
     """
-    reference_type = reference_type or Reference
     if isinstance(d, dict):
-        if 'value' in d and 'type' in d:
+        if 'value' in d and 'type' in d and d['type'] in primitive_types:
             type = d['type']
-            value = parse_data(d['value'])
+            value = parse_data(d['value'], level=None)
             return primitive_types[type](value)
-        elif 'key' in d and len(d) == 1:
-            return reference_type(d['key'])
+        elif level != 0 and 'key' in d and len(d) == 1:
+            return Reference(d['key'])
         else:
-            return web.storage((k, parse_data(v, reference_type)) for k, v in d.iteritems())
+            return web.storage((k, parse_data(v, level+1)) for k, v in d.iteritems())
     elif isinstance(d, list):
-        return [parse_data(v, reference_type) for v in d]
+        return [parse_data(v, level+1) for v in d]
     else:
         return d
 
-def format_data(d, reference_type=None):
+def format_data(d):
     """Convert a data to a representation that can be saved.
     
         >>> format_data(1)
@@ -95,14 +96,13 @@ def format_data(d, reference_type=None):
         >>> format_data(Reference('/type/type'))
         {'key': u'/type/type'}
     """
-    reference_type = reference_type or Reference
     if isinstance(d, dict):
-        return dict((k, format_data(v, reference_type)) for k, v in d.iteritems())
+        return dict((k, format_data(v)) for k, v in d.iteritems())
     elif isinstance(d, list):
-        return [format_data(v, reference_type) for v in d]
+        return [format_data(v) for v in d]
     elif isinstance(d, Text):
         return {'type': '/type/text', 'value': unicode(d)}
-    elif isinstance(d, reference_type):
+    elif isinstance(d, Reference):
         return {'key': unicode(d)}
     elif isinstance(d, datetime.datetime):
         return {'type': '/type/datetime', 'value': d.isoformat()}

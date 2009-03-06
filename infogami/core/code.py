@@ -24,7 +24,7 @@ class view (delegate.mode):
 
         if i.v is not None and safeint(i.v, None) is None:
             raise web.seeother(web.changequery(v=None))
-        
+
         p = db.get_version(path, i.v)
         if p is None:
             return notfound(path)
@@ -79,7 +79,7 @@ class edit (delegate.mode):
         elif isinstance(d, dict):
             for k, v in d.items():
                 d[k] = self.trim(v)
-                if d[k] == '':
+                if d[k] is None or d[k] == '' or d[k] == []:
                     del d[k]
 
             # hack to stop saving empty properties
@@ -99,11 +99,9 @@ class edit (delegate.mode):
         action = self.get_action(_)
         comment = _.get('_comment', None)
         
-        def non_empty(items):
-            return [i for i in items if i]
+        for k, v in i.items():
+            i[k] = self.trim(v)
             
-        i = self.trim(i)
-    
         p = web.ctx.site.get(path) or web.ctx.site.new(path, {})
         p.update(i)
         

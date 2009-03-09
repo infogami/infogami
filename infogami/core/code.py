@@ -106,14 +106,16 @@ class edit (delegate.mode):
         p.update(i)
         
         if action == 'preview':
+            p['comment_'] = comment
             return render.editpage(p, preview=True)
         elif action == 'save':
             try:
                 p._save(comment)
                 path = web.input(_method='GET', redirect=None).redirect or web.changequery(query={})
                 raise web.seeother(path)
-            except ClientException, e:
+            except ClientException, e:            
                 utils.view.set_error(str(e))
+                p['comment_'] = comment                
                 return render.editpage(p)
         elif action == 'delete':
             q = dict(key=q['key'], type=dict(key='/type/delete'))

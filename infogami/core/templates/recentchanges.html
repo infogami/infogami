@@ -2,5 +2,8 @@ $def with ()
 
 $var title: Recent Changes
 
-$:macros.RecentChanges()
+$ type = query_param('type', None)
+$ author = query_param('author', None)
+
+$:macros.RecentChanges(author=author, type=type)
 

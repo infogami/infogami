@@ -1,3 +1,3 @@
+import sys
+sys.path.append(".")
 
-from storage_test import *
-from actions_test import *

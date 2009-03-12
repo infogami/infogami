@@ -96,7 +96,7 @@ def trim(x):
     >>> trim(unflatten({'a#1#2.b': 1}))
     {'a': [[{'b': 1}]]}
     >>> trim(flatten(unflatten({'a#1#2.b': 1})))
-    {'a#1#2.b': 1}    
+    {'a#1#2.b': 1}
     """
     def trimlist(x):
         y = []

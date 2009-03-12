@@ -118,12 +118,12 @@ class LRU:
         >>> d[4] = 4
         >>> d
         [2, 1, 4]
-        >>> del d[4]
+        >>> del d[1]
         >>> d
-        [2, 1]
+        [2, 4]
         >>> d[2] = 2
         >>> d
-        [1, 2]
+        [4, 2]
     """
     def __init__(self, capacity, d=None):
         self.capacity = capacity
@@ -157,7 +157,9 @@ class LRU:
         
     @synchronized
     def __getitem__(self, key):
-        return self.d[key].value
+        node = self.d[key]
+        self.touch(node)
+        return node.value
         
     @synchronized
     def get(self, key, default=None):

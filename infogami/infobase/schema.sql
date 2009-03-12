@@ -42,7 +42,7 @@ create table version (
     id serial primary key,
     thing_id int references thing,
     revision int,
-    txn_id int references transaction,
+    transaction_id int references transaction,
     UNIQUE (thing_id, revision)
 );
 
@@ -78,7 +78,7 @@ create table data (
 );
 create index data_thing_id_revision_idx ON data(thing_id, revision);
 
-$ sqltypes = dict(int="int", float="float", boolean="boolean", str="varchar(2048)", datetime='datetime', ref="int references thing")
+$ sqltypes = dict(int="int", float="float", boolean="boolean", str="varchar(2048)", datetime="timestamp", ref="int references thing")
 
 $for table, datatype in tables:
     create table $table (

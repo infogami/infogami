@@ -72,6 +72,8 @@ class Schema:
         
         path = os.path.join(os.path.dirname(__file__), 'schema.sql')
         t = web.template.frender(path)
+
+        self.add_table_group("datum", None)
         
         tables = [(e.table, e.datatype) for e in self.entries]
         web.template.Template.globals['dict'] = dict

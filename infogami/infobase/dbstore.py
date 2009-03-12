@@ -474,6 +474,9 @@ class DBSiteStore(common.SiteStore):
         
         try:
             process_query(query)
+            # special care for case where query {}.
+            if not tables:
+                tables['_thing'] = DBTable('thing')
             order = process_sort(query)
         except StopIteration:
             return []

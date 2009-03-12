@@ -78,7 +78,7 @@ create table data (
 );
 create index data_thing_id_revision_idx ON data(thing_id, revision);
 
-$ sqltypes = dict(int="int", float="float", boolean="boolean", str="varchar(2048)", ref="int references thing")
+$ sqltypes = dict(int="int", float="float", boolean="boolean", str="varchar(2048)", datetime='datetime', ref="int references thing")
 
 $for table, datatype in tables:
     create table $table (

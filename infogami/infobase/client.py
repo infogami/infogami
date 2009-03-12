@@ -525,7 +525,10 @@ class Thing:
         return web.utf8(self.key)
     
     def __repr__(self):
-        return "<Thing: %s>" % repr(self.key)
+        if self.key:
+            return "<Thing: %s>" % repr(self.key)
+        else:
+            return "<Thing: %s>" % repr(self._data)
             
 # hooks can be registered by extending the hook class
 hooks = []

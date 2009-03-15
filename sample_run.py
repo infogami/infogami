@@ -16,11 +16,16 @@ infogami.config.admin_password = "admin123"
 
 def createsite():
     import web
-    from infogami.infobase.infobase import Infobase
+    from infogami.infobase import dbstore, infobase, config, server
     web.config.db_parameters = infogami.config.db_parameters
     web.config.db_printing = True
-    web.load()
-    Infobase().create_site(infogami.config.site, infogami.config.admin_password)
+    web.ctx.ip = '127.0.0.1'
+
+    server.app.request('/')
+    schema = dbstore.Schema()
+    store = dbstore.DBStore(schema)
+    ib = infobase.Infobase(store, config.secret_key)
+    ib.create(infogami.config.site)
 
 if __name__ == "__main__":
     import sys

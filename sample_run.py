@@ -24,7 +24,12 @@ def createsite():
 
 if __name__ == "__main__":
     import sys
-    if '--createsite' in sys.argv:
+
+    if '--schema' in sys.argv:
+        from infogami.infobase.dbstore import Schema
+        print Schema().sql()
+    elif '--createsite' in sys.argv:
         createsite()
     else:
         infogami.run()
+

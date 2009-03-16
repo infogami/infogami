@@ -76,7 +76,7 @@ def jsonify(f):
     
 def get_data():
     if 'infobase_input' in web.ctx:
-        return infobase_input
+        return web.ctx.infobase_input
     else:
         return web.data()
     

@@ -19,6 +19,23 @@ def test_write():
     assert 'Foo' in b.data
     assert 'Bar' in b.data
 
+def test_delete():
+    b.open('/sandbox/delete?m=edit')
+    b.select_form(name="edit")
+    b['title'] = 'Foo'
+    b['body'] = 'Bar'
+    b.submit()
+    assert b.path == '/sandbox/delete'
+
+    b.open('/sandbox/delete?m=edit')
+    b.select_form(name="edit")
+    try:
+        b.submit(name="_delete")
+    except web.BrowserError, e:
+        pass
+    else:
+        assert False, "expected 404"
+
 def test_notfound():
     try:
         b.open('/notthere')

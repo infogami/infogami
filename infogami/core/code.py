@@ -118,7 +118,7 @@ class edit (delegate.mode):
                 p['comment_'] = comment                
                 return render.editpage(p)
         elif action == 'delete':
-            q = dict(key=q['key'], type=dict(key='/type/delete'))
+            q = dict(key=i['key'], type=dict(key='/type/delete'))
             web.ctx.site.save(q, comment)
             raise web.seeother(web.changequery(query={}))
     

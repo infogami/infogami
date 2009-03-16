@@ -72,7 +72,13 @@ def jsonify(f):
             if web.ctx.get('infobase_auth_token'):
                 web.setcookie('infobase_auth_token', web.ctx.infobase_auth_token)
             return result
-    return g    
+    return g
+    
+def get_data():
+    if 'infobase_input' in web.ctx:
+        return infobase_input
+    else:
+        return web.data()
     
 def input(*required, **defaults):
     if 'infobase_input' in web.ctx:
@@ -150,7 +156,7 @@ class save:
     @jsonify
     def POST(self, sitename, key):
         #@@ This takes payload of json instead of form encoded data.
-        data = web.ctx.infobase_input
+        data = get_data()
         data = from_json(data)
 
         comment = data.pop('_comment', None)

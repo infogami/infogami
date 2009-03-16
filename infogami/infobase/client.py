@@ -77,7 +77,7 @@ class RemoteConnection(Connection):
     def request(self, sitename, path, method='GET', data=None):
         url = self.base_url + '/' + sitename + path
         path = '/' + sitename + path
-        if data:
+        if isinstance(data, dict):
             for k in data.keys():
                 if data[k] is None: del data[k]
         

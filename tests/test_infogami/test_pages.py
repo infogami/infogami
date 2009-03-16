@@ -42,3 +42,5 @@ def test_notfound():
     except web.BrowserError:
         assert b.status == 404
 
+def test_recent_changes():
+    b.open('/recentchanges')

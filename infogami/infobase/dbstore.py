@@ -322,7 +322,7 @@ class DBSiteStore(common.SiteStore):
         thing = common.Thing.from_dict(self, key, data.copy())
         web.ctx.new_objects[key] = thing    
         return {'key': key, 'revision': revision}
-            
+        
     def get_property_id(self, type_id, name, create=False):
         if (type_id, name) in self.property_id_cache:
             return self.property_id_cache[type_id, name]
@@ -529,7 +529,7 @@ class DBSiteStore(common.SiteStore):
         return web.SQLQuery.join(queries, delim)
         
     def versions(self, query):
-        what = 'thing.key, version.revision, version.machine_comment, transaction.*'
+        what = 'thing.key, version.revision, transaction.*'
         where = 'version.thing_id = thing.id AND version.transaction_id = transaction.id'
         
         for c in query.conditions:

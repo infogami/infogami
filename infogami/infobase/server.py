@@ -29,7 +29,7 @@ app = web.application(urls, globals())
 
 app.add_processor(web.loadhook(setup_remoteip))
 app.add_processor(web.loadhook(cache.loadhook))
-app.add_processor(web.loadhook(cache.unloadhook))
+app.add_processor(web.unloadhook(cache.unloadhook))
 
 def process_exception(e):
     if isinstance(e, common.InfobaseException):

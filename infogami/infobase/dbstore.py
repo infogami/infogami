@@ -75,7 +75,7 @@ class Schema:
 
         self.add_table_group("datum", None)
         
-        tables = [(e.table, e.datatype) for e in self.entries]
+        tables = sorted(set([(e.table, e.datatype) for e in self.entries]))
         web.template.Template.globals['dict'] = dict
         web.template.Template.globals['enumerate'] = enumerate
         return t(tables, sequences, self.multisite)

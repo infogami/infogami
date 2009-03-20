@@ -59,6 +59,7 @@ class AccountManager:
         self.register1(username, email, enc_password, data)
         
     def register1(self, username, email, enc_password, data, ip=None, timestamp=None):
+        ip = ip or web.ctx.ip
         key = '/user/' + username
         if self.site.get(key):
             raise common.BadData("User already exists: " + username)

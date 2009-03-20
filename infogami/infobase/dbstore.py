@@ -8,6 +8,10 @@ import datetime, time
 
 INDEXED_DATATYPES = ["str", "int", "float", "ref", "boolean", "datetime"]
 
+# earlier there used to be a machine_comment column in version table. 
+# Set this flag to True to continue to use that field in earlier installations.
+use_machine_comment = False
+
 class Schema:
     """Schema to map <type, datatype, key> to database table.
     
@@ -531,6 +535,9 @@ class DBSiteStore(common.SiteStore):
     def versions(self, query):
         what = 'thing.key, version.revision, transaction.*'
         where = 'version.thing_id = thing.id AND version.transaction_id = transaction.id'
+
+        if use_machine_comment:
+            what += ", version.machine_comment"
         
         for c in query.conditions:
             key, value = c.key, c.value

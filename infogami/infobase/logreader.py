@@ -296,6 +296,11 @@ class LogPlayback:
         d = web.storage(data)
         author = d.author and site.withKey(d.author)
         return site.write(d.query, comment=d.comment, machine_comment=d.machine_comment, ip=d.ip, author=author, timestamp=timestamp)
+        
+    def save(self, site, timestamp, data):
+        d = web.storage(data)
+        author = d.author and site.withKey(d.author)
+        return site.save(d.key, d.query, comment=d.comment, machine_comment=d.machine_comment, ip=d.ip, author=author, timestamp=timestamp)
                 
     def new_account(self, site, timestamp, data):
         d = web.storage(data)

@@ -290,8 +290,8 @@ class Site:
         
     def save_many(self, query, comment=None, action=None):
         _query = simplejson.dumps(query)
-        for q in query:
-            self._run_hooks('before_new_version', q)
+        #for q in query:
+        #    self._run_hooks('before_new_version', q)
         result = self._request('/save_many', 'POST', dict(query=_query, comment=comment, action=action))
         self._invalidate_cache([r['key'] for r in result])
         for q in query:

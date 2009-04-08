@@ -245,7 +245,7 @@ class DBSiteStore(common.SiteStore):
                     f(table, thing_id, pid, value, ordering)
         
         def action_delete(table, thing_id, key_id, value, ordering):
-            self.db.delete(table, where='thing_id=$thing_id AND key_id=$key_id AND value=$value AND ordering=$ordering', vars=locals())
+            self.db.delete(table, where='thing_id=$thing_id AND key_id=$key_id', vars=locals())
         
         def action_insert(table, thing_id, key_id, value, ordering):
             self.db.insert(table, seqname=False, thing_id=thing_id, key_id=key_id, value=value, ordering=ordering)

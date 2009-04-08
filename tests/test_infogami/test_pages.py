@@ -1,5 +1,8 @@
-from infogami.utils.delegate import app
 import web
+import simplejson
+import urllib
+
+from infogami.utils.delegate import app
 
 b = app.browser()
 
@@ -44,3 +47,26 @@ def test_notfound():
 
 def test_recent_changes():
     b.open('/recentchanges')
+
+def save(key, **data):
+    b.open(key + '?m=edit')
+    b.select_form(name="edit")
+    
+    if "type" in data:
+        data['type.key'] = [data.pop('type')]
+        
+    for k, v in data.items():
+        b[k] = v
+    b.submit()
+    
+def query(**kw):
+    url = '/query.json?' + urllib.urlencode(kw)
+    return [d['key'] for d in simplejson.loads(b.open(url).read())]
+
+def test_query():
+    save('/test_query_1', title="title 1", body="body 1", type="/type/page")
+    assert query(type='/type/page', title='title 1') == ['/test_query_1']
+    
+    save('/test_query_1', title="title 2", body="body 1", type="/type/page")
+    assert query(type='/type/page', title='title 1') == []
+    

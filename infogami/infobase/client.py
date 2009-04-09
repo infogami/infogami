@@ -328,8 +328,9 @@ class Site:
         return self._request('/account/login', 'POST', dict(username=username, password=password))
         
     def register(self, username, displayname, email, password):
-        return self._request('/account/register', 'POST', 
-            dict(username=username, displayname=displayname, email=email, password=password))
+        data = dict(username=username, displayname=displayname, email=email, password=password)
+        _run_hooks("before_register", data)
+        return self._request('/account/register', 'POST', data)
             
     def update_user(self, old_password, new_password, email):
         return self._request('/account/update_user', 'POST', 

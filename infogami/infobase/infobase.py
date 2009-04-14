@@ -192,7 +192,8 @@ class Site:
         a.register(username="useradmin", email="useradmin@example.com", password=admin_password, data=dict(displayname="User Administrator"))
         
     def add_trigger(self, type, func):
-        """Registers a trigger to call func when object of specified type is modified.
+        """Registers a trigger to call func when object of specified type is modified. 
+        If type=None is specified then the trigger is called for every modification.
         func is called with old object and new object as arguments. old object will be None if the object is newly created.
         """
         self._triggers.setdefault(type, []).append(func)
@@ -200,7 +201,7 @@ class Site:
     def _fire_triggers(self, result):
         """Executes all required triggers on write."""
         def fire_trigger(type, old, new):
-            triggers = self._triggers.get(type.key, [])
+            triggers = self._triggers.get(type.key, []) + self._triggers.get(None, [])
             for t in triggers:
                 try:
                     t(self, old, new)

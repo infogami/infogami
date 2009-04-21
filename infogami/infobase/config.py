@@ -18,3 +18,10 @@ query_timeout = "60000"
 #@@ Hack to execute some code when infobase is created. 
 #@@ This will be replaced with a better method soon.
 startup_hook = None
+
+bind_address = None
+port = 5964
+fastcgi = False
+
+def get(key, default=None):
+    return globals().get(key, default)

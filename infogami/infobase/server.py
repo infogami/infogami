@@ -117,7 +117,7 @@ def get_site(sitename):
     global _infobase
     if not _infobase:
         import dbstore
-        schema = dbstore.Schema()
+        schema = dbstore.default_schema or dbstore.Schema()
         store = dbstore.DBStore(schema)
         _infobase = infobase.Infobase(store, config.secret_key)
     return _infobase.get(sitename)

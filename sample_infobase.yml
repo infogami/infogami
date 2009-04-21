@@ -1,0 +1,28 @@
+## infobase configuration
+
+db_parameters:
+  host: localhost
+  name: infobase
+  user: joe
+  password: secret
+
+## secret_key used in encrypting user passwords
+# secret_key: my-secret-key
+
+## query timeout in milli sec.
+query_timeout: 60000
+
+cache_size: 1000
+
+## Additional python path. will be added to python sys.path
+# python_path:
+#  - /addition/path1
+
+## plugins
+# plugins:
+#    - plugin1
+
+bind_address:
+port: 8080
+fastcgi: false
+

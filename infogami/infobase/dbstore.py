@@ -231,7 +231,8 @@ class DBSiteStore(common.SiteStore):
             else:
                 datatype = find_datatype(value)
                 if datatype == 'ref':
-                    value = self.get_metadata(value).id
+                    value = self.get_metadata(value)
+                    value = value and value.id
                 elif datatype == 'str':
                     value = value[:2048] # truncate long strings
                 elif isinstance(value, bool):

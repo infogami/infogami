@@ -25,4 +25,3 @@ cache_size: 1000
 bind_address:
 port: 8080
 fastcgi: false
-

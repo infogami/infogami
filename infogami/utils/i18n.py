@@ -128,8 +128,12 @@ def i18n_loadhook():
         """Parses HTTP_LANG cookie."""
         cookies = web.cookies()
         return cookies.get('HTTP_LANG')
+
+    def parse_query_string():
+        i = web.input(lang=None, _method="GET")
+        return i.lang
         
-    web.ctx.lang = parse_lang_cookie() or parse_lang_header() or ''
+    web.ctx.lang = parse_query_string() or parse_lang_cookie() or parse_lang_header() or ''
 
 def find(path, pattern):
     """Find all files matching the given pattern in the file hierarchy rooted at path.

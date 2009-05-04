@@ -1,5 +1,7 @@
 """Infobase server to expose the API.
 """
+__version__ = "0.5dev"
+
 import web
 import infobase
 import _json as simplejson
@@ -13,6 +15,8 @@ def setup_remoteip():
     web.ctx.ip = web.ctx.env.get('HTTP_X_REMOTE_IP', web.ctx.ip)
 
 urls = (
+    "/", "server",
+    "/([^/]*)", "db",
     "/([^/]*)/get", "withkey",
     "/([^/]*)/get_many", "get_many",
     '/([^/]*)/save(/.*)', 'save',
@@ -23,6 +27,7 @@ urls = (
     "/([^/]*)/write", "write",
     "/([^/]*)/account/(.*)", "account",
     "/([^/]*)/permission", "permission",
+    "/_invalidate", "invalidate"
 )
 
 app = web.application(urls, globals())
@@ -121,6 +126,38 @@ def get_site(sitename):
         store = dbstore.DBStore(schema)
         _infobase = infobase.Infobase(store, config.secret_key)
     return _infobase.get(sitename)
+    
+class server:
+    @jsonify
+    def GET(self):
+        return {"infobase": "welcome", "version": __version__}
+        
+class db:
+    @jsonify
+    def GET(self, name):
+        site = get_site(name)
+        if site is None:
+            raise web.notfound("")
+        else:
+            return {"name": site.sitename}
+        
+    @jsonify
+    def PUT(self, name):
+        site = get_site(name)
+        if site is not None:
+            raise web.HTTPError("412 Precondition Failed", {}, "")
+        else:
+            site = _infobase.create(name)
+            return {"ok": True}
+            
+    @jsonify
+    def DELETE(self, name):
+        site = get_site(name)
+        if site is None:
+            raise web.notfound("")
+        else:
+            site.delete()
+            return {"ok": True}
 
 class write:
     @jsonify

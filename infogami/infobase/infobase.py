@@ -83,6 +83,9 @@ class Site:
         
     def get_account_manager(self):
         return self.account_manager
+        
+    def delete(self):
+        return self._infobase.delete(self.sitename)
     
     def get(self, key, revision=None):
         thing = self.store.get(key, revision)

@@ -101,3 +101,9 @@ class Cache:
     def __setitem__(self, key, value):
         web.ctx.local_cache[key] = value
         web.ctx.locally_added[key] = value
+
+    def clear(self):
+        web.ctx.locally_added.clear()
+        web.ctx.local_cache.clear()
+        web.ctx.new_objects.clear()
+        global_cache.clear()

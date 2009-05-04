@@ -12,6 +12,8 @@ INDEXED_DATATYPES = ["str", "int", "float", "ref", "boolean", "datetime"]
 # Set this flag to True to continue to use that field in earlier installations.
 use_machine_comment = False
 
+default_schema = None
+
 class Schema:
     """Schema to map <type, datatype, key> to database table.
     
@@ -83,6 +85,11 @@ class Schema:
         web.template.Template.globals['dict'] = dict
         web.template.Template.globals['enumerate'] = enumerate
         return t(tables, sequences, self.multisite)
+        
+    def list_tables(self):
+        self.add_table_group("datum", None)
+        tables = sorted(set([e.table for e in self.entries]))
+        return tables
         
     def __str__(self):
         lines = ["%s\t%s\t%s\t%s" % (e.table, e.type, e.datatype, e.name) for e in self.entries]
@@ -622,6 +629,7 @@ class DBSiteStore(common.SiteStore):
     def initialize(self):
         if not self.initialized():
             t = self.db.transaction()
+            
             id = self.new_thing(key='/type/type')
             last_modified = datetime.datetime.utcnow()
             
@@ -642,6 +650,21 @@ class DBSiteStore(common.SiteStore):
             
     def initialized(self):
         return self.get_metadata('/type/type') is not None
+        
+    def delete(self):
+        t = self.db.transaction()
+        self.db.delete('data', where='1=1')
+        self.db.delete('version', where='1=1')
+        self.db.delete('transaction', where='1=1')
+        self.db.delete('account', where='1=1')
+        
+        for table in self.schema.list_tables():
+            self.db.delete(table, where='1=1')
+            
+        self.db.delete('property', where='1=1')
+        self.db.delete('thing', where='1=1')
+        t.commit()
+        self.cache.clear()
 
 class DBStore(common.Store):
     """StoreFactory that works with single site. 
@@ -652,22 +675,38 @@ class DBStore(common.Store):
         self.sitestore = None
         self.db = web.database(**web.config.db_parameters)
         
+    def has_initialized(self):
+        try:
+            self.db.select('thing', limit=1)
+            return True
+        except:
+            return False
+        
     def create(self, sitename):
         if self.sitestore is None:
             self.sitestore = DBSiteStore(self.db, self.schema)
+            if not self.has_initialized():
+                q = str(self.schema.sql())
+                self.db.query(web.SQLQuery([q]))
         self.sitestore.initialize()
         return self.sitestore
         
     def get(self, sitename):
         if self.sitestore is None:
             sitestore = DBSiteStore(self.db, self.schema)
-            if not sitestore.initialized():
+            if not self.has_initialized():
                 return None
             self.sitestore = sitestore
+            
+        if not self.sitestore.initialized():
+            return None            
         return self.sitestore
 
     def delete(self, sitename):
-        pass
+        if not self.has_initialized():
+            return
+        d = self.get(sitename)
+        d and d.delete()
             
 class MultiDBStore(DBStore):
     """DBStore that works with multiple sites.
@@ -703,6 +742,9 @@ class MultiDBStore(DBStore):
     def get_site_id(self, sitename):
         d = self.db.query('SELECT * FROM site WHERE name=$sitename', vars=locals())
         return d and d[0].id or None
+        
+    def delete(self, sitename):
+        pass
             
 class MultiDBSiteStore(DBSiteStore):
     def __init__(self, db, schema, sitename, site_id):
@@ -732,6 +774,9 @@ class MultiDBSiteStore(DBSiteStore):
         d = self.db.select('account', where='site_id=$self.site_id, $email=email', vars=locals())
         thing_id = d and d[0].thing_id or None
         return thing_id and self.get_metadata_from_id(thing_id).key
+    
+    def delete(self):
+        pass
                     
 if __name__ == "__main__":
     import doctest

@@ -16,6 +16,7 @@ def setup_remoteip():
 
 urls = (
     "/", "server",
+    "/_echo", "echo",
     "/([^/]*)", "db",
     "/([^/]*)/get", "withkey",
     "/([^/]*)/get_many", "get_many",
@@ -93,7 +94,7 @@ def input(*required, **defaults):
         
     for k in required:
         if k not in d:
-            raise MissingArgument(k)
+            raise common.BadData("Missing argument: " + repr(k))
             
     result = web.storage(defaults)
     result.update(d)
@@ -158,6 +159,12 @@ class db:
         else:
             site.delete()
             return {"ok": True}
+
+class echo:
+    @jsonify
+    def POST(self):
+        print >> web.debug, web.data()
+        return {'ok': True}
 
 class write:
     @jsonify

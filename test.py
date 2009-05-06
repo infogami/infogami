@@ -1,6 +1,61 @@
+import subcommand
+import web.test
+import os
+import sys
 
-from tests import *
+@subcommand.subcommand()
+def doctests(options=None):
+    """Run all doctests."""
+    print >> sys.stderr, "\nRunning doctests\n"
+
+    modules = [
+        "infogami.infobase.common",
+        "infogami.infobase.dbstore",
+        "infogami.infobase.lru",
+        "infogami.infobase.readquery",
+        "infogami.infobase.writequery",
+        "infogami.utils.delegate", # required for monkey-patching
+        "infogami.utils.i18n",
+        "infogami.utils.storage",
+    ]
+    suite = web.test.doctest_suite(modules)
+    web.test.runTests(suite)
+
+@subcommand.subcommand()
+def infobase(options=None, *args):
+    """Test Infobase.
+    
+    Options:
+        -d [--database] database        : database name (default: test_infobase)
+        -u [--url] url                  : url of infobase to test; tested locally if not provided.
+    """
+    print >> sys.stderr, "\nRunning infobase tests\n"
+
+    options = options or web.storage(database='test_infobase')
+    db = options.database or 'test_infobase'
+    web.config.test_url = options.__dict__.get('url')
+    web.config.debug = False
+
+    user=os.environ['USER']
+    web.config.db_parameters = dict(dbn='postgres', db=db, user=user, pw='')
+
+    from test import test_infobase
+
+    suite = web.test.module_suite(test_infobase, args or None)
+    web.test.runTests(suite)
+
+@subcommand.subcommand()
+def alltests(options=None):
+    """Runn all tests."""
+    doctests()
+    infobase()
+
+@subcommand.subcommand()
+def schema(options=None):
+    """Print db schema."""
+    from infogami.infobase import dbstore
+    print dbstore.Schema().sql()
 
 if __name__ == "__main__":
-    import unittest
-    unittest.main()
+    subcommand.main()
+

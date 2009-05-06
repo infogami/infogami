@@ -280,9 +280,17 @@ class DBSiteStore(common.SiteStore):
     def save_many(self, items, timestamp, comment, machine_comment, ip, author, action=None):
         action = action or "bulk_update"
         t = self.db.transaction()
-        transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
-        result = [self.save(d['key'], d, transaction_id=transaction_id, timestamp=timestamp) for d in items]
-        t.commit()
+        try:
+            transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
+            result = [self.save(d['key'], d, transaction_id=transaction_id, timestamp=timestamp) for d in items]
+        except:
+            t.rollback()
+            # clear local cache when something fails to avoid local cache changes due to
+            # any earliers saves (in this save_many query) getting into global cache.
+            self.cache.clear(local=True)
+            raise
+        else:
+            t.commit()
         return result
 
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):

@@ -102,8 +102,13 @@ class Cache:
         web.ctx.local_cache[key] = value
         web.ctx.locally_added[key] = value
 
-    def clear(self):
+    def clear(self, local=False):
+        """Clears the cache. 
+        When local=True, only the local cache is cleared.
+        """
         web.ctx.locally_added.clear()
         web.ctx.local_cache.clear()
         web.ctx.new_objects.clear()
-        global_cache.clear()
+        if not local:
+            global_cache.clear()
+

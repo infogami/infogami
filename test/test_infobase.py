@@ -39,6 +39,9 @@ def echo(msg):
 
 def save(query):
     return request('/test/save' + query['key'], method='POST', data=query)
+
+def save_many(query, comment=''):
+    return request('/test/save_many', method='POST', data=urllib.urlencode({'query': simplejson.dumps(query), 'comment': comment}))
         
 class DatabaseTest(unittest.TestCase):
     pass
@@ -56,6 +59,7 @@ class InfobaseTestCase(unittest.TestCase):
         global b
         b = browser()
         try:
+            # create new database with name "test"
             self.assertEquals2(request("/test", method="PUT"), {"ok": True})
         except Exception:
             self.tearDown()
@@ -66,6 +70,7 @@ class InfobaseTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.clear_threadlocal()
+        # delete test database
         request('/test', method="DELETE")
 
     def assertEquals2(self, a, b):
@@ -170,6 +175,103 @@ class DocumentTest(InfobaseTestCase):
 
         d = get('/zero')
         self.assertEquals(b.status, 404)
+
+# create author, book and collection types to test validations
+types = [{
+    "key": "/type/author",
+    "type": "/type/type",
+    "kind": "regular",
+    "properties": [{
+        "name": "name",
+        "expected_type": {"key": "/type/string"},
+        "unique": True
+    }, {
+        "name": "bio",
+        "expected_type": {"key": "/type/text"},
+        "unique": True
+    }]
+}, {
+    "key": "/type/book",
+    "type": "/type/type",
+    "kind": "regular",
+    "properties": [{
+        "name": "title",
+        "expected_type": {"key": "/type/string"},
+        "unique": True
+    }, {
+        "name": "authors",
+        "expected_type": {"key": "/type/author"},
+        "unique": False
+    }, {
+        "name": "publisher",
+        "expected_type": {"key": "/type/string"},
+        "unique": True
+    }, {
+        "name": "description",
+        "expected_type": {"key": "/type/text"},
+        "unique": True
+    }]
+}, {
+    "key": "/type/collection",
+    "type": "/type/type",
+    "kind": "regular",
+    "properties": [{
+        "name": "name",
+        "expected_type": {"key": "/type/string"},
+        "unique": True
+    }, {
+        "name": "books",
+        "expected_type": {"key": "/type/book"},
+        "unique": False
+    }]
+}]
+
+class MoreDocumentTest(DocumentTest):
+    def setUp(self):
+        DocumentTest.setUp(self)
+        save_many(types)
+
+    def test_save_validation(self):
+        # ok: name is string
+        d = save({'key': '/author/x', 'type': '/type/author', 'name': 'x'})
+        self.assertEquals(b.status, 200)
+        self.assertEquals(d, {"key": "/author/x", "revision": 1})
+        
+        # error: name is int instead of string
+        d = save({'key': '/author/x', 'type': '/type/author', 'name': 42})
+        self.assertEquals(b.status, 400)
+
+        # error: name is list instead of single value
+        d = save({'key': '/author/x', 'type': '/type/author', 'name': ['x', 'y']})
+        self.assertEquals(b.status, 400)
+
+    def test_validation_when_type_changes(self):
+        # create an author and a book
+        save({'key': '/author/x', 'type': '/type/author', 'name': 'x'})
+        save({'key': '/book/x', 'type': '/type/book', 'title': 'x', 'authors': [{'key': '/author/x'}], 'publisher': 'publisher_x'})
+
+        # change schema of "/type/book" and make expected_type of "publisher" as "/type/publisher"
+        save({
+            "key": "/type/publisher",
+            "type": "/type/type",
+            "kind": "regular",
+            "properties": [{
+                "name": "name",
+                "expected_type": "/type/string",
+                "unique": True
+             }]
+        })
+
+        d = get('/type/book')
+        assert d['properties'][2]['name'] == "publisher"
+        d['properties'][2]['expected_type'] = {"key": "/type/publisher"}
+        save(d)
+
+        # now changing just the title of the book should not fail.
+        d = get('/book/x')
+        d['title'] = 'xx'
+        save(d)
+        self.assertEquals(b.status, 200)
 
 if __name__ == "__main__":
     unittest.main()

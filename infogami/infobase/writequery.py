@@ -26,11 +26,16 @@ class SaveProcessor:
             raise common.BadData("missing type")
         type = self.process_value(type, self.get_property(None, 'type'))
         type = self.store.get(type)
-        data = self.process_data(data, type)
         
         thing = self.store.get(key)
         prev_data = thing and thing._get_data()
-        
+
+        # when type is changed, consider as all object is modified and don't compare with prev data.
+        if prev_data and prev_data.get('type') != type.key:
+            prev_data = None
+
+        data = self.process_data(data, type, prev_data)
+
         for k in common.READ_ONLY_PROPERTIES:
             data.pop(k, None)
             prev_data and prev_data.pop(k, None)
@@ -56,11 +61,13 @@ class SaveProcessor:
             if not rx.match(key):
                 raise common.BadData("Bad Property: %s" % repr(key))
 
-    def process_data(self, d, type):
+    def process_data(self, d, type, old_data=None):
         for k, v in d.items():
             if v is None or v == [] or web.safeunicode(v).strip() == '':
                 del d[k]
             else:
+                if old_data and old_data.get(k) == v:
+                    continue
                 p = self.get_property(type, k)
                 if p:
                     d[k] = self.process_value(v, p)

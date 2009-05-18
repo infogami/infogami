@@ -22,6 +22,13 @@ import infogami
 from infogami import config
 from infogami.infobase import cache, lru, config as infobase_config
 
+def storify(d):
+    if isinstance(d, dict):
+        return web.storage((k, storify(v)) for k, v in d.items())
+    elif isinstance(d, list):
+        return [storify(x) for x in d]
+    else:
+        return d
 
 def setup_infogami():
     # setup python path and load plugins
@@ -31,15 +38,17 @@ def setup_infogami():
         cache.global_cache = lru.LRU(config.cache_size)
 
     d = config.db_parameters
-    web.config.db_parameters = dict(
-        dbn=d.get('engine', 'postgres'),
-        host=d.get('host', 'localhost'),
-        db=d['database'],
-        user=d['username'],
-        pw=d.get('password') or ''
-    )
-    config.db_parameters = web.config.db_parameters
-
+    if d:
+        web.config.db_parameters = dict(
+            dbn=d.get('engine', 'postgres'),
+            host=d.get('host', 'localhost'),
+            db=d['database'],
+            user=d['username'],
+            pw=d.get('password') or ''
+        )
+        config.db_parameters = web.config.db_parameters
+    
+    
     if config.get('secret_key'):
         infobase_config.secret_key = config.secret_key
 
@@ -54,7 +63,7 @@ def main():
     sys.argv = sys.argv[1:]
     runtime_config = yaml.load(open(config_file))
     for k, v in runtime_config.items():
-        setattr(infogami.config, k, v)
+        setattr(infogami.config, k, storify(v))
 
     setup_infogami()
     infogami.run()

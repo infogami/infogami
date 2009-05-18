@@ -235,6 +235,14 @@ class Site:
             return None
 
     def get_many(self, keys):
+        # simple hack to avoid crossing URL length limit.
+        if len(keys) > 100:
+            things = []
+            while keys:
+                things += self.get_many(keys[:100])
+                keys = keys[100:]
+            return things
+
         data = dict(keys=simplejson.dumps(keys))
         result = self._request('/get_many', data=data)
         things = []

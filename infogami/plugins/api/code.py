@@ -100,7 +100,7 @@ class infobase_request:
             elif path == "/write":
                 result = simplejson.loads(out)
                 for k in result.get('created', []) + result.get('updated', []):
-                    web.ctx.site._run_hooks("on_new_version", request("/get", dict(key=k)))
+                    web.ctx.site._run_hooks("on_new_version", request("/get", data=dict(key=k)))
         except Exception, e:
             import traceback
             traceback.print_exc()

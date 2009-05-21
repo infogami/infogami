@@ -8,10 +8,6 @@ import datetime, time
 
 INDEXED_DATATYPES = ["str", "int", "float", "ref", "boolean", "datetime"]
 
-# earlier there used to be a machine_comment column in version table. 
-# Set this flag to True to continue to use that field in earlier installations.
-use_machine_comment = False
-
 default_schema = None
 
 class Schema:
@@ -552,7 +548,7 @@ class DBSiteStore(common.SiteStore):
         what = 'thing.key, version.revision, transaction.*'
         where = 'version.thing_id = thing.id AND version.transaction_id = transaction.id'
 
-        if use_machine_comment:
+        if config.get('use_machine_comment'):
             what += ", version.machine_comment"
         
         for c in query.conditions:

@@ -23,5 +23,9 @@ bind_address = None
 port = 5964
 fastcgi = False
 
+# earlier there used to be a machine_comment column in version table. 
+# Set this flag to True to continue to use that field in earlier installations.
+use_machine_comment = False
+
 def get(key, default=None):
     return globals().get(key, default)

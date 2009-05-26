@@ -2,6 +2,7 @@
 import web
 import os
 import urllib
+import re
 
 import infogami
 from infogami.core.diff import simple_diff, better_diff
@@ -385,4 +386,50 @@ def get_types(regular=True):
     if regular:
         q['kind'] = 'regular'
     return sorted(web.ctx.site.things(q))
+
+def parse_db_url(dburl):
+    """Parses db url and returns db parameters dictionary.
+
+    >>> parse_db_url("sqlite:///test.db")
+    {'dbn': 'sqlite', 'db': 'test.db'}
+    >>> parse_db_url("postgres://joe:secret@dbhost:1234/test")
+    {'pw': 'secret', 'dbn': 'postgres', 'db': 'test', 'host': 'dbhost', 'user': 'joe', 'port': '1234'}
+    >>> parse_db_url("postgres://joe@/test")
+    {'pw': '', 'dbn': 'postgres', 'db': 'test', 'user': 'joe'}
+
+    Note: this should be part of web.py
+    """
+    rx = web.re_compile("""
+        (?P<dbn>\w+)://
+        (?:
+            (?P<user>\w+)
+            (?::(?P<pw>\w+))?
+            @
+        )?
+        (?:
+            (?P<host>\w+)
+            (?::(?P<port>\w+))?
+        )?
+        /(?P<db>.*)
+    """, re.X)
+    m = rx.match(dburl)
+    if m:
+        d = m.groupdict()
+
+        if d['host'] is None:
+            del d['host']
+
+        if d['port'] is None:
+            del d['port']
+
+        if d['pw'] is None:
+            d['pw'] = ''
+
+        if d['user'] is None:
+            del d['user']
+            del d['pw']
+
+        return d
+    else:
+        raise ValueError("Invalid database url: %s" % repr(dburl))
     

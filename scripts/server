@@ -21,6 +21,8 @@ import web
 import infogami
 from infogami import config
 from infogami.infobase import cache, lru, config as infobase_config
+import infogami.utils.delegate
+import infogami.utils.view
 
 def storify(d):
     if isinstance(d, dict):
@@ -37,17 +39,21 @@ def setup_infogami():
     if config.get('cache_size'):
         cache.global_cache = lru.LRU(config.cache_size)
 
-    d = config.db_parameters
-    if d:
-        web.config.db_parameters = dict(
-            dbn=d.get('engine', 'postgres'),
-            db=d['database'],
-            user=d['username'],
-            pw=d.get('password') or ''
-        )
-        if d.get('host'):
-            web.config.db_parameters['host'] = d['host']
+    if config.get('database_url'):
+        web.config.db_parameters = infogami.utils.view.parse_db_url(config.database_url)
         config.db_parameters = web.config.db_parameters
+    elif config.get('db_parameters'):
+       d = config.db_parameters
+       if d:
+           web.config.db_parameters = dict(
+               dbn=d.get('engine', 'postgres'),
+               db=d['database'],
+               user=d['username'],
+               pw=d.get('password') or ''
+           )
+           if d.get('host'):
+               web.config.db_parameters['host'] = d['host']
+           config.db_parameters = web.config.db_parameters
 
     if config.get('smtp_server'):
         web.config.smtp_server = config.smtp_server

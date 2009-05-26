@@ -1,6 +1,6 @@
 {
     'key': '/',
-    'type': '/type/page',
+    'type': {'key': '/type/page'},
     'title': 'Welcome', 
     'body': 'Infogami is a free, easy-to-use, structured wiki.\n'
             'Visit [Infogami Developer Site](http://infogami.org/dev/) for more details.\n\n'

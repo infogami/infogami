@@ -80,6 +80,9 @@ def install():
     """Setup everything."""
     from infogami.utils import delegate
     delegate.fakeload()
+    if not web.ctx.site.exists():
+        web.ctx.site.create()
+
     delegate.admin_login()
     for a in _install_hooks:
         print >> web.debug, a.__name__

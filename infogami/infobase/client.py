@@ -223,7 +223,24 @@ class Site:
 
             backreferences[p.name] = LazyObject(lambda q=q: [self.get(key, lazy=True) for key in self.things(q)])
         return backreferences
-            
+
+    def exists(self):
+        """Returns true if this site exists.
+        """
+        try:
+            self._request(path="", method="GET")
+            return True
+        except ClientException, e:
+            if e.status.startswith("404"):
+                return False
+            else:
+                raise
+
+    def create(self):
+        """Creates this site if not exists."""
+        if not self.exists():
+            self._request(path="", method="PUT")
+    
     def get(self, key, revision=None, lazy=False):
         assert key.startswith('/')
         try:

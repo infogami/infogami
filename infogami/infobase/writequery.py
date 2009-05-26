@@ -14,7 +14,7 @@ class SaveProcessor:
             data['key'] = key
 
         assert data['key'] == key
-    
+
         data = common.parse_query(data)
         self.validate_properties(data)
         

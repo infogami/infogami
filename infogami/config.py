@@ -35,3 +35,5 @@ login_cookie_name = "infogami_session"
 infobase_parameters = dict(type='local')
 bugfixer = None
 
+admin_password = "admin123"
+

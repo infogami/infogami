@@ -138,7 +138,7 @@ class db:
     def GET(self, name):
         site = get_site(name)
         if site is None:
-            raise web.notfound("")
+            raise common.NotFound(name)
         else:
             return {"name": site.sitename}
         
@@ -155,7 +155,7 @@ class db:
     def DELETE(self, name):
         site = get_site(name)
         if site is None:
-            raise web.notfound("")
+            raise common.NotFound(name)
         else:
             site.delete()
             return {"ok": True}
@@ -343,6 +343,6 @@ def request(path, method, data):
     finally:
         # hack to make cache work for local infobase connections
         cache.unloadhook()
-        
+    
 def run():
     app.run()

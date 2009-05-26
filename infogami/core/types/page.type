@@ -5,14 +5,13 @@
     'kind': 'regular',
     'properties': [{
         'name': 'title',
-        'type': '/type/property',
-        'expected_type': '/type/string',
+        'type': {'key': '/type/property'},
+        'expected_type': {'key': '/type/string'},
         'unique': True
     }, {
         'name': 'body',
-        'type': '/type/property',
-        'expected_type': '/type/text',
+        'type': {'key': '/type/property'},
+        'expected_type': {'key': '/type/text'},
         'unique': True
     }]
 }
-    

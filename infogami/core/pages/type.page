@@ -1,6 +1,6 @@
 {
     'key': '/type', 
-    'type': '/type/page',
+    'type': {'key': '/type/page'},
     'title': 'Types', 
     'body': '{{PageList("/type")}}'
 }

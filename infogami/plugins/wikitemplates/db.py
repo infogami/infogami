@@ -17,4 +17,7 @@ def get_all_macros(site):
     return site.get_many([key for key in site.things(q)])
     
 def get_all_sites():
-    return [web.ctx.site]
+    if web.ctx.site.exists():
+        return [web.ctx.site]
+    else:
+        return []

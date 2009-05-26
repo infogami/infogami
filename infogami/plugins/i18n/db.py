@@ -10,4 +10,7 @@ def get_all_strings(site):
         return site.get_many(site.things(q))
 
 def get_all_sites():
-    return [web.ctx.site]
+    if web.ctx.site.exists():
+        return [web.ctx.site]
+    else:
+        return []

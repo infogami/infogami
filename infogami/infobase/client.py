@@ -265,10 +265,13 @@ class Site:
         things = []
         
         import copy
-        for key, data in result.items():
-            data = web.storage(common.parse_query(data))
-            self._cache[key, None] = data
-            things.append(Thing(self, key, self._process_dict(copy.deepcopy(data))))
+        for key in keys:
+            #@@ what if key is not there?
+            if key in result:
+                data = result[key]
+                data = web.storage(common.parse_query(data))
+                self._cache[key, None] = data
+                things.append(Thing(self, key, self._process_dict(copy.deepcopy(data))))
         return things
 
     def new_key(self, type):

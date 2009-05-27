@@ -221,7 +221,7 @@ class Site:
             if p.expected_type:
                 q['type'] = p.expected_type.key
 
-            backreferences[p.name] = LazyObject(lambda q=q: [self.get(key, lazy=True) for key in self.things(q)])
+            backreferences[p.name] = LazyObject(lambda q=q: self.get_many(self.things(q)))
         return backreferences
 
     def exists(self):
@@ -264,7 +264,7 @@ class Site:
         result = self._request('/get_many', data=data)
         things = []
         
-        import copy        
+        import copy
         for key, data in result.items():
             data = web.storage(common.parse_query(data))
             self._cache[key, None] = data

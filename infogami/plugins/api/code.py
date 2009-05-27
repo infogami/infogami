@@ -61,7 +61,7 @@ class infobase_request:
         method = web.ctx.method
         data = web.input()
         
-        conn = client.connect(**infogami.config.infobase_parameters)
+        conn = self.create_connection()
         
         try:
             out = conn.request(sitename, path, method, data)
@@ -70,6 +70,12 @@ class infobase_request:
             return '{"status": "fail", "message": "%s"}' % str(e)
     
     GET = delegate
+    
+    def create_connection(self):
+        conn = client.connect(**infogami.config.infobase_parameters)
+        auth_token = web.cookies().get(infogami.config.login_cookie_name)
+        conn.set_auth_token(auth_token)
+        return conn
     
     def POST(self):
         """RESTful write API."""
@@ -86,7 +92,8 @@ class infobase_request:
         action = h.get('action')
         data = dict(query=query, comment=comment, action=action)
         
-        conn = client.connect(**infogami.config.infobase_parameters)
+        conn = self.create_connection()
+        
         try:
             out = conn.request(sitename, path, method, data)
         except client.ClientException, e:

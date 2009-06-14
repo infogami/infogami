@@ -109,6 +109,11 @@ class DBSiteStore(common.SiteStore):
         if self.cache and key in self.cache:
             thing = self.cache[key]
             return thing and web.storage(id=thing.id, key=thing.key, last_modified=thing.last_modified, created=thing.created, type=thing.type.id, latest_revision=thing.latest_revision)
+
+        # postgres doesn't seem to like Reference objects even though Referece extends from unicode.
+        if isinstance(key, common.Reference):
+            key = unicode(key)
+
         d = self.db.query('SELECT * FROM thing WHERE key=$key', vars=locals())
         return d and d[0] or None
         

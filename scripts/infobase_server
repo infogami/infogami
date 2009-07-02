@@ -35,11 +35,13 @@ def setup_infobase():
     d = config.db_parameters
     web.config.db_parameters = dict(
         dbn=d.get('engine', 'postgres'),
-        host=d.get('host', 'localhost'),
         db=d['database'],
         user=d['username'],
         pw=d.get('password') or ''
     )
+
+	if 'host' in d:
+		web.config.db_parameters['host'] = d['host']
 
     for p in plugins:
         m = getattr(p, 'init_plugin', None)

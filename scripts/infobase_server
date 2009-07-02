@@ -40,8 +40,8 @@ def setup_infobase():
         pw=d.get('password') or ''
     )
 
-	if 'host' in d:
-		web.config.db_parameters['host'] = d['host']
+    if 'host' in d:
+        web.config.db_parameters['host'] = d['host']
 
     for p in plugins:
         m = getattr(p, 'init_plugin', None)

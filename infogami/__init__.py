@@ -108,9 +108,56 @@ def run_action(name, args=[]):
         print >> sys.stderr, 'unknown command', name
         help()
 
-def run():
+def run(args=None):
+    if args is None:
+        args = sys.argv[1:]
+        
     _setup()
-    if len(sys.argv) == 1:
+    if len(args) == 0:
         run_action("startserver")
     else:
-        run_action(sys.argv[1], sys.argv[2:])
+        run_action(args[0], args[1:])
+
+def main(config_file, *args):
+    """Start Infogami using config file."""
+    import yaml
+    from infobase import config as infobase_config
+    from infobase import server as infobase_server
+    from infobase import lru
+    
+    def storify(d):
+        if isinstance(d, dict):
+            return web.storage((k, storify(v)) for k, v in d.items())
+        elif isinstance(d, list):
+            return [storify(x) for x in d]
+        else:
+            return d
+    
+    # load config
+    runtime_config = yaml.load(open(config_file))
+    
+    # update config
+    for k, v in runtime_config.items():
+        setattr(config, k, storify(v))
+        
+    for k, v in runtime_config.get('infobase', {}).items():
+        setattr(infobase_config, k, storify(v))
+
+    # setup python path
+    sys.path += config.get('python_path', [])
+
+    config.db_parameters = infobase_server.parse_db_parameters(config.db_parameters)
+    web.config.db_parameters = config.db_parameters
+    
+    # setup infobase
+    if config.get('cache_size'):
+        cache.global_cache = lru.LRU(config.cache_size)
+
+    if config.get('secret_key'):
+        infobase_config.secret_key = config.secret_key
+
+    # setup smtp_server
+    if config.get('smtp_server'):
+        web.config.smtp_server = config.smtp_server
+
+    run(args)

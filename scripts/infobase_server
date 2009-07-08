@@ -12,56 +12,15 @@ USAGE:
     $ python ./script/infobase_server infobase.yaml fastcgi 7070
 """
 import sys
-import os, os.path
-sys.path.insert(0, os.path.dirname(os.path.dirname(__file__)))
+import _init_path
+from infogami.infobase import server
 
-import yaml
-import web
-
-import infogami
-from infogami.infobase import cache, config, lru, server
-
-def setup_infobase():
-    plugins = []
-    # setup python path and load plugins
-    sys.path += config.get('python_path', [])
-    for p in config.get('plugins') or []:
-        plugins.append(__import__(p, None, None, ["x"]))
-        print >> web.debug, "loaded plugin", p
-
-    if config.get('cache_size'):
-        cache.global_cache = lru.LRU(config.cache_size)
-
-    d = config.db_parameters
-    web.config.db_parameters = dict(
-        dbn=d.get('engine', 'postgres'),
-        db=d['database'],
-        user=d['username'],
-        pw=d.get('password') or ''
-    )
-
-    if 'host' in d:
-        web.config.db_parameters['host'] = d['host']
-
-    for p in plugins:
-        m = getattr(p, 'init_plugin', None)
-        m and m()
-
-def main():
-    if len(sys.argv) < 2 or sys.argv[1] in ['-h', '--help']:
+def main(args):
+    if len(args) < 1 or args[0] in ['-h', '--help']:
         print >> sys.stderr, "USAGE: %s configfile [port]" % (sys.argv[0])
         sys.exit(1)
-
-    config_file = sys.argv[1]
-    sys.argv = sys.argv[1:]
-    runtime_config = yaml.load(open(config_file)) or {}
-    for k, v in runtime_config.items():
-        setattr(config, k, v)
-
-    setup_infobase()
-
-    from infogami.infobase import server
-    server.run()
+        
+    server.start(*args)
 
 if __name__ == "__main__":
-    main()
+    main(sys.argv[1:])

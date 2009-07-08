@@ -2,6 +2,7 @@
 """
 __version__ = "0.5dev"
 
+import sys
 import web
 import infobase
 import _json as simplejson
@@ -346,3 +347,46 @@ def request(path, method, data):
     
 def run():
     app.run()
+    
+def parse_db_parameters(d):
+    # support both <engine, database, username, password> and <dbn, db, user, pw>.
+    if 'database' in d:
+        dbn, db, user, pw = d.get('engine', 'postgres'), d['database'], d['username'], d.get('password') or ''
+    else:
+        dbn, db, user, pw = d.get('dbn', 'postgres'), d['db'], d['user'], d.get('pw') or ''
+     
+    result = dict(dbn=dbn, db=db, user=user, pw=pw)
+    if 'host' in d:
+        result['host'] = d['host']
+    return result
+    
+def start(config_file, *args):
+    # load config
+    import yaml
+    runtime_config = yaml.load(open(config_file)) or {}
+
+    # update config
+    for k, v in runtime_config.items():
+        setattr(config, k, v)
+        
+    # import plugins
+    plugins = []
+    for p in config.get('plugins') or []:
+        plugins.append(__import__(p, None, None, ["x"]))
+        print >> web.debug, "loaded plugin", p
+        
+    web.config.db_parameters = parse_db_parameters(config.db_parameters)    
+
+    # initialize cache
+    if config.get('cache_size'):
+        import lru
+        cache.global_cache = lru.LRU(config.cache_size)
+    
+    # init plugins
+    for p in plugins:
+        m = getattr(p, 'init_plugin', None)
+        m and m()
+        
+    # start running the server
+    sys.argv = [sys.argv[0]] + list(args)
+    run()

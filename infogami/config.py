@@ -15,7 +15,7 @@ db_kind = 'SQL'
 
 db_parameters = None
 infobase_host = None
-site = None
+site = "infogami.org"
 
 plugins = ['links', 'wikitemplates']
 

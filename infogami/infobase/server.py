@@ -11,6 +11,7 @@ from infobase import config
 
 import common
 import cache
+import logreader
 
 def setup_remoteip():
     web.ctx.ip = web.ctx.env.get('HTTP_X_REMOTE_IP', web.ctx.ip)
@@ -29,6 +30,7 @@ urls = (
     "/([^/]*)/write", "write",
     "/([^/]*)/account/(.*)", "account",
     "/([^/]*)/permission", "permission",
+    "/([^/]*)/log/(\d\d\d\d-\d\d-\d\d:\d+)", 'readlog',
     "/_invalidate", "invalidate"
 )
 
@@ -320,7 +322,58 @@ class account:
         i = input('old_password', new_password=None, email=None)
         a = site.get_account_manager()
         return a.update_user(i.old_password, i.new_password, i.email)
+
+class readlog:
+    def get_log(self, offset, i):
+        log = logreader.LogFile(config.writelog)
+        log.seek(offset)
         
+        # when the offset is not known, skip_till parameter can be used to query.
+        if i.timestamp:
+            try:
+                timestamp = common.parse_datetime(i.timestamp)
+                logreader.LogReader(log).skip_till(timestamp)
+            except Exception, e:
+                raise web.internalerror(str(e))
+        
+        return log
+        
+    def assert_valid_json(self, line):
+        try:
+            simplejson.loads(line)
+        except ValueError:
+            raise web.BadRequest()
+        
+    def GET(self, sitename, offset):
+        i = web.input(timestamp=None, limit=1000)
+        
+        if not config.writelog:
+            raise web.notfound("")
+        else:
+            log = self.get_log(offset, i)
+            limit = min(1000, common.safeint(i.limit, 1000))
+            
+            try:
+                # read the first line
+                line = log.readline(do_update=False)
+                # first line can be incomplete if the offset is wrong. Assert valid.
+                self.assert_valid_json(line)
+                
+                web.header('Content-Type', 'application/json')
+                yield '{"data": [\n'
+                yield line.strip()
+
+                for i in range(1, limit):
+                    line = log.readline(do_update=False)
+                    if line:
+                        yield ",\n" + line.strip()
+                    else:
+                        break
+                yield '], \n'
+                yield '"offset": ' + simplejson.dumps(log.tell()) + "\n}\n"
+            except Exception, e:
+                print 'ERROR:', str(e)
+                
 def request(path, method, data):
     """Fakes the web request.
     Useful when infobase is not run as a separate process.
@@ -349,6 +402,9 @@ def run():
     app.run()
     
 def parse_db_parameters(d):
+    if d is None:
+        return None
+
     # support both <engine, database, username, password> and <dbn, db, user, pw>.
     if 'database' in d:
         dbn, db, user, pw = d.get('engine', 'postgres'), d['database'], d['username'], d.get('password') or ''

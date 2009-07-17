@@ -460,7 +460,13 @@ def register_thing_class(type, klass):
     _thing_class_registry[type] = klass
 
 def create_thing(site, key, data, revision=None):
-    type = data and data.get('type') and data.get('type').key
+    type = None
+    if data is not None and data.get('type'):
+        type = data.get('type').key
+        # just to be safe
+        if not isinstance(type, basestring):
+            type = None
+
     return _thing_class_registry.get(type, Thing)(site, key, data, revision)
     
 class Thing:

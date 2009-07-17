@@ -34,7 +34,7 @@ urls = (
     "/_invalidate", "invalidate"
 )
 
-app = web.application(urls, globals())
+app = web.application(urls, globals(), autoreload=False)
 
 app.add_processor(web.loadhook(setup_remoteip))
 app.add_processor(web.loadhook(cache.loadhook))
@@ -377,27 +377,36 @@ class readlog:
 def request(path, method, data):
     """Fakes the web request.
     Useful when infobase is not run as a separate process.
-    """    
+    """
     web.ctx.infobase_localmode = True
     web.ctx.infobase_input = data or {}
     web.ctx.infobase_method = method
     
+    def get_class(classname):
+        if '.' in classname:
+            modname, classname = classname.rsplit('.', 1)
+            mod = __import__(modname, None, None, ['x'])
+            fvars = mod.__dict__
+        else:
+            fvars = globals()
+        return fvars[classname]
+
     try:
         # hack to make cache work for local infobase connections
         cache.loadhook()
-            
-        for pattern, classname in web.group(urls, 2):
+
+        for pattern, classname in web.group(app.mapping, 2):
             m = web.re_compile('^' + pattern + '$').match(path)
             if m:
                 args = m.groups()
-                cls = globals()[classname]
+                cls = get_class(classname)
                 tocall = getattr(cls(), method)
                 return tocall(*args)
         raise web.notfound()
     finally:
         # hack to make cache work for local infobase connections
         cache.unloadhook()
-    
+            
 def run():
     app.run()
     

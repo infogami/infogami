@@ -183,9 +183,9 @@ class Site:
             d = {}
             for k, v in value.items():
                 d[k] = self._process(v)
-            return Thing(self, None, d)
+            return create_thing(self, None, d)
         elif isinstance(value, common.Reference):
-            return Thing(self, unicode(value), None)
+            return create_thing(self, unicode(value), None)
         else:
             return value
             
@@ -220,7 +220,6 @@ class Site:
             }
             if p.expected_type:
                 q['type'] = p.expected_type.key
-
             backreferences[p.name] = LazyObject(lambda q=q: self.get_many(self.things(q)))
         return backreferences
 
@@ -243,13 +242,15 @@ class Site:
     
     def get(self, key, revision=None, lazy=False):
         assert key.startswith('/')
-        try:
-            thing = Thing(self, key, data=None, revision=revision)
-            if not lazy:
-                thing._getdata()
-            return thing
-        except NotFound:
-            return None
+        
+        if lazy:
+            data = None
+        else:
+            try:
+                data = self._load(key, revision)
+            except NotFound:
+                return None        
+        return create_thing(self, key, data, revision=revision)
 
     def get_many(self, keys):
         # simple hack to avoid crossing URL length limit.
@@ -271,7 +272,7 @@ class Site:
                 data = result[key]
                 data = web.storage(common.parse_query(data))
                 self._cache[key, None] = data
-                things.append(Thing(self, key, self._process_dict(copy.deepcopy(data))))
+                things.append(create_thing(self, key, self._process_dict(copy.deepcopy(data))))
         return things
 
     def new_key(self, type):
@@ -386,7 +387,7 @@ class Site:
             data = self._request('/account/get_user')
         except ClientException:
             return None
-        user = data and Thing(self, data['key'], data)
+        user = data and create_thing(self, data['key'], data)
         return user
 
     def new(self, key, data=None):
@@ -394,7 +395,7 @@ class Site:
         """
         data = common.parse_query(data)
         data = self._process_dict(data or {})
-        return Thing(self, key, data)
+        return create_thing(self, key, data)
         
 def parse_datetime(datestring):
     """Parses from isoformat.
@@ -454,6 +455,14 @@ class Nothing:
 
 nothing = Nothing()
 
+_thing_class_registry = {}
+def register_thing_class(type, klass):
+    _thing_class_registry[type] = klass
+
+def create_thing(site, key, data, revision=None):
+    type = data and data.get('type') and data.get('type').key
+    return _thing_class_registry.get(type, Thing)(site, key, data, revision)
+    
 class Thing:
     def __init__(self, site, key, data=None, revision=None):
         self._site = site
@@ -472,6 +481,10 @@ class Thing:
     def _getdata(self):
         if self._data is None:
             self._data = self._site._load(self.key, self._revision)
+            
+            # @@ Hack: change class based on type
+            self.__class__ = _thing_class_registry.get(self._data.get('type').key, Thing)
+            
         return self._data
         
     def _get_backreferences(self):

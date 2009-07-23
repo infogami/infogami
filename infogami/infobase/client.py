@@ -461,11 +461,16 @@ def register_thing_class(type, klass):
 
 def create_thing(site, key, data, revision=None):
     type = None
-    if data is not None and data.get('type'):
-        type = data.get('type').key
-        # just to be safe
-        if not isinstance(type, basestring):
-            type = None
+    try:
+        if data is not None and data.get('type'):
+            type = data.get('type').key
+            # just to be safe
+            if not isinstance(type, basestring):
+                type = None
+    except Exception, e:
+        # just for extra safety
+        print >> web.debug, 'ERROR:', str(e)
+        type = None
 
     return _thing_class_registry.get(type, Thing)(site, key, data, revision)
     

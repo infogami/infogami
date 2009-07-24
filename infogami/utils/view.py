@@ -298,7 +298,7 @@ def movetypes():
     for plugin in delegate.plugins:
         path = os.path.join(plugin.path, 'types')
         if os.path.exists(path) and os.path.isdir(path):
-            files = [os.path.join(path, f) for f in os.listdir(path) if f.endswith(extension)]
+            files = [os.path.join(path, f) for f in sorted(os.listdir(path)) if f.endswith(extension)]
             for f in files:
                 print >> web.debug, 'moving types from ', f
                 d = eval(open(f).read(), {'property': property, 'backreference': backreference})

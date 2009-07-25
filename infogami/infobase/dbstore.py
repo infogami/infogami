@@ -367,8 +367,11 @@ class DBSiteStore(common.SiteStore):
         type_id = type and self.get_metadata(type).id
         
         # type is required if there are conditions/sort on keys other than [key, type, created, last_modified]
-        common_properties = ['key', 'type', 'created', 'last_modified']
-        type_required = bool([c for c in query.conditions if c.key not in common_properties]) or (query.sort and query.sort.key not in common_properties)
+        common_properties = ['key', 'type', 'created', 'last_modified'] 
+        _sort = query.sort and query.sort.key
+        if _sort and _sort.startswith('-'):
+            _sort = _sort[1:]
+        type_required = bool([c for c in query.conditions if c.key not in common_properties]) or (_sort and _sort not in common_properties)
         
         if type_required and type is None:
             raise common.BadData("Type Required")
@@ -410,7 +413,6 @@ class DBSiteStore(common.SiteStore):
             # ordering_func is used when the query contains emebbabdle objects
             #
             # example: {'links': {'title: 'foo', 'url': 'http://example.com/foo'}}
-            
             if c.datatype == 'ref':
                 metadata = self.get_metadata(c.value)
                 assert metadata is not None, 'Not found: ' + str(c.value)
@@ -483,7 +485,7 @@ class DBSiteStore(common.SiteStore):
                     order = 'thing.' + sort_key # make sure c.key is valid
                     # Add thing table explicitly because get_table is not called
                     tables['_thing'] = DBTable("thing")                
-                else:
+                else:   
                     table = get_table(query.sort.datatype, sort_key)
                     key_id = self.get_property_id(type_id, sort_key)
                     if key_id is None:
@@ -514,7 +516,7 @@ class DBSiteStore(common.SiteStore):
                 x = labels[0]
                 xwheres = [get_column(x) + ' = ' + get_column(y) for y in labels[1:]]
                 wheres.extend(xwheres)
-            
+        
         add_joins()
         wheres = wheres or ['1 = 1']
         table_names = [t.sql() for t in tables.values()]

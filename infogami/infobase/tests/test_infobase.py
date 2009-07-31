@@ -71,13 +71,28 @@ class TestInfobase(DBTest):
         
         assert d1 == {'key': '/foo', 'revision': 1}
         
-        versions = site.versions({})[:3]
-        versions = [subdict(v, ['key', 'revision', 'comment']) for v in versions]
-        assert versions == [
+        def versions(q):
+            return [subdict(v, ['key', 'revision', 'comment']) for v in site.versions(q)]
+            
+        assert versions({'limit': 3}) == [
             {'key': '/foo', 'revision': 2, 'comment': 'test 3'},
             {'key': '/bar', 'revision': 1, 'comment': 'test 2'},
             {'key': '/foo', 'revision': 1, 'comment': 'test 1'},
         ]
+        
+        self.create_user('test', 'testt@example.com', 'test123', data={'displayname': 'Test'})
+        site.save('/foo', {'key': '/foo', 'type': '/type/object', 'x': 2}, comment='test 4', ip='1.2.3.4', author=site.get('/user/test'))
+        
+        assert versions({'author': '/user/test'}) == [
+            {'key': '/foo', 'revision': 3, 'comment': 'test 4'}
+        ]
+
+        assert versions({'ip': '1.2.3.4'}) == [
+            {'key': '/foo', 'revision': 3, 'comment': 'test 4'}
+        ]
+        
+        # should return empty result for bad queries
+        assert versions({'bad': 1}) == []
         
     def test_versions_by_bot(self):
         # create user TestBot and mark him as bot
@@ -138,10 +153,11 @@ class TestInfobase(DBTest):
         
         assert site.things({'type': '/type/object', 'name': 'a'}) == [{'key': '/a'}]
 
-
+        # should return empty result when queried with non-existing or bad property
         assert site.things({'type': '/type/object', 'foo': 'bar'}) == []
         assert site.things({'type': '/type/object', 'bad property': 'bar'}) == []
 
+        # should return empty result when queried for non-existing objects
         assert site.things({'type': '/type/object', 'foo': {'key': '/foo'}}) == []
         assert site.things({'type': '/type/bad'}) == []
         
@@ -183,10 +199,6 @@ class TestInfobase(DBTest):
         site.things({'type': '/type/object', 'links': {'name': 'z'}}) == [{'key': '/b'}]
 
 class TestServer(DBTest):
-    def setUp(self):
-        DBTest.setUp(self)
-        app.do_cleanup()
-        
     def test_home(self):
         b = app.browser()
         b.open('/')

@@ -3,7 +3,7 @@ $def with (tables, sequences, multisite=False)
 BEGIN;
 
 -- changelog:
--- 10: added active and bot columns to account and meta table is created to track version.
+-- 10: added active and bot columns to account and created meta table to track the schema version.
 
 create table meta (
     version int

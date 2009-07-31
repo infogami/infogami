@@ -206,8 +206,11 @@ class AccountManager:
 
     def checkpassword(self, username, raw_password):
         details = self.site.store.get_user_details(username)
-        return details is not None and self._check_salted_hash(self.secret_key, raw_password, details.password)
-                
+        if details is None or details.active == False:
+            return False
+        else:
+            return self._check_salted_hash(self.secret_key, raw_password, details.password)
+
 if __name__ == "__main__":
     web.transact()
     from infobase import Infobase

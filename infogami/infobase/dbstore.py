@@ -197,7 +197,8 @@ class DBSiteStore(common.SiteStore):
             author_id=author and self.get_metadata(author).id,
             ip=ip,
             created=created,
-            comment=comment
+            comment=comment,
+            bot=bool(author and (self.get_user_details(author) or {}).get('bot', False))
         )
         
     def _add_version(self, thing_id, revision, transaction_id, created):
@@ -560,7 +561,7 @@ class DBSiteStore(common.SiteStore):
         
         for c in query.conditions:
             key, value = c.key, c.value
-            assert key in ['key', 'type', 'author', 'ip', 'comment', 'created']
+            assert key in ['key', 'type', 'author', 'ip', 'comment', 'created', 'bot']
             
             if key == 'key':
                 key = 'thing_id'

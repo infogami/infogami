@@ -2,6 +2,14 @@ $def with (tables, sequences, multisite=False)
 
 BEGIN;
 
+-- changelog:
+-- 10: added active and bot columns to account and meta table is created to track version.
+
+create table meta (
+    version int
+);
+insert into meta (version) values (10);
+
 $if multisite:
     create table site (
         id serial primary key,
@@ -31,7 +39,7 @@ create table transaction (
     author_id int references thing,
     ip inet,
     comment text,
-    machine_comment text,
+    bot boolean default 'f', -- true if the change is made by a bot
     created timestamp default (current_timestamp at time zone 'utc')    
 );
 
@@ -64,12 +72,18 @@ create table account (
     thing_id int references thing,
     email text,
     password text,
+    active boolean default 't',
+    bot  boolean default 'f',
     $if multisite:
         UNIQUE(site_id, email)
     $else:
         UNIQUE(email)
 );
+
 create index account_thing_id_idx ON account(thing_id);
+create index account_thing_email_idx ON account(active);
+create index account_thing_active_idx ON account(active);
+create index account_thing_bot_idx ON account(bot);
 
 create table data (
     thing_id int references thing,

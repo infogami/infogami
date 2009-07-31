@@ -18,6 +18,7 @@ def setup_module(mod):
     mod.app = server.app
     
     # overwrite _cleanup to make it possible to have transactions spanning multiple requests.
+    mod.app.do_cleanup = mod.app._cleanup
     mod.app._cleanup = lambda: None
     
 def subdict(d, keys):
@@ -105,8 +106,87 @@ class TestInfobase(DBTest):
         
         # make sure he can't login
         assert self.login('TestUser', 'test123') == False
-                
+        
+    def test_property_cache(self):
+        # Make sure a failed save_many query doesn't pollute property cache
+        q = [
+            {'key': '/a', 'type': '/type/object', 'a': 1},
+            {'key': '/b', 'type': '/type/object', 'bad property': 1}
+        ]
+        try:
+            site.save_many(q)
+        except Exception:
+            pass
+
+        q = [
+            {'key': '/a', 'type': '/type/object', 'a': 1},
+        ]
+        site.save_many(q)
+        
+    def test_things(self):
+        site.save('/a', {'key': '/a', 'type': '/type/object', 'x': 1, 'name': 'a'})
+        site.save('/b', {'key': '/b', 'type': '/type/object', 'x': 2, 'name': 'b'})
+        
+        assert site.things({'type': '/type/object'}) == [{'key': '/a'}, {'key': '/b'}]
+        assert site.things({'type': {'key': '/type/object'}}) == [{'key': '/a'}, {'key': '/b'}]
+        
+        assert site.things({'type': '/type/object', 'sort': 'created'}) == [{'key': '/a'}, {'key': '/b'}]
+        assert site.things({'type': '/type/object', 'sort': '-created'}) == [{'key': '/b'}, {'key': '/a'}]
+        
+        assert site.things({'type': '/type/object', 'x': 1}) == [{'key': '/a'}]
+        assert site.things({'type': '/type/object', 'x': '1'}) == []
+        
+        assert site.things({'type': '/type/object', 'name': 'a'}) == [{'key': '/a'}]
+
+
+        assert site.things({'type': '/type/object', 'foo': 'bar'}) == []
+        assert site.things({'type': '/type/object', 'bad property': 'bar'}) == []
+
+        assert site.things({'type': '/type/object', 'foo': {'key': '/foo'}}) == []
+        assert site.things({'type': '/type/bad'}) == []
+        
+    def test_nested_things(self):
+        site.save('/a', {
+            'key': '/a', 
+            'type': '/type/object',
+            'links': [{
+                'name': 'x',
+                'url': 'http://example.com/x'
+            },
+            {
+                'name': 'y',
+                'url': 'http://example.com/y1'
+            }]
+        })
+
+        site.save('/b', {
+            'key': '/b', 
+            'type': '/type/object',
+            'links': [{
+                'name': 'y',
+                'url': 'http://example.com/y2'
+            },
+            {
+                'name': 'z',
+                'url': 'http://example.com/z'
+            }]
+        })
+        
+        site.things({'type': '/type/object', 'links.name': 'x'}) == [{'key': '/a'}]
+        site.things({'type': '/type/object', 'links.name': 'y'}) == [{'key': '/a'}, {'key': '/b'}]
+        site.things({'type': '/type/object', 'links.name': 'z'}) == [{'key': '/b'}]
+
+        site.things({'type': '/type/object', 'links': {'name': 'x', 'url': 'http://example.com/y1'}}) == [{'key': '/a'}]
+
+        site.things({'type': '/type/object', 'links': {'name': 'x'}}) == [{'key': '/a'}]
+        site.things({'type': '/type/object', 'links': {'name': 'y'}}) == [{'key': '/a'}, {'key': '/b'}]
+        site.things({'type': '/type/object', 'links': {'name': 'z'}}) == [{'key': '/b'}]
+
 class TestServer(DBTest):
+    def setUp(self):
+        DBTest.setUp(self)
+        app.do_cleanup()
+        
     def test_home(self):
         b = app.browser()
         b.open('/')

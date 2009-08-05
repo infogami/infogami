@@ -93,6 +93,8 @@ class TestInfobase(DBTest):
         
         # should return empty result for bad queries
         assert versions({'bad': 1}) == []
+
+        assert versions({'author': '/user/noone'}) == []
         
     def test_versions_by_bot(self):
         # create user TestBot and mark him as bot

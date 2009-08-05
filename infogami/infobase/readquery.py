@@ -237,7 +237,8 @@ def make_versions_query(store, query):
     columns = ['key', 'type', 'revision', 'author', 'comment', 'machine_comment', 'ip', 'created', 'bot']
     
     for k, v in query.items():
-        assert k in columns
+        if k not in columns:
+            raise ValueError, k
         q.add_condition(k, '=', None, v)
         
     return q

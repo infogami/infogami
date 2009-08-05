@@ -350,7 +350,8 @@ class DBSiteStore(common.SiteStore):
             return self.property_id_cache[type_id, name]
             
         pid = self._get_property_id(type_id, name, create)
-        if pid is not None:
+        # Don't update the cache when the pid is created. The pid creation might be part of a transaction and that might get rolled back.
+        if pid is not None and create is False:
             self.property_id_cache[type_id, name] = pid
         return pid
             
@@ -365,7 +366,15 @@ class DBSiteStore(common.SiteStore):
 
     def things(self, query):
         type = query.get_type()
-        type_id = type and self.get_metadata(type).id
+        if type:
+            type_metedata = self.get_metadata(type)
+            if type_metedata:
+                type_id = type_metedata.id
+            else:
+                # Return empty result when type not found
+                return []
+        else:
+            type_id = None
         
         # type is required if there are conditions/sort on keys other than [key, type, created, last_modified]
         common_properties = ['key', 'type', 'created', 'last_modified'] 
@@ -416,7 +425,10 @@ class DBSiteStore(common.SiteStore):
             # example: {'links': {'title: 'foo', 'url': 'http://example.com/foo'}}
             if c.datatype == 'ref':
                 metadata = self.get_metadata(c.value)
-                assert metadata is not None, 'Not found: ' + str(c.value)
+                if metadata is None:
+                    # required object is not found so the query result wil be empty. 
+                    # Raise StopIteration to indicate empty result.
+                    raise StopIteration
                 c.value = metadata.id
             if c.op == '~':
                 op = Literal('LIKE')
@@ -558,22 +570,33 @@ class DBSiteStore(common.SiteStore):
 
         if config.get('use_machine_comment'):
             what += ", version.machine_comment"
+            
+        def get_id(key):
+            meta = self.get_metadata(key)
+            if meta:
+                return meta.id
+            else:
+                raise StopIteration
         
         for c in query.conditions:
             key, value = c.key, c.value
             assert key in ['key', 'type', 'author', 'ip', 'comment', 'created', 'bot']
             
-            if key == 'key':
-                key = 'thing_id'
-                value = self.get_metadata(value).id
-            elif key == 'type':
-                key = 'thing.type'
-                value = self.get_metadata(value).id
-            elif key == 'author':
-                key = 'transaction.author_id'
-                value = self.get_metadata(value).id
-            else:
-                key = 'transaction.' + key
+            try:
+                if key == 'key':
+                    key = 'thing_id'
+                    value = get_id(value)
+                elif key == 'type':
+                    key = 'thing.type'
+                    value = get_id(value)
+                elif key == 'author':
+                    key = 'transaction.author_id'
+                    value = get_id(value)
+                else:
+                    key = 'transaction.' + key
+            except StopIteration:
+                # StopIteration is raised when a non-existing object is referred in the query
+                return []
                 
             where += web.reparam(' AND %s=$value' % key, locals())
             

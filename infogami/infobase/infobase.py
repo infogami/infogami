@@ -171,7 +171,13 @@ class Site:
         return readquery.run_things_query(self.store, query)
         
     def versions(self, query):
-        q = readquery.make_versions_query(self.store, query)
+        try:
+            q = readquery.make_versions_query(self.store, query)
+        except ValueError:
+            # ValueError is raised if unknown keys are used in the query. 
+            # Invalid keys shouldn't make the query fail, instead the it should result in no match.
+            return []
+            
         return self.store.versions(q)
         
     def get_permissions(self, key):

@@ -39,6 +39,9 @@ class view (delegate.mode):
 class edit (delegate.mode):
     def GET(self, path):
         i = web.input(v=None, t=None)
+        
+        if not web.ctx.site.can_write(path):
+            return render.permission_denied(path, "Permission denied to edit " + path + ".")
 
         if i.v is not None and safeint(i.v, None) is None:
             raise web.seeother(web.changequery(v=None))

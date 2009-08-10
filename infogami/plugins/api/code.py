@@ -219,7 +219,7 @@ class recentchanges(delegate.page):
         i = web.input(query=None)
         query = i.pop('query')
         if not query:
-            query = simplejson.dumps(make_query(i, required_keys=["key", "type", "author", "ip", "offset", "limit"]))
+            query = simplejson.dumps(make_query(i, required_keys=["key", "type", "author", "ip", "offset", "limit", "bot"]))
         return request('/versions', data=dict(query=query))
 
 class query(delegate.page):

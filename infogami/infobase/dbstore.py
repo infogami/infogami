@@ -192,14 +192,17 @@ class DBSiteStore(common.SiteStore):
         return result
         
     def _add_transaction(self, action, author, ip, comment, created):
-        return self.db.insert('transaction', 
+        kw = dict(
             action=action,
             author_id=author and self.get_metadata(author).id,
             ip=ip,
             created=created,
             comment=comment,
-            bot=bool(author and (self.get_user_details(author) or {}).get('bot', False))
         )
+        if config.use_bot_column:
+            kw['bot'] = bool(author and (self.get_user_details(author) or {}).get('bot', False))
+            
+        return self.db.insert('transaction', **kw)
         
     def _add_version(self, thing_id, revision, transaction_id, created):
         if revision is None:
@@ -298,7 +301,7 @@ class DBSiteStore(common.SiteStore):
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         t = self.db.transaction()
-
+        
         thing = self.get(key)
         typekey = data['type']
 
@@ -313,29 +316,29 @@ class DBSiteStore(common.SiteStore):
             thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
             olddata = {}
             action = "create"
-        
+    
         if transaction_id is None:
             transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
         revision = self._add_version(thing_id=thing_id, revision=revision, transaction_id=transaction_id, created=timestamp)
-            
-        created = olddata and olddata['created']
         
+        created = olddata and olddata['created']
+    
         self._update_tables(thing_id, key, olddata, dict(data))
-            
+        
         data['created'] = created
         data['revision'] = revision
         data['last_modified'] = timestamp
         data['key'] = key
         data['id'] = thing_id
         data['latest_revision'] = revision
-        
+    
         if revision == 1:
             data['created'] = timestamp
         else:
             data['created'] = created
-            
-        data = common.format_data(data)
         
+        data = common.format_data(data)
+    
         type_id=self.get_metadata(typekey).id
         self.db.update('thing', where='id=$thing_id', last_modified=timestamp, latest_revision=revision, type=type_id, vars=locals())
         self.db.insert('data', seqname=False, thing_id=thing_id, revision=revision, data=simplejson.dumps(data))
@@ -593,6 +596,10 @@ class DBSiteStore(common.SiteStore):
                     key = 'transaction.author_id'
                     value = get_id(value)
                 else:
+                    # 'bot' column is not enabled
+                    if key == 'bot' and not config.use_bot_column:
+                        raise StopIteration
+                        
                     key = 'transaction.' + key
             except StopIteration:
                 # StopIteration is raised when a non-existing object is referred in the query

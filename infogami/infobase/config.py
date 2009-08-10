@@ -27,5 +27,9 @@ fastcgi = False
 # Set this flag to True to continue to use that field in earlier installations.
 use_machine_comment = False
 
+# bot column is added transaction table to mark edits by bot. Flag to enable/disable this feature.
+use_bot_column = True
+
 def get(key, default=None):
     return globals().get(key, default)
+

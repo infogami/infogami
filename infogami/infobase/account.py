@@ -206,7 +206,7 @@ class AccountManager:
 
     def checkpassword(self, username, raw_password):
         details = self.site.store.get_user_details(username)
-        if details is None or details.active == False:
+        if details is None or details.get('active', True) == False:
             return False
         else:
             return self._check_salted_hash(self.secret_key, raw_password, details.password)

@@ -302,47 +302,53 @@ class DBSiteStore(common.SiteStore):
         timestamp = timestamp or datetime.datetime.utcnow()
         t = self.db.transaction()
         
-        thing = self.get(key)
-        typekey = data['type']
+        try:
+            thing = self.get(key)
+            typekey = data['type']
 
-        if thing:
-            revision = None
-            thing_id = thing.id
-            olddata = thing._get_data()
-            action = "update"
-        else:
-            revision = 1
-            type_id = self.get(typekey).id
-            thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
-            olddata = {}
-            action = "create"
-    
-        if transaction_id is None:
-            transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
-        revision = self._add_version(thing_id=thing_id, revision=revision, transaction_id=transaction_id, created=timestamp)
+            if thing:
+                revision = None
+                thing_id = thing.id
+                olddata = thing._get_data()
+                action = "update"
+            else:
+                revision = 1
+                type_id = self.get(typekey).id
+                thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
+                olddata = {}
+                action = "create"
         
-        created = olddata and olddata['created']
-    
-        self._update_tables(thing_id, key, olddata, dict(data))
+            if transaction_id is None:
+                transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
+            revision = self._add_version(thing_id=thing_id, revision=revision, transaction_id=transaction_id, created=timestamp)
+            
+            created = olddata and olddata['created']
         
-        data['created'] = created
-        data['revision'] = revision
-        data['last_modified'] = timestamp
-        data['key'] = key
-        data['id'] = thing_id
-        data['latest_revision'] = revision
-    
-        if revision == 1:
-            data['created'] = timestamp
-        else:
+            self._update_tables(thing_id, key, olddata, dict(data))
+            
             data['created'] = created
+            data['revision'] = revision
+            data['last_modified'] = timestamp
+            data['key'] = key
+            data['id'] = thing_id
+            data['latest_revision'] = revision
         
-        data = common.format_data(data)
-    
-        type_id=self.get_metadata(typekey).id
-        self.db.update('thing', where='id=$thing_id', last_modified=timestamp, latest_revision=revision, type=type_id, vars=locals())
-        self.db.insert('data', seqname=False, thing_id=thing_id, revision=revision, data=simplejson.dumps(data))
-        t.commit()
+            if revision == 1:
+                data['created'] = timestamp
+            else:
+                data['created'] = created
+            
+            data = common.format_data(data)
+        
+            type_id=self.get_metadata(typekey).id
+            self.db.update('thing', where='id=$thing_id', last_modified=timestamp, latest_revision=revision, type=type_id, vars=locals())
+            self.db.insert('data', seqname=False, thing_id=thing_id, revision=revision, data=simplejson.dumps(data))
+        except:
+            t.rollback()
+            self.cache.clear(local=True)        
+            raise
+        else:
+            t.commit()
         
         thing = common.Thing.from_dict(self, key, data.copy())
         web.ctx.new_objects[key] = thing    

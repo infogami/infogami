@@ -13,6 +13,7 @@ from context import context
 import template
 import macro
 import storage
+from flash import get_flash_messages, add_flash_message
 
 from infogami.infobase.lru import lrumemoize
 
@@ -70,6 +71,7 @@ web.template.Template.globals.update(dict(
   slice = slice,
   urlencode = urllib.urlencode,
   debug = web.debug,
+  get_flash_messages=get_flash_messages,
 ))
 
 render = template.render

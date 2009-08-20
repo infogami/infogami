@@ -6,7 +6,7 @@ from infogami import utils, config
 from infogami.utils import delegate, types
 from infogami.utils.context import context
 from infogami.utils.template import render
-from infogami.utils.view import login_redirect, require_login, safeint
+from infogami.utils.view import login_redirect, require_login, safeint, add_flash_message
 
 import db
 import forms
@@ -51,7 +51,7 @@ class edit (delegate.mode):
         if i.t:
             type = db.get_type(i.t)
             if type is None:
-                utils.view.set_error('Unknown type: ' + i.t)
+                add_flash_message('error', 'Unknown type: ' + i.t)
             else:
                 p.type = type 
 
@@ -117,7 +117,7 @@ class edit (delegate.mode):
                 path = web.input(_method='GET', redirect=None).redirect or web.changequery(query={})
                 raise web.seeother(path)
             except ClientException, e:            
-                utils.view.set_error(str(e))
+                add_flash_message('error', str(e))
                 p['comment_'] = comment                
                 return render.editpage(p)
         elif action == 'delete':
@@ -162,7 +162,7 @@ class permission(delegate.mode):
         except Exception, e:
             import traceback
             traceback.print_exc(e)
-            delegate.view.set_error(str(e))
+            add_flash_message('error', str(e))
             return render.permission(p)
     
         raise web.seeother(web.changequery({}, m='permission'))
@@ -347,6 +347,7 @@ class change_password(delegate.page):
             except ClientException, e:
                 f.note = str(e)
                 return render.login_preferences(f)
+            add_flash_message('info', 'Password updated successfully.')
             raise web.seeother("/account/preferences")
 
 register_preferences(change_password)

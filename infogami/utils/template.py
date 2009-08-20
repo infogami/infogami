@@ -141,8 +141,10 @@ def saferender(templates, *a, **kw):
             
             import traceback
             traceback.print_exc()
-            from view import set_error
-            set_error(str(t.filename) + ': error in processing template: ' + e.__class__.__name__ + ': ' + str(e) + ' (falling back to default template)')
+            
+            import view            
+            message = str(t.filename) + ': error in processing template: ' + e.__class__.__name__ + ': ' + str(e) + ' (falling back to default template)'
+            view.add_flash_message('error', message)
 
     return Stowage(_str="Unable to render this page.", title='Error')
 

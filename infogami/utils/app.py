@@ -5,6 +5,8 @@ import web
 import os
 import re
 
+import flash
+
 urls = ("/.*", "item")
 app = web.application(urls, globals(), autoreload=False)
 
@@ -223,6 +225,8 @@ def encoding_processor(handler):
 app.add_processor(hook_processor)
 app.add_processor(path_processor)
 app.add_processor(encoding_processor)
+app.add_processor(flash.flash_processor)
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()

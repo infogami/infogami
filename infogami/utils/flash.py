@@ -23,7 +23,10 @@ def add_flash_message(type, message):
     
 def flash_processor(handler):
     flash = web.cookies(flash="[]").flash
-    flash = [web.storage(d) for d in simplejson.loads(flash)]
+    try:
+        flash = [web.storage(d) for d in simplejson.loads(flash) if isinstance(d, dict) and 'type' in d and 'message' in d]
+    except ValueError:
+        flash = []
     
     web.ctx.flash = list(flash)
     

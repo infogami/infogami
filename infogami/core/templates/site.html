@@ -15,18 +15,16 @@ $for jsurl in ctx.javascripts:
 </head>
 <body>
     <div id="wrapper">
-    <div id="header">
-        <div id="menu">
-$if ctx.user:
-    <form name='logout' action="$homepath()/account/logout" method='POST'></form>
-    
-    $:_.welcome_user(homepath() + ctx.user.key, ctx.user.displayname)
-    | <a href="$homepath()/account/preferences">$_.preferences</a>
-    | <a href="#" onclick="document.forms['logout'].submit()">$_.logout</a>
-$else:
-    <a href="/account/login">$_.login</a>
-
-</div>
+        <div id="header">
+            <div id="menu">
+            $if ctx.user:
+                <form name='logout' action="$homepath()/account/logout" method='POST'></form>
+                $:_.welcome_user(homepath() + ctx.user.key, ctx.user.displayname)
+                | <a href="$homepath()/account/preferences">$_.preferences</a>
+                | <a href="#" onclick="document.forms['logout'].submit()">$_.logout</a>
+            $else:
+                <a href="/account/login">$_.login</a>
+        </div>
 
         <div id="title"><a href="/">$_.site_title</a></div>
         <!--
@@ -42,13 +40,14 @@ $else:
     </div>
 
     <div id="content">
+        <div class="flash-messages">
+        $for flash in get_flash_messages():
+            <div class="$flash.type">$flash.message</div>
+        </div>
 
         <h1>$page.title</h1>
-
-$if ctx.error:
-    <div class="error"><pre>$ctx.error</pre></div>
-
-    $:page
+        
+        $:page
    </div>
    <div id="footer">
         $:_.powered_by_infogami("http://infogami.org")

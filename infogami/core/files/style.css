@@ -103,10 +103,17 @@ body
     color: red;
 } 
 
-.error {
-    background: #ffdfdf;
-    border: 1px solid #ffafaf;
-    margin: 2px;
+div.info {
+    border: 1px solid #FCEFA1;
+    background: #FBF9EE;
+    margin: 5px;
     padding: 5px;
-    color: #ff0000;
+}
+
+div.error {
+    border:1px solid #CD0A0A;
+    background: #FEF1EC;
+    color: #CD0A0A;
+    margin: 5px;
+    padding: 5px;
 }

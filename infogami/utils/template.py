@@ -13,10 +13,28 @@ import os
 
 import storage
 
+web_render = web.template.render
+
+class TemplateRender(web_render):
+    def _lookup(self, name):
+        path = os.path.join(self._loc, name)
+        filepath = self._findfile(path)
+        if filepath:
+            return 'file', filepath
+        elif os.path.isdir(path):
+            return 'dir', path
+        else:
+            return 'none', None
+            
+    def __repr__(self):
+        return "<TemplateRender: %s>" % repr(self._loc)
+
+web.template.Render = web.template.render = TemplateRender
+
 class LazyTemplate:
     def __init__(self, func):
         self.func = func
-
+        
 class DiskTemplateSource(web.storage):
     """Template source of templates on disk.
     Supports loading of templates from a search path instead of single dir.
@@ -24,8 +42,7 @@ class DiskTemplateSource(web.storage):
     def load_templates(self, path, lazy=False):
         def get_template(render, name):
             tokens = name.split(os.path.sep)
-            for t in tokens:
-                render = getattr(render, t)
+            render = getattr(render, name)
             render.filepath = '%s/%s.html' % (path, name)
             return render
             
@@ -154,3 +171,4 @@ render.edit = typetemplate('edit')
 render.repr = typetemplate('repr')
 render.input = typetemplate('input')
 render.xdiff = typetemplate('diff')
+

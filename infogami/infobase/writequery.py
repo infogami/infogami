@@ -357,7 +357,9 @@ def has_permission(store, author, key):
     if permission is None:
         return True
     else:
-        groups = permission.get('writers') or []
+        groups = permission.get('writers') or [] 
+        # admin users can edit anything
+        groups = groups + [store.get('/usergroup/admin')]
         for group in groups:
             if group.key == '/usergroup/everyone':
                 return True

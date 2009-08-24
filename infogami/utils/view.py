@@ -27,8 +27,8 @@ def _register_mdx_extensions(md):
     mdx_footnotes.makeExtension({}).extendMarkdown(md, markdown.__dict__)
     macro.makeExtension({}).extendMarkdown(md, markdown.__dict__)
     
-def get_markdown(text):
-    md = markdown.Markdown(source=text, safe_mode=False)
+def get_markdown(text, safe_mode=False):
+    md = markdown.Markdown(source=text, safe_mode=safe_mode)
     _register_mdx_extensions(md)
     md.postprocessors += wiki_processors
     return md
@@ -114,14 +114,14 @@ def join(sep, items):
     return web.utf8(sep).join(items)
     
 @public
-def format(text):
-    html, macros = _format(text)
+def format(text, safe_mode=False):
+    html, macros = _format(text, safe_mode=safe_mode)
     return macro.replace_macros(html, macros)
     
 @lrumemoize(1000)
-def _format(text):
+def _format(text, safe_mode=False):
     text = web.utf8(text).decode('utf-8')
-    md = get_markdown(text)
+    md = get_markdown(text, safe_mode=safe_mode)
     html = md.convert().encode('utf-8')
     return html, md.macros
 

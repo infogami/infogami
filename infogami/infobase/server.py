@@ -279,10 +279,13 @@ class account:
         i = input('username', 'password')
         a = site.get_account_manager()
         user = a.login(i.username, i.password)
-        if user:
-            return user.format_data()
-        else:
+        
+        if not user:
             raise common.BadData('Invalid username or password')
+        elif config.verify_user_email and user.get('verified') is False:
+                raise common.BadData("User is not verified")
+        else:
+            return user.format_data()
 
     def POST_register(self, site):
         i = input('username', 'password', 'email')
@@ -322,6 +325,13 @@ class account:
         i = input('old_password', new_password=None, email=None)
         a = site.get_account_manager()
         return a.update_user(i.old_password, i.new_password, i.email)
+        
+    def POST_update_user_details(self, site):
+        i = input('username')
+        username = i.pop('username')
+        
+        a = site.get_account_manager()
+        return a.update_user_details(username, **i)
 
 class readlog:
     def get_log(self, offset, i):

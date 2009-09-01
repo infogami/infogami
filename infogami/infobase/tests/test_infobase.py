@@ -1,5 +1,6 @@
 import os
 import simplejson
+import urllib
 
 import py.test
 
@@ -10,6 +11,8 @@ def _create_site(name):
     schema = dbstore.default_schema or dbstore.Schema()
     store = dbstore.DBStore(schema)
     _infobase = infobase.Infobase(store, config.secret_key)
+    server._infobase = _infobase
+    
     return _infobase.create(name)
 
 def setup_module(mod):
@@ -22,7 +25,7 @@ def setup_module(mod):
     # overwrite _cleanup to make it possible to have transactions spanning multiple requests.
     mod.app.do_cleanup = mod.app._cleanup
     mod.app._cleanup = lambda: None
-    
+        
 def subdict(d, keys):
     """Returns a subset of a dictionary.
         >>> subdict({'a': 1, 'b': 2}, ['a'])
@@ -39,7 +42,7 @@ class DBTest(unittest.TestCase):
         site.store.property_id_cache.clear()
         
     def tearDown(self):
-        self.t.rollback()
+        self.t.rollback()        
         
     def create_user(self, username, email, password, data={}):
         site.account_manager.register(username, email, password, data)
@@ -211,3 +214,48 @@ class TestServer(DBTest):
         b.open('/')
         assert simplejson.loads(b.data) == {"infobase": "welcome", "version": "0.5dev"}
     
+class TestAccount(DBTest):
+    def new_user(self, b, username, email, password):
+        d = {'username': username, 'email': email, 'password': password}
+        b.open('/test/account/register', urllib.urlencode(d))
+        assert b.status == 200, b.data
+        
+    def test_login(self):
+        b = app.browser()
+        
+        self.new_user(b, 'foo', 'foo@example.com', 'secret')
+        
+        b.open('/test/account/login', urllib.urlencode({'username': 'foo', 'password': 'secret'}))
+        assert b.status == 200, b.data
+        
+        user = simplejson.loads(b.data)
+        assert user['key'] == '/user/foo'
+        
+    def test_change_password(self):
+        b = app.browser()
+        
+        self.new_user(b, 'foo', 'foo@example.com', 'secret')
+        
+        d = {'old_password': 'secret', 'new_password': 'terces'}
+        b.open('/test/account/update_user', urllib.urlencode(d))
+        assert b.status == 200, b.data
+        
+        b.open('/test/account/login', urllib.urlencode({'username': 'foo', 'password': 'terces'}))
+        assert b.status == 200, b.data
+        
+    def test_update_user_details(self):
+        b = app.browser()
+        
+        self.new_user(b, 'foo', 'foo@example.com', 'secret')
+        
+        b.open('/test/account/login', urllib.urlencode({'username': 'foo', 'password': 'secret'}))
+        d = simplejson.loads(b.data)
+        assert d['bot'] == False
+
+        b.open('/test/account/update_user_details', urllib.urlencode({'username': 'foo', 'bot': True}))
+        assert b.status == 200, b.data
+        
+        b.open('/test/account/login', urllib.urlencode({'username': 'foo', 'password': 'secret'}))
+        d = simplejson.loads(b.data)
+        assert d['bot'] == True
+        

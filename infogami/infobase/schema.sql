@@ -74,6 +74,8 @@ create table account (
     password text,
     active boolean default 't',
     bot  boolean default 'f',
+    verified boolean default 'f',
+    
     $if multisite:
         UNIQUE(site_id, email)
     $else:

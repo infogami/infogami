@@ -643,15 +643,17 @@ class DBSiteStore(common.SiteStore):
         d = self.db.query("SELECT * FROM account WHERE thing_id=$metadata.id", vars=locals())
         return d and d[0] or None
         
-    def update_user_details(self, key, email, enc_password):
+    def update_user_details(self, key, **params):
         """Update user's email and/or encrypted password."""
         metadata = self.get_metadata(key)
         if metadata is None:
             return None
-                    
-        params = {}
-        email and params.setdefault('email', email)
-        enc_password and params.setdefault('password', enc_password)
+            
+        for k, v in params.items():
+            assert k in ['bot', 'active', 'verified', 'email', 'password']
+            if v is None:
+                del params[k]
+        
         self.db.update('account', where='thing_id=$metadata.id', vars=locals(), **params)
             
     def register(self, key, email, enc_password):

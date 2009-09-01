@@ -97,11 +97,17 @@ class AccountManager:
         self.update_user1(user, enc_password, email)
         
     def update_user1(self, user, enc_password, email, ip=None, timestamp=None):
-        self.site.store.update_user_details(user.key, email, enc_password)
+        self.site.store.update_user_details(user.key, email=email, password=enc_password)
         
         timestamp = timestamp or datetime.datetime.utcnow()
         event_data = dict(username=user.key, email=email, password=enc_password)
         self.site._fire_event("update_user", timestamp=timestamp, ip=ip or web.ctx.ip, username=None, data=event_data)
+        
+    def update_user_details(self, username, **params):
+        """Update user details like email, active, bot, verified.
+        """
+        key = '/user/' + username
+        self.site.store.update_user_details(key, **params)
         
     def assert_password(self, password):
         pass
@@ -143,7 +149,8 @@ class AccountManager:
         timestamp = str(int(time.time()))
         text = details.password + '$' + timestamp
         return username, timestamp + '$' + self._generate_salted_hash(self.secret_key, text)
-            
+    
+    
     def reset_password(self, username, code, password):
         SEC_PER_WEEK = 7 * 24 * 3600
         timestamp, code = code.split('$', 1)
@@ -162,7 +169,7 @@ class AccountManager:
         
         if self._check_salted_hash(self.secret_key, text, code):
             enc_password = self._generate_salted_hash(self.secret_key, password)
-            self.site.store.update_user_details(username, email=None, enc_password=enc_password)
+            self.site.store.update_user_details(username, password=enc_password, verified=True)
         else:
             raise common.BadData('Invalid password reset code')
         
@@ -173,10 +180,17 @@ class AccountManager:
         username = '/user/' + username
         if self.checkpassword(username, password):
             self.set_auth_token(username)
-            return self.site.get(username)
+            user = self.site.get(username)
+            details = self.site.store.get_user_details(username)
+            
+            for k in ['bot', 'active', 'verified']:
+                if k in details:
+                    user[k] = details[k]
+                    
+            return user
         else:
             return None
-
+    
     def get_user(self):
         """Returns the current user from the session."""
         #@@ TODO: call assert_trusted_machine when user is admin.
@@ -210,7 +224,7 @@ class AccountManager:
             return False
         else:
             return self._check_salted_hash(self.secret_key, raw_password, details.password)
-
+            
 if __name__ == "__main__":
     web.transact()
     from infobase import Infobase

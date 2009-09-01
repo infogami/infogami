@@ -54,6 +54,9 @@ class Thing:
 
     def __getitem__(self, key):
         return self._process(self._data[key])
+        
+    def __setitem__(self, key, value):
+        self._data[key] = value
 
     def __getattr__(self, key):
         try:

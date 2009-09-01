@@ -30,6 +30,8 @@ use_machine_comment = False
 # bot column is added transaction table to mark edits by bot. Flag to enable/disable this feature.
 use_bot_column = True
 
+verify_user_email = False
+
 def get(key, default=None):
     return globals().get(key, default)
 

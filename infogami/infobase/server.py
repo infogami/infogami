@@ -315,6 +315,12 @@ class account:
         a = site.get_account_manager()
         email = a.get_user_email(i.username)
         return dict(email=email)
+        
+    def GET_find_user_by_email(self, site):
+        i = input("email")
+        a = site.get_account_manager()
+        username = a.find_user_by_email(i.email)
+        return username
 
     def POST_reset_password(self, site):
         i = input('username', 'code', 'password')

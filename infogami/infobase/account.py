@@ -150,7 +150,9 @@ class AccountManager:
         text = details.password + '$' + timestamp
         return username, timestamp + '$' + self._generate_salted_hash(self.secret_key, text)
     
-    
+    def find_user_by_email(self, email):
+        return self.site.store.find_user(email)
+
     def reset_password(self, username, code, password):
         SEC_PER_WEEK = 7 * 24 * 3600
         timestamp, code = code.split('$', 1)

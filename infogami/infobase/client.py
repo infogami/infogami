@@ -365,6 +365,13 @@ class Site:
         return self._request('/account/update_user', 'POST', 
             dict(old_password=old_password, new_password=new_password, email=email))
             
+    def update_user_details(self, username, **kw):
+        params = dict(kw, username=username)
+        return self._request('/account/update_user_details', 'POST', params)
+        
+    def find_user_by_email(self, email):
+        return self._request('/account/find_user_by_email', 'GET', {'email': email})
+            
     def get_reset_code(self, email):
         """Returns the reset code for user specified by the email.
         This called to send forgot password email. 

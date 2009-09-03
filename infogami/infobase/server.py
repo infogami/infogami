@@ -310,6 +310,12 @@ class account:
         username, code = a.get_user_code(i.email)
         return dict(username=username, code=code)
         
+    def GET_check_reset_code(self, site):
+        i = input('username', 'code')
+        a = site.get_account_manager()
+        a.check_reset_code(i.username, i.code)
+        return {'ok': True}
+        
     def GET_get_user_email(self, site):
         i = input('username')
         a = site.get_account_manager()

@@ -379,6 +379,9 @@ class Site:
         """
         return self._request('/account/get_reset_code', 'GET', dict(email=email))
         
+    def check_reset_code(self, username, code):
+        return self._request('/account/check_reset_code', 'GET', dict(username=username, code=code))
+        
     def get_user_email(self, username):
         return self._request('/account/get_user_email', 'GET', dict(username=username))
         

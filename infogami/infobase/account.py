@@ -154,26 +154,28 @@ class AccountManager:
         return self.site.store.find_user(email)
 
     def reset_password(self, username, code, password):
+        self.check_reset_code(username, code)        
+        enc_password = self._generate_salted_hash(self.secret_key, password)
+        self.site.store.update_user_details('/user/' + username, password=enc_password, verified=True)
+            
+    def check_reset_code(self, username, code):
         SEC_PER_WEEK = 7 * 24 * 3600
         timestamp, code = code.split('$', 1)
         
         # code is valid only for a week
         if int(timestamp) + SEC_PER_WEEK < int(time.time()):
             raise common.BadData('Password Reset code expired')
-            
-        username = '/user/' + username        
+
+        username = '/user/' + username 
         details = self.site.store.get_user_details(username)
         
         if not details:
-            raise common.NotFound("No such user: " + username)
+            raise common.BadData("Invalid username")
         
         text = details.password + '$' + timestamp
         
-        if self._check_salted_hash(self.secret_key, text, code):
-            enc_password = self._generate_salted_hash(self.secret_key, password)
-            self.site.store.update_user_details(username, password=enc_password, verified=True)
-        else:
-            raise common.BadData('Invalid password reset code')
+        if not self._check_salted_hash(self.secret_key, text, code):
+            raise common.BadData("Invaid password reset code")
         
     def login(self, username, password):
         if username == 'admin':

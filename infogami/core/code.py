@@ -116,13 +116,20 @@ class edit (delegate.mode):
                 p._save(comment)
                 path = web.input(_method='GET', redirect=None).redirect or web.changequery(query={})
                 raise web.seeother(path)
-            except ClientException, e:            
+            except (ClientException, db.ValidationException), e:            
                 add_flash_message('error', str(e))
                 p['comment_'] = comment                
                 return render.editpage(p)
         elif action == 'delete':
             q = dict(key=i['key'], type=dict(key='/type/delete'))
-            web.ctx.site.save(q, comment)
+            
+            try:
+                web.ctx.site.save(q, comment)
+            except (ClientException, db.ValidationException), e:            
+                add_flash_message('error', str(e))
+                p['comment_'] = comment                
+                return render.editpage(p)
+            
             raise web.seeother(web.changequery(query={}))
     
     def get_action(self, i):

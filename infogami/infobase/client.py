@@ -86,6 +86,7 @@ class RemoteConnection(Connection):
         
         if data:
             if isinstance(data, dict):
+                data = dict((web.safestr(k), web.safestr(v)) for k, v in data.items())
                 data = urllib.urlencode(data)
             if method == 'GET':
                 path += '?' + data

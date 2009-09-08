@@ -151,6 +151,7 @@ def normpath(path):
     # os.path.normpath doesn't remove double/triple /'s at the begining    
     path = path.replace("///", "/").replace("//", "/")
     path = path.replace(' ', '_') # replace space with underscore
+    path = path.replace('\n', '_').replace('\r', '_')
     return path
     
 def path_processor(handler):

@@ -7,6 +7,7 @@ import _json as simplejson
 import web
 import socket
 import datetime
+import time
 
 DEBUG = False
 
@@ -81,9 +82,12 @@ class RemoteConnection(Connection):
             for k in data.keys():
                 if data[k] is None: del data[k]
         
-        if DEBUG: 
-            print >>web.debug, path, data
-        
+        if web.config.debug:
+            web.ctx.infobase_req_count = 1 + web.ctx.get('infobase_req_count', 0)
+            a = time.time()
+            _path = path
+            _data = data
+                
         if data:
             if isinstance(data, dict):
                 data = dict((web.safestr(k), web.safestr(v)) for k, v in data.items())
@@ -91,7 +95,7 @@ class RemoteConnection(Connection):
             if method == 'GET':
                 path += '?' + data
                 data = None
-        
+                
         conn = httplib.HTTPConnection(self.base_url)
         env = web.ctx.get('env') or {}
         
@@ -120,6 +124,11 @@ class RemoteConnection(Connection):
             c.load(cookie)
             if 'infobase_auth_token' in c:
                 self.set_auth_token(c['infobase_auth_token'].value)                
+                
+        if web.config.debug:
+            b = time.time()
+            print >> web.debug, "%.02f (%s):" % (round(b-a, 2), web.ctx.infobase_req_count), response.status, method, _path, _data
+                
         if response.status == 200:
             return response.read()
         else:

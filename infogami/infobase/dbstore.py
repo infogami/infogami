@@ -106,11 +106,6 @@ class DBSiteStore(common.SiteStore):
         self.cache = cache
 
     def get_metadata(self, key):
-        if self.cache and key in self.cache:
-            json = self.cache[key]
-            thing = common.Thing.from_json(self, key, json)
-            return thing and web.storage(id=thing.id, key=thing.key, last_modified=thing.last_modified, created=thing.created, type=thing.type.id, latest_revision=thing.latest_revision)
-
         # postgres doesn't seem to like Reference objects even though Referece extends from unicode.
         if isinstance(key, common.Reference):
             key = unicode(key)

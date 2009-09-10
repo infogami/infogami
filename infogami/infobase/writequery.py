@@ -370,7 +370,8 @@ def has_permission(store, author, key):
             if group.key == '/usergroup/everyone':
                 return True
             elif author is not None:
-                if group.key == '/usergroup/allusers' or author in group.get('members', []):
+                members = [m.key for m in group.get('members', [])]
+                if group.key == '/usergroup/allusers' or author.key in members:
                     return True
             else:
                 return False        

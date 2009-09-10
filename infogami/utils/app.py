@@ -145,7 +145,11 @@ def normpath(path):
         path.encode('utf-8')
     except UnicodeEncodeError:
         return '/'
-
+        
+    # path is taken as empty by web.py dev server when given path starts with //
+    if path == '':
+        return '/'
+        
     # correct trailing / and ..s in the path
     path = os.path.normpath(path)
     # os.path.normpath doesn't remove double/triple /'s at the begining    
@@ -159,7 +163,9 @@ def path_processor(handler):
     npath = normpath(web.ctx.path)
     if npath != web.ctx.path:
         if web.ctx.method in ['GET' or 'HEAD']:
-            raise web.seeother(npath + web.ctx.query)
+            # give absolute url for redirect. There is a bug in web.py 
+            # that causes infinite redicts when web.ctx.path startswith "//" 
+            raise web.seeother(web.ctx.home + npath + web.ctx.query)
         else:
             raise web.notfound()
     else:

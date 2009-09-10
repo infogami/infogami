@@ -143,13 +143,13 @@ class permission(delegate.mode):
     def GET(self, path):
         p = db.get_version(path)
         if not p:
-            raise web.seeother('/' + path)
+            raise web.seeother(path)
         return render.permission(p)
         
     def POST(self, path):
         p = db.get_version(path)
         if not p:
-            raise web.seeother('/' + path)
+            raise web.seeother(path)
             
         i = web.input('permission.key', 'child_permission.key')
         q = {

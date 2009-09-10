@@ -473,9 +473,8 @@ def start(config_file, *args):
     web.config.db_parameters = parse_db_parameters(config.db_parameters)    
 
     # initialize cache
-    if config.get('cache_size'):
-        import lru
-        cache.global_cache = lru.LRU(config.cache_size)
+    cache_params = config.get('cache', {'type': 'none'})
+    cache.global_cache = cache.create_cache(**cache_params)
     
     # init plugins
     for p in plugins:

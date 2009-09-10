@@ -41,6 +41,39 @@ class NoneDict:
     def update(self, d):
         pass
 
+class MemcachedDict:
+    def __init__(self, memcache_client=None, servers=[]):
+        if memcache_client is None:
+            import memcache
+            memcache_client = memcache.Client(servers)
+        self.memcache_client = memcache_client
+        
+    def __getitem__(self, key):
+        key = web.safestr(key)
+        value = self.memcache_client.get(key)
+        if value is None:
+            raise KeyError, key
+        return value
+        
+    def __setitem__(self, key, value):
+        key = web.safestr(key)
+        self.memcache_client.set(key, value)
+        
+    def update(self, d):
+        d = dict((web.safestr(k), v) for k, v in d.items())
+        self.memcache_client.set_multi(d)
+        
+    def clear(self):
+        self.memcache_client.flush_all()
+        
+def create_cache(type, **kw):
+    if type == "lru":
+        return lru.LRU(**kw)
+    elif type == "memcache":
+        return MemcachedDict(**kw)
+    else:
+        return NoneDict()
+
 special_cache = {}
 global_cache = lru.LRU(200)
 

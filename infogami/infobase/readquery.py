@@ -2,6 +2,11 @@ import common
 from common import all, any
 import web
 import re
+import _json as simplejson
+
+def get_thing(store, key, revision=None):
+    json = store.get(key, revision)
+    return json and common.Thing.from_json(store, key, json)
 
 def run_things_query(store, query):
     query = make_query(store, query)
@@ -9,7 +14,7 @@ def run_things_query(store, query):
         
     xthings = {}
     def load_things(keys, query):
-        _things = dict((k, t.format_data()) for k, t in store.get_many(keys).items())
+        _things = simplejson.loads(store.get_many(keys))
         xthings.update(_things)
         
         for k, v in query.requested.items():
@@ -144,7 +149,7 @@ def make_query(store, query, prefix=""):
     if not nested:
         q.assert_type_required()
         
-    type = store.get(q.get_type())
+    type = get_thing(store, q.get_type())
     #assert type is not None, 'Not found: ' + q.get_type()
     for c in q.conditions:
         if not isinstance(c, Query):

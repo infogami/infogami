@@ -86,7 +86,7 @@ class TestInfobase(DBTest):
         ]
         
         self.create_user('test', 'testt@example.com', 'test123', data={'displayname': 'Test'})
-        site.save('/foo', {'key': '/foo', 'type': '/type/object', 'x': 2}, comment='test 4', ip='1.2.3.4', author=site.get('/user/test'))
+        site.save('/foo', {'key': '/foo', 'type': '/type/object', 'x': 2}, comment='test 4', ip='1.2.3.4', author=site._get_thing('/user/test'))
         
         assert versions({'author': '/user/test'}) == [
             {'key': '/foo', 'revision': 3, 'comment': 'test 4'}
@@ -108,7 +108,7 @@ class TestInfobase(DBTest):
         db.update('account', where='thing_id=$testbot_id', bot=True, vars=locals())
         
         site.save('/a', {'key': '/a', 'type': '/type/object'}, ip='1.2.3.4', comment='notbot')
-        site.save('/b', {'key': '/b', 'type': '/type/object'}, ip='1.2.3.4', comment='bot', author=site.get('/user/TestBot'))
+        site.save('/b', {'key': '/b', 'type': '/type/object'}, ip='1.2.3.4', comment='bot', author=site._get_thing('/user/TestBot'))
         
         def f(q):
             return [v['key'] for v in site.versions(q)]

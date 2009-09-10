@@ -107,7 +107,8 @@ class DBSiteStore(common.SiteStore):
 
     def get_metadata(self, key):
         if self.cache and key in self.cache:
-            thing = self.cache[key]
+            json = self.cache[key]
+            thing = common.Thing.from_json(self, key, json)
             return thing and web.storage(id=thing.id, key=thing.key, last_modified=thing.last_modified, created=thing.created, type=thing.type.id, latest_revision=thing.latest_revision)
 
         # postgres doesn't seem to like Reference objects even though Referece extends from unicode.
@@ -147,17 +148,17 @@ class DBSiteStore(common.SiteStore):
                     return key
         else:
             return common.SiteStore.new_key(self, type, kw)
-        
+    
     def get(self, key, revision=None):
         if self.cache is None or revision is not None:
-            return self._get(key, revision)
+            json = self._get(key, revision)
         else:
-            thing = self.cache.get(key)
-            if thing is None:
-                thing = self._get(key, revision)
-                if thing:
-                    self.cache[key] = thing
-            return thing
+            json = self.cache.get(key)
+            if json is None:
+                json = self._get(key, revision)
+                if json:
+                    self.cache[key] = json
+        return json
     
     def _get(self, key, revision):    
         metadata = self.get_metadata(key)
@@ -166,30 +167,27 @@ class DBSiteStore(common.SiteStore):
         revision = revision or metadata.latest_revision
         d = self.db.query('SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision', vars=locals())
         data = d and d[0].data 
-        if not data:
-            return None
-        thing = common.Thing.from_json(self, key, data)
-
-        # just to be careful about the old data
-        for k in common.READ_ONLY_PROPERTIES:
-            if k not in thing:
-                thing._data[k] = metadata[k]
-
-        return thing
+        return data
         
     def get_many(self, keys):
         if not keys:
-            return {}
+            return '{}'
 
         xkeys = [web.reparam('$k', dict(k=k)) for k in keys]
         query = 'SELECT thing.key, data.data from thing, data ' \
             + 'WHERE data.revision = thing.latest_revision and data.thing_id=thing.id ' \
             + ' AND thing.key IN (' + self.sqljoin(xkeys, ', ') + ')'
-
-        result = {}
-        for r in self.db.query(query):
-            result[r.key] = common.LazyThing(self, r.key, r.data)
-        return result
+            
+        def process(query):
+            yield '{\n'
+            for i, r in enumerate(self.db.query(query)):
+                if i:
+                    yield ',\n'
+                yield simplejson.dumps(r.key)
+                yield ": "
+                yield r.data
+            yield '}'
+        return "".join(process(query))
         
     def _add_transaction(self, action, author, ip, comment, created):
         kw = dict(
@@ -263,9 +261,18 @@ class DBSiteStore(common.SiteStore):
         def action_insert(table, thing_id, key_id, value, ordering):
             self.db.insert(table, seqname=False, thing_id=thing_id, key_id=key_id, value=value, ordering=ordering)
 
-        old_type = olddata and olddata['type']
+        old_type = (olddata and olddata['type']) or None
         new_type = newdata['type']
-
+        
+        def _coerce(d):
+            if isinstance(d, dict) and 'key' in d:
+                return d['key']
+            else:
+                return d
+    
+        old_type = _coerce(old_type)
+        new_type = _coerce(new_type)
+        
         for k in ['id', 'key', 'type', 'last_modified', 'created', 'revision']:
             olddata.pop(k, None)
             newdata.pop(k, None)
@@ -297,23 +304,26 @@ class DBSiteStore(common.SiteStore):
         else:
             t.commit()
         return result
+        
+    def _key2id(self, key):
+        return self.get_metadata(key).id
 
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         t = self.db.transaction()
         
         try:
-            thing = self.get(key)
             typekey = data['type']
+            olddata = self.get(key)
 
-            if thing:
+            if olddata:
                 revision = None
-                thing_id = thing.id
-                olddata = thing._get_data()
+                thing_id = self._key2id(key)
+                olddata = simplejson.loads(olddata)
                 action = "update"
             else:
                 revision = 1
-                type_id = self.get(typekey).id
+                type_id = self._key2id(typekey)
                 thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
                 olddata = {}
                 action = "create"
@@ -324,7 +334,7 @@ class DBSiteStore(common.SiteStore):
             
             created = olddata and olddata['created']
         
-            self._update_tables(thing_id, key, olddata, dict(data))
+            self._update_tables(thing_id, key, olddata, dict(data)) #@@ why making copy of data?
             
             data['created'] = created
             data['revision'] = revision
@@ -350,8 +360,7 @@ class DBSiteStore(common.SiteStore):
         else:
             t.commit()
         
-        thing = common.Thing.from_dict(self, key, data.copy())
-        web.ctx.new_objects[key] = thing    
+        web.ctx.new_objects[key] = simplejson.dumps(data)
         return {'key': key, 'revision': revision}
         
     def get_property_id(self, type_id, name, create=False):

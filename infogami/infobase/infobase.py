@@ -88,10 +88,13 @@ class Site:
         return self._infobase.delete(self.sitename)
     
     def get(self, key, revision=None):
-        thing = self.store.get(key, revision)
-        return thing
+        return self.store.get(key, revision)
         
     withKey = get
+    
+    def _get_thing(self, key, revision=None):
+        json = self.get(key, revision)
+        return json and common.Thing.from_json(self.store, key, json)
 
     def get_many(self, keys):
         return self.store.get_many(keys)
@@ -115,7 +118,6 @@ class Site:
 
         result2 = web.storage(created=created, updated=updated)
         
-
         if not _internal:
             data = dict(comment=comment, machine_comment=machine_comment, query=query, result=result2)
             self._fire_event("write", timestamp, ip, author and author.key, data)
@@ -223,24 +225,14 @@ class Site:
         updated = [r['key'] for r in result if r and r['revision'] != 1]
         
         for key in created:
-            thing = self.get(key)
+            thing = self._get_thing(key)
             fire_trigger(thing.type, None, thing)
         
         for key in updated:
-            thing = self.get(key)
-            old = self.get(key, thing.revision-1)
+            thing = self._get_thing(key)
+            old = self._get_thing(key, thing.revision-1)
             if old.type.key == thing.type.key:
                 fire_trigger(thing.type, old, thing)
             else:
                 fire_trigger(old.type, old, thing)
                 fire_trigger(thing.type, old, thing)
-
-if __name__ == '__main__':
-    web.config.db_parameters = dict(dbn='postgres', db='infobase2', user='anand', pw='')
-    web.config.db_printing = True
-    web.load()
-    import dbstore, config
-    schema = dbstore.Schema()
-    store = dbstore.DBStore(schema)
-    _infobase = Infobase(store, config.secret_key)
-    print _infobase.create('infogami.org')

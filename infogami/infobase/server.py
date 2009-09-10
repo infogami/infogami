@@ -185,10 +185,10 @@ class withkey:
         site = get_site(sitename)
         revision = i.revision and to_int(i.revision, "revision")
         assert_key(i.key)
-        thing = site.withKey(i.key, revision=revision)
-        if not thing:
+        json = site.get(i.key, revision=revision)
+        if not json:
             raise common.NotFound(i.key)
-        return thing.format_data()
+        return json
 
 class get_many:
     @jsonify
@@ -196,8 +196,7 @@ class get_many:
         i = input("keys")
         keys = from_json(i['keys'])
         site = get_site(sitename)
-        things = site.get_many(keys)
-        return things
+        return site.get_many(keys)
 
 class save:
     @jsonify

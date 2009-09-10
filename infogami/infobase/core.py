@@ -45,7 +45,8 @@ class Thing:
         elif isinstance(value, dict):
             return web.storage((k, self._process(v)) for k, v in value.iteritems())
         elif isinstance(value, Reference):
-            return self._store.get(value)
+            json = self._store.get(value)
+            return Thing.from_json(self._store, value, json)
         else:
             return value
 

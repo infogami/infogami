@@ -184,7 +184,7 @@ class AccountManager:
         username = '/user/' + username
         if self.checkpassword(username, password):
             self.set_auth_token(username)
-            user = self.site.get(username)
+            user = self.site._get_thing(username)
             details = self.site.store.get_user_details(username)
             
             for k in ['bot', 'active', 'verified']:
@@ -205,7 +205,7 @@ class AccountManager:
             except ValueError:
                 return
             if self._check_salted_hash(self.secret_key, user_key + "," + login_time, digest):
-                return self.site.get(user_key)
+                return self.site._get_thing(user_key)
 
     def set_auth_token(self, user_key):
         t = datetime.datetime(*time.gmtime()[:6]).isoformat()

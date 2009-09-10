@@ -4,6 +4,12 @@ import common
 from common import pprint, any, all
 import web
 
+def get_thing(store, key, revision=None):
+    if isinstance(key, common.Reference):
+        key = unicode(key)
+    json = store.get(key, revision)
+    return json and common.Thing.from_json(store, key, json)
+
 class SaveProcessor:
     def __init__(self, store, author):
         self.store = store
@@ -25,9 +31,9 @@ class SaveProcessor:
         if type is None:
             raise common.BadData("missing type")
         type = self.process_value(type, self.get_property(None, 'type'))
-        type = self.store.get(type)
+        type = get_thing(self.store, type)
         
-        thing = self.store.get(key)
+        thing = get_thing(self.store, key)
         prev_data = thing and thing._get_data()
 
         # when type is changed, consider as all object is modified and don't compare with prev data.
@@ -144,7 +150,7 @@ class SaveProcessor:
         type_found = common.find_type(value)
     
         if type_found == '/type/object':
-            thing = self.store.get(value)
+            thing = get_thing(self.store, value)
             if thing is None:
                 raise common.NotFound(value)
             type_found = thing.type.key
@@ -168,7 +174,7 @@ class WriteQueryProcessor:
                 continue
 
             key = q['key']                
-            thing = self.store.get(key)
+            thing = get_thing(self.store, key)
             create = q.pop('create', None)
             
             if thing is None:
@@ -359,7 +365,7 @@ def has_permission(store, author, key):
     else:
         groups = permission.get('writers') or [] 
         # admin users can edit anything
-        groups = groups + [store.get('/usergroup/admin')]
+        groups = groups + [get_thing(store, '/usergroup/admin')]
         for group in groups:
             if group.key == '/usergroup/everyone':
                 return True
@@ -380,7 +386,7 @@ def get_permission(store, key):
     def _get_permission(key, child_permission=False):
         if key is None:
             return None
-        thing = store.get(key)
+        thing = get_thing(store, key)
         if child_permission:
             permission = thing and (thing.get("child_permission") or thing.get("permission"))
         else:

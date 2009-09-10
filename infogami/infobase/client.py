@@ -263,6 +263,9 @@ class Site:
         return create_thing(self, key, data, revision=revision)
 
     def get_many(self, keys):
+        if not keys:
+            return []
+            
         # simple hack to avoid crossing URL length limit.
         if len(keys) > 100:
             things = []

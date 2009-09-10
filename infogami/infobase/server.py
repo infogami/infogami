@@ -48,6 +48,12 @@ def process_exception(e):
 
     msg = str(e)
     raise web.HTTPError(status, {}, msg)
+    
+class JSON:
+    """JSON marker. instances of this class not escaped by jsonify.
+    """
+    def __init__(self, json):
+        self.json = json
 
 def jsonify(f):
     def g(self, *a, **kw):
@@ -72,7 +78,10 @@ def jsonify(f):
             else:
                 process_exception(e)
         
-        result = simplejson.dumps(d)
+        if isinstance(d, JSON):
+            result = d.json
+        else:
+            result = simplejson.dumps(d)
 
         if web.ctx.get('infobase_localmode'):
             return result
@@ -188,7 +197,7 @@ class withkey:
         json = site.get(i.key, revision=revision)
         if not json:
             raise common.NotFound(i.key)
-        return json
+        return JSON(json)
 
 class get_many:
     @jsonify
@@ -196,7 +205,7 @@ class get_many:
         i = input("keys")
         keys = from_json(i['keys'])
         site = get_site(sitename)
-        return site.get_many(keys)
+        return JSON(site.get_many(keys))
 
 class save:
     @jsonify

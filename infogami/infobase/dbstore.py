@@ -307,28 +307,29 @@ class DBSiteStore(common.SiteStore):
         timestamp = timestamp or datetime.datetime.utcnow()
         t = self.db.transaction()
         
+        metadata = self.get_metadata(key)
+        
         try:
             typekey = data['type']
-            olddata = self.get(key)
-
-            if olddata:
+            type_id = self._key2id(typekey)
+            
+            if metadata: # already existing object
                 revision = None
-                thing_id = self._key2id(key)
-                olddata = simplejson.loads(olddata)
+                thing_id = metadata.id
+                olddata = simplejson.loads(self.get(key))
+                created = metadata.created
                 action = "update"
             else:
                 revision = 1
-                type_id = self._key2id(typekey)
                 thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
                 olddata = {}
+                created = timestamp
                 action = "create"
         
             if transaction_id is None:
                 transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
             revision = self._add_version(thing_id=thing_id, revision=revision, transaction_id=transaction_id, created=timestamp)
-            
-            created = olddata and olddata['created']
-        
+                    
             self._update_tables(thing_id, key, olddata, dict(data)) #@@ why making copy of data?
             
             data['created'] = created
@@ -337,15 +338,9 @@ class DBSiteStore(common.SiteStore):
             data['key'] = key
             data['id'] = thing_id
             data['latest_revision'] = revision
-        
-            if revision == 1:
-                data['created'] = timestamp
-            else:
-                data['created'] = created
-            
+                    
             data = common.format_data(data)
         
-            type_id=self.get_metadata(typekey).id
             self.db.update('thing', where='id=$thing_id', last_modified=timestamp, latest_revision=revision, type=type_id, vars=locals())
             self.db.insert('data', seqname=False, thing_id=thing_id, revision=revision, data=simplejson.dumps(data))
         except:

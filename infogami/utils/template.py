@@ -131,9 +131,9 @@ def saferender(templates, *a, **kw):
             return result
         except Exception, e:
             # help to debug template errors.
-            # when called with safe=false, the debug error is displayed.
-            i = web.input(_method='GET', safe="true")
-            if i.safe.lower() == "false":
+            # when called with debug=true, the debug error is displayed.
+            i = web.input(_method='GET', debug="false")
+            if i.debug.lower() == "true":
                 raise
             
             import delegate

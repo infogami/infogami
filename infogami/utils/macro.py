@@ -50,8 +50,8 @@ def call_macro(name, args):
             args, kwargs = safeeval_args(args)
             result = macro(*args, **kwargs)
         except Exception, e:
-            i = web.input(_method="GET", safe="true")
-            if i.safe.lower() == "false":
+            i = web.input(_method="GET", debug="false")
+            if i.debug.lower() == "true":
                 raise
             result = "%s failed with error: <pre>%s</pre>" % (name, web.websafe(str(e)))
             import traceback

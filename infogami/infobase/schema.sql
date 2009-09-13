@@ -92,7 +92,7 @@ create table data (
     revision int,
     data text
 );
-create index data_thing_id_revision_idx ON data(thing_id, revision);
+create unique index data_thing_id_revision_idx ON data(thing_id, revision);
 
 $ sqltypes = dict(int="int", float="float", boolean="boolean", str="varchar(2048)", datetime="timestamp", ref="int references thing")
 

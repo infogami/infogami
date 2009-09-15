@@ -45,7 +45,7 @@ def admin_only(f):
     def g(self, *a, **kw):
         user = self.get_user()
         if user is None or user.key != '/user/admin':
-            raise common.PermissionDenied('Permission denied')
+            raise common.PermissionDenied(message='Permission Denied')
         return f(self, *a, **kw)
     return g
 
@@ -62,10 +62,10 @@ class AccountManager:
         ip = ip or web.ctx.ip
         key = '/user/' + username
         if self.site.get(key):
-            raise common.BadData("User already exists: " + username)
+            raise common.BadData(message="User already exists: " + username)
         
         if self.site.store.find_user(email):
-            raise common.BadData('Email is already used: ' + email)
+            raise common.BadData(message='Email is already used: ' + email)
 
         def f():
             web.ctx.disable_permission_check = True
@@ -85,10 +85,10 @@ class AccountManager:
     def update_user(self, old_password, new_password, email):
         user = self.get_user()
         if user is None:
-            raise common.PermissionDenied("Not logged in")
+            raise common.PermissionDenied(message="Not logged in")
 
         if not self.checkpassword(user.key, old_password):
-            raise common.BadData('Invalid Password')
+            raise common.BadData(message='Invalid Password')
         
         new_password and self.assert_password(new_password)
         email and self.assert_email(email)
@@ -117,14 +117,14 @@ class AccountManager:
 
     def assert_trusted_machine(self):
         if web.ctx.ip not in config.trusted_machines:
-            raise common.PermissionDenied('Permission denied to login as admin from ' + web.ctx.ip)
+            raise common.PermissionDenied(message='Permission denied to login as admin from ' + web.ctx.ip)
             
     @admin_only
     def get_user_email(self, username):
         details = self.site.store.get_user_details(username)
         
         if not details:
-            raise common.BadData('No user registered with username: ' + username)
+            raise common.BadData(message='No user registered with username: ' + username)
         else:
             return details.email
             
@@ -139,7 +139,7 @@ class AccountManager:
         
         key = self.site.store.find_user(email)
         if not key:
-            raise common.NotFound('No user registered with email: ' + email)
+            raise common.UserNotFound(email=email)
             
         username = web.lstrips(key, '/user/')
         details = self.site.store.get_user_details(key)
@@ -164,18 +164,18 @@ class AccountManager:
         
         # code is valid only for a week
         if int(timestamp) + SEC_PER_WEEK < int(time.time()):
-            raise common.BadData('Password Reset code expired')
+            raise common.BadData(message='Password Reset code expired')
 
         username = '/user/' + username 
         details = self.site.store.get_user_details(username)
         
         if not details:
-            raise common.BadData("Invalid username")
+            raise common.BadData(message="Invalid username")
         
         text = details.password + '$' + timestamp
         
         if not self._check_salted_hash(self.secret_key, text, code):
-            raise common.BadData("Invaid password reset code")
+            raise common.BadData(message="Invaid password reset code")
         
     def login(self, username, password):
         if username == 'admin':

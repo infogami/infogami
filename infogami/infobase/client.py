@@ -22,8 +22,9 @@ def storify(d):
         return d
 
 class ClientException(Exception):
-    def __init__(self, status, msg):
+    def __init__(self, status, msg, json=None):
         self.status = status
+        self.json = json
         Exception.__init__(self, msg)
 
 class NotFound(ClientException):
@@ -51,6 +52,16 @@ class Connection:
     def request(self, path, method='GET', data=None):
         raise NotImplementedError
         
+    def handle_error(self, status, error):
+        try:
+            data = simplejson.loads(error)
+            message = data.get('message', '')
+            json = error
+        except:
+            message = data
+            json = None
+        raise ClientException(status, message, json)
+        
 class LocalConnection(Connection):
     """LocalConnection assumes that db_parameters are set in web.config."""
     def __init__(self, **params):
@@ -66,7 +77,7 @@ class LocalConnection(Connection):
             if 'infobase_auth_token' in web.ctx:
                 self.set_auth_token(web.ctx.infobase_auth_token)
         except common.InfobaseException, e:
-            raise ClientException(e.status, str(e))
+            self.handle_error(e.status, str(e))
         return out
         
 class RemoteConnection(Connection):
@@ -132,7 +143,7 @@ class RemoteConnection(Connection):
         if response.status == 200:
             return response.read()
         else:
-            raise ClientException("%d %s" % (response.status, response.reason), response.read())
+            self.handle_error("%d %s" % (response.status, response.reason), response.read())
 
 _connection_types = {
     'local': LocalConnection,

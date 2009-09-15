@@ -94,7 +94,7 @@ class Query:
     def assert_type_required(self):
         type_required = any(c.key not in common.COMMON_PROPERTIES for c in self.conditions if not isinstance(c, Query))
         if type_required and self.get_type() is None:
-            raise common.BadData("missing 'type' in query")
+            raise common.BadData(message="missing 'type' in query")
 
     def add_condition(self, key, op, datatype, value):
         self.conditions.append(web.storage(key=key, op=op, datatype=datatype, value=value))

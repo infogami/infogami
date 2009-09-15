@@ -25,11 +25,11 @@ class SaveProcessor:
         self.validate_properties(data)
         
         if not web.ctx.get('disable_permission_check', False) and not has_permission(self.store, self.author, key):
-            raise common.PermissionDenied('Permission denied to modify %s' % repr(key))
+            raise common.PermissionDenied(message='Permission denied to modify %s' % repr(key))
         
         type = data.get('type')
         if type is None:
-            raise common.BadData("missing type")
+            raise common.BadData(message="missing type")
         type = self.process_value(type, self.get_property(None, 'type'))
         type = get_thing(self.store, type)
         
@@ -65,7 +65,7 @@ class SaveProcessor:
         rx = web.re_compile('^[a-z][a-z0-9_]*$')
         for key in data:
             if not rx.match(key):
-                raise common.BadData("Bad Property: %s" % repr(key))
+                raise common.BadData(message="Bad Property: %s" % repr(key))
 
     def process_data(self, d, type, old_data=None):
         for k, v in d.items():
@@ -118,14 +118,14 @@ class SaveProcessor:
 
         if isinstance(value, list):
             if unique is True:
-                raise common.BadData('expected atom, found list')
+                raise common.BadData(message='expected atom, found list')
             
             p = web.storage(property.copy())
             p.unique = True
             return [self.process_value(v, p) for v in value]
     
         if unique is False:    
-            raise common.BadData('expected list, found atom')
+            raise common.BadData(message='expected list, found atom')
 
         type_found = common.find_type(value)
     
@@ -137,7 +137,7 @@ class SaveProcessor:
                 elif type_found == '/type/int' and expected_type == '/type/float':
                     value = float(value)
             except ValueError, e:
-                raise common.BadData(str(e))
+                raise common.BadData(message=str(e))
         elif property.expected_type.kind == 'embeddable':
             if isinstance(value, dict):
                 return self.process_data(value, property.expected_type)
@@ -152,11 +152,11 @@ class SaveProcessor:
         if type_found == '/type/object':
             thing = get_thing(self.store, value)
             if thing is None:
-                raise common.NotFound(value)
+                raise common.NotFound(key=value)
             type_found = thing.type.key
 
         if expected_type != type_found:
-            raise common.BadData('expected %s, found %s' % (repr(property.expected_type.key), repr(type_found)))
+            raise common.BadData(message='expected %s, found %s' % (repr(property.expected_type.key), repr(type_found)))
         return value
 
 class WriteQueryProcessor:
@@ -181,7 +181,7 @@ class WriteQueryProcessor:
                 if create:
                     q = self.remove_connects(q)
                 else:
-                    raise common.NotFound(key)
+                    raise common.NotFound(key=key)
             else:
                 q = self.connect_all(thing._data, q)
             

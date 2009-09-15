@@ -127,7 +127,7 @@ def jsonapi(f):
         try:
             out = f(*a, **kw)
         except client.ClientException, e:
-            raise web.HTTPError(e.status, {}, str(e))
+            raise web.HTTPError(e.status, {}, e.json or str(e))
         
         i = web.input(_method='GET', callback=None)
         

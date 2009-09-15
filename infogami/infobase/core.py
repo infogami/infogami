@@ -1,27 +1,45 @@
 """Core datastructures for Infogami.
 """
 import web
+import _json as simplejson
+import copy
 
 class InfobaseException(Exception):
     status = "500 Internal Server Error"
-    pass
+    def __init__(self, **kw):
+        self.status = kw.pop('status', self.status)
+        kw.setdefault('error', 'unknown')
+        self.d = kw
+        Exception.__init__(self)
+        
+    def __str__(self):
+        return simplejson.dumps(self.d)
     
 class NotFound(InfobaseException):
     status = "404 Not Found"
-    def __init__(self, key):
-        InfobaseException.__init__(self, 'Not Found: %s' % repr(web.safeunicode(key)))
-        
+    def __init__(self, **kw):
+        error = kw.pop('error', 'notfound')
+        InfobaseException.__init__(self, error=error, **kw)
+
+class UserNotFound(InfobaseException):
+    status = "404 Not Found"
+    def __init__(self, **kw):
+        InfobaseException.__init__(self, error='user_notfound', **kw)
+                
 class PermissionDenied(InfobaseException):
     status = "403 Forbidden"
-    pass
+    def __init__(self, msg=""):
+        InfobaseException.__init__(self, error='permission_denied', message=msg)
 
 class BadData(InfobaseException):
     status = "400 Bad Request"
-    pass
+    
+    def __init__(self, **kw):
+        InfobaseException.__init__(self, error='bad_data', **kw)
     
 class TypeMismatch(BadData):
     def __init__(self, type_expected, type_found):
-        BadData.__init__(self, "Expected %s, found %s" % (repr(type_expected), repr(type_found)))
+        BadData.__init__(self, message="Expected %s, found %s" % (repr(type_expected), repr(type_found)))
 
 class Text(unicode):
     """Python type for /type/text."""
@@ -65,12 +83,15 @@ class Thing:
         except KeyError:
             raise AttributeError, key
             
+    def __eq__(self, other):
+        return getattr(other, 'key', None) == self.key and getattr(other, '_data', None) == self._data
+            
     def get(self, key, default=None):
         try:
             return self[key]
         except KeyError:
             return default
-
+            
     def __repr__(self):
         return "<thing: %s>" % repr(self.key)
         
@@ -78,7 +99,6 @@ class Thing:
         return Thing(self._store, self.key, self._data.copy())
         
     def _get_data(self):
-        import copy
         return copy.deepcopy(self._data)
 
     def format_data(self):
@@ -92,7 +112,6 @@ class Thing:
         
     @staticmethod
     def from_json(store, key, data):
-        import _json as simplejson
         return Thing.from_dict(store, key, simplejson.loads(data))
         
     @staticmethod

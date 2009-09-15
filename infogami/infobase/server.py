@@ -71,10 +71,10 @@ def jsonify(f):
         except Exception, e:
             common.record_exception()
             # call web.internalerror to send email when web.internalerror is set to web.emailerrors
-            web.internalerror()
+            process_exception(common.InfobaseException(error="internal_error", message=str(e)))
             
             if web.ctx.get('infobase_localmode'):
-                raise common.InfobaseException(str(e))
+                raise common.InfobaseException(message=str(e))
             else:
                 process_exception(e)
         
@@ -106,7 +106,7 @@ def input(*required, **defaults):
         
     for k in required:
         if k not in d:
-            raise common.BadData("Missing argument: " + repr(k))
+            raise common.BadData(message="Missing argument: " + repr(k))
             
     result = web.storage(defaults)
     result.update(d)
@@ -116,18 +116,18 @@ def to_int(value, key):
     try:
         return int(value)
     except:
-        raise common.BadData("Bad integer value for %s: %s" % (repr(key), repr(value)))
+        raise common.BadData(message="Bad integer value for %s: %s" % (repr(key), repr(value)))
         
 def assert_key(key):
     rx = web.re_compile(r'^/([^ ]*[^/])?$')
     if not rx.match(key):
-        raise common.BadData("Invalid key: %s" % repr(key))
+        raise common.BadData(message="Invalid key: %s" % repr(key))
         
 def from_json(s):
     try:
         return simplejson.loads(s)
     except ValueError, e:
-        raise common.BadData("Bad JSON: " + str(e))
+        raise common.BadData(message="Bad JSON: " + str(e))
         
 _infobase = None
 def get_site(sitename):
@@ -150,7 +150,7 @@ class db:
     def GET(self, name):
         site = get_site(name)
         if site is None:
-            raise common.NotFound(name)
+            raise common.NotFound(error="db_notfound", name=name)
         else:
             return {"name": site.sitename}
         
@@ -167,7 +167,7 @@ class db:
     def DELETE(self, name):
         site = get_site(name)
         if site is None:
-            raise common.NotFound(name)
+            raise common.NotFound(error="db_notfound", name=name)
         else:
             site.delete()
             return {"ok": True}
@@ -196,7 +196,7 @@ class withkey:
         assert_key(i.key)
         json = site.get(i.key, revision=revision)
         if not json:
-            raise common.NotFound(i.key)
+            raise common.NotFound(key=i.key)
         return JSON(json)
 
 class get_many:
@@ -289,9 +289,9 @@ class account:
         user = a.login(i.username, i.password)
         
         if not user:
-            raise common.BadData('Invalid username or password')
+            raise common.BadData(message='Invalid username or password')
         elif config.verify_user_email and user.get('verified') is False:
-                raise common.BadData("User is not verified")
+            raise common.BadData(message="User is not verified")
         else:
             return user.format_data()
 
@@ -372,7 +372,7 @@ class readlog:
         try:
             simplejson.loads(line)
         except ValueError:
-            raise web.BadRequest()
+            raise web.BadRequest(message="Invalid json")
         
     def GET(self, sitename, offset):
         i = web.input(timestamp=None, limit=1000)

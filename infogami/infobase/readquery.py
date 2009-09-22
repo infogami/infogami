@@ -137,7 +137,10 @@ def make_query(store, query, prefix=""):
         elif isinstance(v, dict):
             # make sure op is ==
             v = dict((k + '.' + key, value) for key, value in v.items())
-            q2 = make_query(store, v, prefix=prefix + k + ".") 
+            q2 = make_query(store, v, prefix=prefix + k + ".")
+            #@@ Anand: Quick-fix
+            # dbstore.things looks for key to find whether type is required or not. 
+            q2.key = k 
             if q2.conditions:
                 q.conditions.append(q2)
             else:

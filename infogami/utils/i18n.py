@@ -132,8 +132,13 @@ def i18n_loadhook():
     def parse_query_string():
         i = web.input(lang=None, _method="GET")
         return i.lang
-        
-    web.ctx.lang = parse_query_string() or parse_lang_cookie() or parse_lang_header() or ''
+    
+    try:    
+        web.ctx.lang = parse_query_string() or parse_lang_cookie() or parse_lang_header() or ''
+    except:
+        import traceback
+        traceback.print_exc()
+        web.ctx.lang = None
 
 def find(path, pattern):
     """Find all files matching the given pattern in the file hierarchy rooted at path.

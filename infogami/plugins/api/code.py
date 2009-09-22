@@ -134,7 +134,12 @@ def jsonapi(f):
         if i.callback:
             out = '%s(%s)' % (i.callback, out)
             
-        return delegate.RawText(out, content_type="application/json")
+        if web.input(_method="GET", text="false").text.lower() == "true":
+            content_type = "text/plain"
+        else:
+            content_type = "application/json"
+        
+        return delegate.RawText(out, content_type="text/plain")
     return g
 
 def request(path, method='GET', data=None):

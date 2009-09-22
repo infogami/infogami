@@ -94,7 +94,7 @@ def find_mode():
         
     if what in modes:
         cls = modes[what].get(encoding)
-
+        
         # mode is available, but not for the requested encoding
         if cls is None:
             raise web.HTTPError("406 Not Acceptable", {})
@@ -210,20 +210,23 @@ def parse_accept(header):
     return result
             
 def find_encoding():
+    def find_from_extension():
+        for enc in encodings:
+            if enc is None: continue
+            if web.ctx.path.endswith('.' + enc):
+                return enc
+                
     if web.ctx.method == 'GET':
         if 'HTTP_ACCEPT' in web.ctx.environ:
             accept = parse_accept(web.ctx.environ['HTTP_ACCEPT'])
             media_type = accept[0]['media_type']
             if media_type in media_types:
                 return media_types[media_type]
-    
-        for enc in encodings:
-            if enc is None: continue
-            if web.ctx.path.endswith('.' + enc):
-                return enc
+            else:
+                return find_from_extension()
     else:
         content_type = web.ctx.env.get('CONTENT_TYPE')
-        return media_types.get(content_type)
+        return media_types.get(content_type) or find_from_extension()
 
 def encoding_processor(handler):
     web.ctx.encoding = find_encoding()

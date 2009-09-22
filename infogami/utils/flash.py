@@ -14,12 +14,13 @@ import simplejson
 import web
 
 def get_flash_messages():
-    flash = web.ctx.flash
+    flash = web.ctx.get('flash', [])
     web.ctx.flash = []
     return flash
 
 def add_flash_message(type, message):
-    web.ctx.flash.append(web.storage(type=type, message=message))
+    flash = web.ctx.setdefault('flash', [])
+    flash.append(web.storage(type=type, message=message))
     
 def flash_processor(handler):
     flash = web.cookies(flash="[]").flash

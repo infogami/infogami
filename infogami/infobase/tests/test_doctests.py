@@ -1,21 +1,35 @@
 import doctest
+import py.test
 
 def test_doctest():
-    yield _test_doctest, "infogami.infobase.account"
-    yield _test_doctest, "infogami.infobase.bootstrap"
-    yield _test_doctest, "infogami.infobase.cache"
-    yield _test_doctest, "infogami.infobase.client"
-    yield _test_doctest, "infogami.infobase.common"
-    yield _test_doctest, "infogami.infobase.core"
-    yield _test_doctest, "infogami.infobase.dbstore"
-    yield _test_doctest, "infogami.infobase.infobase"
-    yield _test_doctest, "infogami.infobase.logger"
-    yield _test_doctest, "infogami.infobase.logreader"
-    yield _test_doctest, "infogami.infobase.lru"
-    yield _test_doctest, "infogami.infobase.readquery"
-    yield _test_doctest, "infogami.infobase.utils"
-    yield _test_doctest, "infogami.infobase.writequery"
+    modules = [
+        "infogami.infobase.account",
+        "infogami.infobase.bootstrap",
+        "infogami.infobase.cache",
+        "infogami.infobase.client",
+        "infogami.infobase.common",
+        "infogami.infobase.core",
+        "infogami.infobase.dbstore",
+        "infogami.infobase.infobase",
+        "infogami.infobase.logger",
+        "infogami.infobase.logreader",
+        "infogami.infobase.lru",
+        "infogami.infobase.readquery",
+        "infogami.infobase.utils",
+        "infogami.infobase.writequery",
+    ]
+    for test in find_doctests(modules):
+        yield run_doctest, test
 
-def _test_doctest(modname):
-    mod = __import__(modname, None, None, ['x'])
-    doctest.testmod(mod)
+def find_doctests(modules):
+    finder = doctest.DocTestFinder()
+    for m in modules:
+        mod = __import__(m, None, None, ['x'])
+        for t in finder.find(mod, mod.__name__):
+            yield t
+        
+def run_doctest(test):
+    runner = doctest.DocTestRunner(verbose=True)
+    failures, tries = runner.run(test)
+    if failures:
+        py.test.fail("doctest failed: " + test.name)

@@ -64,7 +64,7 @@ class Thing:
             return web.storage((k, self._process(v)) for k, v in value.iteritems())
         elif isinstance(value, Reference):
             json = self._store.get(value)
-            return Thing.from_json(self._store, value, json)
+            return Thing.from_json(self._store, unicode(value), json)
         else:
             return value
 

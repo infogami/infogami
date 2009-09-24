@@ -121,15 +121,21 @@ def create_test_store():
     """Creates a test implementation for using in doctests.
     
     >>> store = create_test_store()
-    >>> t = store.get('/type/type')
+    >>> json = store.get('/type/type')
+    >>> t = Thing.from_json(store, u'/type/type', json)
     >>> t
-    <thing: '/type/type'>
+    <thing: u'/type/type'>
     >>> t.properties[0]
-    <Storage {'expected_type': <thing: '/type/string'>, 'unique': True, 'name': 'name'}>
+    <Storage {'expected_type': <thing: u'/type/string'>, 'unique': True, 'name': 'name'}>
     >>> t.properties[0].expected_type.key
-    '/type/string'
+    u'/type/string'
     """
-    store = web.storage()
+    import _json as simplejson
+    class Store(web.storage):
+        def get(self, key, revision=None):
+            return simplejson.dumps(self[key].format_data())
+            
+    store = Store()
     
     def add_primitive_type(key):
         add_object({
@@ -188,6 +194,17 @@ def create_test_store():
     add_primitive_type('/type/boolean')
     add_primitive_type('/type/text')
     add_primitive_type('/type/datetime')
+    
+    add_object({
+        'key': '/type/page',
+        'type': '/type/page',
+        'kind': 'regular',
+        'properties': [{
+            'name': 'title',
+            'expected_type': {'key': '/type/string'},
+            'unique': True
+        }]
+    })
     return store
 
 class LazyThing:

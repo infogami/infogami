@@ -100,16 +100,15 @@ class SaveProcessor:
             >>> p.process_value('x', property('/type/int'))
             Traceback (most recent call last):
                 ... 
-            BadData: invalid literal for int() with base 10: 'x'
+            BadData: {"message": "invalid literal for int() with base 10: 'x'", "error": "bad_data"}
             >>> p.process_value('1', property('/type/int', unique=False))
             Traceback (most recent call last):
                 ... 
-            BadData: expected list, found atom
+            BadData: {"message": "expected list, found atom", "error": "bad_data"}
             >>> p.process_value(['1'], property('/type/int'))
             Traceback (most recent call last):
                 ... 
-            BadData: expected atom, found list
-        
+            BadData: {"message": "expected atom, found list", "error": "bad_data"}
             >>> p.process_value('/type/string', property('/type/type'))
             <ref: u'/type/string'>
         """

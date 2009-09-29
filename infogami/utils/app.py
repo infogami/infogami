@@ -220,10 +220,13 @@ def find_encoding():
         if 'HTTP_ACCEPT' in web.ctx.environ:
             accept = parse_accept(web.ctx.environ['HTTP_ACCEPT'])
             media_type = accept[0]['media_type']
-            if media_type in media_types:
-                return media_types[media_type]
-            else:
-                return find_from_extension()
+        else:
+            media_type = None
+
+        if media_type in media_types:
+            return media_types[media_type]
+        else:
+            return find_from_extension()
     else:
         content_type = web.ctx.env.get('CONTENT_TYPE')
         return media_types.get(content_type) or find_from_extension()

@@ -121,7 +121,7 @@ def _compile_template(name, text):
             
     try:
         return web.template.Template(text, filter=web.websafe, filename=name)
-    except web.template.ParseError, e:
+    except (web.template.ParseError, SyntaxError), e:
         print >> web.debug, 'Template parsing failed for ', name
         import traceback
         traceback.print_exc()
@@ -178,7 +178,11 @@ def movetemplates(prefix_pattern=None):
 
     for name, t in template.disktemplates.items():
         if isinstance(t, LazyTemplate):
-            t.func()
+            try:
+                t.func()
+            except:
+                print >> web.debug, 'unable to load template', t.name
+                raise
     
     for name, t in template.disktemplates.items():
         prefix = '/templates/'

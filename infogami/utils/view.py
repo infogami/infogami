@@ -76,6 +76,9 @@ web.template.Template.globals.update(dict(
 
 render = template.render
 
+def render_template(name, *a, **kw):
+    return render[name](*a, **kw)
+
 def public(f):
     """Exposes a funtion in templates."""
     web.template.Template.globals[f.__name__] = f

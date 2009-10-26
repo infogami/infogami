@@ -9,10 +9,6 @@ from context import context
 
 from app import *
 
-urls = (
-  '(/.*)', 'item'
-)
-
 import view
 import i18n
 

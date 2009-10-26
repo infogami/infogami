@@ -66,13 +66,16 @@ class MemcachedDict:
     def clear(self):
         self.memcache_client.flush_all()
         
+_cache_classes = {}
+def register_cache(type, klass):
+    _cache_classes[type] = klass
+    
+register_cache('lru', lru.LRU)
+register_cache('memcache', MemcachedDict)
+
 def create_cache(type, **kw):
-    if type == "lru":
-        return lru.LRU(**kw)
-    elif type == "memcache":
-        return MemcachedDict(**kw)
-    else:
-        return NoneDict()
+    klass = _cache_classes.get(type) or NoneDict
+    return klass(**kw)
 
 special_cache = {}
 global_cache = lru.LRU(200)
@@ -144,4 +147,3 @@ class Cache:
         web.ctx.new_objects.clear()
         if not local:
             global_cache.clear()
-

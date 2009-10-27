@@ -141,9 +141,8 @@ def _load_macro(page, lazy=False):
         t = _compile_template(page.key, page.macro)
         t.__doc__ = page.description or ''
         wikimacros[page.key] = t
-    
-def setup():
-    delegate.fakeload()
+        
+def load_all():
     def load_macros(site): 
         for m in db.get_all_macros(site):
             _load_macro(m, lazy=True)
@@ -156,7 +155,12 @@ def setup():
         context.site = site
         load_macros(site)
         load_templates(site)
-        
+    
+def setup():
+    delegate.fakeload()
+    
+    load_all()
+    
     from infogami.utils import types
     types.register_type('/templates/.*\.tmpl$', '/type/template')
     types.register_type('^/type/[^/]*$', '/type/type')

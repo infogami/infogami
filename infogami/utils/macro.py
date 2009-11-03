@@ -65,7 +65,7 @@ MACRO_PLACEHOLDER = "asdfghjjkl%sqwertyuiop"
 class MacroPattern(markdown.BasePattern):
     """Inline pattern to replace macros."""
     def __init__(self, md):
-        pattern = r'{{(.*)\((.*)\)}}'
+        pattern = r'{{([a-zA-Z0-9_]*)\((.*)\)}}'
         markdown.BasePattern.__init__(self, pattern)
         self.markdown = md
 

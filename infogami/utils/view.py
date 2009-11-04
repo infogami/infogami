@@ -15,8 +15,6 @@ import macro
 import storage
 from flash import get_flash_messages, add_flash_message
 
-from infogami.infobase.lru import lrumemoize
-
 wiki_processors = []
 def register_wiki_processor(p):
     wiki_processors.append(p)
@@ -121,7 +119,6 @@ def format(text, safe_mode=False):
     html, macros = _format(text, safe_mode=safe_mode)
     return macro.replace_macros(html, macros)
     
-@lrumemoize(1000)
 def _format(text, safe_mode=False):
     text = web.utf8(text).decode('utf-8')
     md = get_markdown(text, safe_mode=safe_mode)

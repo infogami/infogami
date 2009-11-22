@@ -537,18 +537,26 @@ class Thing:
         if self._backreferences is None:
             self._backreferences = self._site._get_backreferences(self)
         return self._backreferences
+        
+    def _get_defaults(self):
+        return {}
     
     def keys(self):
         special = ['revision', 'latest_revision', 'last_modified', 'created']
         return [k for k in self._getdata() if k not in special]
-
+        
     def get(self, key, default=None):
         try:
             return self._getdata()[key]
         except KeyError:
-            if 'type' not in self._data:
-                return default
-            return self._get_backreferences().get(key, default) 
+            # try default-value
+            d = self._get_defaults()
+            try:
+                return d[key]
+            except KeyError:
+                if 'type' not in self._data:
+                    return default
+                return self._get_backreferences().get(key, default) 
 
     def __getitem__(self, key):
         return self.get(key, nothing)
@@ -617,6 +625,12 @@ class Thing:
             return "<Thing: %s>" % repr(self.key)
         else:
             return "<Thing: %s>" % repr(self._data)
+            
+class Type(Thing):
+    def _get_defaults(self):
+        return {"kind": "regular"}
+        
+register_thing_class('/type/type', Type)
             
 # hooks can be registered by extending the hook class
 hooks = []

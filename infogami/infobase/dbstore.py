@@ -291,7 +291,11 @@ class DBSiteStore(common.SiteStore):
             transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
             result = [self.save(d['key'], d, transaction_id=transaction_id, timestamp=timestamp) for d in items]
         except:
-            t.rollback()
+            try:
+                t.rollback()
+            except:
+                pass
+                
             # clear local cache when something fails to avoid local cache changes due to
             # any earliers saves (in this save_many query) getting into global cache.
             self.cache.clear(local=True)
@@ -588,12 +592,14 @@ class DBSiteStore(common.SiteStore):
         
         for c in query.conditions:
             key, value = c.key, c.value
-            assert key in ['key', 'type', 'author', 'ip', 'comment', 'created', 'bot']
+            assert key in ['key', 'type', 'author', 'ip', 'comment', 'created', 'bot', 'revision']
             
             try:
                 if key == 'key':
                     key = 'thing_id'
                     value = get_id(value)
+                elif key == 'revision':
+                    key = 'version.revision'
                 elif key == 'type':
                     key = 'thing.type'
                     value = get_id(value)

@@ -609,9 +609,14 @@ class DBSiteStore(common.SiteStore):
                 else:
                     # 'bot' column is not enabled
                     if key == 'bot' and not config.use_bot_column:
-                        raise StopIteration
-                        
-                    key = 'transaction.' + key
+                        bots = [r.thing_id for r in self.db.query("SELECT thing_id FROM account WHERE bot='t'")]
+                        if value == True or str(value).lower() == "true":
+                            where += web.reparam(" AND transaction.author_id IN $bots", vars={"bots": bots})
+                        else:
+                            where += web.reparam(" AND transaction.author_id NOT IN $bots", vars={"bots": bots})
+                        continue
+                    else:
+                        key = 'transaction.' + key
             except StopIteration:
                 # StopIteration is raised when a non-existing object is referred in the query
                 return []

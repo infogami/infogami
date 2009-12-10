@@ -611,9 +611,9 @@ class DBSiteStore(common.SiteStore):
                     if key == 'bot' and not config.use_bot_column:
                         bots = [r.thing_id for r in self.db.query("SELECT thing_id FROM account WHERE bot='t'")]
                         if value == True or str(value).lower() == "true":
-                            where += web.reparam(" AND transaction.author_id IN $bots", vars={"bots": bots})
+                            where += web.reparam(" AND transaction.author_id IN $bots", {"bots": bots})
                         else:
-                            where += web.reparam(" AND transaction.author_id NOT IN $bots", vars={"bots": bots})
+                            where += web.reparam(" AND transaction.author_id NOT IN $bots", {"bots": bots})
                         continue
                     else:
                         key = 'transaction.' + key

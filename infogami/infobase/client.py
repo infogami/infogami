@@ -631,6 +631,16 @@ class Type(Thing):
     def _get_defaults(self):
         return {"kind": "regular"}
         
+    def get_property(self, name):
+        for p in self.properties:
+            if p.name == name:
+                return p
+                
+    def get_backreference(self, name):
+        for p in self.backreferences:
+            if p.name == name:
+                return p
+        
 register_thing_class('/type/type', Type)
             
 # hooks can be registered by extending the hook class

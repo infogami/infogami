@@ -422,7 +422,8 @@ class Site:
             data = self._request('/account/get_user')
         except ClientException:
             return None
-        user = data and create_thing(self, data['key'], data)
+            
+        user = data and create_thing(self, data['key'], self._process_dict(common.parse_query(data)))
         return user
 
     def new(self, key, data=None):

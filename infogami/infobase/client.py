@@ -603,7 +603,7 @@ class Thing:
     def update(self, data):
         data = common.parse_query(data)
         data = self._site._process_dict(data)
-        self._data.update(data)
+        self._getdata().update(data)
 
     def __getattr__(self, key):
         if key.startswith('__'):

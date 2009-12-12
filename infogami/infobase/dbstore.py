@@ -609,11 +609,11 @@ class DBSiteStore(common.SiteStore):
                 else:
                     # 'bot' column is not enabled
                     if key == 'bot' and not config.use_bot_column:
-                        bots = [r.thing_id for r in self.db.query("SELECT thing_id FROM account WHERE bot='t'")]
+                        bots = [r.thing_id for r in self.db.query("SELECT thing_id FROM account WHERE bot='t'")] or [-1]
                         if value == True or str(value).lower() == "true":
                             where += web.reparam(" AND transaction.author_id IN $bots", {"bots": bots})
                         else:
-                            where += web.reparam(" AND transaction.author_id NOT IN $bots", {"bots": bots})
+                            where += web.reparam(" AND (transaction.author_id NOT IN $bots OR transaction.author_id IS NULL)", {"bots": bots})
                         continue
                     else:
                         key = 'transaction.' + key

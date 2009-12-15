@@ -7,39 +7,22 @@ import web
 import common
 import config
 
-def make_query(username, data):
-    group = username + '/usergroup'
-    permission = username + '/permission'
-    q = {
-        'create': 'unless_exists',
-        'key': username,
-        'type': '/type/user'    
-    }
-    q.update(data)
-    return [q, 
-        {
-            'create': 'unless_exists',
-            'key': group,
-            'type': '/type/usergroup',
-            'members': [username]
-        },
-        {
-            'create': 'unless_exists',
-            'key': permission,
-            'type': '/type/permission',
-            'readers': ['/usergroup/everyone'],
-            'writers': [group],
-            'admins': [group]
-        },
-        {
-            'key': username,
-            'permission': {
-                'connect': 'update',
-                'key': permission
-            }
-        }
-    ]
-    
+def make_query(user):
+    q = [{
+        'key': user.key + '/usergroup',
+        'type': {'key': '/type/usergroup'},
+        'members': [{'key': user.key}]
+    }, 
+    {
+        'key': user.key + '/permission',
+        'type': {'key': '/type/permission'},
+        'readers': [{'key': '/usergroup/everyone'}],
+        'writers': [{'key': user.key + '/usergroup'}],
+        'admins': [{'key': user.key + '/usergroup'}]
+    }]
+    user.permission = {'key': user.key + '/permission'}
+    q.append(user)
+    return q
 def admin_only(f):
     """Decorator to limit a function to admin user only."""
     def g(self, *a, **kw):
@@ -56,7 +39,12 @@ class AccountManager:
         
     def register(self, username, email, password, data):
         enc_password = self._generate_salted_hash(self.secret_key, password)
-        self.register1(username, email, enc_password, data)
+        try:
+            self.register1(username, email, enc_password, data)
+        except:
+            import traceback
+            traceback.print_exc()
+            raise
         
     def register1(self, username, email, enc_password, data, ip=None, timestamp=None):
         ip = ip or web.ctx.ip
@@ -69,12 +57,16 @@ class AccountManager:
 
         def f():
             web.ctx.disable_permission_check = True
-            q = make_query(key, data)
-            self.site.write(q, ip=ip, timestamp=timestamp, _internal=True, author=None, action='register')
+            
+            d = web.storage({"key": key, "type": {"key": "/type/user"}})
+            d.update(data)
+            self.site.save(key, d, timestamp=timestamp, author=d, comment="Created new account")
+            
+            q = make_query(d)
+            self.site.save_many(q, ip=ip, timestamp=timestamp, author=None, action='register', comment="Setup new account")
             self.site.store.register(key, email, enc_password)
         
         timestamp = timestamp or datetime.datetime.utcnow()
-        
         self.site.store.transact(f)
         
         event_data = dict(data, username=username, email=email, password=enc_password)

@@ -63,7 +63,9 @@ class AccountManager:
             self.site.save(key, d, timestamp=timestamp, author=d, comment="Created new account")
             
             q = make_query(d)
-            self.site.save_many(q, ip=ip, timestamp=timestamp, author=None, action='register', comment="Setup new account")
+            account_bot = config.get('account_bot')
+            account_bot = account_bot and web.storage({"key": account_bot, "type": {"key": "/type/user"}})
+            self.site.save_many(q, ip=ip, timestamp=timestamp, author=account_bot, action='register', comment="Setup new account")
             self.site.store.register(key, email, enc_password)
         
         timestamp = timestamp or datetime.datetime.utcnow()

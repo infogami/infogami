@@ -117,14 +117,14 @@ class SaveProcessor:
 
         if isinstance(value, list):
             if unique is True:
-                raise common.BadData(message='expected atom, found list')
+                raise common.BadData(message='expected atom, found list', property=property.name)
             
             p = web.storage(property.copy())
             p.unique = True
             return [self.process_value(v, p) for v in value]
     
         if unique is False:    
-            raise common.BadData(message='expected list, found atom')
+            raise common.BadData(message='expected list, found atom', property=property.name)
 
         type_found = common.find_type(value)
     

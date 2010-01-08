@@ -351,7 +351,8 @@ class DBSiteStore(common.SiteStore):
         return result
         
     def _key2id(self, key):
-        return self.get_metadata(key).id
+        d = self.get_metadata(key)
+        return d and d.id
 
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):
         timestamp = timestamp or datetime.datetime.utcnow()

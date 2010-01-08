@@ -24,6 +24,7 @@ urls = (
     "/([^/]*)/get_many", "get_many",
     '/([^/]*)/save(/.*)', 'save',
     '/([^/]*)/save_many', 'save_many',
+    "/([^/]*)/reindex", "reindex",    
     "/([^/]*)/new_key", "new_key",
     "/([^/]*)/things", "things",
     "/([^/]*)/versions", "versions",
@@ -226,6 +227,15 @@ class save_many:
         data = from_json(i.query)
         site = get_site(sitename)
         return site.save_many(data, comment=i.comment, machine_comment=i.machine_comment, action=i.action)
+
+class reindex:
+    @jsonify
+    def POST(self, sitename):
+        i = input("keys")
+        keys = simplejson.loads(i['keys'])
+        site = get_site(sitename)
+        site.store.reindex(keys)
+        return {"status": "ok"}
         
 class new_key:
     @jsonify

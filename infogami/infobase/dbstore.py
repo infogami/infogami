@@ -305,6 +305,30 @@ class DBSiteStore(common.SiteStore):
             do_action(action_insert, new_type, new_type_id, thing_id, k, newdata[k])
             
         do_deletes_and_inserts()
+        
+    def reindex(self, keys):
+        """Remove all entries from index table and add again."""
+        t = self.db.transaction()
+        try:
+            thing_ids = dict((key, self._key2id(key)) for key in keys)
+            docs = dict((key, simplejson.loads(self.get(key))) for key in keys)
+        
+            deletes = {}
+            for key in keys:
+                type = docs[key]['type']['key']
+                for table in self.schema.find_tables(type):
+                    deletes.setdefault(table, []).append(thing_ids[key])
+        
+            for table, ids in deletes.items():
+                self.db.delete(table, where="thing_id IN $ids", vars=locals())
+
+            for key in keys:
+                self._update_tables(thing_ids[key], key, {}, docs[key])
+        except:
+            t.rollback()
+            raise
+        else:
+            t.commit()
                     
     def save_many(self, items, timestamp, comment, machine_comment, ip, author, action=None):
         action = action or "bulk_update"

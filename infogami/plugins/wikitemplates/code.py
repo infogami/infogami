@@ -62,7 +62,7 @@ class MacroSource(WikiSource):
 def get_user_preferences():
     #@ quick hack to avoid querying for user_preferences again and again
     if 'user_preferences' not in web.ctx:
-        web.ctx.user_preferences = context.user and web.ctx.site.get(context.user.key + "/preferences")
+        web.ctx.user_preferences = context.get('user') and web.ctx.site.get(context.user.key + "/preferences")
     return web.ctx.user_preferences
 
 def get_user_root():

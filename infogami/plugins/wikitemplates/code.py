@@ -109,15 +109,16 @@ class hooks(client.hook):
             _compile_template(page.key, page.body)
         elif page.type.key == '/type/macro':
             _compile_template(page.key, page.macro)
+            
+            
+def _stringify(value):
+    if isinstance(value, dict):
+        return value['value']
+    else:
+        return value
 
 def _compile_template(name, text):
-    def stringify(value):
-        if isinstance(value, dict):
-            return value['value']
-        else:
-            return value
-            
-    text = web.utf8(stringify(text))
+    text = web.utf8(_stringify(text))
             
     try:
         return web.template.Template(text, filter=web.websafe, filename=name)
@@ -130,12 +131,14 @@ def _compile_template(name, text):
 def _load_template(page, lazy=False):
     """load template from a wiki page."""
     if lazy:
+        page = web.storage(key=page.key, body=web.utf8(_stringify(page.body)))
         wikitemplates[page.key] = LazyTemplate(lambda: _load_template(page))
     else:
         wikitemplates[page.key] = _compile_template(page.key, page.body)
     
 def _load_macro(page, lazy=False):
     if lazy:
+        page = web.storage(key=page.key, macro=web.utf8(_stringify(page.macro)), description=page.description or "")
         wikimacros[page.key] = LazyTemplate(lambda: _load_macro(page))
     else:
         t = _compile_template(page.key, page.macro)

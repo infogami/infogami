@@ -200,7 +200,7 @@ def parse_accept(header):
             try:
                 k, v = part.split('=')
                 d[k.strip()] = v.strip()
-            except IndexError:
+            except IndexError, ValueError:
                 pass
                 
         if 'q' in d:

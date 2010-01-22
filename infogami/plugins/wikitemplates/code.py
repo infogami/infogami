@@ -30,10 +30,11 @@ class WikiSource(DictMixin):
         
     def __getitem__(self, key):
         key = self.process_key(key)
-        root = web.rstrips(self.getroot() or "", "/")
+        root = self.getroot()
         if root is None or context.get('rescue_mode'):
             raise KeyError, key
         
+        root = web.rstrips(root or "", "/")
         value = self.templates[root + key]    
         if isinstance(value, LazyTemplate):
             value = value.func()

@@ -69,8 +69,12 @@ def find_page():
     # encoding can be specified as part of path, strip the encoding part of path.
     if encoding:
         path = web.rstrips(path, "." + encoding)
-    
-    for p in pages:
+        
+    def sort_paths(paths):
+        """Sort path such that wildcards go at the end."""
+        return sorted(paths, key=lambda path: ('.*' in path, path))
+        
+    for p in sort_paths(pages):
         m = re.match('^' + p + '$', path)
         if m:
             cls = pages[p].get(encoding) or pages[p].get(None)

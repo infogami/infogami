@@ -28,8 +28,8 @@ class UserNotFound(InfobaseException):
                 
 class PermissionDenied(InfobaseException):
     status = "403 Forbidden"
-    def __init__(self, msg=""):
-        InfobaseException.__init__(self, error='permission_denied', message=msg)
+    def __init__(self, **kw):
+        InfobaseException.__init__(self, error='permission_denied', **kw)
 
 class BadData(InfobaseException):
     status = "400 Bad Request"

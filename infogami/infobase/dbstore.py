@@ -614,6 +614,7 @@ class DBSiteStore(common.SiteStore):
                 limit=query.limit, 
                 offset=query.offset,
                 )
+            keys = [r.key for r in result]
         else:
             result = self.db.select(
                 what='d0.thing_id', 
@@ -623,10 +624,12 @@ class DBSiteStore(common.SiteStore):
                 limit=query.limit, 
                 offset=query.offset,
             )
-            result = self.db.query('SELECT key FROM thing where ' + web.sqlors('id = ', [r.thing_id for r in result]))
-        result = [r.key for r in result]
+            ids = [r.thing_id for r in result]
+            rows = self.db.query('SELECT id, key FROM thing where id in $ids', vars={"ids": ids})
+            d = dict((r.id, r.key) for r in rows)
+            keys = [d[id] for id in ids]
         t.commit()
-        return result
+        return keys
         
     def sqljoin(self, queries, delim):
         return web.SQLQuery.join(queries, delim)

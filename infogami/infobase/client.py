@@ -99,7 +99,7 @@ class RemoteConnection(Connection):
             a = time.time()
             _path = path
             _data = data
-                
+        
         if data:
             if isinstance(data, dict):
                 data = dict((web.safestr(k), web.safestr(v)) for k, v in data.items())
@@ -609,6 +609,18 @@ class Thing:
     def __getattr__(self, key):
         if key.startswith('__'):
             raise AttributeError, key
+        
+        # Hack: __class__ of this object can change in _getdata method.
+        #
+        # Lets say __class__ is changed to A in _getdata and A has method foo.
+        # When obj.foo() is called before initializing, foo won't be found becase 
+        # __class__ is not yet set to A. Initialize and call getattr again to get 
+        # the expected behaviour.
+        # 
+        # @@ Can this ever lead to infinite-recursion?
+        if self._data is None:
+            self._getdata() # initialize self._data
+            return getattr(self, key)
 
         return self[key]
     

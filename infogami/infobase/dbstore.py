@@ -625,7 +625,7 @@ class DBSiteStore(common.SiteStore):
                 offset=query.offset,
             )
             ids = [r.thing_id for r in result]
-            rows = self.db.query('SELECT id, key FROM thing where id in $ids', vars={"ids": ids})
+            rows = ids and self.db.query('SELECT id, key FROM thing where id in $ids', vars={"ids": ids})
             d = dict((r.id, r.key) for r in rows)
             keys = [d[id] for id in ids]
         t.commit()

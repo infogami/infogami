@@ -119,11 +119,6 @@ def to_int(value, key):
     except:
         raise common.BadData(message="Bad integer value for %s: %s" % (repr(key), repr(value)))
         
-def assert_key(key):
-    rx = web.re_compile(r'^/([^ ]*[^/])?$')
-    if not rx.match(key):
-        raise common.BadData(message="Invalid key: %s" % repr(key))
-        
 def from_json(s):
     try:
         return simplejson.loads(s)
@@ -194,7 +189,6 @@ class withkey:
         i = input("key", revision=None, expand=False)
         site = get_site(sitename)
         revision = i.revision and to_int(i.revision, "revision")
-        assert_key(i.key)
         json = site.get(i.key, revision=revision)
         if not json:
             raise common.NotFound(key=i.key)

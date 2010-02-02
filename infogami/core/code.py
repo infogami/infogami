@@ -425,4 +425,4 @@ class feed(delegate.page):
         for c in changes:
             c.diff = diff(c.key, c.revision)
             c.created = self._format_date(c.created)
-        print render.feed(site, changes)
+        return delegate.RawText(render.feed(site, changes))

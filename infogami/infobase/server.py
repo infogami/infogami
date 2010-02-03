@@ -24,6 +24,7 @@ urls = (
     "/([^/]*)/get_many", "get_many",
     '/([^/]*)/save(/.*)', 'save',
     '/([^/]*)/save_many', 'save_many',
+    "/([^/]*)/reindex", "reindex",    
     "/([^/]*)/new_key", "new_key",
     "/([^/]*)/things", "things",
     "/([^/]*)/versions", "versions",
@@ -118,11 +119,6 @@ def to_int(value, key):
     except:
         raise common.BadData(message="Bad integer value for %s: %s" % (repr(key), repr(value)))
         
-def assert_key(key):
-    rx = web.re_compile(r'^/([^ ]*[^/])?$')
-    if not rx.match(key):
-        raise common.BadData(message="Invalid key: %s" % repr(key))
-        
 def from_json(s):
     try:
         return simplejson.loads(s)
@@ -193,7 +189,6 @@ class withkey:
         i = input("key", revision=None, expand=False)
         site = get_site(sitename)
         revision = i.revision and to_int(i.revision, "revision")
-        assert_key(i.key)
         json = site.get(i.key, revision=revision)
         if not json:
             raise common.NotFound(key=i.key)
@@ -226,6 +221,15 @@ class save_many:
         data = from_json(i.query)
         site = get_site(sitename)
         return site.save_many(data, comment=i.comment, machine_comment=i.machine_comment, action=i.action)
+
+class reindex:
+    @jsonify
+    def POST(self, sitename):
+        i = input("keys")
+        keys = simplejson.loads(i['keys'])
+        site = get_site(sitename)
+        site.store.reindex(keys)
+        return {"status": "ok"}
         
 class new_key:
     @jsonify

@@ -41,7 +41,7 @@ class edit (delegate.mode):
         i = web.input(v=None, t=None)
         
         if not web.ctx.site.can_write(path):
-            return render.permission_denied(path, "Permission denied to edit " + path + ".")
+            return render.permission_denied(web.ctx.fullpath, "Permission denied to edit " + path + ".")
 
         if i.v is not None and safeint(i.v, None) is None:
             raise web.seeother(web.changequery(v=None))
@@ -425,4 +425,4 @@ class feed(delegate.page):
         for c in changes:
             c.diff = diff(c.key, c.revision)
             c.created = self._format_date(c.created)
-        print render.feed(site, changes)
+        return delegate.RawText(render.feed(site, changes))

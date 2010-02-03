@@ -99,7 +99,7 @@ class RemoteConnection(Connection):
             a = time.time()
             _path = path
             _data = data
-                
+        
         if data:
             if isinstance(data, dict):
                 data = dict((web.safestr(k), web.safestr(v)) for k, v in data.items())
@@ -422,7 +422,8 @@ class Site:
             data = self._request('/account/get_user')
         except ClientException:
             return None
-        user = data and create_thing(self, data['key'], data)
+            
+        user = data and create_thing(self, data['key'], self._process_dict(common.parse_query(data)))
         return user
 
     def new(self, key, data=None):
@@ -603,11 +604,23 @@ class Thing:
     def update(self, data):
         data = common.parse_query(data)
         data = self._site._process_dict(data)
-        self._data.update(data)
+        self._getdata().update(data)
 
     def __getattr__(self, key):
         if key.startswith('__'):
             raise AttributeError, key
+        
+        # Hack: __class__ of this object can change in _getdata method.
+        #
+        # Lets say __class__ is changed to A in _getdata and A has method foo.
+        # When obj.foo() is called before initializing, foo won't be found becase 
+        # __class__ is not yet set to A. Initialize and call getattr again to get 
+        # the expected behaviour.
+        # 
+        # @@ Can this ever lead to infinite-recursion?
+        if self._data is None:
+            self._getdata() # initialize self._data
+            return getattr(self, key)
 
         return self[key]
     
@@ -629,6 +642,16 @@ class Thing:
 class Type(Thing):
     def _get_defaults(self):
         return {"kind": "regular"}
+        
+    def get_property(self, name):
+        for p in self.properties:
+            if p.name == name:
+                return p
+                
+    def get_backreference(self, name):
+        for p in self.backreferences:
+            if p.name == name:
+                return p
         
 register_thing_class('/type/type', Type)
             

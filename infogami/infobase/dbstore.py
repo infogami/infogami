@@ -100,7 +100,7 @@ class DBSiteStore(common.SiteStore):
         self.sitename = None
         
         self.cache = None
-        self.property_id_cache = {}
+        self.property_id_cache = None
         
     def set_cache(self, cache):
         self.cache = cache
@@ -226,13 +226,14 @@ class DBSiteStore(common.SiteStore):
             else:
                 return 'str'
                 
-        def do_action(f, typekey, thing_id, name, value, ordering=None):
+        def do_action(f, type_key, type_id, thing_id, name, value, ordering=None):
             if isinstance(value, list):
                 for i, v in enumerate(value):
-                    do_action(f, typekey, thing_id, name, v, i)
+                    do_action(f, type_key, type_id, thing_id, name, v, i)
             elif isinstance(value, dict):
                 for k, v in value.items():
-                    do_action(f, typekey, thing_id, name + '.' + k, v, ordering)
+                    if k != 'type':
+                        do_action(f, type_key, type_id, thing_id, name + '.' + k, v, ordering)
             else:
                 datatype = find_datatype(value)
                 if datatype == 'ref':
@@ -242,22 +243,41 @@ class DBSiteStore(common.SiteStore):
                     value = value[:2048] # truncate long strings
                 elif isinstance(value, bool):
                     value = "ft"[int(value)] # convert boolean to 't' or 'f'
-                table = self.schema.find_table(typekey, datatype, name)
+                table = self.schema.find_table(type_key, datatype, name)
                 
                 if table:
-                    type_id = self.get_metadata(typekey).id
                     pid = self.get_property_id(type_id, name, create=True)
                     assert pid is not None
                     f(table, thing_id, pid, value, ordering)
         
+        deletes = {}
+        inserts = {}
+        
         def action_delete(table, thing_id, key_id, value, ordering):
-            self.db.delete(table, where='thing_id=$thing_id AND key_id=$key_id', vars=locals())
+            deletes.setdefault((table, thing_id), []).append(key_id)
+            #self.db.delete(table, where='thing_id=$thing_id AND key_id=$key_id', vars=locals())
         
         def action_insert(table, thing_id, key_id, value, ordering):
-            self.db.insert(table, seqname=False, thing_id=thing_id, key_id=key_id, value=value, ordering=ordering)
+            #self.db.insert(table, seqname=False, thing_id=thing_id, key_id=key_id, value=value, ordering=ordering)
+            d = dict(thing_id=thing_id, key_id=key_id, value=value, ordering=ordering)
+            inserts.setdefault(table, []).append(d)
+            
+        def do_deletes_and_inserts():
+            for (table, thing_id), key_ids in deletes.items():
+                key_ids = list(set(key_ids)) # remove duplicates
+                self.db.delete(table, where='thing_id=$thing_id AND key_id IN $key_ids', vars=locals())
+                
+            for table, values in inserts.items():
+                self.db.multiple_insert(table, values,  seqname=False)
+            
+        olddata = olddata and common.parse_data(olddata)
+        newdata = newdata and common.parse_data(newdata)
 
         old_type = (olddata and olddata['type']) or None
         new_type = newdata['type']
+        
+        old_type_id = old_type and self.get_metadata(old_type).id
+        new_type_id = new_type and self.get_metadata(new_type).id
         
         def _coerce(d):
             if isinstance(d, dict) and 'key' in d:
@@ -268,21 +288,47 @@ class DBSiteStore(common.SiteStore):
         old_type = _coerce(old_type)
         new_type = _coerce(new_type)
         
-        for k in ['id', 'key', 'type', 'last_modified', 'created', 'revision']:
+        for k in ['id', 'key', 'type', 'last_modified', 'created', 'revision', 'latest_revision']:
             olddata.pop(k, None)
             newdata.pop(k, None)
         
         removed, unchanged, added = common.dict_diff(olddata, newdata)
-                
+                        
         if old_type != new_type:
             removed = olddata.keys()
             added = newdata.keys()
         
         for k in removed:
-            do_action(action_delete, old_type, thing_id, k, olddata[k])
+            do_action(action_delete, old_type, old_type_id, thing_id, k, olddata[k])
         
         for k in added:
-            do_action(action_insert, new_type, thing_id, k, newdata[k])
+            do_action(action_insert, new_type, new_type_id, thing_id, k, newdata[k])
+            
+        do_deletes_and_inserts()
+        
+    def reindex(self, keys):
+        """Remove all entries from index table and add again."""
+        t = self.db.transaction()
+        try:
+            thing_ids = dict((key, self._key2id(key)) for key in keys)
+            docs = dict((key, simplejson.loads(self.get(key))) for key in keys)
+        
+            deletes = {}
+            for key in keys:
+                type = docs[key]['type']['key']
+                for table in self.schema.find_tables(type):
+                    deletes.setdefault(table, []).append(thing_ids[key])
+        
+            for table, ids in deletes.items():
+                self.db.delete(table, where="thing_id IN $ids", vars=locals())
+
+            for key in keys:
+                self._update_tables(thing_ids[key], key, {}, docs[key])
+        except:
+            t.rollback()
+            raise
+        else:
+            t.commit()
                     
     def save_many(self, items, timestamp, comment, machine_comment, ip, author, action=None):
         action = action or "bulk_update"
@@ -305,7 +351,8 @@ class DBSiteStore(common.SiteStore):
         return result
         
     def _key2id(self, key):
-        return self.get_metadata(key).id
+        d = self.get_metadata(key)
+        return d and d.id
 
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):
         timestamp = timestamp or datetime.datetime.utcnow()
@@ -357,14 +404,22 @@ class DBSiteStore(common.SiteStore):
         web.ctx.new_objects[key] = simplejson.dumps(data)
         return {'key': key, 'revision': revision}
         
+    def get_property_id_cache(self):
+        if self.property_id_cache is None:
+            self.property_id_cache = {}
+            for d in self.db.select('property'):
+                self.property_id_cache[d.type, d.name] = d.id
+        return self.property_id_cache
+        
     def get_property_id(self, type_id, name, create=False):
-        if (type_id, name) in self.property_id_cache:
-            return self.property_id_cache[type_id, name]
+        cache = self.get_property_id_cache()
+        if (type_id, name) in cache:
+            return cache[type_id, name]
             
         pid = self._get_property_id(type_id, name, create)
         # Don't update the cache when the pid is created. The pid creation might be part of a transaction and that might get rolled back.
         if pid is not None and create is False:
-            self.property_id_cache[type_id, name] = pid
+            cache[type_id, name] = pid
         return pid
             
     def _get_property_id(self, type_id, name, create=False):
@@ -559,6 +614,7 @@ class DBSiteStore(common.SiteStore):
                 limit=query.limit, 
                 offset=query.offset,
                 )
+            keys = [r.key for r in result]
         else:
             result = self.db.select(
                 what='d0.thing_id', 
@@ -568,10 +624,12 @@ class DBSiteStore(common.SiteStore):
                 limit=query.limit, 
                 offset=query.offset,
             )
-            result = self.db.query('SELECT key FROM thing where ' + web.sqlors('id = ', [r.thing_id for r in result]))
-        result = [r.key for r in result]
+            ids = [r.thing_id for r in result]
+            rows = ids and self.db.query('SELECT id, key FROM thing where id in $ids', vars={"ids": ids})
+            d = dict((r.id, r.key) for r in rows)
+            keys = [d[id] for id in ids]
         t.commit()
-        return result
+        return keys
         
     def sqljoin(self, queries, delim):
         return web.SQLQuery.join(queries, delim)
@@ -609,11 +667,11 @@ class DBSiteStore(common.SiteStore):
                 else:
                     # 'bot' column is not enabled
                     if key == 'bot' and not config.use_bot_column:
-                        bots = [r.thing_id for r in self.db.query("SELECT thing_id FROM account WHERE bot='t'")]
+                        bots = [r.thing_id for r in self.db.query("SELECT thing_id FROM account WHERE bot='t'")] or [-1]
                         if value == True or str(value).lower() == "true":
                             where += web.reparam(" AND transaction.author_id IN $bots", {"bots": bots})
                         else:
-                            where += web.reparam(" AND transaction.author_id NOT IN $bots", {"bots": bots})
+                            where += web.reparam(" AND (transaction.author_id NOT IN $bots OR transaction.author_id IS NULL)", {"bots": bots})
                         continue
                     else:
                         key = 'transaction.' + key

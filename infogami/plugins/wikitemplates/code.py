@@ -30,10 +30,11 @@ class WikiSource(DictMixin):
         
     def __getitem__(self, key):
         key = self.process_key(key)
-        root = web.rstrips(self.getroot() or "", "/")
+        root = self.getroot()
         if root is None or context.get('rescue_mode'):
             raise KeyError, key
         
+        root = web.rstrips(root or "", "/")
         value = self.templates[root + key]    
         if isinstance(value, LazyTemplate):
             value = value.func()
@@ -62,7 +63,7 @@ class MacroSource(WikiSource):
 def get_user_preferences():
     #@ quick hack to avoid querying for user_preferences again and again
     if 'user_preferences' not in web.ctx:
-        web.ctx.user_preferences = context.user and web.ctx.site.get(context.user.key + "/preferences")
+        web.ctx.user_preferences = context.get('user') and web.ctx.site.get(context.user.key + "/preferences")
     return web.ctx.user_preferences
 
 def get_user_root():
@@ -109,15 +110,16 @@ class hooks(client.hook):
             _compile_template(page.key, page.body)
         elif page.type.key == '/type/macro':
             _compile_template(page.key, page.macro)
+            
+            
+def _stringify(value):
+    if isinstance(value, dict):
+        return value['value']
+    else:
+        return value
 
 def _compile_template(name, text):
-    def stringify(value):
-        if isinstance(value, dict):
-            return value['value']
-        else:
-            return value
-            
-    text = web.utf8(stringify(text))
+    text = web.utf8(_stringify(text))
             
     try:
         return web.template.Template(text, filter=web.websafe, filename=name)
@@ -130,12 +132,14 @@ def _compile_template(name, text):
 def _load_template(page, lazy=False):
     """load template from a wiki page."""
     if lazy:
+        page = web.storage(key=page.key, body=web.utf8(_stringify(page.body)))
         wikitemplates[page.key] = LazyTemplate(lambda: _load_template(page))
     else:
         wikitemplates[page.key] = _compile_template(page.key, page.body)
     
 def _load_macro(page, lazy=False):
     if lazy:
+        page = web.storage(key=page.key, macro=web.utf8(_stringify(page.macro)), description=page.description or "")
         wikimacros[page.key] = LazyTemplate(lambda: _load_macro(page))
     else:
         t = _compile_template(page.key, page.macro)

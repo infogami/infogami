@@ -120,9 +120,9 @@ def format(text, safe_mode=False):
     return macro.replace_macros(html, macros)
     
 def _format(text, safe_mode=False):
-    text = web.utf8(text).decode('utf-8')
+    text = web.safeunicode(text)
     md = get_markdown(text, safe_mode=safe_mode)
-    html = md.convert().encode('utf-8')
+    html = web.safestr(md.convert())
     return html, md.macros
 
 @public

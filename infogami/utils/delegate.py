@@ -105,9 +105,13 @@ def _make_plugin(name):
         module = 'infogami.core'
     else:
         for p in config.plugin_path:
-            m = __import__(p, globals(), locals(), ['plugins'])
-            path = os.path.dirname(m.__file__) + '/' + name
-            module = p + '.' + name
+            if p:
+                m = __import__(p, globals(), locals(), ['plugins'])
+                path = os.path.dirname(m.__file__) + '/' + name
+                module = p + '.' + name
+            else:
+                path = name
+                module = name
             if os.path.isdir(path):
                 break
         else:

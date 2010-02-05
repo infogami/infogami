@@ -19,13 +19,7 @@ class hook(client.hook):
     def on_new_version(self, page):
         """Update i18n strings when a i18n wiki page is changed."""
         if page.type.key == '/type/i18n':
-            data = page._getdata()
-            for k, v in data.items():
-                if isinstance(v, dict):
-                    data[k]  = v['value']
-                if not data[k]:
-                    data.pop(k)
-            
+            data = page._getdata()            
             load(page.key, data)
 
 def load_strings(site):

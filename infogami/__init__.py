@@ -57,6 +57,7 @@ def startserver(*args):
     """Start webserver."""
     from infogami.utils import delegate
     sys.argv = [sys.argv[0]] + list(args)
+    web.ctx.clear()
     delegate.app.run(*config.middleware)
 
 @action

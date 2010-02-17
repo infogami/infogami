@@ -81,9 +81,17 @@ def layout_processor(handler):
         web.header('Content-Type', out.content_type)
         
     if hasattr(out, 'rawtext'):
-        return out.rawtext
+        html = out.rawtext
     else:
-        return view.render_site(config.site, out)
+        html = view.render_site(config.site, out)
+        
+    # cleanup references to avoid memory leaks
+    web.ctx.site._cache.clear()
+    web.ctx.pop('site', None)
+    web.ctx.env.clear()
+    context.clear()
+
+    return html
 
 app.add_processor(web.loadhook(initialize_context))
 app.add_processor(layout_processor)

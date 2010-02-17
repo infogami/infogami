@@ -543,7 +543,7 @@ class Thing:
         return {}
     
     def keys(self):
-        special = ['revision', 'latest_revision', 'last_modified', 'created']
+        special = ['id', 'revision', 'latest_revision', 'last_modified', 'created']
         return [k for k in self._getdata() if k not in special]
         
     def get(self, key, default=None):

@@ -88,7 +88,7 @@ def layout_processor(handler):
     # cleanup references to avoid memory leaks
     web.ctx.site._cache.clear()
     web.ctx.pop('site', None)
-    web.ctx.env.clear()
+    web.ctx.env = {}
     context.clear()
 
     return html

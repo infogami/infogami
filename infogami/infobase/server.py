@@ -376,7 +376,14 @@ class readlog:
         try:
             simplejson.loads(line)
         except ValueError:
-            raise web.BadRequest(message="Invalid json")
+            raise web.BadRequest()
+            
+    def valid_json(self, line):
+        try:
+            simplejson.loads(line)
+            return True
+        except ValueError:
+            return False
         
     def GET(self, sitename, offset):
         i = web.input(timestamp=None, limit=1000)
@@ -387,20 +394,17 @@ class readlog:
             log = self.get_log(offset, i)
             limit = min(1000, common.safeint(i.limit, 1000))
             
-            try:
-                # read the first line
-                line = log.readline(do_update=False)
-                # first line can be incomplete if the offset is wrong. Assert valid.
-                self.assert_valid_json(line)
-                
+            try:                
                 web.header('Content-Type', 'application/json')
                 yield '{"data": [\n'
-                yield line.strip()
-
-                for i in range(1, limit):
-                    line = log.readline(do_update=False)
+                
+                for i in range(limit):
+                    line = log.readline().strip()
                     if line:
-                        yield ",\n" + line.strip()
+                        if self.valid_json(line):
+                            yield ",\n" + line.strip()
+                        else:
+                            print >> sys.stderr, "ERROR: found invalid json before %s" % log.tell()
                     else:
                         break
                 yield '], \n'

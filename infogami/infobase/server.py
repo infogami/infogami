@@ -398,11 +398,13 @@ class readlog:
                 web.header('Content-Type', 'application/json')
                 yield '{"data": [\n'
                 
+                sep = ""
                 for i in range(limit):
                     line = log.readline().strip()
                     if line:
                         if self.valid_json(line):
-                            yield ",\n" + line.strip()
+                            yield sep + line.strip()
+                            sep = ",\n"
                         else:
                             print >> sys.stderr, "ERROR: found invalid json before %s" % log.tell()
                     else:

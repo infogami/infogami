@@ -195,8 +195,8 @@ class Site:
                 else:
                     raise
             self._cache[key, revision] = web.storage(common.parse_query(result))
-        import copy
-        return copy.deepcopy(self._cache[key, revision])
+            
+        return self._cache[key, revision]
         
     def _process(self, value):
         if isinstance(value, list):
@@ -212,9 +212,10 @@ class Site:
             return value
             
     def _process_dict(self, data):
+        d = {}
         for k, v in data.items():
-            data[k] = self._process(v)
-        return data
+            d[k] = self._process(v)
+        return d
             
     def _load(self, key, revision=None):
         data = self._get(key, revision)
@@ -277,7 +278,7 @@ class Site:
     def get_many(self, keys):
         if not keys:
             return []
-            
+        
         # simple hack to avoid crossing URL length limit.
         if len(keys) > 100:
             things = []
@@ -297,9 +298,9 @@ class Site:
                 data = result[key]
                 data = web.storage(common.parse_query(data))
                 self._cache[key, None] = data
-                things.append(create_thing(self, key, self._process_dict(copy.deepcopy(data))))
+                things.append(create_thing(self, key, self._process_dict(data)))
         return things
-
+        
     def new_key(self, type):
         data = {'type': type}
         result = self._request('/new_key', data=data)

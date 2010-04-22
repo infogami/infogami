@@ -27,8 +27,10 @@ create table thing (
     created timestamp default(current_timestamp at time zone 'utc'),
     last_modified timestamp default(current_timestamp at time zone 'utc')
 );
-$for name in ['key', 'type', 'latest_revision', 'last_modified', 'created']:
+$for name in ['type', 'latest_revision', 'last_modified', 'created']:
     create index thing_${name}_idx ON thing($name);
+
+create unique index thing_key_idx ON thing(key);
 
 $if multisite:
     create index thing_site_id_idx ON thing(site_id);

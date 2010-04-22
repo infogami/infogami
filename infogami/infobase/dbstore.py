@@ -105,12 +105,15 @@ class DBSiteStore(common.SiteStore):
     def set_cache(self, cache):
         self.cache = cache
 
-    def get_metadata(self, key):
+    def get_metadata(self, key, for_update=False):
         # postgres doesn't seem to like Reference objects even though Referece extends from unicode.
         if isinstance(key, common.Reference):
             key = unicode(key)
 
-        d = self.db.query('SELECT * FROM thing WHERE key=$key', vars=locals())
+        if for_update:
+            d = self.db.query('SELECT * FROM thing WHERE key=$key FOR UPDATE NOWAIT', vars=locals())
+        else:
+            d = self.db.query('SELECT * FROM thing WHERE key=$key', vars=locals())
         return d and d[0] or None
         
     def get_metadata_list(self, keys):
@@ -335,7 +338,7 @@ class DBSiteStore(common.SiteStore):
         t = self.db.transaction()
         try:
             transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
-            result = [self.save(d['key'], d, transaction_id=transaction_id, timestamp=timestamp) for d in items]
+            result = [self._save(d['key'], d, transaction_id=transaction_id, timestamp=timestamp) for d in items]
         except:
             try:
                 t.rollback()
@@ -358,50 +361,65 @@ class DBSiteStore(common.SiteStore):
         timestamp = timestamp or datetime.datetime.utcnow()
         t = self.db.transaction()
         
-        metadata = self.get_metadata(key)
-        
         try:
-            typekey = data['type']
-            type_id = self._key2id(typekey)
-            
-            if metadata: # already existing object
-                revision = None
-                thing_id = metadata.id
-                olddata = simplejson.loads(self.get(key))
-                created = metadata.created
-                action = "update"
-            else:
-                revision = 1
-                thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
-                olddata = {}
-                created = timestamp
-                action = "create"
-        
-            if transaction_id is None:
-                transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
-            revision = self._add_version(thing_id=thing_id, revision=revision, transaction_id=transaction_id, created=timestamp)
-                    
-            self._update_tables(thing_id, key, olddata, dict(data)) #@@ why making copy of data?
-            
-            data['created'] = created
-            data['revision'] = revision
-            data['last_modified'] = timestamp
-            data['key'] = key
-            data['id'] = thing_id
-            data['latest_revision'] = revision
-                    
-            data = common.format_data(data)
-        
-            self.db.update('thing', where='id=$thing_id', last_modified=timestamp, latest_revision=revision, type=type_id, vars=locals())
-            self.db.insert('data', seqname=False, thing_id=thing_id, revision=revision, data=simplejson.dumps(data))
+            result = self._save(key, data, 
+                timestamp=timestamp, 
+                comment=comment, 
+                machine_comment=machine_comment, 
+                ip=ip, 
+                author=author, 
+                transaction_id=None)
         except:
             t.rollback()
             self.cache.clear(local=True)        
+            import traceback
+            traceback.print_exc()
             raise
         else:
             t.commit()
         
-        web.ctx.new_objects[key] = simplejson.dumps(data)
+        return result
+        
+    def _save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):
+        try:
+            metadata = self.get_metadata(key, for_update=True)
+        except:
+            raise common.Conflict(key=key, reason="Edit conflict detected.")
+
+        typekey = data['type']
+        type_id = self._key2id(typekey)
+        
+        if metadata: # already existing object
+            revision = None
+            thing_id = metadata.id
+            olddata = simplejson.loads(self.get(key))
+            created = metadata.created
+            action = "update"
+        else:
+            revision = 1
+            thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
+            olddata = {}
+            created = timestamp
+            action = "create"
+            
+        if transaction_id is None:
+            transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
+        revision = self._add_version(thing_id=thing_id, revision=revision, transaction_id=transaction_id, created=timestamp)
+                
+        self._update_tables(thing_id, key, olddata, dict(data)) #@@ why making copy of data?
+        
+        data['created'] = created
+        data['revision'] = revision
+        data['last_modified'] = timestamp
+        data['key'] = key
+        data['latest_revision'] = revision
+                
+        data = common.format_data(data)
+        
+        self.db.update('thing', where='id=$thing_id', last_modified=timestamp, latest_revision=revision, type=type_id, vars=locals())
+        self.db.insert('data', seqname=False, thing_id=thing_id, revision=revision, data=simplejson.dumps(data))
+        
+        web.ctx.new_objects[key] = simplejson.dumps(data)    
         return {'key': key, 'revision': revision}
         
     def get_property_id_cache(self):

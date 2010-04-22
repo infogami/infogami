@@ -36,6 +36,12 @@ class BadData(InfobaseException):
     
     def __init__(self, **kw):
         InfobaseException.__init__(self, error='bad_data', **kw)
+        
+class Conflict(InfobaseException):
+    status = "409 Conflict"
+    
+    def __init__(self, **kw):
+        InfobaseException.__init__(self, error="conflict", **kw)
     
 class TypeMismatch(BadData):
     def __init__(self, type_expected, type_found):

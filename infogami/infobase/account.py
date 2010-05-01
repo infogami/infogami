@@ -7,6 +7,10 @@ import web
 import common
 import config
 
+def get_user_root():
+    user_root = config.get("user_root", "/user")
+    return user_root.rstrip("/") + "/"
+
 def make_query(user):
     q = [{
         'key': user.key + '/usergroup',
@@ -27,7 +31,7 @@ def admin_only(f):
     """Decorator to limit a function to admin user only."""
     def g(self, *a, **kw):
         user = self.get_user()
-        if user is None or user.key != '/user/admin':
+        if user is None or user.key != get_user_root() + '/admin':
             raise common.PermissionDenied(message='Permission Denied')
         return f(self, *a, **kw)
     return g
@@ -48,7 +52,7 @@ class AccountManager:
         
     def register1(self, username, email, enc_password, data, ip=None, timestamp=None):
         ip = ip or web.ctx.ip
-        key = '/user/' + username
+        key = get_user_root() + username
         if self.site.get(key):
             raise common.BadData(message="User already exists: " + username)
         
@@ -100,7 +104,7 @@ class AccountManager:
     def update_user_details(self, username, **params):
         """Update user details like email, active, bot, verified.
         """
-        key = '/user/' + username
+        key = get_user_root() + username
         self.site.store.update_user_details(key, **params)
         
     def assert_password(self, password):
@@ -135,7 +139,7 @@ class AccountManager:
         if not key:
             raise common.UserNotFound(email=email)
             
-        username = web.lstrips(key, '/user/')
+        username = web.lstrips(key, get_user_root())
         details = self.site.store.get_user_details(key)
 
         # generate code by combining encrypt password and timestamp. 
@@ -150,7 +154,7 @@ class AccountManager:
     def reset_password(self, username, code, password):
         self.check_reset_code(username, code)        
         enc_password = self._generate_salted_hash(self.secret_key, password)
-        self.site.store.update_user_details('/user/' + username, password=enc_password, verified=True)
+        self.site.store.update_user_details(get_user_root() + username, password=enc_password, verified=True)
             
     def check_reset_code(self, username, code):
         SEC_PER_WEEK = 7 * 24 * 3600
@@ -160,7 +164,7 @@ class AccountManager:
         if int(timestamp) + SEC_PER_WEEK < int(time.time()):
             raise common.BadData(message='Password Reset code expired')
 
-        username = '/user/' + username 
+        username = get_user_root() + username 
         details = self.site.store.get_user_details(username)
         
         if not details:
@@ -175,7 +179,7 @@ class AccountManager:
         if username == 'admin':
             self.assert_trusted_machine()
             
-        username = '/user/' + username
+        username = get_user_root() + username
         if self.checkpassword(username, password):
             self.set_auth_token(username)
             user = self.site._get_thing(username)

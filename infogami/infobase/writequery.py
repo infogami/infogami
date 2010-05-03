@@ -3,6 +3,7 @@
 import common
 from common import pprint, any, all
 import web
+import account
 
 def get_thing(store, key, revision=None):
     if isinstance(key, common.Reference):
@@ -355,7 +356,7 @@ def serialize(query):
 
 def has_permission(store, author, key):
     # admin user can modify everything
-    if author and author.key == '/user/admin':
+    if author and author.key == account.get_user_root() + 'admin':
         return True
     
     permission = get_permission(store, key)

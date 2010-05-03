@@ -132,7 +132,7 @@ def jsonapi(f):
         i = web.input(_method='GET', callback=None)
         
         if i.callback:
-            out = '%s(%s)' % (i.callback, out)
+            out = '%s(%s);' % (i.callback, out)
             
         if web.input(_method="GET", text="false").text.lower() == "true":
             content_type = "text/plain"
@@ -233,6 +233,7 @@ class query(delegate.page):
     @jsonapi
     def GET(self):
         i = web.input(query=None)
+        i.pop("callback", None)
         query = i.pop('query')
         if not query:
             query = simplejson.dumps(make_query(i))

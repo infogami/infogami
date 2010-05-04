@@ -57,6 +57,10 @@ def run_things_query(store, query):
         return data
     else:
         load_things(keys, query)
+        
+        # @@@ Sometimes thing.latest_revision is not same as max(data.revision) due to some data error.
+        # @@@ Temporary work-around to handle that case.
+        data = [d for d in data if d['key'] in xthings]
         return get_nested_data(data, query)
 
 class Query:

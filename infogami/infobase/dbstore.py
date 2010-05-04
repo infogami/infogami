@@ -10,6 +10,11 @@ INDEXED_DATATYPES = ["str", "int", "float", "ref", "boolean", "datetime"]
 
 default_schema = None
 
+def process_json(json):
+    """Hook to process json.
+    """
+    return json
+
 class Schema:
     """Schema to map <type, datatype, key> to database table.
     
@@ -156,7 +161,7 @@ class DBSiteStore(common.SiteStore):
                 json = self._get(key, revision)
                 if json:
                     self.cache[key] = json
-        return json
+        return process_json(key, json)
     
     def _get(self, key, revision):    
         metadata = self.get_metadata(key)
@@ -164,8 +169,8 @@ class DBSiteStore(common.SiteStore):
             return None
         revision = revision or metadata.latest_revision
         d = self.db.query('SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision', vars=locals())
-        data = d and d[0].data 
-        return data
+        json = d and d[0].data 
+        return json
         
     def get_many(self, keys):
         if not keys:
@@ -183,7 +188,7 @@ class DBSiteStore(common.SiteStore):
                     yield ',\n'
                 yield simplejson.dumps(r.key)
                 yield ": "
-                yield r.data
+                yield process_json(r.key, r.data)
             yield '}'
         return "".join(process(query))
         

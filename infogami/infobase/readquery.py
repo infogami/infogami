@@ -5,7 +5,7 @@ import re
 import _json as simplejson
 
 def get_thing(store, key, revision=None):
-    json = store.get(key, revision)
+    json = key and store.get(key, revision)
     return json and common.Thing.from_json(store, key, json)
 
 def run_things_query(store, query):

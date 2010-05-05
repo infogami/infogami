@@ -169,7 +169,7 @@ class DBSiteStore(common.SiteStore):
             return None
         revision = revision or metadata.latest_revision
         d = self.db.query('SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision', vars=locals())
-        json = d and d[0].data 
+        json = d and d[0].data or None
         return json
         
     def get_many(self, keys):

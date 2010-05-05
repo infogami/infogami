@@ -31,7 +31,7 @@ def admin_only(f):
     """Decorator to limit a function to admin user only."""
     def g(self, *a, **kw):
         user = self.get_user()
-        if user is None or user.key != get_user_root() + '/admin':
+        if user is None or user.key != get_user_root() + 'admin':
             raise common.PermissionDenied(message='Permission Denied')
         return f(self, *a, **kw)
     return g
@@ -226,11 +226,3 @@ class AccountManager:
             return False
         else:
             return self._check_salted_hash(self.secret_key, raw_password, details.password)
-            
-if __name__ == "__main__":
-    web.transact()
-    from infobase import Infobase
-    site = Infobase().get_site('infogami.org')
-    a = AccountManager(site)
-    web.rollback()
-    

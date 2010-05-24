@@ -214,7 +214,7 @@ class diff (delegate.mode):
         if b is None:
             raise web.seeother(web.changequery(query={}))
         
-        a = get(path, safeint(i.a, b.revision-1))            
+        a = get(path, max(1, safeint(i.a, b.revision-1)))
         return render.diff(a, b)
 
 class login(delegate.page):

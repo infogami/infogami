@@ -13,6 +13,12 @@ import os
 
 import storage
 
+# There are some backward-incompatible changes in web.py 0.34 which makes Infogami fail. 
+# Monkey-patching web.py to fix that issue.
+if web.__version__ == "0.34":
+    from UserDict import DictMixin
+    web.template.TemplateResult.__bases__ = (DictMixin, web.storage)
+
 web_render = web.template.render
 
 class TemplateRender(web_render):

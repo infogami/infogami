@@ -91,30 +91,31 @@ def system_types():
         ),
     ]
 
-def system_objects():
-    def group(key, description):
-        return {
-            'key': key,
-            'type': {'key': '/type/usergroup'},
-            'description': description
-        }
+def usergroup(key, description, members=[]):
+    return {
+        'key': key,
+        'type': {'key': '/type/usergroup'},
+        'description': description, 
+        'members': members
+    }
     
-    def permission(key, readers, writers, admins):
-        return {
-            'key': key,
-            'type': {'key': '/type/permission'},
-            'readers': readers,
-            'writers': writers,
-            'admins': admins
-        }
-        
+def permission(key, readers, writers, admins):
+    return {
+        'key': key,
+        'type': {'key': '/type/permission'},
+        'readers': readers,
+        'writers': writers,
+        'admins': admins
+    }
+
+def system_objects():        
     def t(key):
         return {'key': key}
     
     return [
-        group('/usergroup/everyone', 'Group of all users including anonymous users.'),
-        group('/usergroup/allusers', 'Group of all registred users.'),
-        group('/usergroup/admin', 'Group of admin users.'),
+        usergroup('/usergroup/everyone', 'Group of all users including anonymous users.'),
+        usergroup('/usergroup/allusers', 'Group of all registred users.'),
+        usergroup('/usergroup/admin', 'Group of admin users.'),
         permission('/permission/open', [t('/usergroup/everyone')], [t('/usergroup/everyone')], [t('/usergroup/admin')]),
         permission('/permission/restricted', [t('/usergroup/everyone')], [t('/usergroup/admin')], [t('/usergroup/admin')]),
         permission('/permission/secret', [t('/usergroup/admin')], [t('/usergroup/admin')], [t('/usergroup/admin')]),
@@ -131,10 +132,14 @@ def bootstrap(site, admin_password):
     
     import web
     web.ctx.infobase_bootstrap = True
-    query = make_query()
     
-    #site.write(query)
+    query = make_query()
     site.save_many(query)
+    
     a = site.get_account_manager()
     a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))
-    a.register(username="useradmin", email="useradmin@example.com", password=admin_password, data=dict(displayname="User Administrator"))
+
+    # add admin user to admin usergroup
+    import account
+    q = [usergroup('/usergroup/admin', 'Group of admin users.', [{"key": account.get_user_root() + "admin"}])]
+    site.save_many(q)

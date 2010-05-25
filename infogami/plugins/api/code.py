@@ -155,8 +155,10 @@ class BadRequest(web.HTTPError):
         
 def can_write():
     user = delegate.context.user and delegate.context.user.key
-    usergroup = web.ctx.site.get('/usergroup/api')
-    return usergroup and user in [u.key for u in usergroup.members]
+    usergroup = web.ctx.site.get('/usergroup/api') or {}
+    usergroup_admin = web.ctx.site.get('/usergroup/admin') or {}
+    api_users = usergroup.get('members', []) + usergroup_admin.get('members', [])
+    return user in [u.key for u in api_users]
     
 class view(delegate.mode):
     encoding = "json"

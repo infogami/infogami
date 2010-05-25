@@ -189,18 +189,12 @@ class Site:
         
     def bootstrap(self, admin_password='admin123'):
         import bootstrap
-        query = bootstrap.make_query()
+        web.ctx.ip = '127.0.0.1'
         
         import cache
         cache.loadhook()
         
-        web.ctx.ip = '127.0.0.1'
-        
-        self.save_many(query)
-                
-        a = self.get_account_manager()
-        a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))
-        a.register(username="useradmin", email="useradmin@example.com", password=admin_password, data=dict(displayname="User Administrator"))
+        bootstrap.bootstrap(self, admin_password)
         
     def add_trigger(self, type, func):
         """Registers a trigger to call func when object of specified type is modified. 

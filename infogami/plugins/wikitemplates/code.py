@@ -7,7 +7,7 @@ import os
 from UserDict import DictMixin
 
 import infogami
-from infogami import core
+from infogami import core, config
 from infogami.core.db import ValidationException
 from infogami.utils import delegate, macro, template, storage, view
 from infogami.utils.context import context
@@ -26,7 +26,7 @@ class WikiSource(DictMixin):
         self.templates = templates
         
     def getroot(self):
-        return "/"
+        return config.get("default_template_root", "/")
         
     def __getitem__(self, key):
         key = self.process_key(key)

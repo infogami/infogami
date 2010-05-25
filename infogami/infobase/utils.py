@@ -117,6 +117,26 @@ def flatten(nested_list, result=None):
         else:
             result.append(x)
     return result
+    
+def flatten_dict(d):
+    """Flattens a dictionary.
+    
+        >>> flatten_dict({"key": "/books/foo", "type": {"key": "/type/book"}, "authors": [{"key": "/authors/a1"}, {"key": "/authors/a2"}]})
+        [('type.key', '/type/book'), ('key', '/books/foo'), ('authors.key', '/authors/a1'), ('authors.key', '/authors/a2')]
+    """
+    def f(key, value):
+        if isinstance(value, dict):
+            for k, v in value.items():
+                f(key + "." + k, v)
+        elif isinstance(value, list):
+            for v in value:
+                f(key, v)
+        else:
+            key = web.lstrips(key, ".")
+            items.append((key, value))
+    items = []
+    f("", d)
+    return items
 
 def safeint(value, default):
     """

@@ -5,10 +5,16 @@ import config
 import web
 import _json as simplejson
 import datetime, time
+from collections import defaultdict
 
-INDEXED_DATATYPES = ["str", "int", "float", "ref", "boolean", "datetime"]
+INDEXED_DATATYPES = ["str", "int", "ref"]
 
 default_schema = None
+
+def process_json(json):
+    """Hook to process json.
+    """
+    return json
 
 class Schema:
     """Schema to map <type, datatype, key> to database table.
@@ -98,6 +104,7 @@ class DBSiteStore(common.SiteStore):
         self.db = db
         self.schema = schema
         self.sitename = None
+        self.indexer = Indexer()
         
         self.cache = None
         self.property_id_cache = None
@@ -156,7 +163,7 @@ class DBSiteStore(common.SiteStore):
                 json = self._get(key, revision)
                 if json:
                     self.cache[key] = json
-        return json
+        return process_json(key, json)
     
     def _get(self, key, revision):    
         metadata = self.get_metadata(key)
@@ -164,8 +171,8 @@ class DBSiteStore(common.SiteStore):
             return None
         revision = revision or metadata.latest_revision
         d = self.db.query('SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision', vars=locals())
-        data = d and d[0].data 
-        return data
+        json = d and d[0].data or None
+        return json
         
     def get_many(self, keys):
         if not keys:
@@ -183,7 +190,7 @@ class DBSiteStore(common.SiteStore):
                     yield ',\n'
                 yield simplejson.dumps(r.key)
                 yield ": "
-                yield r.data
+                yield process_json(r.key, r.data)
             yield '}'
         return "".join(process(query))
         
@@ -309,13 +316,61 @@ class DBSiteStore(common.SiteStore):
             
         do_deletes_and_inserts()
         
+    def _delete_index(self, index):
+        """Delete the specified index.
+        Index must be a list of (type, key, datatype, name, value). 
+        """
+        index = self._process_index(index)
+        for table, data in index.items():
+            for thing_id, key_id, value in data:
+                if key_id is None:
+                    self.db.delete(table, 'thing_id=$thing_id', vars=locals())
+                else:
+                    self.db.delete(table, 'thing_id=$thing_id AND key_id=$key_id AND value=$value', vars=locals())
+            
+    def _insert_index(self, index):
+        """Insert the specified index.
+        index must be a list of (type, key, datatype, name, value). 
+        """
+        index = self._process_index(index)
+        for table, d in index.items():
+            self.db.multiple_insert(table, d, seqname=False)
+    
+    def _process_index(self, index):
+        """Process the index and create the data suitable for inserting/deleting from the database.
+        """
+        @web.memoize
+        def get_thing_id(key):
+            return self.get_metadata(key).id
+            
+        data = defaultdict(list)
+            
+        for type, key, datatype, name, value in index:
+            thing_id = get_thing_id(key)
+            key_id = name and self.get_property_id(get_thing_id(type), name, create=True)
+            if datatype == 'ref':
+                value = value and get_thing_id(value)
+    
+            table = self.schema.find_table(type, datatype, name)                
+            data[table].append(web.storage(thing_id=thing_id, key_id=key_id, value=value))
+        return data
+        
+    def compute_index(self, doc):
+        """Computes the index for given doc.
+        Index is a list of (type, key, datatype, name, value).
+        """
+        type = doc['type']['key']
+        key = doc['key']
+        return [(type, key, datatype, name, value) for datatype, name, value in self.indexer.compute_index(doc)]
+    
     def reindex(self, keys):
         """Remove all entries from index table and add again."""
+        
         t = self.db.transaction()
         try:
             thing_ids = dict((key, self._key2id(key)) for key in keys)
             docs = dict((key, simplejson.loads(self.get(key))) for key in keys)
-        
+            
             deletes = {}
             for key in keys:
                 type = docs[key]['type']['key']
@@ -324,9 +379,9 @@ class DBSiteStore(common.SiteStore):
         
             for table, ids in deletes.items():
                 self.db.delete(table, where="thing_id IN $ids", vars=locals())
-
-            for key in keys:
-                self._update_tables(thing_ids[key], key, {}, docs[key])
+        
+            index = [d for doc in docs.values() for d in self.compute_index(doc)]
+            self._insert_index(index)
         except:
             t.rollback()
             raise
@@ -913,7 +968,59 @@ class MultiDBSiteStore(DBSiteStore):
     
     def delete(self):
         pass
-                    
+        
+class Indexer:
+    """Indexer computes the values to be indexed.
+    
+        >>> indexer = Indexer()
+        >>> sorted(indexer.compute_index({"key": "/books/foo", "title": "The Foo Book", "authors": [{"key": "/authors/a1"}, {"key": "/authors/a2"}]}))
+        [('ref', 'authors', '/authors/a1'), ('ref', 'authors', '/authors/a2'), ('str', 'title', 'The Foo Book')]
+    """
+    def compute_index(self, doc):
+        """Returns an iterator with (datatype, key, value) for each value be indexed.
+        """
+        index = common.flatten_dict(doc)
+        
+        # skip special values and /type/text
+        skip = ["id", "key", "type.key", "revision", "latest_revison", "last_modified", "created"]
+        index = set((k, v) for k, v in index if k not in skip and not k.endswith(".value") and not k.endswith(".type"))
+        
+        for k, v in index:
+            if k.endswith(".key"):
+                yield 'ref', web.rstrips(k, ".key"), v
+            elif isinstance(v, basestring):
+                yield 'str', k, v
+            elif isinstance(v, int):
+                yield 'int', k, v
+    
+    def diff_index(self, old_doc, new_doc):
+        """Compute the difference between the index of old doc and new doc.
+        Returns the indexes to be deleted and indexes to be inserted.
+        
+        >>> i = Indexer()
+        >>> r1 = {"key": "/books/foo", "title": "The Foo Book", "authors": [{"key": "/authors/a1"}, {"key": "/authors/a2"}]}
+        >>> r2 = {"key": "/books/foo", "title": "The Bar Book", "authors": [{"key": "/authors/a2"}]}
+        >>> deletes, inserts = i.diff_index(r1, r2)
+        >>> list(deletes)
+        [('str', 'title', 'The Foo Book'), ('ref', 'authors', '/authors/a1')]
+        >>> list(inserts)
+        [('str', 'title', 'The Bar Book')]
+        """
+        def get_type(doc):
+            return doc.get('type', {}).get('key', None)
+
+        new_index = set(self.compute_index(new_doc))
+        
+        # nothing to delete when the old doc is not specified
+        if not old_doc:
+            return [], new_index
+            
+        old_index = set(self.compute_index(old_doc))
+        if get_type(old_doc) != get_type(new_doc):
+            return old_index, new_index
+        else:
+            return old_index.difference(new_index), new_index.difference(old_index)
+        
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

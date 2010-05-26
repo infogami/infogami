@@ -18,7 +18,8 @@ import storage
 if web.__version__ == "0.34":
     from UserDict import DictMixin
     web.template.TemplateResult.__bases__ = (DictMixin, web.storage)
-
+    web.template.StatementNode.emit = lambda self, indent, text_indent="": indent + self.stmt
+    
 web_render = web.template.render
 
 class TemplateRender(web_render):

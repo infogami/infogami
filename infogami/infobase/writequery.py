@@ -87,8 +87,8 @@ class SaveProcessor:
 
     def process_value(self, value, property):
         """
-            >>> def property(expected_type, unique=True):
-            ...     return web.storage(expected_type=web.storage(key=expected_type, kind='regular'), unique=unique)
+            >>> def property(expected_type, unique=True, name='foo'):
+            ...     return web.storage(expected_type=web.storage(key=expected_type, kind='regular'), unique=unique, name=name)
             ...
             >>> p = SaveProcessor(common.create_test_store(), None)
             
@@ -102,14 +102,14 @@ class SaveProcessor:
             Traceback (most recent call last):
                 ... 
             BadData: {"message": "invalid literal for int() with base 10: 'x'", "error": "bad_data"}
-            >>> p.process_value('1', property('/type/int', unique=False))
+            >>> p.process_value('1', property('/type/int', unique=False, name="foo"))
             Traceback (most recent call last):
                 ... 
-            BadData: {"message": "expected list, found atom", "error": "bad_data"}
-            >>> p.process_value(['1'], property('/type/int'))
+            BadData: {"message": "expected list, found atom", "property": "foo", "error": "bad_data"}
+            >>> p.process_value(['1'], property('/type/int', name="foo"))
             Traceback (most recent call last):
                 ... 
-            BadData: {"message": "expected atom, found list", "error": "bad_data"}
+            BadData: {"message": "expected atom, found list", "property": "foo", "error": "bad_data"}
             >>> p.process_value('/type/string', property('/type/type'))
             <ref: u'/type/string'>
         """

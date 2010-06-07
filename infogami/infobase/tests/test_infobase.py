@@ -26,6 +26,16 @@ def setup_module(mod):
     # overwrite _cleanup to make it possible to have transactions spanning multiple requests.
     mod.app.do_cleanup = mod.app._cleanup
     mod.app._cleanup = lambda: None
+    
+def teardown_module(mod):
+    # clear reference to close the connection
+    mod.db.__dict__.clear()    
+    mod.db = None
+    mod.app = None
+    mod.site = None
+    _infobase = server._infobase    
+    server._infobase = None
+    os.system('dropdb infobase_test')
         
 def subdict(d, keys):
     """Returns a subset of a dictionary.

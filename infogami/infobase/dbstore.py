@@ -11,7 +11,7 @@ INDEXED_DATATYPES = ["str", "int", "ref"]
 
 default_schema = None
 
-def process_json(json):
+def process_json(key, json):
     """Hook to process json.
     """
     return json

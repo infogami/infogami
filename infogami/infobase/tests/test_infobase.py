@@ -20,6 +20,7 @@ def setup_module(mod):
     web.config.db_parameters = dict(dbn='postgres', db='infobase_test', user=os.getenv('USER'), pw='')    
     mod.site = _create_site('test')
     mod.db = mod.site.store.db
+    mod.db.printing = False
     mod.app = server.app
     
     # overwrite _cleanup to make it possible to have transactions spanning multiple requests.
@@ -85,11 +86,13 @@ class TestInfobase(DBTest):
             {'key': '/foo', 'revision': 1, 'comment': 'test 1'},
         ]
         
-        self.create_user('test', 'testt@example.com', 'test123', data={'displayname': 'Test'})
+        print self.create_user('test', 'testt@example.com', 'test123', data={'displayname': 'Test'})
+        print site._get_thing('/user/test')
         site.save('/foo', {'key': '/foo', 'type': '/type/object', 'x': 2}, comment='test 4', ip='1.2.3.4', author=site._get_thing('/user/test'))
         
         assert versions({'author': '/user/test'}) == [
-            {'key': '/foo', 'revision': 3, 'comment': 'test 4'}
+            {'key': '/foo', 'revision': 3, 'comment': 'test 4'},
+            {'key': u'/user/test', 'revision': 1, 'comment': u'Created new account'}
         ]
 
         assert versions({'ip': '1.2.3.4'}) == [

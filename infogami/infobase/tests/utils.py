@@ -12,4 +12,5 @@ def setup_db(mod):
     mod.db.query(sql)
     
 def teardown_db(mod):
+    mod.db.ctx.clear()
     mod.db = None

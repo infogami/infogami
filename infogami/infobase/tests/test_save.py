@@ -1,5 +1,5 @@
 from infogami.infobase import dbstore
-from infogami.infobase._dbstore_save import SaveImpl
+from infogami.infobase._dbstore.save import SaveImpl
 
 import web
 import simplejson
@@ -8,19 +8,10 @@ import datetime
 import unittest
 
 def setup_module(mod):
-    global db
-    
-    os.system('dropdb infobase_test; createdb infobase_test')
-    db = web.database(dbn='postgres', db='infobase_test', user=os.getenv('USER'), pw='')
-    
-    schema = dbstore.default_schema or dbstore.Schema()
-    sql = str(schema.sql())
-    db.query(sql)
+    utils.setup_db(mod)
     
 def teardown_module(mod):
-    # clear reference to close the connection
-    global db
-    db = None
+    utils.teardown_db(mod)
 
 class DBTest(unittest.TestCase):
     def setUp(self):

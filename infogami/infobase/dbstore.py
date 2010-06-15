@@ -7,7 +7,8 @@ import _json as simplejson
 import datetime, time
 from collections import defaultdict
 
-INDEXED_DATATYPES = ["str", "int", "ref"]
+from _dbstore.schema import Schema, INDEXED_DATATYPES
+from _dbstore.indexer import Indexer
 
 default_schema = None
 
@@ -16,87 +17,6 @@ def process_json(key, json):
     """
     return json
 
-class Schema:
-    """Schema to map <type, datatype, key> to database table.
-    
-        >>> schema = Schema()
-        >>> schema.add_entry('page_str', '/type/page', 'str', None)
-        >>> schema.find_table('/type/page', 'str', 'title')
-        'page_str'
-        >>> schema.find_table('/type/article', 'str', 'title')
-        'datum_str'
-    """
-    def __init__(self, multisite=False):
-        self.entries = []
-        self.sequences = {}
-        self.prefixes = set()
-        self.multisite = multisite
-        self._table_cache = {}
-        
-    def add_entry(self, table, type, datatype, name):
-        entry = web.storage(table=table, type=type, datatype=datatype, name=name)
-        self.entries.append(entry)
-        
-    def add_seq(self, type, pattern='/%d'):
-        self.sequences[type] = pattern
-        
-    def get_seq(self, type):
-        if type in self.sequences:
-            # name is 'type_page_seq' for type='/type/page'
-            name = type[1:].replace('/', '_') + '_seq'
-            return web.storage(type=type, pattern=self.sequences[type], name=name)
-        
-    def add_table_group(self, prefix, type, datatypes=None):
-        datatypes = datatypes or INDEXED_DATATYPES
-        for d in datatypes:
-            self.add_entry(prefix + "_" + d, type, d, None)
-            
-        self.prefixes.add(prefix)
-        
-    def find_table(self, type, datatype, name):
-        if datatype not in INDEXED_DATATYPES:
-            return None
-            
-        def f():
-            def match(a, b):
-                return a is None or a == b
-            for e in self.entries:
-                if match(e.type, type) and match(e.datatype, datatype) and match(e.name, name):
-                    return e.table
-            return 'datum_' + datatype
-        
-        key = type, datatype, name
-        if key not in self._table_cache:
-            self._table_cache[key] = f()
-        return self._table_cache[key]
-        
-    def find_tables(self, type):
-        return [self.find_table(type, d, None) for d in INDEXED_DATATYPES]
-        
-    def sql(self):
-        import os
-        prefixes = sorted(list(self.prefixes) + ['datum'])
-        sequences = [self.get_seq(type).name for type in self.sequences]
-        
-        path = os.path.join(os.path.dirname(__file__), 'schema.sql')
-        t = web.template.frender(path)
-
-        self.add_table_group("datum", None)
-        
-        tables = sorted(set([(e.table, e.datatype) for e in self.entries]))
-        web.template.Template.globals['dict'] = dict
-        web.template.Template.globals['enumerate'] = enumerate
-        return t(tables, sequences, self.multisite)
-        
-    def list_tables(self):
-        self.add_table_group("datum", None)
-        tables = sorted(set([e.table for e in self.entries]))
-        return tables
-        
-    def __str__(self):
-        lines = ["%s\t%s\t%s\t%s" % (e.table, e.type, e.datatype, e.name) for e in self.entries]
-        return "\n".join(lines)
-        
 class DBSiteStore(common.SiteStore):
     """
     """
@@ -968,58 +888,6 @@ class MultiDBSiteStore(DBSiteStore):
     
     def delete(self):
         pass
-        
-class Indexer:
-    """Indexer computes the values to be indexed.
-    
-        >>> indexer = Indexer()
-        >>> sorted(indexer.compute_index({"key": "/books/foo", "title": "The Foo Book", "authors": [{"key": "/authors/a1"}, {"key": "/authors/a2"}]}))
-        [('ref', 'authors', '/authors/a1'), ('ref', 'authors', '/authors/a2'), ('str', 'title', 'The Foo Book')]
-    """
-    def compute_index(self, doc):
-        """Returns an iterator with (datatype, key, value) for each value be indexed.
-        """
-        index = common.flatten_dict(doc)
-        
-        # skip special values and /type/text
-        skip = ["id", "key", "type.key", "revision", "latest_revison", "last_modified", "created"]
-        index = set((k, v) for k, v in index if k not in skip and not k.endswith(".value") and not k.endswith(".type"))
-        
-        for k, v in index:
-            if k.endswith(".key"):
-                yield 'ref', web.rstrips(k, ".key"), v
-            elif isinstance(v, basestring):
-                yield 'str', k, v
-            elif isinstance(v, int):
-                yield 'int', k, v
-    
-    def diff_index(self, old_doc, new_doc):
-        """Compute the difference between the index of old doc and new doc.
-        Returns the indexes to be deleted and indexes to be inserted.
-        
-        >>> i = Indexer()
-        >>> r1 = {"key": "/books/foo", "title": "The Foo Book", "authors": [{"key": "/authors/a1"}, {"key": "/authors/a2"}]}
-        >>> r2 = {"key": "/books/foo", "title": "The Bar Book", "authors": [{"key": "/authors/a2"}]}
-        >>> deletes, inserts = i.diff_index(r1, r2)
-        >>> list(deletes)
-        [('str', 'title', 'The Foo Book'), ('ref', 'authors', '/authors/a1')]
-        >>> list(inserts)
-        [('str', 'title', 'The Bar Book')]
-        """
-        def get_type(doc):
-            return doc.get('type', {}).get('key', None)
-
-        new_index = set(self.compute_index(new_doc))
-        
-        # nothing to delete when the old doc is not specified
-        if not old_doc:
-            return [], new_index
-            
-        old_index = set(self.compute_index(old_doc))
-        if get_type(old_doc) != get_type(new_doc):
-            return old_index, new_index
-        else:
-            return old_index.difference(new_index), new_index.difference(old_index)
         
 if __name__ == "__main__":
     import doctest

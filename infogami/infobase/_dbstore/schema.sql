@@ -111,6 +111,23 @@ $for table, datatype in tables:
 -- sequences --
 $for seq in sequences:
     CREATE SEQUENCE $seq;
+    
+create table store (
+    id serial primary key,
+    key text unique,
+    json text
+);
+
+create table store_index (
+    id serial primary key,
+    store_id int references store,
+    type text,
+    name text,
+    value text
+);
+
+create index store_index_store_id_idx ON store_index (store_id);
+create index store_idx ON store_index(type, name, value);
 
 COMMIT;
 

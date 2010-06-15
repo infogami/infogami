@@ -29,7 +29,7 @@ def setup_module(mod):
     
 def teardown_module(mod):
     # clear reference to close the connection
-    mod.db.__dict__.clear()    
+    mod.db.ctx.clear()
     mod.db = None
     mod.app = None
     mod.site = None

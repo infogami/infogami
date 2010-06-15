@@ -31,7 +31,8 @@ urls = (
     "/([^/]*)/write", "write",
     "/([^/]*)/account/(.*)", "account",
     "/([^/]*)/permission", "permission",
-    "/([^/]*)/log/(\d\d\d\d-\d\d-\d\d:\d+)", 'readlog',
+    "/([^/]*)/log/(\d\d\d\d-\d\d-\d\d:\d+)", "readlog",
+    "/([^/]*)/store(.*)", "store",
     "/_invalidate", "invalidate"
 )
 
@@ -266,6 +267,10 @@ class permission:
         i = input('key')
         return site.get_permissions(i.key)
         
+class store:
+    def GET(self, path):
+        pass
+        
 class account:
     """Code for handling /account/.*"""
     def get_method(self):
@@ -273,7 +278,7 @@ class account:
             return web.ctx.infobase_method
         else:
             return web.ctx.method
-        
+    
     @jsonify
     def delegate(self, sitename, method):
         site = get_site(sitename)

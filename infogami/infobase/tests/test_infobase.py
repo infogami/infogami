@@ -17,7 +17,7 @@ def _create_site(name):
 
 def setup_module(mod):
     os.system('dropdb infobase_test; createdb infobase_test')
-    web.config.db_parameters = dict(dbn='postgres', db='infobase_test', user=os.getenv('USER'), pw='')    
+    web.config.db_parameters = dict(dbn='postgres', db='infobase_test', user=os.getenv('USER'), pw='', pooling=False)
     mod.site = _create_site('test')
     mod.db = mod.site.store.db
     mod.db.printing = False
@@ -268,4 +268,3 @@ class TestAccount(DBTest):
         b.open('/test/account/login', urllib.urlencode({'username': 'foo', 'password': 'secret'}))
         d = simplejson.loads(b.data)
         assert d['bot'] == True
-        

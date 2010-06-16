@@ -55,7 +55,8 @@ class Store:
         return row and row.json
     
     def get(self, key):
-        return simplejson.loads(self.get_json(key))
+        json = self.get_json(key)
+        return json and simplejson.loads(json)
     
     def put(self, key, data):
         self.put_json(key, simplejson.dumps(data))
@@ -79,7 +80,21 @@ class Store:
             tx.commit()
     
     def delete(self, key):
-        self.db.delete("store", where="key=$key", vars=locals())
+        tx = self.db.transaction()
+        try:
+            row = self.get_row(key)
+            if row:
+                self.delete_row(row.id)
+        except:
+            tx.rollback()
+            raise
+        else:
+            tx.commit()
+            
+    def delete_row(self, id):
+        """Deletes a row. This must be called in a transaction."""
+        self.db.delete("store_index", where="store_id=$id", vars=locals())
+        self.db.delete("store", where="id=$id", vars=locals())
         
     def query(self, type, name, value, limit=100, offset=0):
         """Query the json store.
@@ -99,14 +114,17 @@ class Store:
                 wheres.append("value = $value")
                 
         rows = self.db.select(tables, what='store.key', where=" AND ".join(wheres), limit=limit, offset=offset, order="store.id desc", vars=locals())
-        return [r.key for r in rows]
+        return [{"key": r.key} for r in rows]
     
     def delete_index(self, id):
         self.db.delete("store_index", where="id=$id", vars=locals())
         
     def add_index(self, id, json):
         data = simplejson.loads(json)
-        type = data.get("type", "")
+        if isinstance(data, dict):
+            type = data.get("type", "")
+        else:
+            type = ""
         d = []
         ignored = ["type"]
         for name, value in self.indexer.index(data):

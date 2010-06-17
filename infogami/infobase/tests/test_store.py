@@ -51,8 +51,8 @@ class TestStore(DBTest):
         assert store.get("foo") == {"name": "bar"}
                 
     def test_query(self):
-        store.put("one", {"type": "digit", "name": "one"})
-        store.put("two", {"type": "digit", "name": "two"})
+        store.put("one", {"type": "digit", "name": "one", "value": 1})
+        store.put("two", {"type": "digit", "name": "two", "value": 2})
         
         store.put("a", {"type": "char", "name": "a"})
         store.put("b", {"type": "char", "name": "b"})

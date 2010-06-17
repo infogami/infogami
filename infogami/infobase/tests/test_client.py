@@ -6,15 +6,13 @@ import utils
 
 def setup_module(mod):
     utils.setup_conn(mod)
-    
-    server._infobase = None # clear earlier reference, if any.
-    server.get_site("test") # initialize server._infobase
-    server._infobase.create("test") # create a new site
+    utils.setup_server(mod)
     
     mod.site = client.Site(mod.conn, "test")
     mod.s = mod.site.store
     
 def teardown_module(mod):
+    utils.teardown_server(mod)
     utils.teardown_conn(mod)
     
 class StoreTest(unittest.TestCase):

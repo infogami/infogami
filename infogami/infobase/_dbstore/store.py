@@ -72,7 +72,7 @@ class Store:
             else:
                 id = self.db.insert("store", key=key, json=json)
                 
-            self.add_index(id, json)
+            self.add_index(id, key, json)
         except:
             tx.rollback()
             raise
@@ -103,32 +103,33 @@ class Store:
         All the documents of the given type are returned when the name is None.
         All the documents are returned when the type is None.
         """
-        
-        tables = ["store", "store_index"]
-        wheres = ["store.id = store_index.store_id"]
-        
-        if type is not None:
-            wheres.append("type = $type")
-            if name is not None:
-                wheres.append("name = $name")
-                wheres.append("value = $value")
-                
-        rows = self.db.select(tables, what='store.key', where=" AND ".join(wheres), limit=limit, offset=offset, order="store.id desc", vars=locals())
+        if type is None:
+            rows = self.db.select("store", what="key", limit=limit, offset=offset, order="store.id desc", vars=locals())
+        else:
+            tables = ["store", "store_index"]
+            wheres = ["store.id = store_index.store_id", "type = $type"]
+            
+            if name is None:
+                wheres.append("name='_key'")
+            else:
+                wheres.append("name=$name AND value=$value")
+            rows = self.db.select(tables, what='store.key', where=" AND ".join(wheres), limit=limit, offset=offset, order="store.id desc", vars=locals())
+            
         return [{"key": r.key} for r in rows]
     
     def delete_index(self, id):
         self.db.delete("store_index", where="store_id=$id", vars=locals())
         
-    def add_index(self, id, json):
+    def add_index(self, id, key, json):
         data = simplejson.loads(json)
         if isinstance(data, dict):
             type = data.get("type", "")
         else:
             type = ""
-        d = []
+        d = [web.storage(store_id=id, type=type, name="_key", value=key)]
         ignored = ["type"]
-        for name, value in self.indexer.index(data):
-            if name not in ignored:
+        for name, value in set(self.indexer.index(data)):
+            if not name.startswith("_") and name not in ignored:
                 d.append(web.storage(store_id=id, type=type, name=name, value=value))
         if d:
             self.db.multiple_insert('store_index', d)

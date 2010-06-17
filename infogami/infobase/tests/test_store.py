@@ -100,6 +100,15 @@ class TestStore(DBTest):
         assert store.query("digit", "name", "one") == [{"key": "one"}]
         assert store.query("", "name", "foo") == [{"key": "foo"}]
         
+    def test_multiput(self):
+        store.put("x", {"name": "foo"})
+        store.put("x", {"name": "foo"})
+        store.put("x", {"name": "foo"})
+                
+        assert store.query(None, None, None) == [{"key": "x"}]
+        assert store.query("", None, None) == [{"key": "x"}]
+        assert store.query("", "name", "foo") == [{"key": "x"}]
+        
 class BookIndexer:
     def index(self, doc):
         yield "title,lang", doc['title'] + "--" + doc['lang']

@@ -117,7 +117,7 @@ class Store:
         return [{"key": r.key} for r in rows]
     
     def delete_index(self, id):
-        self.db.delete("store_index", where="id=$id", vars=locals())
+        self.db.delete("store_index", where="store_id=$id", vars=locals())
         
     def add_index(self, id, json):
         data = simplejson.loads(json)

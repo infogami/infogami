@@ -58,8 +58,11 @@ class DiskTemplateSource(web.storage):
             return render
             
         def set_template(render, name):
-            self[name] = get_template(render, name)
-            return self[name]
+            t = get_template(render, name)
+            # disable caching in debug mode
+            if not web.config.debug:
+                self[name] = t
+            return t
             
         render = web.template.render(path)
         # assuming all templates have .html extension

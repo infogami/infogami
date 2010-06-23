@@ -17,14 +17,25 @@ def _create_site(name):
 
 def setup_module(mod):
     os.system('dropdb infobase_test; createdb infobase_test')
-    web.config.db_parameters = dict(dbn='postgres', db='infobase_test', user=os.getenv('USER'), pw='')    
+    web.config.db_parameters = dict(dbn='postgres', db='infobase_test', user=os.getenv('USER'), pw='', pooling=False)
     mod.site = _create_site('test')
     mod.db = mod.site.store.db
+    mod.db.printing = False
     mod.app = server.app
     
     # overwrite _cleanup to make it possible to have transactions spanning multiple requests.
     mod.app.do_cleanup = mod.app._cleanup
     mod.app._cleanup = lambda: None
+    
+def teardown_module(mod):
+    # clear reference to close the connection
+    mod.db.ctx.clear()
+    mod.db = None
+    mod.app = None
+    mod.site = None
+    _infobase = server._infobase    
+    server._infobase = None
+    os.system('dropdb infobase_test')
         
 def subdict(d, keys):
     """Returns a subset of a dictionary.
@@ -85,11 +96,13 @@ class TestInfobase(DBTest):
             {'key': '/foo', 'revision': 1, 'comment': 'test 1'},
         ]
         
-        self.create_user('test', 'testt@example.com', 'test123', data={'displayname': 'Test'})
+        print self.create_user('test', 'testt@example.com', 'test123', data={'displayname': 'Test'})
+        print site._get_thing('/user/test')
         site.save('/foo', {'key': '/foo', 'type': '/type/object', 'x': 2}, comment='test 4', ip='1.2.3.4', author=site._get_thing('/user/test'))
         
         assert versions({'author': '/user/test'}) == [
-            {'key': '/foo', 'revision': 3, 'comment': 'test 4'}
+            {'key': '/foo', 'revision': 3, 'comment': 'test 4'},
+            {'key': u'/user/test', 'revision': 1, 'comment': u'Created new account'}
         ]
 
         assert versions({'ip': '1.2.3.4'}) == [
@@ -255,4 +268,3 @@ class TestAccount(DBTest):
         b.open('/test/account/login', urllib.urlencode({'username': 'foo', 'password': 'secret'}))
         d = simplejson.loads(b.data)
         assert d['bot'] == True
-        

@@ -121,7 +121,7 @@ class RemoteConnection(Connection):
             headers = {}
             
         # pass the remote ip to the infobase server
-        headers['X-REMOTE-IP'] = web.ctx.ip
+        headers['X-REMOTE-IP'] = web.ctx.get('ip')
         
         try:
             conn.request(method, path, data, headers=headers)
@@ -175,6 +175,8 @@ class Site:
         self.name = sitename
         # cache for storing pages requested in this HTTP request
         self._cache = {}
+        
+        self.store = Store(conn, sitename)
         
     def _request(self, path, method='GET', data=None):
         out = self._conn.request(self.name, path, method, data)
@@ -291,7 +293,6 @@ class Site:
         result = self._request('/get_many', data=data)
         things = []
         
-        import copy
         for key in keys:
             #@@ what if key is not there?
             if key in result:
@@ -433,6 +434,90 @@ class Site:
         data = common.parse_query(data)
         data = self._process_dict(data or {})
         return create_thing(self, key, data)
+        
+class Store:
+    """Store to store any arbitrary data.
+    
+    This provides a dictionary like interface for storing documents. 
+    Each document can have an optional type (default is "") and all the (type, name, value) triples are indexed.
+    """
+    def __init__(self, conn, sitename):
+        self.conn = conn
+        self.name = sitename
+        
+    def _request(self, path, method='GET', data=None):
+        out = self.conn.request(self.name, "/_store/" + path, method, data)
+        return simplejson.loads(out)
+    
+    def delete(self, key):
+        return self._request(key, method='DELETE')
+        
+    def update(self, d={}, **kw):
+        for k, v in d.items():
+            self[k] = v
+        for k, v in kw.items():
+            self[k] = v
+            
+    def clear(self):
+        """Removes all keys from the store. Use this with caution!"""
+        for k in self.keys(limit=-1):
+            del self[k]
+
+    def query(self, type=None, name=None, value=None, limit=100, offset=0, include_docs=False):
+        """Returns the  a list of keys matching the given query.        
+        Sample result:
+            [{"key": "a"}, {"key": "b"}, {"key": "c"}]
+        """
+        if limit == -1:
+            return self.unlimited_query(type, name, value, offset=offset)
+            
+        params = dict(type=type, name=name, value=value, limit=limit, offset=offset)
+        params = dict((k, v) for k, v in params.items() if v is not None)
+        return self._request("_query", method="GET", data=params)
+        
+    def unlimited_query(self, type, name, value, offset=0):
+        while True:
+            result = self.query(type, name, value, limit=1000, offset=offset)
+            if not result:
+                break
+                
+            offset += len(result)
+            for k in result:
+                yield k
+    
+    def __getitem__(self, key):
+        try:
+            return self._request(key)
+        except ClientException, e:
+            if e.status.startswith("404"):
+                raise KeyError, key
+            else:
+                raise
+    
+    def __setitem__(self, key, data):
+        return self._request(key, method='PUT', data=simplejson.dumps(data))
+        
+    def __delitem__(self, key):
+        self.delete(key)
+        
+    def __contains__(self, key):
+        return bool(self.get(key))
+        
+    def get(self, key, default=None):
+        try:
+            return self[key]
+        except KeyError:
+            return default
+        
+    def keys(self, **kw):
+        result = self.query(**kw)
+        return [d['key'] for d in result]
+    
+    def values(self, **kw):
+        return (self[k] for k in self.keys())
+        
+    def items(self, **kw):
+        return ((k, self[k]) for k in self.keys(**kw))
         
 def parse_datetime(datestring):
     """Parses from isoformat.

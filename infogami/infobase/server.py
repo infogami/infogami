@@ -31,7 +31,9 @@ urls = (
     "/([^/]*)/write", "write",
     "/([^/]*)/account/(.*)", "account",
     "/([^/]*)/permission", "permission",
-    "/([^/]*)/log/(\d\d\d\d-\d\d-\d\d:\d+)", 'readlog',
+    "/([^/]*)/log/(\d\d\d\d-\d\d-\d\d:\d+)", "readlog",
+    "/([^/]*)/_store/(_.*)", "store_special",
+    "/([^/]*)/_store/(.*)", "store",
     "/_invalidate", "invalidate"
 )
 
@@ -266,6 +268,44 @@ class permission:
         i = input('key')
         return site.get_permissions(i.key)
         
+class store_special:
+    def GET(self, sitename, path):
+        if path == '_query':
+            return self.GET_query(sitename)
+        else:
+            raise web.notfound("")
+    
+    @jsonify
+    def GET_query(self, sitename):
+        i = input(type=None, name=None, value=None, limit=100, offset=0)
+        
+        i.limit = common.safeint(i.limit, 100)
+        i.offset = common.safeint(i.offset, 0)
+        
+        store = get_site(sitename).get_store()
+        return store.query(type=i.type, name=i.name, value=i.value, limit=i.limit, offset=i.offset)
+
+class store:
+    @jsonify
+    def GET(self, sitename, path):
+        store = get_site(sitename).get_store()
+        json = store.get_json(path)
+        if not json:
+            raise common.NotFound(error="notfound", key=path)
+        return JSON(store.get_json(path))
+
+    @jsonify
+    def PUT(self, sitename, path):
+        store = get_site(sitename).get_store()
+        store.put_json(path, get_data())
+        return JSON('{"ok": true}')
+        
+    @jsonify
+    def DELETE(self, sitename, path):
+        store = get_site(sitename).get_store()
+        store.delete(path)
+        return JSON('{"ok": true}')
+        
 class account:
     """Code for handling /account/.*"""
     def get_method(self):
@@ -273,7 +313,7 @@ class account:
             return web.ctx.infobase_method
         else:
             return web.ctx.method
-        
+    
     @jsonify
     def delegate(self, sitename, method):
         site = get_site(sitename)

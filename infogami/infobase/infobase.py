@@ -84,6 +84,9 @@ class Site:
     def get_account_manager(self):
         return self.account_manager
         
+    def get_store(self):
+        return self.store.get_store()
+        
     def delete(self):
         return self._infobase.delete(self.sitename)
     

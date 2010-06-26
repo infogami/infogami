@@ -508,16 +508,25 @@ class Store:
             return self[key]
         except KeyError:
             return default
+            
+    def iterkeys(self, **kw):
+        result = self.query(**kw)
+        return (d['key'] for d in result)
         
     def keys(self, **kw):
-        result = self.query(**kw)
-        return [d['key'] for d in result]
+        return list(self.iterkeys(**kw))
+        
+    def itervalues(self, **kw):
+        return (self[k] for k in self.keys(**kw))
     
     def values(self, **kw):
-        return (self[k] for k in self.keys())
+        return [self[k] for k in self.keys(**kw)]
+        
+    def iteritems(self, **kw):
+        return ((k, self[k]) for k in self.keys(**kw))
         
     def items(self, **kw):
-        return ((k, self[k]) for k in self.keys(**kw))
+        return [(k, self[k]) for k in self.keys(**kw)]
         
 def parse_datetime(datestring):
     """Parses from isoformat.

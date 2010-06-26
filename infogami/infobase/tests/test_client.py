@@ -64,9 +64,42 @@ class StoreTest(unittest.TestCase):
         assert s.keys() == srange(900, 1000)[::-1]
         assert list(s.keys(limit=-1)) == srange(1000)[::-1]
         
+    def test_key_value_items(self):
+        s["x"] = {"type": "foo", "name": "x"}
+        s["y"] = {"type": "bar", "name": "y"}
+        s["z"] = {"type": "bar", "name": "z"}
+        
+        assert s.keys() == ["z", "y", "x"]
+        assert s.keys(type='bar') == ["z", "y"]
+        assert s.keys(type='bar', name="name", value="y") == ["y"]
+
+        assert s.values() == [
+            {"type": "bar", "name": "z"},
+            {"type": "bar", "name": "y"},
+            {"type": "foo", "name": "x"}
+        ]
+        assert s.values(type='bar') == [
+            {"type": "bar", "name": "z"},
+            {"type": "bar", "name": "y"}
+        ]
+        assert s.values(type='bar', name="name", value="y") == [
+            {"type": "bar", "name": "y"}
+        ]
+
+        assert s.items() == [
+            ("z", {"type": "bar", "name": "z"}),
+            ("y", {"type": "bar", "name": "y"}),
+            ("x", {"type": "foo", "name": "x"})
+        ]
+        assert s.items(type='bar') == [
+            ("z", {"type": "bar", "name": "z"}),
+            ("y", {"type": "bar", "name": "y"}),
+        ]
+        assert s.items(type='bar', name="name", value="y") == [
+            ("y", {"type": "bar", "name": "y"}),
+        ]
+        
     def test_bad_data(self):
         s["x"] = 1
         assert s["x"] == 1
         assert "x" in s
-
-        

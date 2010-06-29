@@ -139,7 +139,7 @@ def jsonapi(f):
         else:
             content_type = "application/json"
         
-        return delegate.RawText(out, content_type="text/plain")
+        return delegate.RawText(out, content_type=content_type)
     return g
 
 def request(path, method='GET', data=None):

@@ -39,9 +39,10 @@ class TemplateRender(web_render):
 web.template.Render = web.template.render = TemplateRender
 
 class LazyTemplate:
-    def __init__(self, func, name=None):
+    def __init__(self, func, name=None, **kw):
         self.func = func
         self.name = name
+        self.__dict__.update(kw)
         
     def __repr__(self):
         return "<LazyTemplate: %s>" % repr(self.name)
@@ -69,7 +70,10 @@ class DiskTemplateSource(web.storage):
         names = [web.rstrips(p, '.html') for p in find(path) if p.endswith('.html')]
         for name in names:
             if lazy:
-                self[name] = LazyTemplate(lambda render=render, name=name: set_template(render, name), name=path + '/' + name)
+                def load(render=render, name=name):
+                    set_template(render, name)
+                    
+                self[name] = LazyTemplate(load, name=path + '/' + name, filepath=path + '/' + name + '.html')
             else:
                 self[name] = get_template(render, name)
             

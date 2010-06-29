@@ -79,6 +79,10 @@ def help(name=None):
 @action
 def install():
     """Setup everything."""
+    
+    # set debug=False to avoid reload magic.
+    web.config.debug = False
+    
     from infogami.utils import delegate
     delegate.fakeload()
     if not web.ctx.site.exists():

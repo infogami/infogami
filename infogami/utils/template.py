@@ -46,7 +46,7 @@ class LazyTemplate:
         
     def __repr__(self):
         return "<LazyTemplate: %s>" % repr(self.name)
-        
+
 class DiskTemplateSource(web.storage):
     """Template source of templates on disk.
     Supports loading of templates from a search path instead of single dir.
@@ -71,7 +71,7 @@ class DiskTemplateSource(web.storage):
         for name in names:
             if lazy:
                 def load(render=render, name=name):
-                    set_template(render, name)
+                    return set_template(render, name)
                     
                 self[name] = LazyTemplate(load, name=path + '/' + name, filepath=path + '/' + name + '.html')
             else:

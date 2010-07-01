@@ -128,6 +128,12 @@ create table store_index (
 
 create index store_index_store_id_idx ON store_index (store_id);
 create index store_idx ON store_index(type, name, value);
+    
+create table seq (
+    id serial primary key,
+    name text unique,
+    value int default 0
+);
 
 COMMIT;
 

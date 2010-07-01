@@ -7,7 +7,7 @@ import _json as simplejson
 import datetime, time
 from collections import defaultdict
 
-from _dbstore import store
+from _dbstore import store, sequence
 from _dbstore.schema import Schema, INDEXED_DATATYPES
 from _dbstore.indexer import Indexer
 
@@ -27,6 +27,7 @@ class DBSiteStore(common.SiteStore):
         self.sitename = None
         self.indexer = Indexer()
         self.store = store.Store(self.db)
+        self.seq = sequence.SequenceImpl(self.db)
         
         self.cache = None
         self.property_id_cache = None

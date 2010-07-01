@@ -177,6 +177,7 @@ class Site:
         self._cache = {}
         
         self.store = Store(conn, sitename)
+        self.seq = Sequence(conn, sitename)
         
     def _request(self, path, method='GET', data=None):
         out = self._conn.request(self.name, path, method, data)
@@ -527,6 +528,28 @@ class Store:
         
     def items(self, **kw):
         return [(k, self[k]) for k in self.keys(**kw)]
+        
+class Sequence:
+    """Dynamic sequences. 
+    Quite similar to sequences in postgres, but there is no need of define anything upfront..
+    
+        seq = web.ctx.site.seq
+        for i in range(10):
+            print seq.next_value("foo")
+    """
+    def __init__(self, conn, sitename):
+        self.conn = conn
+        self.name = sitename
+        
+    def _request(self, path, method='GET', data=None):
+        out = self.conn.request(self.name, "/_seq/" + path, method, data)
+        return simplejson.loads(out)        
+        
+    def get_value(self, name):
+        return self._request(name, method="GET")['value']
+        
+    def next_value(self, name):
+        return self._request(name, method="POST")['value']
         
 def parse_datetime(datestring):
     """Parses from isoformat.

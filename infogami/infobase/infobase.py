@@ -80,6 +80,7 @@ class Site:
         
         self._triggers = {}
         store.store.set_listener(self._log_store_action)
+        store.seq.set_listener(self._log_store_action)
         
     def _log_store_action(self, name, data):
         event = web.storage(name=name, ip=web.ctx.ip, author=None, data=data, sitename=self.sitename, timestamp=None)
@@ -90,6 +91,9 @@ class Site:
         
     def get_store(self):
         return self.store.get_store()
+        
+    def get_seq(self):
+        return self.store.seq
         
     def delete(self):
         return self._infobase.delete(self.sitename)

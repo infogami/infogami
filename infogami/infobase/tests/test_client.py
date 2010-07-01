@@ -10,6 +10,7 @@ def setup_module(mod):
     
     mod.site = client.Site(mod.conn, "test")
     mod.s = mod.site.store
+    mod.seq = mod.site.seq
     
 def teardown_module(mod):
     utils.teardown_server(mod)
@@ -103,3 +104,11 @@ class StoreTest(unittest.TestCase):
         s["x"] = 1
         assert s["x"] == 1
         assert "x" in s
+        
+class TestSeq:
+    def test_seq(self):
+        seq.get_value("foo") == 0
+        seq.get_value("bar") == 0
+        
+        for i in range(10):
+            seq.next_value("foo") == i+1

@@ -34,6 +34,7 @@ urls = (
     "/([^/]*)/log/(\d\d\d\d-\d\d-\d\d:\d+)", "readlog",
     "/([^/]*)/_store/(_.*)", "store_special",
     "/([^/]*)/_store/(.*)", "store",
+    "/([^/]*)/_seq/(.*)", "seq",
     "/_invalidate", "invalidate"
 )
 
@@ -305,6 +306,17 @@ class store:
         store = get_site(sitename).get_store()
         store.delete(path)
         return JSON('{"ok": true}')
+        
+class seq:
+    @jsonify
+    def GET(self, sitename, name):
+        seq = get_site(sitename).get_seq()
+        return {"name": name, "value": seq.get_value(name)}
+
+    @jsonify
+    def POST(self, sitename, name):
+        seq = get_site(sitename).get_seq()
+        return {"name": name, "value": seq.next_value(name)}
         
 class account:
     """Code for handling /account/.*"""

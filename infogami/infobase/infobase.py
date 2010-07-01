@@ -67,7 +67,7 @@ class Infobase:
             except:
                 common.record_exception()
                 pass
-        
+
 class Site:
     """A site of infobase."""
     def __init__(self, _infobase, sitename, store, secret_key):
@@ -75,11 +75,15 @@ class Site:
         self.sitename = sitename
         self.store = store
         self.store.set_cache(cache.Cache())
-        
         import account
         self.account_manager = account.AccountManager(self, secret_key)
         
         self._triggers = {}
+        store.store.set_listener(self._log_store_action)
+        
+    def _log_store_action(self, name, data):
+        event = web.storage(name=name, ip=web.ctx.ip, author=None, data=data, sitename=self.sitename, timestamp=None)
+        self._infobase.fire_event(event)
         
     def get_account_manager(self):
         return self.account_manager

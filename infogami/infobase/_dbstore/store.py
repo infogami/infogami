@@ -41,6 +41,7 @@ class Store:
     def __init__(self, db):
         self.db = db
         self.indexer = StoreIndexer()
+        self.listener = None
         
     def get_row(self, key, for_update=False):
         q = "SELECT * FROM store WHERE key=$key"
@@ -49,6 +50,12 @@ class Store:
         rows = self.db.query(q, vars=locals())
         if rows:
             return rows[0]
+            
+    def set_listener(self, f):
+        self.listener = f
+            
+    def fire_event(self, name, data):
+        self.listener and self.listener(name, data)
 
     def get_json(self, key):
         row = self.get_row(key)
@@ -71,13 +78,15 @@ class Store:
                 id = row.id
             else:
                 id = self.db.insert("store", key=key, json=json)
-                
-            self.add_index(id, key, json)
+
+            data = simplejson.loads(json)                
+            self.add_index(id, key, data)
         except:
             tx.rollback()
             raise
         else:
             tx.commit()
+            self.fire_event("store.put", {"key": key, "data": data})
     
     def delete(self, key):
         tx = self.db.transaction()
@@ -90,6 +99,7 @@ class Store:
             raise
         else:
             tx.commit()
+            self.fire_event("store.delete", {"key": key})
             
     def delete_row(self, id):
         """Deletes a row. This must be called in a transaction."""
@@ -120,8 +130,7 @@ class Store:
     def delete_index(self, id):
         self.db.delete("store_index", where="store_id=$id", vars=locals())
         
-    def add_index(self, id, key, json):
-        data = simplejson.loads(json)
+    def add_index(self, id, key, data):
         if isinstance(data, dict):
             type = data.get("type", "")
         else:

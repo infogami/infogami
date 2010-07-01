@@ -78,6 +78,7 @@ class Logger:
     def __call__(self, event):
         import web
         data = event.data.copy()
+        event.timestamp = event.timestamp or datetime.datetime.utcnow()
         if event.name in ['write', 'save', 'save_many']:
             name = event.name
             data['ip'] = event.ip
@@ -89,6 +90,8 @@ class Logger:
         elif event.name == 'update_user':
             name = "update_account"
             data['ip'] = event.ip
+        elif event.name.startswith("store."):
+            name = event.name
         else:
             return
             

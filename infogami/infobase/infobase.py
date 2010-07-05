@@ -6,6 +6,7 @@ Each site is an independent collection of objects.
 """
 import web
 import datetime
+import simplejson
 
 import common
 import config
@@ -106,6 +107,11 @@ class Site:
     def _get_thing(self, key, revision=None):
         json = self.get(key, revision)
         return json and common.Thing.from_json(self.store, key, json)
+        
+    def _get_many_things(self, keys):
+        json = self.get_many(keys)
+        d = simplejson.loads(json)
+        return dict((k, common.Thing.from_dict(self.store, k, doc)) for k, doc in d.items())
 
     def get_many(self, keys):
         return self.store.get_many(keys)
@@ -163,7 +169,7 @@ class Site:
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
         
-        p = writequery.SaveProcessor(self.store, author)        
+        p = writequery.SaveProcessor(self.store, author)
 
         items = p.process_many(query)
         result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key, action=action)
@@ -224,18 +230,28 @@ class Site:
                     import traceback
                     traceback.print_exc()
                     
+        if not self._triggers:
+            return
+                    
         created = [r['key'] for r in result if r and r['revision'] == 1]
         updated = [r['key'] for r in result if r and r['revision'] != 1]
         
+        things = self._get_many_things(created + updated)
+        
         for key in created:
-            thing = self._get_thing(key)
+            thing = things[key]
             fire_trigger(thing.type, None, thing)
         
         for key in updated:
-            thing = self._get_thing(key)
-            old = self._get_thing(key, thing.revision-1)
-            if old.type.key == thing.type.key:
-                fire_trigger(thing.type, old, thing)
-            else:
-                fire_trigger(old.type, old, thing)
-                fire_trigger(thing.type, old, thing)
+            thing = things[key]
+            
+            # old_data (the second argument) is not used anymore. 
+            # TODO: Remove the old_data argument.
+            fire_trigger(thing.type, None, thing)
+            
+            #old = self._get_thing(key, thing.revision-1)
+            #if old.type.key == thing.type.key:
+            #    fire_trigger(thing.type, old, thing)
+            #else:
+            #    fire_trigger(old.type, old, thing)
+            #    fire_trigger(thing.type, old, thing)

@@ -3,6 +3,7 @@
 import common
 from common import pprint, any, all
 import web
+import simplejson
 import account
 
 def get_thing(store, key, revision=None):
@@ -19,9 +20,11 @@ class SaveProcessor:
         self.things = {}
         
     def process_many(self, docs):
+        keys = [doc['key'] for doc in docs]
+        prev_data = self.get_prev_data(keys)
         self.things = dict((doc['key'], common.Thing.from_dict(self.store, doc['key'], doc)) for doc in docs)
         
-        docs = [self.process(doc['key'], doc) for doc in docs]
+        docs = [self.process(doc['key'], doc, prev_data.get(doc['key'])) for doc in docs]
         return [doc for doc in docs if doc]
         
     def get_thing(self, key):
@@ -29,8 +32,12 @@ class SaveProcessor:
             return self.things[key]
         except KeyError:
             return get_thing(self.store, key)
+            
+    def get_prev_data(self, keys):
+        d = self.store.get_many_as_dict(keys)
+        return dict((k, simplejson.loads(json)) for k, json in d.items())
         
-    def process(self, key, data):
+    def process(self, key, data, prev_data=None):
         if 'key' not in data:
             data['key'] = key
             
@@ -51,9 +58,6 @@ class SaveProcessor:
         type = self.process_value(type, self.get_property(None, 'type'))
         type = self.get_thing(type)
         
-        thing = get_thing(self.store, key)
-        prev_data = thing and thing._get_data()
-
         # when type is changed, consider as all object is modified and don't compare with prev data.
         if prev_data and prev_data.get('type') != type.key:
             prev_data = None

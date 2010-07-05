@@ -101,6 +101,16 @@ class DBSiteStore(common.SiteStore):
         json = d and d[0].data or None
         return json
         
+    def get_many_as_dict(self, keys):
+        if not keys:
+            return {}
+            
+        query = 'SELECT thing.key, data.data from thing, data' \
+            + ' WHERE data.revision = thing.latest_revision and data.thing_id=thing.id' \
+            + ' AND thing.key IN $keys'
+            
+        return dict((row.key, row.data) for row in self.db.query(query, vars=locals()))
+        
     def get_many(self, keys):
         if not keys:
             return '{}'

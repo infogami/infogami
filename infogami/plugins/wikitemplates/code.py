@@ -202,7 +202,7 @@ def movetemplates(prefix_pattern=None):
         if prefix_pattern is None or wikipath.startswith(prefix_pattern):
             title = get_title(name)
             body = open(t.filepath).read()
-            d = web.storage(create='unless_exists', key=wikipath, type='/type/template', title=title, body=dict(connect='update', value=body))
+            d = web.storage(create='unless_exists', key=wikipath, type={"key": '/type/template'}, title=title, body=dict(connect='update', value=body))
             templates.append(d)
             
     delegate.admin_login()
@@ -225,7 +225,7 @@ def movemacros():
     for name, m in macro.diskmacros.items():
         key = _wikiname(name, '/macros/', '')
         body = open(m.filepath).read()
-        d = web.storage(create='unless_exists', key=key, type='/type/macro', description='', macro=body)
+        d = web.storage(create='unless_exists', key=key, type={'key': '/type/macro'}, description='', macro=body)
         macros.append(d)
     delegate.admin_login()
     result = web.ctx.site.write(macros)

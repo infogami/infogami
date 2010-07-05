@@ -10,7 +10,7 @@ from collections import defaultdict
 from _dbstore import store, sequence
 from _dbstore.schema import Schema, INDEXED_DATATYPES
 from _dbstore.indexer import Indexer
-from _dbstore.save import SaveImpl
+from _dbstore.save import SaveImpl, PropertyManager
 
 default_schema = None
 
@@ -31,7 +31,7 @@ class DBSiteStore(common.SiteStore):
         self.seq = sequence.SequenceImpl(self.db)
         
         self.cache = None
-        self.property_id_cache = None
+        self.property_manager = PropertyManager(self.db)
                 
     def get_store(self):
         return self.store
@@ -120,282 +120,18 @@ class DBSiteStore(common.SiteStore):
                 yield process_json(r.key, r.data)
             yield '}'
         return "".join(process(query))
-        
-    def _add_transaction(self, action, author, ip, comment, created):
-        kw = dict(
-            action=action,
-            author_id=author and self.get_metadata(author).id,
-            ip=ip,
-            created=created,
-            comment=comment,
-        )
-        if config.use_bot_column:
-            kw['bot'] = bool(author and (self.get_user_details(author) or {}).get('bot', False))
-            
-        return self.db.insert('transaction', **kw)
-        
-    def _add_version(self, thing_id, revision, transaction_id, created):
-        if revision is None:
-            d = self.db.query(
-                'UPDATE thing set latest_revision=latest_revision+1, last_modified=$created WHERE id=$thing_id;' + \
-                'SELECT latest_revision FROM thing WHERE id=$thing_id', vars=locals())
-            revision = d[0].latest_revision
-            
-        self.db.insert('version', False, 
-            thing_id=thing_id, 
-            revision=revision, 
-            transaction_id=transaction_id
-        )
-        return revision
-        
-    def _update_tables(self, thing_id, key, olddata, newdata):
-        def find_datatype(value):
-            if isinstance(value, common.Text):
-                return 'text'
-            elif isinstance(value, common.Reference):
-                return 'ref'
-            elif isinstance(value, bool):
-                return 'boolean'
-            elif isinstance(value, float):
-                return 'float'
-            elif isinstance(value, int):
-                return 'int'
-            else:
-                return 'str'
-                
-        def do_action(f, type_key, type_id, thing_id, name, value, ordering=None):
-            if isinstance(value, list):
-                for i, v in enumerate(value):
-                    do_action(f, type_key, type_id, thing_id, name, v, i)
-            elif isinstance(value, dict):
-                for k, v in value.items():
-                    if k != 'type':
-                        do_action(f, type_key, type_id, thing_id, name + '.' + k, v, ordering)
-            else:
-                datatype = find_datatype(value)
-                if datatype == 'ref':
-                    value = self.get_metadata(value)
-                    value = value and value.id
-                elif datatype == 'str':
-                    value = value[:2048] # truncate long strings
-                elif isinstance(value, bool):
-                    value = "ft"[int(value)] # convert boolean to 't' or 'f'
-                table = self.schema.find_table(type_key, datatype, name)
-                
-                if table:
-                    pid = self.get_property_id(type_id, name, create=True)
-                    assert pid is not None
-                    f(table, thing_id, pid, value, ordering)
-        
-        deletes = {}
-        inserts = {}
-        
-        def action_delete(table, thing_id, key_id, value, ordering):
-            deletes.setdefault((table, thing_id), []).append(key_id)
-            #self.db.delete(table, where='thing_id=$thing_id AND key_id=$key_id', vars=locals())
-        
-        def action_insert(table, thing_id, key_id, value, ordering):
-            #self.db.insert(table, seqname=False, thing_id=thing_id, key_id=key_id, value=value, ordering=ordering)
-            d = dict(thing_id=thing_id, key_id=key_id, value=value, ordering=ordering)
-            inserts.setdefault(table, []).append(d)
-            
-        def do_deletes_and_inserts():
-            for (table, thing_id), key_ids in deletes.items():
-                key_ids = list(set(key_ids)) # remove duplicates
-                self.db.delete(table, where='thing_id=$thing_id AND key_id IN $key_ids', vars=locals())
-                
-            for table, values in inserts.items():
-                self.db.multiple_insert(table, values,  seqname=False)
-            
-        olddata = olddata and common.parse_data(olddata)
-        newdata = newdata and common.parse_data(newdata)
-
-        old_type = (olddata and olddata['type']) or None
-        new_type = newdata['type']
-        
-        old_type_id = old_type and self.get_metadata(old_type).id
-        new_type_id = new_type and self.get_metadata(new_type).id
-        
-        def _coerce(d):
-            if isinstance(d, dict) and 'key' in d:
-                return d['key']
-            else:
-                return d
-    
-        old_type = _coerce(old_type)
-        new_type = _coerce(new_type)
-        
-        for k in ['id', 'key', 'type', 'last_modified', 'created', 'revision', 'latest_revision']:
-            olddata.pop(k, None)
-            newdata.pop(k, None)
-        
-        removed, unchanged, added = common.dict_diff(olddata, newdata)
-                        
-        if old_type != new_type:
-            removed = olddata.keys()
-            added = newdata.keys()
-        
-        for k in removed:
-            do_action(action_delete, old_type, old_type_id, thing_id, k, olddata[k])
-        
-        for k in added:
-            do_action(action_insert, new_type, new_type_id, thing_id, k, newdata[k])
-            
-        do_deletes_and_inserts()
-        
-    def _delete_index(self, index):
-        """Delete the specified index.
-        Index must be a list of (type, key, datatype, name, value). 
-        """
-        index = self._process_index(index)
-        for table, data in index.items():
-            for thing_id, key_id, value in data:
-                if key_id is None:
-                    self.db.delete(table, 'thing_id=$thing_id', vars=locals())
-                else:
-                    self.db.delete(table, 'thing_id=$thing_id AND key_id=$key_id AND value=$value', vars=locals())
-            
-    def _insert_index(self, index):
-        """Insert the specified index.
-        index must be a list of (type, key, datatype, name, value). 
-        """
-        index = self._process_index(index)
-        for table, d in index.items():
-            self.db.multiple_insert(table, d, seqname=False)
-    
-    def _process_index(self, index):
-        """Process the index and create the data suitable for inserting/deleting from the database.
-        """
-        @web.memoize
-        def get_thing_id(key):
-            return self.get_metadata(key).id
-            
-        data = defaultdict(list)
-            
-        for type, key, datatype, name, value in index:
-            thing_id = get_thing_id(key)
-            key_id = name and self.get_property_id(get_thing_id(type), name, create=True)
-            if datatype == 'ref':
-                value = value and get_thing_id(value)
-    
-            table = self.schema.find_table(type, datatype, name)                
-            data[table].append(web.storage(thing_id=thing_id, key_id=key_id, value=value))
-        return data
-        
-    def compute_index(self, doc):
-        """Computes the index for given doc.
-        Index is a list of (type, key, datatype, name, value).
-        """
-        type = doc['type']['key']
-        key = doc['key']
-        return [(type, key, datatype, name, value) for datatype, name, value in self.indexer.compute_index(doc)]
-    
-    def reindex(self, keys):
-        """Remove all entries from index table and add again."""
-        
-        t = self.db.transaction()
-        try:
-            thing_ids = dict((key, self._key2id(key)) for key in keys)
-            docs = dict((key, simplejson.loads(self.get(key))) for key in keys)
-            
-            deletes = {}
-            for key in keys:
-                type = docs[key]['type']['key']
-                for table in self.schema.find_tables(type):
-                    deletes.setdefault(table, []).append(thing_ids[key])
-        
-            for table, ids in deletes.items():
-                self.db.delete(table, where="thing_id IN $ids", vars=locals())
-        
-            index = [d for doc in docs.values() for d in self.compute_index(doc)]
-            self._insert_index(index)
-        except:
-            t.rollback()
-            raise
-        else:
-            t.commit()
                     
     def save_many(self, items, timestamp, comment, machine_comment, ip, author, action=None):
         action = action or "bulk_update"
-        s = SaveImpl(self.db, self.schema, self.indexer)
+        s = SaveImpl(self.db, self.schema, self.indexer, self.property_manager)
         return s.save(common.format_data(items), timestamp=timestamp, comment=comment, ip=ip, author=author, action=action, machine_comment=machine_comment)
         
-    def _key2id(self, key):
-        d = self.get_metadata(key)
-        return d and d.id
-
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):
         timestamp = timestamp or datetime.datetime.utcnow
         return self.save_many([data], timestamp, comment, machine_comment, ip, author, action="update")[0]
         
-    def _save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):
-        try:
-            metadata = self.get_metadata(key, for_update=True)
-        except:
-            raise common.Conflict(key=key, reason="Edit conflict detected.")
-
-        typekey = data['type']
-        type_id = self._key2id(typekey)
-        
-        if metadata: # already existing object
-            revision = None
-            thing_id = metadata.id
-            olddata = simplejson.loads(self.get(key))
-            created = metadata.created
-            action = "update"
-        else:
-            revision = 1
-            thing_id = self.new_thing(key=key, type=type_id, latest_revision=1, last_modified=timestamp, created=timestamp)
-            olddata = {}
-            created = timestamp
-            action = "create"
-            
-        if transaction_id is None:
-            transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
-        revision = self._add_version(thing_id=thing_id, revision=revision, transaction_id=transaction_id, created=timestamp)
-                
-        self._update_tables(thing_id, key, olddata, dict(data)) #@@ why making copy of data?
-        
-        data['created'] = created
-        data['revision'] = revision
-        data['last_modified'] = timestamp
-        data['key'] = key
-        data['latest_revision'] = revision
-                
-        data = common.format_data(data)
-        
-        self.db.update('thing', where='id=$thing_id', last_modified=timestamp, latest_revision=revision, type=type_id, vars=locals())
-        self.db.insert('data', seqname=False, thing_id=thing_id, revision=revision, data=simplejson.dumps(data))
-        
-        web.ctx.new_objects[key] = simplejson.dumps(data)    
-        return {'key': key, 'revision': revision}
-        
-    def get_property_id_cache(self):
-        if self.property_id_cache is None:
-            self.property_id_cache = {}
-            for d in self.db.select('property'):
-                self.property_id_cache[d.type, d.name] = d.id
-        return self.property_id_cache
-        
-    def get_property_id(self, type_id, name, create=False):
-        cache = self.get_property_id_cache()
-        if (type_id, name) in cache:
-            return cache[type_id, name]
-            
-        pid = self._get_property_id(type_id, name, create)
-        # Don't update the cache when the pid is created. The pid creation might be part of a transaction and that might get rolled back.
-        if pid is not None and create is False:
-            cache[type_id, name] = pid
-        return pid
-            
-    def _get_property_id(self, type_id, name, create=False):
-        d = self.db.select('property', where='name=$name AND type=$type_id', vars=locals())
-        if d:
-            return d[0].id
-        elif create:
-            return self.db.insert('property', type=type_id, name=name)
-        else:
-            return None
+    def get_property_id(self, type, name):
+        return self.property_manager.get_property_id(type, name)
 
     def things(self, query):
         type = query.get_type()
@@ -486,7 +222,7 @@ class DBSiteStore(common.SiteStore):
                 tables['_thing'] = DBTable("thing")
             else:
                 table = get_table(c.datatype, c.key)
-                key_id = self.get_property_id(type_id, c.key)
+                key_id = self.get_property_id(type, c.key)
                 if not key_id:
                     raise StopIteration
                     
@@ -533,7 +269,7 @@ class DBSiteStore(common.SiteStore):
                     tables['_thing'] = DBTable("thing")                
                 else:   
                     table = get_table(query.sort.datatype, sort_key)
-                    key_id = self.get_property_id(type_id, sort_key)
+                    key_id = self.get_property_id(type, sort_key)
                     if key_id is None:
                         raise StopIteration
                     q = '%(table)s.key_id=$key_id' % {'table': table}

@@ -42,7 +42,7 @@ def fakeload():
     context.path = '/'
     
     # hack to disable permissions
-    web.ctx.infobase_bootstrap = True
+    web.ctx.disable_permisson_check = True
     
     context.user = None
     web.ctx.site = create_site()

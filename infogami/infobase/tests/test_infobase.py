@@ -50,7 +50,7 @@ class DBTest(unittest.TestCase):
         self.t = db.transaction()
         # important to clear the caches
         site.store.cache.clear()
-        site.store.property_id_cache and site.store.property_id_cache.clear()
+        site.store.property_manager.reset()
         
     def tearDown(self):
         self.t.rollback()        

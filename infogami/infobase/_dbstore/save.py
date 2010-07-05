@@ -7,7 +7,7 @@ from collections import defaultdict
 from indexer import Indexer
 from schema import INDEXED_DATATYPES, Schema
 
-from infogami.infobase import config
+from infogami.infobase import config, common
 
 __all__ = ["SaveImpl"]
 
@@ -20,6 +20,8 @@ class SaveImpl:
     
     def save(self, docs, timestamp, comment, ip, author, action, machine_comment=None):
         docs = list(docs)
+        docs = common.format_data(docs)
+        
         if not docs:
             return []
             
@@ -60,14 +62,30 @@ class SaveImpl:
     
     def _update_index(self, records):
         self.indexUtil.update_index(records)
-                
+        
+    def dedup(self, docs):
+        x = set()
+        docs2 = []
+        for doc in docs[::-1]:
+            key = doc['key']
+            if key in x:
+                continue
+            x.add(key)
+            docs2.append(doc)
+        return docs2[::-1]
+            
     def _get_records_for_save(self, docs, timestamp):
+        docs = self.dedup(docs)
         keys = [doc['key'] for doc in docs]
-        rows = self.db.query("SELECT thing.*, data.data FROM thing, data" + 
-            " WHERE thing.key in $keys" + 
-            " AND data.thing_id=thing.id AND data.revision = thing.latest_revision" + 
-            " FOR UPDATE NOWAIT",
-            vars=locals())
+        try:
+            rows = self.db.query("SELECT thing.*, data.data FROM thing, data" + 
+                " WHERE thing.key in $keys" + 
+                " AND data.thing_id=thing.id AND data.revision = thing.latest_revision" + 
+                " FOR UPDATE NOWAIT",
+                vars=locals())
+        except:
+            raise common.Conflict(key=key, reason="Edit conflict detected.")
+        
         d = dict((r.key, r) for r in rows)
         
         type_ids = self.get_thing_ids(doc['type']['key'] for doc in docs)
@@ -105,7 +123,7 @@ class SaveImpl:
         """Insert/update entries in the thing table for the given records."""
         d = dict((r.key, r) for r in records)
         timestamp = records[0].last_modified
-        
+                
         # insert new records
         new = [dict(key=r.key, type=r.type, latest_revision=1, created=r.created, last_modified=r.last_modified) 
                 for r in records if r.revision == 1]
@@ -125,7 +143,7 @@ class SaveImpl:
                     self.db.update("thing", type=r['type'], where="key=key", vars={"key": r['key']})
                 
         # update records with type change
-        type_changed = [r for r in records if r.type != r.prev.type]
+        type_changed = [r for r in records if r.type != r.prev.type and r.revision != 1]
         for r in type_changed:
             self.db.update('thing', where='id=$r.id', vars=locals(),
                 last_modified=timestamp, latest_revision=r.revision, type=r.type)
@@ -174,7 +192,11 @@ class IndexUtil:
         key = doc['key']
         
         special = ["id", "type", "revision", "latest_revision", "created", "last_modified"]
-        return [(type, key, datatype, name, value) for datatype, name, value in self._indexer.compute_index(doc) if name not in special]
+        index = [(type, key, datatype, name, value) for datatype, name, value in self._indexer.compute_index(doc) if name not in special]
+        
+        # boolen values are not supported. 
+        # avoid empty strings and Nones
+        return [x for x in index if not isinstance(x[-1], bool) and x[-1] != "" and x[-1] is not None]
         
     def diff_index(self, old_doc, new_doc):
         """Takes old and new docs and returns the indexes to be deleted and inserted."""
@@ -287,15 +309,31 @@ class PropertyManager:
     """
     def __init__(self, db):
         self.db = db
-        self.cache = {}
+        self._cache = None
         self.thing_ids = {}
+        
+    def reset(self):
+        self._cache = None
+        self.thing_ids = {}
+        
+    def get_cache(self):
+        if self._cache is None:
+            self._cache = {}
+            
+            rows = self.db.select('property').list()
+            type_ids = list(set(r.type for r in rows)) or [-1]
+            types = dict((r.id, r.key) for r in self.db.select("thing", where='id IN $type_ids', vars=locals()))
+            for r in rows:
+                self._cache[types[r.type], r.name] = r.id
+                
+        return self._cache
         
     def get_property_id(self, type, name, create=False):
         """Returns the id of (type, name) property. 
         When create=True, a new property is created if not already exists.
         """
         try:
-            return self.cache[type, name]
+            return self.get_cache()[type, name]
         except KeyError:
             type_id = self.get_thing_id(type)
             d = self.db.query("SELECT * FROM property WHERE type=$type_id AND name=$name", vars=locals())
@@ -307,7 +345,7 @@ class PropertyManager:
             else:
                 return None
                 
-            self.cache[type, name] = pid
+            self.get_cache()[type, name] = pid
             return pid
     
     def get_thing_id(self, key):
@@ -323,6 +361,7 @@ class PropertyManager:
         Used in write transactions to avoid corrupting the global state in case of rollbacks.
         """
         p = PropertyManager(self.db)
-        p.cache = self.cache.copy()
+        if self._cache is not None:
+            p._cache = self._cache.copy()
         p.thing_ids = self.thing_ids.copy()
         return p

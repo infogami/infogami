@@ -1,4 +1,5 @@
 from infogami.infobase import common
+import web
 
 class Indexer:
     """Indexer computes the values to be indexed.

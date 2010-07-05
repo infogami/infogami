@@ -170,6 +170,10 @@ def setup():
     types.register_type('^/type/[^/]*$', '/type/type')
     types.register_type('/macros/.*$', '/type/macro')
     
+def reload():
+    """Reload all templates and macros."""
+    load_all()
+    
 @infogami.install_hook
 @infogami.action
 def movetemplates(prefix_pattern=None):

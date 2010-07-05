@@ -16,9 +16,26 @@ class SaveProcessor:
         self.store = store
         self.author = author
         
+        self.things = {}
+        
+    def process_many(self, docs):
+        self.things = dict((doc['key'], common.Thing.from_dict(self.store, doc['key'], doc)) for doc in docs)
+        
+        docs = [self.process(doc['key'], doc) for doc in docs]
+        return [doc for doc in docs if doc]
+        
+    def get_thing(self, key):
+        try:
+            return self.things[key]
+        except KeyError:
+            return get_thing(self.store, key)
+        
     def process(self, key, data):
         if 'key' not in data:
             data['key'] = key
+            
+        if web.ctx.get('infobase_bootstrap', False):
+            return data
 
         assert data['key'] == key
 
@@ -32,7 +49,7 @@ class SaveProcessor:
         if type is None:
             raise common.BadData(message="missing type")
         type = self.process_value(type, self.get_property(None, 'type'))
-        type = get_thing(self.store, type)
+        type = self.get_thing(type)
         
         thing = get_thing(self.store, key)
         prev_data = thing and thing._get_data()
@@ -150,7 +167,7 @@ class SaveProcessor:
         type_found = common.find_type(value)
     
         if type_found == '/type/object':
-            thing = get_thing(self.store, value)
+            thing = self.get_thing(value)
             if thing is None:
                 raise common.NotFound(key=value)
             type_found = thing.type.key

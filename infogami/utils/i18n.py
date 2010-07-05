@@ -189,4 +189,5 @@ def load_strings(plugin_path):
 
 # global state
 strings = i18n()
-web._loadhooks['i18n'] = i18n_loadhook
+if hasattr(web, "_loadhooks"):
+    web._loadhooks['i18n'] = i18n_loadhook

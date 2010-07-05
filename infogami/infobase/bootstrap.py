@@ -143,3 +143,5 @@ def bootstrap(site, admin_password):
     import account
     q = [usergroup('/usergroup/admin', 'Group of admin users.', [{"key": account.get_user_root() + "admin"}])]
     site.save_many(q)
+
+    web.ctx.infobase_bootstrap = False

@@ -165,9 +165,7 @@ class Site:
         
         p = writequery.SaveProcessor(self.store, author)        
 
-        items = query
-        items = (p.process(item['key'], item) for item in items)
-        items = (item for item in items if item)
+        items = p.process_many(query)
         result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key, action=action)
         
         event_data = dict(comment=comment, machine_comment=machine_comment, query=query, result=result)

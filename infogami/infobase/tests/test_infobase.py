@@ -20,7 +20,7 @@ def setup_module(mod):
     web.config.db_parameters = dict(dbn='postgres', db='infobase_test', user=os.getenv('USER'), pw='', pooling=False)
     mod.site = _create_site('test')
     mod.db = mod.site.store.db
-    mod.db.printing = False
+    #mod.db.printing = False
     mod.app = server.app
     
     # overwrite _cleanup to make it possible to have transactions spanning multiple requests.
@@ -50,7 +50,7 @@ class DBTest(unittest.TestCase):
         self.t = db.transaction()
         # important to clear the caches
         site.store.cache.clear()
-        site.store.property_id_cache.clear()
+        site.store.property_id_cache and site.store.property_id_cache.clear()
         
     def tearDown(self):
         self.t.rollback()        
@@ -159,7 +159,10 @@ class TestInfobase(DBTest):
         site.save_many(q)
         
     def test_things(self):
+        print >> web.debug, "save /a"
         site.save('/a', {'key': '/a', 'type': '/type/object', 'x': 1, 'name': 'a'})
+
+        print >> web.debug, "save /b"
         site.save('/b', {'key': '/b', 'type': '/type/object', 'x': 2, 'name': 'b'})
         
         assert site.things({'type': '/type/object'}) == [{'key': '/a'}, {'key': '/b'}]
@@ -268,3 +271,6 @@ class TestAccount(DBTest):
         b.open('/test/account/login', urllib.urlencode({'username': 'foo', 'password': 'secret'}))
         d = simplejson.loads(b.data)
         assert d['bot'] == True
+
+def test_foo():
+    pass

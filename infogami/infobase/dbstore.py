@@ -10,6 +10,7 @@ from collections import defaultdict
 from _dbstore import store, sequence
 from _dbstore.schema import Schema, INDEXED_DATATYPES
 from _dbstore.indexer import Indexer
+from _dbstore.save import SaveImpl
 
 default_schema = None
 
@@ -31,7 +32,7 @@ class DBSiteStore(common.SiteStore):
         
         self.cache = None
         self.property_id_cache = None
-        
+                
     def get_store(self):
         return self.store
         
@@ -316,50 +317,16 @@ class DBSiteStore(common.SiteStore):
                     
     def save_many(self, items, timestamp, comment, machine_comment, ip, author, action=None):
         action = action or "bulk_update"
-        t = self.db.transaction()
-        try:
-            transaction_id = self._add_transaction(action=action, author=author, ip=ip, comment=comment, created=timestamp)
-            result = [self._save(d['key'], d, transaction_id=transaction_id, timestamp=timestamp) for d in items]
-        except:
-            try:
-                t.rollback()
-            except:
-                pass
-                
-            # clear local cache when something fails to avoid local cache changes due to
-            # any earliers saves (in this save_many query) getting into global cache.
-            self.cache.clear(local=True)
-            raise
-        else:
-            t.commit()
-        return result
+        s = SaveImpl(self.db, self.schema, self.indexer)
+        return s.save(common.format_data(items), timestamp=timestamp, comment=comment, ip=ip, author=author, action=action, machine_comment=machine_comment)
         
     def _key2id(self, key):
         d = self.get_metadata(key)
         return d and d.id
 
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):
-        timestamp = timestamp or datetime.datetime.utcnow()
-        t = self.db.transaction()
-        
-        try:
-            result = self._save(key, data, 
-                timestamp=timestamp, 
-                comment=comment, 
-                machine_comment=machine_comment, 
-                ip=ip, 
-                author=author, 
-                transaction_id=None)
-        except:
-            t.rollback()
-            self.cache.clear(local=True)        
-            import traceback
-            traceback.print_exc()
-            raise
-        else:
-            t.commit()
-        
-        return result
+        timestamp = timestamp or datetime.datetime.utcnow
+        return self.save_many([data], timestamp, comment, machine_comment, ip, author, action="update")[0]
         
     def _save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):
         try:

@@ -131,10 +131,17 @@ class DBSiteStore(common.SiteStore):
             yield '}'
         return "".join(process(query))
                     
-    def save_many(self, items, timestamp, comment, machine_comment, ip, author, action=None):
+    def save_many(self, docs, timestamp, comment, machine_comment, ip, author, action=None):
         action = action or "bulk_update"
         s = SaveImpl(self.db, self.schema, self.indexer, self.property_manager)
-        return s.save(common.format_data(items), timestamp=timestamp, comment=comment, ip=ip, author=author, action=action, machine_comment=machine_comment)
+        docs = common.format_data(docs)
+        result = s.save(docs, timestamp=timestamp, comment=comment, ip=ip, author=author, action=action, machine_comment=machine_comment)
+        
+        # update cache
+        for doc in docs:
+            web.ctx.new_objects[doc['key']] = simplejson.dumps(doc)
+            
+        return result
         
     def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):
         timestamp = timestamp or datetime.datetime.utcnow

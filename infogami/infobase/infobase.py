@@ -75,7 +75,8 @@ class Site:
         self._infobase = _infobase
         self.sitename = sitename
         self.store = store
-        self.store.set_cache(cache.Cache())
+        self.cache = cache.Cache()
+        self.store.set_cache(self.cache)
         import account
         self.account_manager = account.AccountManager(self, secret_key)
         

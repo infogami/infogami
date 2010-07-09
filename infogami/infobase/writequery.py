@@ -24,7 +24,7 @@ class SaveProcessor:
         prev_data = self.get_prev_data(keys)
         self.things = dict((doc['key'], common.Thing.from_dict(self.store, doc['key'], doc)) for doc in docs)
         
-        docs = [self.process(doc['key'], doc, prev_data.get(doc['key'])) for doc in docs]
+        docs = [self._process(doc['key'], doc, prev_data.get(doc['key'])) for doc in docs]
         return [doc for doc in docs if doc]
         
     def get_thing(self, key):
@@ -36,8 +36,12 @@ class SaveProcessor:
     def get_prev_data(self, keys):
         d = self.store.get_many_as_dict(keys)
         return dict((k, simplejson.loads(json)) for k, json in d.items())
+
+    def process(self, key, data):
+        prev_data = self.get_prev_data([key])
+        return self._process(key, data, prev_data.get(key))
         
-    def process(self, key, data, prev_data=None):
+    def _process(self, key, data, prev_data=None):
         if 'key' not in data:
             data['key'] = key
             
@@ -48,6 +52,7 @@ class SaveProcessor:
 
         data = common.parse_query(data)
         self.validate_properties(data)
+        prev_data = prev_data and common.parse_query(prev_data)
         
         if not web.ctx.get('disable_permission_check', False) and not has_permission(self.store, self.author, key):
             raise common.PermissionDenied(message='Permission denied to modify %s' % repr(key))

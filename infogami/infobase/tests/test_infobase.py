@@ -27,6 +27,9 @@ def setup_module(mod):
     mod.app.do_cleanup = mod.app._cleanup
     mod.app._cleanup = lambda: None
     
+def reset():
+    site.cache.clear()
+    
 def teardown_module(mod):
     # clear reference to close the connection
     mod.db.ctx.clear()
@@ -68,15 +71,19 @@ class DBTest(unittest.TestCase):
         
 class TestInfobase(DBTest):
     def test_save(self):
+        import sys
+
         # save an object and make sure revision==1
         d = site.save('/foo', {'key': '/foo', 'type': '/type/object', 'n': 1, 'p': 'q'})
         assert d == {'key': '/foo', 'revision': 1}
 
         # save again without any change in data and make sure new revision is not added.
+        reset()
         d = site.save('/foo', {'key': '/foo', 'type': '/type/object', 'n': 1, 'p': 'q'})
         assert d == {}
 
         # now save with some change and make sure new revision is created
+        reset()
         d = site.save('/foo', {'key': '/foo', 'type': '/type/object', 'n': 1, 'p': 'qq'})
         assert d == {'key': '/foo', 'revision': 2}
                 

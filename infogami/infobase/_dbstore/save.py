@@ -84,7 +84,7 @@ class SaveImpl:
                 " FOR UPDATE NOWAIT",
                 vars=locals())
         except:
-            raise common.Conflict(key=key, reason="Edit conflict detected.")
+            raise common.Conflict(keys=keys, reason="Edit conflict detected.")
         
         d = dict((r.key, r) for r in rows)
         

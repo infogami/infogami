@@ -14,6 +14,9 @@ class InfobaseException(Exception):
         
     def __str__(self):
         return simplejson.dumps(self.d)
+        
+    def dict(self):
+        return dict(self.d)
     
 class NotFound(InfobaseException):
     status = "404 Not Found"
@@ -44,8 +47,8 @@ class Conflict(InfobaseException):
         InfobaseException.__init__(self, error="conflict", **kw)
     
 class TypeMismatch(BadData):
-    def __init__(self, type_expected, type_found):
-        BadData.__init__(self, message="Expected %s, found %s" % (repr(type_expected), repr(type_found)))
+    def __init__(self, type_expected, type_found, **kw):
+        BadData.__init__(self, message="expected %s, found %s" % (type_expected, type_found), **kw)
 
 class Text(unicode):
     """Python type for /type/text."""

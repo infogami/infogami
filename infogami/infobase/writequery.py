@@ -18,6 +18,7 @@ class SaveProcessor:
         self.author = author
         
         self.things = {}
+        self.key = None
         
     def process_many(self, docs):
         keys = [doc['key'] for doc in docs]
@@ -42,6 +43,9 @@ class SaveProcessor:
         return self._process(key, data, prev_data.get(key))
         
     def _process(self, key, data, prev_data=None):
+        self.key = key # hack to make key available when raising exceptions.
+        
+        
         if 'key' not in data:
             data['key'] = key
             
@@ -59,7 +63,7 @@ class SaveProcessor:
         
         type = data.get('type')
         if type is None:
-            raise common.BadData(message="missing type")
+            raise common.BadData(message="missing type", at=dict(key=key))
         type = self.process_value(type, self.get_property(None, 'type'))
         type = self.get_thing(type)
         
@@ -92,9 +96,9 @@ class SaveProcessor:
         rx = web.re_compile('^[a-z][a-z0-9_]*$')
         for key in data:
             if not rx.match(key):
-                raise common.BadData(message="Bad Property: %s" % repr(key))
+                raise common.BadData(message="Bad Property: %s" % repr(key), at=dict(key=self.key))
 
-    def process_data(self, d, type, old_data=None):
+    def process_data(self, d, type, old_data=None, prefix=""):
         for k, v in d.items():
             if v is None or v == [] or web.safeunicode(v).strip() == '':
                 del d[k]
@@ -103,7 +107,7 @@ class SaveProcessor:
                     continue
                 p = self.get_property(type, k)
                 if p:
-                    d[k] = self.process_value(v, p)
+                    d[k] = self.process_value(v, p, prefix=prefix)
                 else:
                     d[k] = v
         if type:
@@ -111,47 +115,22 @@ class SaveProcessor:
             
         return d
 
-    def process_value(self, value, property):
-        """
-            >>> def property(expected_type, unique=True, name='foo'):
-            ...     return web.storage(expected_type=web.storage(key=expected_type, kind='regular'), unique=unique, name=name)
-            ...
-            >>> p = SaveProcessor(common.create_test_store(), None)
-            
-            >>> p.process_value(1, property('/type/int'))
-            1
-            >>> p.process_value('1', property('/type/int'))
-            1
-            >>> p.process_value(['1', '2'], property('/type/int', unique=False))
-            [1, 2]
-            >>> p.process_value('x', property('/type/int'))
-            Traceback (most recent call last):
-                ... 
-            BadData: {"message": "invalid literal for int() with base 10: 'x'", "error": "bad_data"}
-            >>> p.process_value('1', property('/type/int', unique=False, name="foo"))
-            Traceback (most recent call last):
-                ... 
-            BadData: {"message": "expected list, found atom", "property": "foo", "error": "bad_data"}
-            >>> p.process_value(['1'], property('/type/int', name="foo"))
-            Traceback (most recent call last):
-                ... 
-            BadData: {"message": "expected atom, found list", "property": "foo", "error": "bad_data"}
-            >>> p.process_value('/type/string', property('/type/type'))
-            <ref: u'/type/string'>
-        """
+    def process_value(self, value, property, prefix=""):
         unique = property.get('unique', True)
         expected_type = property.expected_type.key
+        
+        at = {"key": self.key, "property": prefix + property.name}
 
         if isinstance(value, list):
             if unique is True:
-                raise common.BadData(message='expected atom, found list', property=property.name)
+                raise common.BadData(message='expected atom, found list', at=at, value=value)
             
             p = web.storage(property.copy())
             p.unique = True
             return [self.process_value(v, p) for v in value]
     
         if unique is False:    
-            raise common.BadData(message='expected list, found atom', property=property.name)
+            raise common.BadData(message='expected list, found atom', at=at, value=value)
 
         type_found = common.find_type(value)
     
@@ -163,12 +142,12 @@ class SaveProcessor:
                 elif type_found == '/type/int' and expected_type == '/type/float':
                     value = float(value)
             except ValueError, e:
-                raise common.BadData(message=str(e))
+                raise common.BadData(message=str(e), at=at, value=value)
         elif property.expected_type.kind == 'embeddable':
             if isinstance(value, dict):
-                return self.process_data(value, property.expected_type)
+                return self.process_data(value, property.expected_type, prefix=at['property'] + ".")
             else:
-                raise common.TypeMismatch(expected_type, type_found)
+                raise common.TypeMismatch(expected_type, type_found, at=at, value=value)
         else:
             if type_found == '/type/string':
                 value = common.Reference(value)
@@ -178,11 +157,11 @@ class SaveProcessor:
         if type_found == '/type/object':
             thing = self.get_thing(value)
             if thing is None:
-                raise common.NotFound(key=value)
+                raise common.NotFound(key=unicode(value), at=at)
             type_found = thing.type.key
 
         if expected_type != type_found:
-            raise common.BadData(message='expected %s, found %s' % (repr(property.expected_type.key), repr(type_found)))
+            raise common.BadData(message='expected %s, found %s' % (property.expected_type.key, type_found), at=at, value=value)
         return value
 
 class WriteQueryProcessor:

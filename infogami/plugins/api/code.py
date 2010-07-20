@@ -97,7 +97,7 @@ class infobase_request:
         try:
             out = conn.request(sitename, path, method, data)
         except client.ClientException, e:
-            raise BadRequest(str(e))
+            raise BadRequest(e.json or str(e))
             
         #@@ this should be done in the connection.
         try:

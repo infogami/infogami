@@ -117,6 +117,7 @@ class infobase_request:
 add_hook("get", infobase_request)
 add_hook("things", infobase_request)
 add_hook("versions", infobase_request)
+add_hook("get_many", infobase_request)
 
 # RESTful write API.
 add_hook("write", infobase_request)

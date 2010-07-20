@@ -17,6 +17,10 @@ class SaveImpl:
         self.db = db
         self.indexUtil = IndexUtil(db, schema, indexer, property_manager and property_manager.copy())
         self.thing_ids = {}
+        
+    def process_doc(self, doc):
+        """Hack to allow processing of json before using. Required for OL legacy."""
+        return doc
     
     def save(self, docs, timestamp, comment, ip, author, action, machine_comment=None):
         docs = list(docs)
@@ -92,6 +96,7 @@ class SaveImpl:
         
         def make_record(doc):
             doc = dict(doc) # make a copy to avoid modifying the original.
+            doc = self.process_doc(doc)
             
             key = doc['key']
             r = d.get(key) or web.storage(id=None, key=key, latest_revision=0, type=None, data=None, created=timestamp)

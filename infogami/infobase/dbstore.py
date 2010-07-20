@@ -134,6 +134,10 @@ class DBSiteStore(common.SiteStore):
     def save_many(self, docs, timestamp, comment, machine_comment, ip, author, action=None):
         action = action or "bulk_update"
         s = SaveImpl(self.db, self.schema, self.indexer, self.property_manager)
+        
+        # Hack to allow processing of json before using. Required for OL legacy.
+        s.process_doc = lambda doc: process_json(doc['key'], doc)
+        
         docs = common.format_data(docs)
         result = s.save(docs, timestamp=timestamp, comment=comment, ip=ip, author=author, action=action, machine_comment=machine_comment)
         

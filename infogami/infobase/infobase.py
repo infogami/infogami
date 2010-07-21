@@ -158,12 +158,12 @@ class Site:
         if not data:
             return {}
         else:
-            result = self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
+            saved_doc = self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
+            result={"key": saved_doc['key'], "revision": saved_doc['revision']}
             
-            event_data = dict(comment=comment, machine_comment=machine_comment, key=key, query=data, 
-                result={"key": result['key'], "revision": result['revision']})
+            event_data = dict(comment=comment, machine_comment=machine_comment, key=key, query=data, result=result)
             self._fire_event("save", timestamp, ip, author and author.key, event_data)
-            self._fire_triggers([result])
+            self._fire_triggers([saved_doc])
             return result
     
     def save_many(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, action=None):
@@ -174,13 +174,13 @@ class Site:
         p = writequery.SaveProcessor(self.store, author)
 
         items = p.process_many(query)
-        result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key, action=action)
+        saved_docs = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key, action=action)
         
-        event_data = dict(comment=comment, machine_comment=machine_comment, query=query, 
-            result=[{"key": doc["key"], "revision": doc['revision']} for doc in result])
+        result = [{"key": doc["key"], "revision": doc['revision']} for doc in saved_docs]
+        event_data = dict(comment=comment, machine_comment=machine_comment, query=query, result=result)
         self._fire_event("save_many", timestamp, ip, author and author.key, event_data)
 
-        self._fire_triggers(result)
+        self._fire_triggers(saved_docs)
         return result
 
     def _fire_event(self, name, timestamp, ip, username, data):

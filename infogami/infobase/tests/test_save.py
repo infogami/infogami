@@ -37,7 +37,6 @@ def update_doc(doc, revision, created, last_modified):
 
 def assert_record(record, doc, revision, created, timestamp):
     d = update_doc(doc, revision, created, timestamp)
-    print 'assert_record', d
     assert record.data == d
     
     assert record.key == doc['key']
@@ -101,7 +100,7 @@ class Test_save(DBTest):
                     comment="Testing create.", 
                     action="save")
                     
-        assert status == [{"key": "/a", "revision": 1}]
+        assert status[0]['revision'] == 1
         assert self.get_json('/a') == update_doc(a, 1, timestamp, timestamp) 
         
         a['title'] = 'b'
@@ -112,7 +111,7 @@ class Test_save(DBTest):
                     author=None, 
                     comment="Testing update.", 
                     action="save")
-        assert status == [{"key": "/a", "revision": 2}]
+        assert status[0]['revision'] == 2
         assert self.get_json('/a') == update_doc(a, 2, timestamp, timestamp2) 
         
     def test_type_change(self):
@@ -138,7 +137,7 @@ class Test_save(DBTest):
                     comment="Testing type change.", 
                     action="save")
         
-        assert status == [{"key": "/a", "revision": 2}]
+        assert status[0]['revision'] == 2
         assert self.get_json('/a') == update_doc(a, 2, timestamp, timestamp2) 
         
         thing = db.select("thing", where="key='/a'")[0]
@@ -168,7 +167,7 @@ class MockSchema:
     def find_table(self, type, datatype, name):
         return "datum_" + datatype
         
-def pytest_funcarg__testdata(request):
+def pytest_funcarg__testdata(request):        
     return {
         "doc1": {
             "key": "/doc1",
@@ -183,15 +182,14 @@ def pytest_funcarg__testdata(request):
                 "value": "foo"
             }
         },
-        "doc1.index": [
-            ("/type/object", "/doc1", "int", "n", 5),
-            ("/type/object", "/doc1", "ref", "xtype", '/type/object'),
-            ("/type/object", "/doc1", "str", "x", "x0"),
-            ("/type/object", "/doc1", "str", "y", "y1"),
-            ("/type/object", "/doc1", "str", "y", "y2"),
-            ("/type/object", "/doc1", "str", "z.a", "za"),
-            ("/type/object", "/doc1", "str", "z.b", "zb"),
-        ],
+        "doc1.index": {
+            ("/type/object", "/doc1", "int", "n"): [5],
+            ("/type/object", "/doc1", "ref", "xtype"): ['/type/object'],
+            ("/type/object", "/doc1", "str", "x"): ["x0"],
+            ("/type/object", "/doc1", "str", "y"): ["y1", "y2"],
+            ("/type/object", "/doc1", "str", "z.a"): ["za"],
+            ("/type/object", "/doc1", "str", "z.b"): ["zb"],
+        },
     }
 
 class TestIndex:
@@ -208,12 +206,23 @@ class TestIndex:
         assert self.indexer.get_thing_ids(["a", "b"]) == {"a": "id:a", "b": "id:b"}
         assert self.indexer.get_property_id("/type/book", "title") == "p:book-title"
         assert self.indexer.get_table("/type/book", "foo", "bar") == "book_foo"
+        
+    def process_index(self, index):
+        """Process index to remove order in the values, so that it is easier to compare."""
+        return dict((k, set(v)) for k, v in index.iteritems())
                 
     def test_compute_index(self, testdata):
-        print self.indexer._indexer
         index = self.indexer.compute_index(testdata['doc1'])
-        assert sorted(index) == testdata['doc1.index']
+        assert self.process_index(index) == self.process_index(testdata['doc1.index'])
         
+    def test_dict_difference(self):
+        f = self.indexer._dict_difference
+        d1 = {"w": 1, "x": 2, "y": 3}
+        d2 = {"x": 2, "y": 4, "z": 5}
+        
+        assert f(d1, d2) == {"w": 1, "y": 3}
+        assert f(d2, d1) == {"y": 4, "z": 5}
+    
     def test_diff_index(self):
         doc1 = {
             "key": "/books/1",
@@ -224,16 +233,19 @@ class TestIndex:
         doc2 = dict(doc1, title='bar')
         
         deletes, inserts = self.indexer.diff_index(doc1, doc2)
-        assert list(deletes) == [("/type/book", "/books/1", "str", "title", "foo")]
-        assert list(inserts) == [("/type/book", "/books/1", "str", "title", "bar")]
+        assert deletes == {
+            ("/type/book", "/books/1", "str", "title"): ["foo"]
+        }
+        assert inserts == {
+            ("/type/book", "/books/1", "str", "title"): ["bar"]
+        }
 
         deletes, inserts = self.indexer.diff_index(None, doc1)
-        print "XX", deletes, inserts        
-        assert list(deletes) == []
-        assert sorted(inserts) == [
-            ("/type/book", "/books/1", "ref", "author", "/authors/1"),
-            ("/type/book", "/books/1", "str", "title", "foo")
-        ]
+        assert deletes == {}
+        assert inserts == {
+            ("/type/book", "/books/1", "ref", "author"): ["/authors/1"],
+            ("/type/book", "/books/1", "str", "title"): ["foo"]
+        }
         
     def test_diff_records(self):
         doc1 = {
@@ -246,29 +258,32 @@ class TestIndex:
         record = web.storage(key='/books/1', data=doc2, prev=web.storage(data=doc1))
 
         deletes, inserts = self.indexer.diff_records([record])
-        assert list(deletes) == [("/type/book", "/books/1", "str", "title", "foo")]
-        assert list(inserts) == [("/type/book", "/books/1", "str", "title", "bar")]
-        
+        assert deletes == {
+            ("/type/book", "/books/1", "str", "title"): ["foo"]
+        }
+        assert inserts == {
+            ("/type/book", "/books/1", "str", "title"): ["bar"]
+        }
         
     def test_compile_index(self):
         self.monkeypatch_indexer()
         
-        index = [
-            ("/type/book", "/books/1", "str", "name", "Getting started with py.test"),
-            ("/type/book", "/books/2", "ref", "author", "/authors/1"),
-        ]
-        self.indexer.compile_index(index) == [
-            ("book_str", "id:/books/1", "p:book-name", "Getting started with py.test"),
-            ("book_ref", "id:/books/2", "p:book-author", "id:/authors/1"),
-        ]
+        index = {
+            ("/type/book", "/books/1", "str", "name"): ["Getting started with py.test"],
+            ("/type/book", "/books/2", "ref", "author"): ["/authors/1"],
+        }
+        self.indexer.compile_index(index) == {
+            ("book_str", "id:/books/1", "p:book-name"): ["Getting started with py.test"],
+            ("book_ref", "id:/books/2", "p:book-author"): ["id:/authors/1"],
+        }
         
         # When type is changed. de
-        index = [
-            ("/type/books", "/books/1", "str", None, None)
-        ]
-        self.indexer.compile_index(index) == [
-            ("book_str", "id:/books/1", None, None)
-        ]
+        index = {
+            ("/type/books", "/books/1", "str", None): []
+        }
+        self.indexer.compile_index(index) == {
+            ("book_str", "id:/books/1", None): []
+        }
         
 class TestIndexWithDB(DBTest):
     def test_index(self):

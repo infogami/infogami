@@ -75,7 +75,7 @@ class TestInfobase(DBTest):
 
         # save an object and make sure revision==1
         d = site.save('/foo', {'key': '/foo', 'type': '/type/object', 'n': 1, 'p': 'q'})
-        assert d == {'key': '/foo', 'revision': 1}
+        assert d['revision'] == 1
 
         # save again without any change in data and make sure new revision is not added.
         reset()
@@ -85,15 +85,13 @@ class TestInfobase(DBTest):
         # now save with some change and make sure new revision is created
         reset()
         d = site.save('/foo', {'key': '/foo', 'type': '/type/object', 'n': 1, 'p': 'qq'})
-        assert d == {'key': '/foo', 'revision': 2}
+        assert d['revision'] == 2
                 
     def test_versions(self):
-        d1 = site.save('/foo', {'key': '/foo', 'type': '/type/object'}, comment='test 1')
-        d2 = site.save('/bar', {'key': '/bar', 'type': '/type/object'}, comment='test 2')
-        d3 = site.save('/foo', {'key': '/foo', 'type': '/type/object', 'x': 1}, comment='test 3')
-        
-        assert d1 == {'key': '/foo', 'revision': 1}
-        
+        site.save('/foo', {'key': '/foo', 'type': '/type/object'}, comment='test 1')
+        site.save('/bar', {'key': '/bar', 'type': '/type/object'}, comment='test 2')
+        site.save('/foo', {'key': '/foo', 'type': '/type/object', 'x': 1}, comment='test 3')
+                
         def versions(q):
             return [subdict(v, ['key', 'revision', 'comment']) for v in site.versions(q)]
             

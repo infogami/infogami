@@ -136,13 +136,14 @@ class DBSiteStore(common.SiteStore):
         s = SaveImpl(self.db, self.schema, self.indexer, self.property_manager)
         
         # Hack to allow processing of json before using. Required for OL legacy.
-        s.process_doc = lambda doc: process_json(doc['key'], doc)
+        s.process_json = process_json
         
         docs = common.format_data(docs)
         result = s.save(docs, timestamp=timestamp, comment=comment, ip=ip, author=author, action=action, machine_comment=machine_comment)
         
-        # update cache
-        for doc in docs:
+        # update cache. 
+        # Use the docs from result as they contain the updated revision and last_modified fields.
+        for doc in result:
             web.ctx.new_objects[doc['key']] = simplejson.dumps(doc)
             
         return result

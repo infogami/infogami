@@ -18,9 +18,9 @@ class SaveImpl:
         self.indexUtil = IndexUtil(db, schema, indexer, property_manager and property_manager.copy())
         self.thing_ids = {}
         
-    def process_doc(self, doc):
+    def process_json(self, key, json):
         """Hack to allow processing of json before using. Required for OL legacy."""
-        return doc
+        return json
     
     def save(self, docs, timestamp, comment, ip, author, action, machine_comment=None):
         docs = list(docs)
@@ -59,7 +59,7 @@ class SaveImpl:
             raise
         else:
             tx.commit()
-        return [{"key": r.key, "revision": r.revision} for r in records]
+        return [r.data for r in records]
         
     def reindex(self, keys):
         pass
@@ -96,13 +96,14 @@ class SaveImpl:
         
         def make_record(doc):
             doc = dict(doc) # make a copy to avoid modifying the original.
-            doc = self.process_doc(doc)
             
             key = doc['key']
             r = d.get(key) or web.storage(id=None, key=key, latest_revision=0, type=None, data=None, created=timestamp)
             
             r.revision = r.pop('latest_revision')
-            r.data = r.data and simplejson.loads(r.data)
+            
+            json = r.data and self.process_json(key, r.data)
+            r.data = json and simplejson.loads(json)
             
             r.prev = web.storage(r)
 

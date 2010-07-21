@@ -155,15 +155,16 @@ class Site:
         p = writequery.SaveProcessor(self.store, author)
         data = p.process(key, data)
         
-        if data:
-            result = self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
+        if not data:
+            return {}
         else:
-            result = {}
-        
-        event_data = dict(comment=comment, machine_comment=machine_comment, key=key, query=data, result=result)
-        self._fire_event("save", timestamp, ip, author and author.key, event_data)
-        self._fire_triggers([result])
-        return result
+            result = self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
+            
+            event_data = dict(comment=comment, machine_comment=machine_comment, key=key, query=data, 
+                result={"key": result['key'], "revision": result['revision']})
+            self._fire_event("save", timestamp, ip, author and author.key, event_data)
+            self._fire_triggers([result])
+            return result
     
     def save_many(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, action=None):
         timestamp = timestamp or datetime.datetime.utcnow()
@@ -175,7 +176,8 @@ class Site:
         items = p.process_many(query)
         result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key, action=action)
         
-        event_data = dict(comment=comment, machine_comment=machine_comment, query=query, result=result)
+        event_data = dict(comment=comment, machine_comment=machine_comment, query=query, 
+            result=[{"key": doc["key"], "revision": doc['revision']} for doc in result])
         self._fire_event("save_many", timestamp, ip, author and author.key, event_data)
 
         self._fire_triggers(result)
@@ -222,7 +224,7 @@ class Site:
     def _fire_triggers(self, result):
         """Executes all required triggers on write."""
         def fire_trigger(type, old, new):
-            triggers = self._triggers.get(type.key, []) + self._triggers.get(None, [])
+            triggers = self._triggers.get(type['key'], []) + self._triggers.get(None, [])
             for t in triggers:
                 try:
                     t(self, old, new)
@@ -230,25 +232,25 @@ class Site:
                     print >> web.debug, 'Failed to execute trigger', t
                     import traceback
                     traceback.print_exc()
-                    
+        
         if not self._triggers:
             return
-                    
-        created = [r['key'] for r in result if r and r['revision'] == 1]
-        updated = [r['key'] for r in result if r and r['revision'] != 1]
         
-        things = self._get_many_things(created + updated)
+        created = [doc['key'] for doc in result if doc and doc['revision'] == 1]
+        updated = [doc['key'] for doc in result if doc and doc['revision'] != 1]
+        
+        things = dict((doc['key'], doc) for doc in result)
         
         for key in created:
             thing = things[key]
-            fire_trigger(thing.type, None, thing)
+            fire_trigger(thing['type'], None, thing)
         
         for key in updated:
             thing = things[key]
             
             # old_data (the second argument) is not used anymore. 
             # TODO: Remove the old_data argument.
-            fire_trigger(thing.type, None, thing)
+            fire_trigger(thing['type'], None, thing)
             
             #old = self._get_thing(key, thing.revision-1)
             #if old.type.key == thing.type.key:

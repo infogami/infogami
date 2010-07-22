@@ -349,32 +349,15 @@ class IndexUtil:
         for table, group in self.group_index(index).iteritems():
             # group all deletes for a thing_id
             d = defaultdict(list)
+            for thing_id, property_id in group:
+                if property_id:
+                    d[thing_id].append(property_id)
+                else:
+                    self.db.delete(table, where='thing_id=$thing_id', vars=locals())
             
-            delete_all = [thing_id for thing_id, property_id in group if property_id is None]
-            delete_regular = [(thing_id, property_id) for thing_id, property_id in group if property_id is not None]
+            for thing_id, pids in d.iteritems():
+                self.db.delete(table, where="thing_id=$thing_id AND key_id IN $pids", vars=locals())
             
-            if delete_all:
-                self.db.delete(table, where="thing_id IN $delete_all", vars=locals())
-            else:
-                for thing_ids, pids in self._group_deletes(delete_regular):
-                    self.db.delete(table, where="thing_id IN $thing_ids AND key_id IN $pids", vars=locals())
-                
-    def _group_deletes(self, values):
-        """Takes a list of (thing_id, property_id) and groups them as list of (thing_ids, property_ids).
-        """
-        # group pids for each thing_id
-        d = defaultdict(set)
-        for thing_id, property_id in values:
-            if property_id:
-                d[thing_id].add(property_id)
-        
-        # group thing_ids for each pids
-        d2 = defaultdict(list)
-        for thing_id, pids in d.items():
-            d2[tuple(pids)].append(thing_id)
-            
-        return [(thing_ids, list(pids)) for pids, thing_ids in d2.iteritems()]
-        
     def get_thing_ids(self, keys):
         ### TODO: same function is there is SaveImpl too. Get rid of this duplication.
         keys = list(set(keys))

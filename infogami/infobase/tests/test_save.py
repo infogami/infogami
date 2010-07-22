@@ -328,28 +328,6 @@ class TestIndex:
             ("book_str", "id:/books/1", None): []
         }
         
-    def test_group_deletes(self):
-        f = lambda values: sorted(self.indexer._group_deletes(values))
-        
-        assert f([(1, 6), (1, 7)]) == [
-            ([1], [6, 7])
-        ]
-        
-        assert f([(1, 6), (2, 6)]) == [
-            ([1, 2], [6])
-        ]
-        
-        assert f([(1, 6), (2, 6), (3, 7)]) == [
-            ([1, 2], [6]),
-            ([3], [7]),
-        ]
-
-        assert f([(1, 6), (1, 7), (2, 6), (3, 7)]) == [
-            ([1], [6, 7]),
-            ([2], [6]),
-            ([3], [7]),
-        ]
-
 class TestIndexWithDB(DBTest):
     def test_index(self):
         record = web.storage()

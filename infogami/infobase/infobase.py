@@ -200,6 +200,9 @@ class Site:
             
         return self.store.versions(q)
         
+    def recentchanges(self, query):
+        return self.store.recentchanges(query)
+        
     def get_permissions(self, key):
         author = self.get_account_manager().get_user()
         perm = writequery.has_permission(self.store, author, key)

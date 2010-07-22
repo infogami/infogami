@@ -11,6 +11,7 @@ from _dbstore import store, sequence
 from _dbstore.schema import Schema, INDEXED_DATATYPES
 from _dbstore.indexer import Indexer
 from _dbstore.save import SaveImpl, PropertyManager
+from _dbstore.read import RecentChanges
 
 default_schema = None
 
@@ -357,6 +358,17 @@ class DBSiteStore(common.SiteStore):
         
     def sqljoin(self, queries, delim):
         return web.SQLQuery.join(queries, delim)
+        
+    def recentchanges(self, query):
+        """Returns the list of changes matching the given query.
+        
+        Sample Queries:
+            {"limit": 10, "offset": 100}
+            {"limit": 10, "offset": 100, "key": "/authors/OL1A"}
+            {"limit": 10, "offset": 100, "author": "/people/foo"}
+        """
+        engine = RecentChanges(self.db)
+        return engine.recentchanges(**query)
         
     def versions(self, query):
         what = 'thing.key, version.revision, transaction.*'

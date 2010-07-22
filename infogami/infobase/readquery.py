@@ -254,7 +254,7 @@ def make_versions_query(store, query):
         q.add_condition(k, '=', None, v)
         
     return q
-    
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

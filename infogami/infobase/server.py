@@ -35,6 +35,7 @@ urls = (
     "/([^/]*)/_store/(_.*)", "store_special",
     "/([^/]*)/_store/(.*)", "store",
     "/([^/]*)/_seq/(.*)", "seq",
+    "/([^/]*)/_recentchanges", "recentchanges",
     "/_invalidate", "invalidate"
 )
 
@@ -261,6 +262,13 @@ class versions:
         i = input('query')
         q = from_json(i.query)
         return site.versions(q)
+        
+class recentchanges:
+    def GET(self, sitename):
+        site = get_site(sitename)
+        i = input('query')
+        q = from_json(i.query)
+        return site.recentchanges(q)
         
 class permission:
     @jsonify

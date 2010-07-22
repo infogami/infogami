@@ -16,7 +16,10 @@ def setup_db(mod):
     
 def teardown_db(mod):
     mod.db.ctx.clear()
-    del mod.db
+    try:
+        del mod.db
+    except:
+        pass
     
 def setup_conn(mod):
     setup_db(mod)
@@ -25,7 +28,10 @@ def setup_conn(mod):
 
 def teardown_conn(mod):
     teardown_db(mod)
-    del mod.conn 
+    try:
+        del mod.conn 
+    except:
+        pass
     
 def setup_server(mod):
     # clear unwanted state
@@ -38,7 +44,10 @@ def setup_server(mod):
 def teardown_server(mod):
     server._infobase.store.db.ctx.clear()
     server._infobase = None
-    del mod.site
+    try:
+        del mod.site
+    except:
+        pass
 
 def setup_site(mod):
     web.config.db_parameters = db_parameters.copy()

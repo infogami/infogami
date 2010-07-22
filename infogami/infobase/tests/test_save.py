@@ -18,6 +18,7 @@ def teardown_module(mod):
 class DBTest:
     def setup_method(self, method):
         self.tx = db.transaction()
+        db.insert("thing", key='/type/type')
         db.insert("thing", key='/type/object')
         
     def teardown_method(self, method):
@@ -148,6 +149,48 @@ class Test_save(DBTest):
         
     def test_versions(self):
         pass
+        
+    def _get_book_author(self, n):
+        author = {
+            "key": "/author/%d" % n,
+            "type": {"key": "/type/object"},
+            "name": "author %d" % n
+        }
+        book = {
+            "key": "/book/%d" % n,
+            "type": {"key": "/type/object"},
+            "author": {"key": "/author/%d" % n}
+        }
+        return author, book
+        
+    def test_save_with_cross_refs(self):
+        author, book = self._get_book_author(1)
+        self._save([author, book])
+
+        author, book = self._get_book_author(2)  
+        self._save([book, author])
+        
+    def _save(self, docs):
+        s = SaveImpl(db)
+        timestamp = datetime.datetime(2010, 01, 01, 01, 01, 01)
+        return s.save(docs, timestamp=timestamp, comment="foo", ip="1.2.3.4", author=None, action="save")
+    
+    def test_save_with_new_type(self):
+        docs = [{
+            "key": "/type/foo",
+            "type": {"key": "/type/type"}
+        }, {
+            "key": "/foo",
+            "type": {"key": "/type/foo"}
+        }]
+        s = SaveImpl(db)
+        timestamp = datetime.datetime(2010, 01, 01, 01, 01, 01)
+        
+        s.save(docs, timestamp=timestamp, comment="foo", ip="1.2.3.4", author=None, action="save")
+        
+        type = db.query("SELECT * FROM thing where key='/type/foo'")[0]
+        thing = db.query("SELECT * FROM thing where key='/foo'")[0]
+        assert thing.type == type.id
         
 class MockDB:
     def __init__(self):

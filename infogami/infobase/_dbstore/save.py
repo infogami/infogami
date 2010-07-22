@@ -147,7 +147,7 @@ class SaveImpl:
         if any(r['type'] is None for r in new):
             for r in new:
                 if r['type'] is None:
-                    self.db.update("thing", type=r['type'], where="key=key", vars={"key": r['key']})
+                    self.db.update("thing", type=d[r['key']]['type'], where="key=$key", vars={"key": r['key']})
                 
         # update records with type change
         type_changed = [r for r in records if r.type != r.prev.type and r.revision != 1]

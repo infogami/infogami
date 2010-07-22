@@ -21,20 +21,24 @@ class DBTest:
         self.tx.rollback()
 
 class TestRecentChanges(DBTest):
+    def _save(self, docs, author=None, comment="testing", timestamp=None):
+        timestamp = timestamp=timestamp or datetime.datetime(2010, 01, 02, 03, 04, 05)
+        s = SaveImpl(db)
+        s.save(docs, 
+            timestamp=timestamp,
+            comment=comment, 
+            ip="1.2.3.4", 
+            author=author,
+            action="test_save"
+        )
+        
     def test_all(self):
         docs = [
             {"key": "/foo", "type": {"key": "/type/object"}, "title": "foo"},
             {"key": "/bar", "type": {"key": "/type/object"}, "title": "bar"}
         ]
         timestamp = datetime.datetime(2010, 01, 02, 03, 04, 05)
-        s = SaveImpl(db)
-        s.save(docs, 
-            timestamp=timestamp,
-            comment="testing recentchanges", 
-            ip="1.2.3.4", 
-            author=None,
-            action="test_save"
-        )
+        self._save(docs, comment="testing recentchanges", timestamp=timestamp)
 
         changes = RecentChanges(db).recentchanges(limit=1)
         for c in changes:
@@ -52,4 +56,21 @@ class TestRecentChanges(DBTest):
             ],
             "data": {}
         }]
+        
+    def test_author(self):
+        db.insert("thing", key='/user/one')
+        db.insert("thing", key='/user/two')
+        
+        def doc(key):
+            return {"key": key, "type": {"key": "/type/object"}}
+        
+        self._save([doc("/zero")])
+        self._save([doc("/one")], author="/user/one")
+        self._save([doc("/two")], author="/user/two")
+        
+        def changes(author):
+            return RecentChanges(db).recentchanges(author=author)
+        
+        assert len(changes("/user/one")) == 1
+        assert len(changes("/user/two")) == 1
     

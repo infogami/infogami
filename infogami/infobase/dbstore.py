@@ -52,7 +52,10 @@ class DBSiteStore(common.SiteStore):
         return d and d[0] or None
         
     def get_metadata_list(self, keys):
-        result = self.db.select('thing', what='*', where=web.sqlors('key=', keys)).list()
+        if not keys:
+            return {}
+            
+        result = self.db.select('thing', what='*', where="key IN $keys", vars=locals()).list()
         d = dict((r.key, r) for r in result)
         return d
         
@@ -64,8 +67,10 @@ class DBSiteStore(common.SiteStore):
         return d and d[0] or None
 
     def get_metadata_list_from_ids(self, ids):
-        d = {}
-        result = self.db.select('thing', what='*', where=web.sqlors('id=', ids)).list()
+        if not ids:
+            return {}
+            
+        result = self.db.select('thing', what='*', where="id IN $ids", vars=locals()).list()
         d = dict((r.id, r) for r in result)
         return d
         
@@ -368,7 +373,10 @@ class DBSiteStore(common.SiteStore):
             {"limit": 10, "offset": 100, "author": "/people/foo"}
         """
         engine = RecentChanges(self.db)
-        return engine.recentchanges(**query)
+        limit = query.pop("limit", 1000)
+        offset = query.pop("offset", 0)
+        author = query.pop("author", None)
+        return engine.recentchanges(limit=limit, offset=offset, author=author)
         
     def versions(self, query):
         what = 'thing.key, version.revision, transaction.*'

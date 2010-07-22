@@ -12,10 +12,26 @@ class RecentChanges:
             return dict((row.id, row.key) for row in rows)
         else:
             return {}
+            
+    def get_thing_id(self, key):
+        try:
+            return self.db.where("thing", key=key)[0].id
+        except IndexError:
+            return None
     
-    def recentchanges(self, limit=100, offset=0):
+    def recentchanges(self, author=None, limit=100, offset=0):
         order = 'transaction.created DESC'
-        rows = self.db.select("transaction", limit=limit, offset=offset, order=order).list()
+        wheres = ["1 = 1"]
+        
+        if author:
+            author_id = self.get_thing_id(author)
+            if not author_id:
+                return {}
+            else:
+                wheres.append("author_id=$author_id")
+        
+        where=" AND ".join(wheres)
+        rows = self.db.select("transaction", where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
 
         author_ids = set(row.author_id for row in rows if row.author_id)
         authors = self.get_keys(list(author_ids))

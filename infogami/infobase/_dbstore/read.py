@@ -19,7 +19,7 @@ class RecentChanges:
         except IndexError:
             return None
     
-    def recentchanges(self, author=None, limit=100, offset=0):
+    def recentchanges(self, author=None, bot=None, limit=100, offset=0):
         order = 'transaction.created DESC'
         wheres = ["1 = 1"]
         
@@ -29,6 +29,13 @@ class RecentChanges:
                 return {}
             else:
                 wheres.append("author_id=$author_id")
+
+        if bot is not None:
+            bot_ids = [r.thing_id for r in self.db.query("SELECT thing_id FROM account WHERE bot='t'")] or [-1]
+            if bot is True or str(bot).lower() == "true":
+                wheres.append("author_id IN $bot_ids")
+            else:
+                wheres.append("(author_id NOT in $bot_ids OR author_id IS NULL)")
         
         where=" AND ".join(wheres)
         rows = self.db.select("transaction", where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
@@ -42,6 +49,9 @@ class RecentChanges:
     def get_versions(self, tx_ids):
         """Returns key,revision for each modified document in each transaction.
         """
+        if not tx_ids:
+            return {}
+            
         rows = self.db.query(
             "SELECT transaction.id, thing.key, version.revision" + 
             " FROM thing, version, transaction" + 

@@ -73,4 +73,23 @@ class TestRecentChanges(DBTest):
         
         assert len(changes("/user/one")) == 1
         assert len(changes("/user/two")) == 1
-    
+        
+    def test_bot(self):
+        one_id = db.insert("thing", key='/user/one')
+        two_id = db.insert("thing", key='/user/two')
+        db.insert("account", thing_id=one_id, bot=True, seqname=False)
+
+        def doc(key):
+            return {"key": key, "type": {"key": "/type/object"}}
+        
+        self._save([doc("/zero")])
+        self._save([doc("/one")], author="/user/one")
+        self._save([doc("/two")], author="/user/two")
+
+        def changes(bot):
+            return RecentChanges(db).recentchanges(bot=bot)
+        
+        assert len(changes(bot=True)) == 1
+        assert len(changes(bot=False)) == 2
+        assert len(changes(bot=None)) == 3
+            

@@ -376,7 +376,8 @@ class DBSiteStore(common.SiteStore):
         limit = query.pop("limit", 1000)
         offset = query.pop("offset", 0)
         author = query.pop("author", None)
-        return engine.recentchanges(limit=limit, offset=offset, author=author)
+        bot = query.pop("bot", None)
+        return engine.recentchanges(author=author, bot=bot, limit=limit, offset=offset)
         
     def versions(self, query):
         what = 'thing.key, version.revision, transaction.*'

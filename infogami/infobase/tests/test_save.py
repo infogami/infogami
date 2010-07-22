@@ -320,7 +320,7 @@ class TestIndex:
             ("book_ref", "id:/books/2", "p:book-author"): ["id:/authors/1"],
         }
         
-        # When type is changed. de
+        # When the type is changed, property_name will be None to indicate that all the properties are to be removed.
         index = {
             ("/type/books", "/books/1", "str", None): []
         }

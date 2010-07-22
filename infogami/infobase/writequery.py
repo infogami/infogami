@@ -18,28 +18,85 @@ class SaveProcessor:
         self.author = author
         
         self.things = {}
+        
+        self.types = {}
+        
         self.key = None
         
     def process_many(self, docs):
         keys = [doc['key'] for doc in docs]
-        prev_data = self.get_prev_data(keys)
         self.things = dict((doc['key'], common.Thing.from_dict(self.store, doc['key'], doc)) for doc in docs)
         
+        def parse_type(value):
+            if isinstance(value, basestring):
+                return value
+            elif isinstance(value, dict) and 'key' in value:
+                return value['key']
+            else:
+                return None
+
+        # for verifying expected_type, type of the referenced objects is required. 
+        # Finding the the types in one shot instead of querying each one separately.
+        for doc in docs:
+            self.types[doc['key']] = parse_type(doc.get('type'))
+        refs = list(k for k in self.find_references(docs) if k not in self.types)
+        self.types.update(self.find_types(refs))
+        
+        prev_data = self.get_many(keys)
         docs = [self._process(doc['key'], doc, prev_data.get(doc['key'])) for doc in docs]
+        
         return [doc for doc in docs if doc]
         
+    def find_types(self, keys):
+        types = {}
+        
+        if keys:
+            d = self.store.get_metadata_list(keys)
+            type_ids = list(set(row.type for row in d.values())) 
+            typedict = self.store.get_metadata_list_from_ids(type_ids)
+            
+            for k, row in d.items():
+                types[k] = typedict[row.type].key
+        return types
+        
+    def find_references(self, d, result=None):
+        if result is None:
+            result = set()
+            
+        if isinstance(d, dict):
+            if len(d) == 1 and d.keys() == ["key"]:
+                result.add(d['key'])
+            else:
+                for k, v in d.iteritems():
+                    if k != "type":
+                        self.find_references(v, result)
+        elif isinstance(d, list):
+            for v in d:
+                self.find_references(v, result)
+        return result
+            
     def get_thing(self, key):
         try:
             return self.things[key]
         except KeyError:
-            return get_thing(self.store, key)
+            t = get_thing(self.store, key)
+            if t:
+                self.things[key] = t
+            return t
             
-    def get_prev_data(self, keys):
+    def get_type(self, key):
+        try:
+            return self.types[key]
+        except KeyError:
+            t = get_thing(self.store, key)
+            return t and t.type.key
+            
+    def get_many(self, keys):
         d = self.store.get_many_as_dict(keys)
         return dict((k, simplejson.loads(json)) for k, json in d.items())
 
     def process(self, key, data):
-        prev_data = self.get_prev_data([key])
+        prev_data = self.get_many([key])
         return self._process(key, data, prev_data.get(key))
         
     def _process(self, key, data, prev_data=None):
@@ -155,10 +212,11 @@ class SaveProcessor:
         type_found = common.find_type(value)
     
         if type_found == '/type/object':
-            thing = self.get_thing(value)
-            if thing is None:
+            type_found = self.get_type(value)
+            
+            # type is not found only when the thing id not found.
+            if type_found is None:
                 raise common.NotFound(key=unicode(value), at=at)
-            type_found = thing.type.key
 
         if expected_type != type_found:
             raise common.BadData(message='expected %s, found %s' % (property.expected_type.key, type_found), at=at, value=value)

@@ -6,6 +6,7 @@ from infogami import config
 import template
 import macro
 from context import context
+import features
 
 from app import *
 
@@ -95,6 +96,7 @@ def layout_processor(handler):
 
 app.add_processor(web.loadhook(initialize_context))
 app.add_processor(layout_processor)
+app.add_processor(web.loadhook(features.loadhook))
 
 class RawText(web.storage):
     def __init__(self, text, **kw):
@@ -156,6 +158,8 @@ def _load():
         macro.load_macros(plugin.path, lazy=True)
         i18n.load_strings(plugin.path)
         __import__(plugin.module + '.code', globals(), locals(), ['plugins'])
+        
+    features.set_feature_flags(config.get("features", {}))
 
 def admin_login(site=None):
     site = site or web.ctx.site

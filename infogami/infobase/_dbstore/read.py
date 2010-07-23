@@ -66,7 +66,7 @@ class RecentChanges:
         
     def _process_transaction(self, tx, authors, versions):
         d = {
-            "id": tx.id,
+            "id": str(tx.id),
             "kind": tx.action,
             "timestamp": tx.created.isoformat(),
             "comment": tx.comment,

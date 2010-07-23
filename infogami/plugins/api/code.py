@@ -3,7 +3,7 @@ Infogami read/write API.
 """
 import web
 import infogami
-from infogami.utils import delegate
+from infogami.utils import delegate, features
 from infogami.utils.view import safeint
 from infogami.infobase import client
 import simplejson
@@ -228,7 +228,11 @@ class recentchanges(delegate.page):
         query = i.pop('query')
         if not query:
             query = simplejson.dumps(make_query(i, required_keys=["key", "type", "author", "ip", "offset", "limit", "bot"]))
-        return request('/versions', data=dict(query=query))
+
+        if features.is_enabled("recentchanges_v2"):
+            return request('/_recentchanges', data=dict(query=query))
+        else:
+            return request('/versions', data=dict(query=query))
 
 class query(delegate.page):
     encoding = "json"

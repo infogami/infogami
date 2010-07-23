@@ -321,6 +321,10 @@ class Site:
         query = simplejson.dumps(query)
         versions =  self._request('/versions', 'GET', {'query': query})
         return [process(v) for v in versions]
+        
+    def recentchanges(self, query):
+        query = simplejson.dumps(query)
+        changes = self._request('/_recentchanges', 'GET', {'query': query})
 
     def write(self, query, comment=None, action=None):
         self._run_hooks('before_new_version', query)
@@ -612,7 +616,7 @@ nothing = Nothing()
 _thing_class_registry = {}
 def register_thing_class(type, klass):
     _thing_class_registry[type] = klass
-
+    
 def create_thing(site, key, data, revision=None):
     type = None
     try:
@@ -770,9 +774,40 @@ class Type(Thing):
         for p in self.backreferences:
             if p.name == name:
                 return p
+                
+class Change:
+    def __init__(self, site, data):
+        self._site = site
+        
+        self.id = data['id']
+        self.kind = data['kind']
+        self.timestamp = parse_datetime(data['timestamp'])
+        self.common = data['comment']
+        
+        if data['author']:
+            self.author = self._site.get(data['author']['key'], lazy=True)
+        else:
+            self.author = None
+        self.ip = data['ip']
+        self.changes = data['changes']
+        self.data = data['data']
+        self.init()
+        
+    def init(self):
+        pass
+        
+    @staticmethod
+    def create(data):
+        kind = data['kind']
+        klass = _change_class_register.get(kind, Change)
+        return klass(data)
+
+_change_class_register = {}
+def register_change_class(kind, klass):
+    _change_class_register[kind] = klass
         
 register_thing_class('/type/type', Type)
-            
+
 # hooks can be registered by extending the hook class
 hooks = []
 class metahook(type):

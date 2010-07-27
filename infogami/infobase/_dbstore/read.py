@@ -62,8 +62,8 @@ class RecentChanges:
             return {}
             
         rows = self.db.query(
-            "SELECT transaction.id, thing.key, version.revision" + 
-            " FROM thing, version, transaction" + 
+            "SELECT version.transaction_id as id, thing.key, version.revision" + 
+            " FROM thing, version" + 
             " WHERE thing.id = version.thing_id" + 
             " AND version.transaction_id IN $tx_ids",
             vars=locals())

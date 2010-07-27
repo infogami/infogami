@@ -328,7 +328,7 @@ class Site:
         
     def get_change(self, id):
         data = self._request('/_recentchanges/%s' % id, 'GET')
-        return Change.create(self, data)
+        return data and Change.create(self, data)
 
     def write(self, query, comment=None, action=None):
         self._run_hooks('before_new_version', query)
@@ -787,7 +787,7 @@ class Change:
         self.id = data['id']
         self.kind = data['kind']
         self.timestamp = parse_datetime(data['timestamp'])
-        self.common = data['comment']
+        self.comment = data['comment']
         
         if data['author']:
             self.author = self._site.get(data['author']['key'], lazy=True)
@@ -795,8 +795,11 @@ class Change:
             self.author = None
         self.ip = data['ip']
         self.changes = data['changes']
-        self.data = data['data']
+        self.data = web.storage(data['data'])
         self.init()
+        
+    def get_changes(self):
+        return [self._site.get(c['key'], c['revision']) for c in self.changes]
             
     def dict(self):
         return dict(self._data)

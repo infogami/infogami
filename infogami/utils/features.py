@@ -8,7 +8,10 @@ feature_flags = {}
 
 def set_feature_flags(flags):
     global feature_flags
-    feature_flags = flags
+    
+    # sanity check
+    if isinstance(flags, dict):
+        feature_flags = flags
 
 filters = {}
 def register_filter(name, method):
@@ -18,6 +21,7 @@ def call_filter(spec):
     if isinstance(spec, list):
         return any(call_filter(x) for x in spec)
     elif isinstance(spec, dict):
+        spec = spec.copy()
         filter_name = spec.pop('filter', None)
         kwargs = spec
     else:
@@ -25,15 +29,14 @@ def call_filter(spec):
         kwargs = {}
         
     if filter_name in filters:
-        return filters[filter_name](**spec)
+        return filters[filter_name](**kwargs)
     else:
         return False
-        
+    
 def find_enabled_features():
     return set(f for f, spec in feature_flags.iteritems() if call_filter(spec))
     
 def loadhook():
-    print "features.loadhook"
     features = find_enabled_features()
     web.ctx.features = features
     context.features = features

@@ -138,6 +138,7 @@ def bootstrap(site, admin_password):
     
     a = site.get_account_manager()
     a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))
+    a.update_user_details("admin", verified=True)
 
     # add admin user to admin usergroup
     import account

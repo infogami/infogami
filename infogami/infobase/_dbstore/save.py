@@ -342,7 +342,7 @@ class IndexUtil:
             data = [dict(thing_id=thing_id, key_id=property_id, value=v) 
                 for (thing_id, property_id), values in group.iteritems()
                 for v in values]
-            self.db.multiple_insert(table, data)
+            self.db.multiple_insert(table, data, seqname=False)
             
     def delete_index(self, index):
         """Deletes the given index from database."""

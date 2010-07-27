@@ -79,6 +79,12 @@ def find_page():
         if m:
             cls = pages[p].get(encoding) or pages[p].get(None)
             args = m.groups()
+            
+            # FeatureFlags support. 
+            # A handler can be enabled only if a feature is active.
+            if hasattr(cls, "is_enabled") and bool(cls().is_enabled()) is False:
+               continue 
+                
             return cls, args
     return None, None
 

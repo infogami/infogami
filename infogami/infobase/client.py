@@ -324,7 +324,11 @@ class Site:
         
     def recentchanges(self, query):
         query = simplejson.dumps(query)
-        changes = self._request('/_recentchanges', 'GET', {'query': query})
+        return self._request('/_recentchanges', 'GET', {'query': query})
+        
+    def get_change(self, id):
+        data = self._request('/_recentchanges/%s' % id, 'GET')
+        return Change.create(self, data)
 
     def write(self, query, comment=None, action=None):
         self._run_hooks('before_new_version', query)
@@ -778,6 +782,7 @@ class Type(Thing):
 class Change:
     def __init__(self, site, data):
         self._site = site
+        self._data = data
         
         self.id = data['id']
         self.kind = data['kind']
@@ -792,15 +797,18 @@ class Change:
         self.changes = data['changes']
         self.data = data['data']
         self.init()
+            
+    def dict(self):
+        return dict(self._data)
         
     def init(self):
         pass
         
     @staticmethod
-    def create(data):
+    def create(site, data):
         kind = data['kind']
         klass = _change_class_register.get(kind, Change)
-        return klass(data)
+        return klass(site, data)
 
 _change_class_register = {}
 def register_change_class(kind, klass):

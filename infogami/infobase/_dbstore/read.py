@@ -7,6 +7,7 @@ class RecentChanges:
         self.db = db
         
     def get_keys(self, ids):
+        ids = list(set(id for id in ids if id is not None))
         if ids:
             rows = self.db.query("SELECT id, key FROM thing WHERE id in $ids", vars=locals())
             return dict((row.id, row.key) for row in rows)
@@ -18,6 +19,16 @@ class RecentChanges:
             return self.db.where("thing", key=key)[0].id
         except IndexError:
             return None
+            
+    def get_change(self, id):
+        try:
+            change = self.db.select("transaction", where="id=$id", vars=locals())[0]
+        except IndexError:
+            return None
+            
+        versions = self.get_versions([id])
+        authors = self.get_keys([change.author_id])
+        return self._process_transaction(change, authors=authors, versions=versions)
     
     def recentchanges(self, author=None, bot=None, limit=100, offset=0):
         order = 'transaction.created DESC'
@@ -40,9 +51,7 @@ class RecentChanges:
         where=" AND ".join(wheres)
         rows = self.db.select("transaction", where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
 
-        author_ids = set(row.author_id for row in rows if row.author_id)
-        authors = self.get_keys(list(author_ids))
-        
+        authors = self.get_keys(row.author_id for row in rows)        
         versions = self.get_versions([row.id for row in rows])
         return [self._process_transaction(row, authors, versions) for row in rows]
         

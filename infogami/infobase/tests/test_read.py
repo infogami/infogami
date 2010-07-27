@@ -32,7 +32,7 @@ class TestRecentChanges(DBTest):
             action="test_save"
         )
         
-    def test_all(self):
+    def test_all(self, wildcard):
         docs = [
             {"key": "/foo", "type": {"key": "/type/object"}, "title": "foo"},
             {"key": "/bar", "type": {"key": "/type/object"}, "title": "bar"}
@@ -40,11 +40,11 @@ class TestRecentChanges(DBTest):
         timestamp = datetime.datetime(2010, 01, 02, 03, 04, 05)
         self._save(docs, comment="testing recentchanges", timestamp=timestamp)
 
-        changes = RecentChanges(db).recentchanges(limit=1)
-        for c in changes:
-            del c['id']
+        engine = RecentChanges(db)
+        changes = engine.recentchanges(limit=1)
         
         assert changes == [{
+            "id": wildcard,
             "kind": "test_save",
             "timestamp": timestamp.isoformat(), 
             "comment": "testing recentchanges",
@@ -56,6 +56,20 @@ class TestRecentChanges(DBTest):
             ],
             "data": {}
         }]
+        
+        engine.get_change(changes[0]['id']) == {
+            "id": wildcard,
+            "kind": "test_save",
+            "timestamp": timestamp.isoformat(), 
+            "comment": "testing recentchanges",
+            "ip": "1.2.3.4",
+            "author": None,
+            "changes": [
+                {"key": "/foo", "revision": 1},
+                {"key": "/bar", "revision": 1},
+            ],
+            "data": {}
+        }     
         
     def test_author(self):
         db.insert("thing", key='/user/one')

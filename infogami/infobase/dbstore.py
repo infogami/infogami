@@ -379,6 +379,12 @@ class DBSiteStore(common.SiteStore):
         bot = query.pop("bot", None)
         return engine.recentchanges(author=author, bot=bot, limit=limit, offset=offset)
         
+    def get_change(self, id):
+        """Return the info about the requrested change.
+        """
+        engine = RecentChanges(self.db)
+        return engine.get_change(id)
+        
     def versions(self, query):
         what = 'thing.key, version.revision, transaction.*'
         where = 'version.thing_id = thing.id AND version.transaction_id = transaction.id'

@@ -203,6 +203,9 @@ class Site:
     def recentchanges(self, query):
         return self.store.recentchanges(query)
         
+    def get_change(self, id):
+        return self.store.get_change(id)
+        
     def get_permissions(self, key):
         author = self.get_account_manager().get_user()
         perm = writequery.has_permission(self.store, author, key)

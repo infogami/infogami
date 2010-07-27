@@ -16,8 +16,35 @@ def teardown_module(mod):
     utils.teardown_server(mod)
     utils.teardown_conn(mod)
     
-class StoreTest(unittest.TestCase):
-    def setUp(self):
+class TestRecentChanges:
+    def test_all(self, wildcard):
+        site.save({"key": "/foo", "type": {"key": "/type/object"}}, comment="test recentchanges")
+        
+        changes = site.recentchanges({"limit": 1})
+        assert changes == [{
+            "id": wildcard,
+            "kind": "update",
+            "author": None,
+            "ip": wildcard,
+            "timestamp": wildcard,
+            "comment": "test recentchanges",
+            "changes": [{"key": "/foo", "revision": 1}],
+            "data": {}
+        }]
+                        
+        assert site.get_change(changes[0]["id"]).dict() == {
+            "id": wildcard,
+            "kind": "update",
+            "author": None,
+            "ip": wildcard,
+            "timestamp": wildcard,
+            "comment": "test recentchanges",
+            "changes": [{"key": "/foo", "revision": 1}],
+            "data": {}
+        }
+    
+class TestStore:
+    def setup_method(self, method):
         s.clear()
         
     def test_getitem(self):
@@ -56,14 +83,14 @@ class StoreTest(unittest.TestCase):
         assert s.keys() == ["y"]
         
     def test_keys_unlimited(self):
-        for i in range(1000):
+        for i in range(200):
             s[str(i)] = {"value": i}
             
         def srange(*args):
             return [str(i) for i in range(*args)]
             
-        assert s.keys() == srange(900, 1000)[::-1]
-        assert list(s.keys(limit=-1)) == srange(1000)[::-1]
+        assert s.keys() == srange(100, 200)[::-1]
+        assert list(s.keys(limit=-1)) == srange(200)[::-1]
         
     def test_key_value_items(self):
         s["x"] = {"type": "foo", "name": "x"}

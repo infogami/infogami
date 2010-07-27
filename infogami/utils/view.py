@@ -10,7 +10,8 @@ from infogami.utils import i18n
 from infogami.utils.markdown import markdown, mdx_footnotes
 
 from context import context
-import template
+from template import render, render_template
+
 import macro
 import storage
 from flash import get_flash_messages, add_flash_message
@@ -71,11 +72,6 @@ web.template.Template.globals.update(dict(
   debug = web.debug,
   get_flash_messages=get_flash_messages,
 ))
-
-render = template.render
-
-def render_template(name, *a, **kw):
-    return render[name](*a, **kw)
 
 def public(f):
     """Exposes a funtion in templates."""

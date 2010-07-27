@@ -192,3 +192,8 @@ render.repr = typetemplate('repr')
 render.input = typetemplate('input')
 render.xdiff = typetemplate('diff')
 
+def render_template(name, *a, **kw):
+    # strip extension
+    if "." in name:
+        name = name.rsplit(".", 1)[0]
+    return render[name](*a, **kw)

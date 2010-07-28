@@ -192,6 +192,28 @@ class Test_save(DBTest):
         thing = db.query("SELECT * FROM thing where key='/foo'")[0]
         assert thing.type == type.id
         
+    def test_save_with_all_datatypes(self):
+        doc = {
+            "key": "/foo",
+            "type": {"key": "/type/object"},
+            "xtype": {"key": "/type/object"},
+            "int": 1,
+            "str": "foo",
+            "text": {"type": "/type/text", "value": "foo"},
+            "date": {"type": "/type/datetime", "value": "2010-01-02T03:04:05"},
+        }
+        self._save([doc])
+        
+    def test_save_with_long_string(self):
+        docs = [{
+            "key": "/type/foo",
+            "type": {"key": "/type/type"},
+            "title": "a" * 4000
+        }]
+        s = SaveImpl(db)
+        timestamp = datetime.datetime(2010, 01, 01, 01, 01, 01)
+        s.save(docs, timestamp=timestamp, comment="foo", ip="1.2.3.4", author=None, action="save")
+        
 class MockDB:
     def __init__(self):
         self.reset()
@@ -327,6 +349,12 @@ class TestIndex:
         self.indexer.compile_index(index) == {
             ("book_str", "id:/books/1", None): []
         }
+        
+    def test_too_long(self):
+        assert self.indexer._is_too_long("a" * 10000) == True
+        assert self.indexer._is_too_long("a" * 2047) == False
+        c = u'\u20AC' # 3 bytes in utf-8
+        assert self.indexer._is_too_long(c * 1000) == True
         
 class TestIndexWithDB(DBTest):
     def test_index(self):

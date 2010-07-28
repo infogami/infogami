@@ -335,10 +335,27 @@ class IndexUtil:
         for (table, thing_id, property_id), values in index.iteritems():
             groups[table][thing_id, property_id] = values
         return groups
+        
+    def ignore_long_values(self, index):
+        """The DB schema has a limit of 2048 chars on string values. This function ignores values which are longer than that.
+        """
+        is_too_long = self._is_too_long
+        return dict((k, [v for v in values if not is_too_long(v)]) for k, values in index.iteritems())
+        
+    def _is_too_long(self, v, limit=2048):
+        return (
+            isinstance(v, basestring) 
+            # unicode string can be as long as 4 bytes in utf-8. 
+            # This check avoid UTF-8 conversion for small strings.
+            and len(v) > limit/4 
+            and len(web.safestr(v)) > limit
+        )
             
     def insert_index(self, index):
         """Inserts the given index into database."""
         for table, group in self.group_index(index).iteritems():
+            # ignore values longer than 2048, the limit specified by the db schema.
+            group = self.ignore_long_values(group)
             data = [dict(thing_id=thing_id, key_id=property_id, value=v) 
                 for (thing_id, property_id), values in group.iteritems()
                 for v in values]

@@ -796,7 +796,7 @@ class Change:
         else:
             self.author = None
         self.ip = data['ip']
-        self.changes = data['changes']
+        self.changes = data.get('changes', [])
         self.data = web.storage(data['data'])
         self.init()
         

@@ -804,7 +804,7 @@ class Change:
         return self.comment
         
     def get_changes(self):
-        return [self._site.get(c['key'], c['revision']) for c in self.changes]
+        return [self._site.get(c['key'], c['revision'], lazy=True) for c in self.changes]
             
     def dict(self):
         return dict(self._data)
@@ -821,6 +821,9 @@ class Change:
             "id": self.id
         }
         return format % kwargs
+    
+    def __repr__(self):
+        return "<Change@%s of kind %s>" % (self.id, self.kind)
         
     @staticmethod
     def create(site, data):

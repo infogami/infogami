@@ -51,10 +51,6 @@ class TestRecentChanges(DBTest):
             "comment": "testing recentchanges",
             "ip": "1.2.3.4",
             "author": None,
-            "changes": [
-                {"key": "/foo", "revision": 1},
-                {"key": "/bar", "revision": 1},
-            ],
             "data": {}
         }]
         
@@ -141,22 +137,22 @@ class TestRecentChanges(DBTest):
             y, m, d = datestr.split("-")
             return datetime.datetime(int(y), int(m), int(d))
         
-        self._save([doc("/a")], kind="foo", timestamp=date("2010-01-02"))
-        self._save([doc("/b")], kind="bar", timestamp=date("2010-01-03"))
+        self._save([doc("/a")], kind="foo", timestamp=date("2010-01-02"), comment="a")
+        self._save([doc("/b")], kind="bar", timestamp=date("2010-01-03"), comment="b")
         
         def changes(**kw):
-            return [c['changes'][0]['key'] for c in RecentChanges(db).recentchanges(**kw)]
+            return [c['comment'] for c in RecentChanges(db).recentchanges(**kw)]
 
         # begin_date is included in the interval, but end_date is not included.
-        assert changes(begin_date=date("2010-01-01")) == ['/b', '/a']
-        assert changes(begin_date=date("2010-01-02")) == ['/b', '/a']
-        assert changes(begin_date=date("2010-01-03")) == ['/b']
+        assert changes(begin_date=date("2010-01-01")) == ['b', 'a']
+        assert changes(begin_date=date("2010-01-02")) == ['b', 'a']
+        assert changes(begin_date=date("2010-01-03")) == ['b']
         assert changes(begin_date=date("2010-01-04")) == []
 
         assert changes(end_date=date("2010-01-01")) == []
         assert changes(end_date=date("2010-01-02")) == []
-        assert changes(end_date=date("2010-01-03")) == ['/a']
-        assert changes(end_date=date("2010-01-04")) == ['/b', '/a']
+        assert changes(end_date=date("2010-01-03")) == ['a']
+        assert changes(end_date=date("2010-01-04")) == ['b', 'a']
         
-        assert changes(begin_date=date("2010-01-01"), end_date=date("2010-01-03")) == ['/a']
-        assert changes(begin_date=date("2010-01-01"), end_date=date("2010-01-04")) == ['/b', '/a']
+        assert changes(begin_date=date("2010-01-01"), end_date=date("2010-01-03")) == ['a']
+        assert changes(begin_date=date("2010-01-01"), end_date=date("2010-01-04")) == ['b', 'a']

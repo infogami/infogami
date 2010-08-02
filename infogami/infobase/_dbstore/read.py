@@ -69,7 +69,12 @@ class RecentChanges:
         rows = self.db.select("transaction", where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
 
         authors = self.get_keys(row.author_id for row in rows)        
-        versions = self.get_versions([row.id for row in rows])
+        
+        ## It is too expensive to provide versions info with each transaction.
+        ## Supressing it temporarily.
+        #versions = self.get_versions([row.id for row in rows])
+        versions = None
+        
         return [self._process_transaction(row, authors, versions) for row in rows]
         
     def get_versions(self, tx_ids):
@@ -79,26 +84,29 @@ class RecentChanges:
             return {}
             
         rows = self.db.query(
-            "SELECT version.transaction_id as id, thing.key, version.revision" + 
-            " FROM thing, version" + 
-            " WHERE thing.id = version.thing_id" + 
-            " AND version.transaction_id IN $tx_ids",
-            vars=locals())
+            "SELECT version.transaction_id as id, version.thing_id, version.revision" + 
+            " FROM version" + 
+            " WHERE version.transaction_id IN $tx_ids",
+            vars=locals()).list()
+            
+        keys = self.get_keys(row.thing_id for row in rows)
 
         d = defaultdict(list)
         for row in rows:
-            d[row.id].append({"key": row.key, "revision": row.revision})
+            d[row.id].append({"key": keys[row.thing_id], "revision": row.revision})
         return d
         
-    def _process_transaction(self, tx, authors, versions):
+    def _process_transaction(self, tx, authors, versions=None):
         d = {
             "id": str(tx.id),
-            "kind": tx.action,
+            "kind": tx.action or "edit",
             "timestamp": tx.created.isoformat(),
             "comment": tx.comment,
-            "changes": versions[tx.id]
         }
         
+        if versions is not None:
+            d["changes"] = versions.get(tx.id, [])
+
         if tx.author_id:
             d['author'] = {"key": authors[tx.author_id]}
             d['ip'] = None
@@ -116,3 +124,4 @@ class RecentChanges:
             d['data'] = {}
             
         return d        
+

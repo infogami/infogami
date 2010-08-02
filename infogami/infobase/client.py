@@ -324,7 +324,8 @@ class Site:
         
     def recentchanges(self, query):
         query = simplejson.dumps(query)
-        return self._request('/_recentchanges', 'GET', {'query': query})
+        changes = self._request('/_recentchanges', 'GET', {'query': query})
+        return [Change.create(self, c) for c in changes]
         
     def get_change(self, id):
         data = self._request('/_recentchanges/%s' % id, 'GET')
@@ -353,11 +354,12 @@ class Site:
             self._run_hooks('on_new_version', query)
         return result
         
-    def save_many(self, query, comment=None, action=None):
+    def save_many(self, query, comment=None, data=None, action=None):
         _query = simplejson.dumps(query)
         #for q in query:
         #    self._run_hooks('before_new_version', q)
-        result = self._request('/save_many', 'POST', dict(query=_query, comment=comment, action=action))
+        data = data or {}
+        result = self._request('/save_many', 'POST', dict(query=_query, comment=comment, action=action, data=simplejson.dumps(data)))
         self._invalidate_cache([r['key'] for r in result])
         for q in query:
             self._run_hooks('on_new_version', q)
@@ -798,6 +800,9 @@ class Change:
         self.data = web.storage(data['data'])
         self.init()
         
+    def get_comment(self):
+        return self.comment
+        
     def get_changes(self):
         return [self._site.get(c['key'], c['revision']) for c in self.changes]
             
@@ -806,6 +811,16 @@ class Change:
         
     def init(self):
         pass
+        
+    def url(self, format):
+        kwargs = {
+            "year": self.timestamp.year,
+            "month": self.timestamp.month,
+            "day": self.timestamp.day,
+            "kind": self.kind,
+            "id": self.id
+        }
+        return format % kwargs
         
     @staticmethod
     def create(site, data):

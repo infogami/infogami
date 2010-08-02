@@ -42,7 +42,8 @@ create table transaction (
     ip inet,
     comment text,
     bot boolean default 'f', -- true if the change is made by a bot
-    created timestamp default (current_timestamp at time zone 'utc')    
+    created timestamp default (current_timestamp at time zone 'utc'),
+    data text
 );
 
 $for name in ['author_id', 'ip', 'created']:

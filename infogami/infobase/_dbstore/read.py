@@ -1,6 +1,7 @@
 """Implementation of all read queries."""
 
 from collections import defaultdict
+import simplejson
 
 class RecentChanges:
     def __init__(self, db):
@@ -30,23 +31,39 @@ class RecentChanges:
         authors = self.get_keys([change.author_id])
         return self._process_transaction(change, authors=authors, versions=versions)
     
-    def recentchanges(self, author=None, bot=None, limit=100, offset=0):
+    def recentchanges(self, limit=100, offset=0, **kwargs):
         order = 'transaction.created DESC'
         wheres = ["1 = 1"]
-        
-        if author:
-            author_id = self.get_thing_id(author)
-            if not author_id:
-                return {}
-            else:
-                wheres.append("author_id=$author_id")
-
+                
+        bot = kwargs.pop('bot', None)
         if bot is not None:
             bot_ids = [r.thing_id for r in self.db.query("SELECT thing_id FROM account WHERE bot='t'")] or [-1]
             if bot is True or str(bot).lower() == "true":
                 wheres.append("author_id IN $bot_ids")
             else:
                 wheres.append("(author_id NOT in $bot_ids OR author_id IS NULL)")
+
+        author = kwargs.pop('author', None)
+        if author is not None:
+            author_id = self.get_thing_id(author)
+            if not author_id:
+                # Unknown author. Implies no changes by him.
+                return {}
+            else:
+                wheres.append("author_id=$author_id")
+                
+        kind = kwargs.pop('kind', None)
+        if kind is not None:
+            wheres.append('action = $kind')
+            
+        begin_date = kwargs.pop('begin_date', None)
+        if begin_date is not None:
+            wheres.append("created >= $begin_date")
+        
+        end_date = kwargs.pop('end_date', None)
+        if end_date is not None:
+            # end_date is not included in the interval.
+            wheres.append("created < $end_date")
         
         where=" AND ".join(wheres)
         rows = self.db.select("transaction", where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
@@ -91,11 +108,11 @@ class RecentChanges:
 
         # The new db schema has a data column in transaction table. 
         # In old installations, machine_comment column is used as data
-        if "data" in tx:
+        if tx.get('data'):
             d['data'] = simplejson.loads(tx.data)
-        elif "machine_comment" in tx and tx.machine_comment and tx.machine_comment.startswith("{"):
+        elif tx.get('machine_comment') and tx.machine_comment.startswith("{"):
             d['data'] = simplejson.loads(tx.machine_comment)
         else:
             d['data'] = {}
             
-        return d
+        return d        

@@ -215,17 +215,18 @@ class save:
         data = from_json(data)
 
         comment = data.pop('_comment', None)
-        machine_comment = data.pop('_machine_comment', None)
+        
         site = get_site(sitename)
-        return site.save(key, data, comment=comment, machine_comment=machine_comment)
+        return site.save(key, data, comment=comment)
 
 class save_many:
     @jsonify
     def POST(self, sitename):
-        i = input('query', comment=None, machine_comment=None, action=None)
-        data = from_json(i.query)
+        i = input('query', comment=None, data=None, action=None)
+        docs = from_json(i.query)
+        data = data and from_json(i.data)
         site = get_site(sitename)
-        return site.save_many(data, comment=i.comment, machine_comment=i.machine_comment, action=i.action)
+        return site.save_many(docs, comment=i.comment, data=data, action=i.action)
 
 class reindex:
     @jsonify

@@ -120,7 +120,7 @@ class Site:
     def new_key(self, type, kw=None):
         return self.store.new_key(type, kw or {})
         
-    def write(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, action=None, _internal=False):
+    def write(self, query, timestamp=None, comment=None, data=None, ip=None, author=None, action=None, _internal=False):
         timestamp = timestamp or datetime.datetime.utcnow()
         
         author = author or self.get_account_manager().get_user()
@@ -128,8 +128,7 @@ class Site:
         
         items = p.process(query)
         items = (item for item in items if item)
-        result = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key, action=action)
-
+        result = self.store.save_many(items, timestamp, comment, data, ip, author and author.key, action=action)
 
         created = [r['key'] for r in result if r and r['revision'] == 1]
         updated = [r['key'] for r in result if r and r['revision'] != 1]
@@ -137,36 +136,36 @@ class Site:
         result2 = web.storage(created=created, updated=updated)
         
         if not _internal:
-            data = dict(comment=comment, machine_comment=machine_comment, query=query, result=result2)
-            self._fire_event("write", timestamp, ip, author and author.key, data)
+            event_data = dict(comment=comment, data=data, query=query, result=result2)
+            self._fire_event("write", timestamp, ip, author and author.key, event_data)
             
         self._fire_triggers(result)
 
         return result2
     
-    def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
+    def save(self, key, doc, timestamp=None, comment=None, data=None, ip=None, author=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
         
         #@@ why to have key argument at all?
-        data['key'] = key
+        doc['key'] = key
         
         p = writequery.SaveProcessor(self.store, author)
-        data = p.process(key, data)
+        doc = p.process(key, doc)
         
-        if not data:
+        if not doc:
             return {}
         else:
-            saved_doc = self.store.save(key, data, timestamp, comment, machine_comment, ip, author and author.key)
+            saved_doc = self.store.save(key, doc, timestamp, comment, data, ip, author and author.key)
             result={"key": saved_doc['key'], "revision": saved_doc['revision']}
             
-            event_data = dict(comment=comment, machine_comment=machine_comment, key=key, query=data, result=result)
+            event_data = dict(comment=comment, data=data, key=key, query=data, result=result)
             self._fire_event("save", timestamp, ip, author and author.key, event_data)
             self._fire_triggers([saved_doc])
             return result
     
-    def save_many(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, action=None):
+    def save_many(self, query, timestamp=None, comment=None, data=None, ip=None, author=None, action=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
@@ -174,10 +173,10 @@ class Site:
         p = writequery.SaveProcessor(self.store, author)
 
         items = p.process_many(query)
-        saved_docs = self.store.save_many(items, timestamp, comment, machine_comment, ip, author and author.key, action=action)
+        saved_docs = self.store.save_many(items, timestamp, comment, data, ip, author and author.key, action=action)
         
         result = [{"key": doc["key"], "revision": doc['revision']} for doc in saved_docs]
-        event_data = dict(comment=comment, machine_comment=machine_comment, query=query, result=result)
+        event_data = dict(comment=comment, data=data, query=query, result=result)
         self._fire_event("save_many", timestamp, ip, author and author.key, event_data)
 
         self._fire_triggers(saved_docs)

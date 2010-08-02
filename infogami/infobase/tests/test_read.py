@@ -21,7 +21,7 @@ class DBTest:
         self.tx.rollback()
 
 class TestRecentChanges(DBTest):
-    def _save(self, docs, author=None, comment="testing", timestamp=None):
+    def _save(self, docs, author=None, comment="testing", kind="test_save", timestamp=None, data=None):
         timestamp = timestamp=timestamp or datetime.datetime(2010, 01, 02, 03, 04, 05)
         s = SaveImpl(db)
         s.save(docs, 
@@ -29,7 +29,8 @@ class TestRecentChanges(DBTest):
             comment=comment, 
             ip="1.2.3.4", 
             author=author,
-            action="test_save"
+            action=kind,
+            data=data
         )
         
     def test_all(self, wildcard):
@@ -106,4 +107,56 @@ class TestRecentChanges(DBTest):
         assert len(changes(bot=True)) == 1
         assert len(changes(bot=False)) == 2
         assert len(changes(bot=None)) == 3
+        
+    def test_data(self):
+        def doc(key):
+            return {"key": key, "type": {"key": "/type/object"}}
             
+        self._save([doc("/zero")], data={"foo": "bar"})
+        
+        def recentchange():
+            return RecentChanges(db).recentchanges(limit=1)[0]
+            
+        assert recentchange()['data'] == {"foo": "bar"}
+        
+    def test_kind(self):
+        def doc(key):
+            return {"key": key, "type": {"key": "/type/object"}}
+        
+        self._save([doc("/zero")], kind="foo")
+        self._save([doc("/one")], kind="bar")
+
+        def changes(kind):
+            return RecentChanges(db).recentchanges(kind=kind)
+            
+        assert len(changes(None)) == 2
+        assert len(changes("foo")) == 1
+        assert len(changes("bar")) == 1
+        
+    def test_query_by_date(self):
+        def doc(key):
+            return {"key": key, "type": {"key": "/type/object"}}
+            
+        def date(datestr):
+            y, m, d = datestr.split("-")
+            return datetime.datetime(int(y), int(m), int(d))
+        
+        self._save([doc("/a")], kind="foo", timestamp=date("2010-01-02"))
+        self._save([doc("/b")], kind="bar", timestamp=date("2010-01-03"))
+        
+        def changes(**kw):
+            return [c['changes'][0]['key'] for c in RecentChanges(db).recentchanges(**kw)]
+
+        # begin_date is included in the interval, but end_date is not included.
+        assert changes(begin_date=date("2010-01-01")) == ['/b', '/a']
+        assert changes(begin_date=date("2010-01-02")) == ['/b', '/a']
+        assert changes(begin_date=date("2010-01-03")) == ['/b']
+        assert changes(begin_date=date("2010-01-04")) == []
+
+        assert changes(end_date=date("2010-01-01")) == []
+        assert changes(end_date=date("2010-01-02")) == []
+        assert changes(end_date=date("2010-01-03")) == ['/a']
+        assert changes(end_date=date("2010-01-04")) == ['/b', '/a']
+        
+        assert changes(begin_date=date("2010-01-01"), end_date=date("2010-01-03")) == ['/a']
+        assert changes(begin_date=date("2010-01-01"), end_date=date("2010-01-04")) == ['/b', '/a']

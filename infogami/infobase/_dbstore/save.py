@@ -22,7 +22,7 @@ class SaveImpl:
         """Hack to allow processing of json before using. Required for OL legacy."""
         return json
     
-    def save(self, docs, timestamp, comment, ip, author, action, machine_comment=None):
+    def save(self, docs, timestamp, comment, ip, author, action, data=None):
         docs = list(docs)
         docs = common.format_data(docs)
         
@@ -40,9 +40,16 @@ class SaveImpl:
                 author_id=author and self.get_thing_id(author),
                 ip=ip,
                 comment=comment, 
-                created=timestamp)
+                created=timestamp, 
+            )
             if config.use_bot_column:
                 kw['bot'] = bool(author and (self.get_user_details(author) or {}).get('bot', False))
+                
+            if config.use_machine_comment:
+                kw['machine_comment'] = simplejson.dumps(data or {})
+            else:
+                kw['data'] = simplejson.dumps(data or {})
+                
             tx_id = self.db.insert("transaction", **kw)
                 
             # add versions

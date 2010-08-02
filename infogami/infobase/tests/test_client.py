@@ -20,7 +20,10 @@ class TestRecentChanges:
     def test_all(self, wildcard):
         site.save({"key": "/foo", "type": {"key": "/type/object"}}, comment="test recentchanges")
         
-        changes = site.recentchanges({"limit": 1})
+        def recentchanges(query):
+            return [c.dict() for c in site.recentchanges(query)]
+        
+        changes = recentchanges({"limit": 1})
         assert changes == [{
             "id": wildcard,
             "kind": "update",

@@ -137,7 +137,7 @@ class DBSiteStore(common.SiteStore):
             yield '}'
         return "".join(process(query))
                     
-    def save_many(self, docs, timestamp, comment, machine_comment, ip, author, action=None):
+    def save_many(self, docs, timestamp, comment, data, ip, author, action=None):
         action = action or "bulk_update"
         s = SaveImpl(self.db, self.schema, self.indexer, self.property_manager)
         
@@ -145,7 +145,7 @@ class DBSiteStore(common.SiteStore):
         s.process_json = process_json
         
         docs = common.format_data(docs)
-        result = s.save(docs, timestamp=timestamp, comment=comment, ip=ip, author=author, action=action, machine_comment=machine_comment)
+        result = s.save(docs, timestamp=timestamp, comment=comment, ip=ip, author=author, action=action, data=data)
         
         # update cache. 
         # Use the docs from result as they contain the updated revision and last_modified fields.
@@ -154,9 +154,9 @@ class DBSiteStore(common.SiteStore):
             
         return result
         
-    def save(self, key, data, timestamp=None, comment=None, machine_comment=None, ip=None, author=None, transaction_id=None):
+    def save(self, key, doc, timestamp=None, comment=None, data=None, ip=None, author=None, transaction_id=None):
         timestamp = timestamp or datetime.datetime.utcnow
-        return self.save_many([data], timestamp, comment, machine_comment, ip, author, action="update")[0]
+        return self.save_many([doc], timestamp, comment, data, ip, author, action="update")[0]
         
     def get_property_id(self, type, name):
         return self.property_manager.get_property_id(type, name)
@@ -373,11 +373,14 @@ class DBSiteStore(common.SiteStore):
             {"limit": 10, "offset": 100, "author": "/people/foo"}
         """
         engine = RecentChanges(self.db)
+        
         limit = query.pop("limit", 1000)
         offset = query.pop("offset", 0)
-        author = query.pop("author", None)
-        bot = query.pop("bot", None)
-        return engine.recentchanges(author=author, bot=bot, limit=limit, offset=offset)
+        
+        keys = "author", "kind", "bot", "begin_date", "end_date"
+        kwargs = dict((k, query[k]) for k in keys if k in query)
+        
+        return engine.recentchanges(limit=limit, offset=offset, **kwargs)
         
     def get_change(self, id):
         """Return the info about the requrested change.

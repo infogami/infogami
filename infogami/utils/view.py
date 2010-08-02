@@ -10,7 +10,7 @@ from infogami.utils import i18n
 from infogami.utils.markdown import markdown, mdx_footnotes
 
 from context import context
-from template import render, render_template
+from template import render, render_template, get_template
 
 import macro
 import storage
@@ -71,6 +71,8 @@ web.template.Template.globals.update(dict(
   urlencode = urllib.urlencode,
   debug = web.debug,
   get_flash_messages=get_flash_messages,
+  render_template=render_template,
+  get_template=get_template
 ))
 
 def public(f):

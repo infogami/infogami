@@ -43,6 +43,7 @@ create table transaction (
     comment text,
     bot boolean default 'f', -- true if the change is made by a bot
     created timestamp default (current_timestamp at time zone 'utc'),
+    changes text,
     data text
 );
 

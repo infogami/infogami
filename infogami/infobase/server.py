@@ -224,7 +224,7 @@ class save_many:
     def POST(self, sitename):
         i = input('query', comment=None, data=None, action=None)
         docs = from_json(i.query)
-        data = data and from_json(i.data)
+        data = i.data and from_json(i.data)
         site = get_site(sitename)
         return site.save_many(docs, comment=i.comment, data=data, action=i.action)
 

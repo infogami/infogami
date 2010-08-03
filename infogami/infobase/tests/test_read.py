@@ -51,6 +51,10 @@ class TestRecentChanges(DBTest):
             "comment": "testing recentchanges",
             "ip": "1.2.3.4",
             "author": None,
+            "changes": [
+                {"key": "/foo", "revision": 1},
+                {"key": "/bar", "revision": 1},
+            ],
             "data": {}
         }]
         

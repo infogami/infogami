@@ -30,6 +30,7 @@ class TestRecentChanges:
             "author": None,
             "ip": wildcard,
             "timestamp": wildcard,
+            "changes": [{"key": "/foo", "revision": 1}],
             "comment": "test recentchanges",
             "data": {}
         }]

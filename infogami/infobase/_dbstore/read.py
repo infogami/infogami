@@ -26,8 +26,12 @@ class RecentChanges:
             change = self.db.select("transaction", where="id=$id", vars=locals())[0]
         except IndexError:
             return None
-            
-        versions = self.get_versions([id])
+        
+        if change.changes is None:
+            versions = self.get_versions([id])
+        else:
+            versions = {}
+        
         authors = self.get_keys([change.author_id])
         return self._process_transaction(change, authors=authors, versions=versions)
     
@@ -72,8 +76,8 @@ class RecentChanges:
         
         ## It is too expensive to provide versions info with each transaction.
         ## Supressing it temporarily.
-        #versions = self.get_versions([row.id for row in rows])
-        versions = None
+        #versions = self.get_versions([row.id for row in rows if row.changes is None])
+        versions = {}
         
         return [self._process_transaction(row, authors, versions) for row in rows]
         
@@ -96,7 +100,7 @@ class RecentChanges:
             d[row.id].append({"key": keys[row.thing_id], "revision": row.revision})
         return d
         
-    def _process_transaction(self, tx, authors, versions=None):
+    def _process_transaction(self, tx, authors, versions={}):
         d = {
             "id": str(tx.id),
             "kind": tx.action or "edit",
@@ -104,8 +108,10 @@ class RecentChanges:
             "comment": tx.comment,
         }
         
-        if versions is not None:
-            d["changes"] = versions.get(tx.id, [])
+        if tx.changes is None:
+            d['changes'] = versions.get(tx.id, [])
+        else:
+            d['changes'] = simplejson.loads(tx.changes)
 
         if tx.author_id:
             d['author'] = {"key": authors[tx.author_id]}

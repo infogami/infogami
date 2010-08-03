@@ -45,10 +45,7 @@ class SaveImpl:
             if config.use_bot_column:
                 kw['bot'] = bool(author and (self.get_user_details(author) or {}).get('bot', False))
                 
-            if config.use_machine_comment:
-                kw['machine_comment'] = simplejson.dumps(data or {})
-            else:
-                kw['data'] = simplejson.dumps(data or {})
+            kw['data'] = simplejson.dumps(data or {})
                 
             tx_id = self.db.insert("transaction", **kw)
                 

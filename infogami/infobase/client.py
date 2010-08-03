@@ -1,13 +1,14 @@
 """Infobase client."""
 
 import common
-
 import httplib, urllib
 import _json as simplejson
 import web
 import socket
 import datetime
 import time
+
+from infogami import config
 
 DEBUG = False
 
@@ -325,11 +326,11 @@ class Site:
     def recentchanges(self, query):
         query = simplejson.dumps(query)
         changes = self._request('/_recentchanges', 'GET', {'query': query})
-        return [Change.create(self, c) for c in changes]
+        return [Changeset.create(self, c) for c in changes]
         
     def get_change(self, id):
         data = self._request('/_recentchanges/%s' % id, 'GET')
-        return data and Change.create(self, data)
+        return data and Changeset.create(self, data)
 
     def write(self, query, comment=None, action=None):
         self._run_hooks('before_new_version', query)
@@ -425,10 +426,9 @@ class Site:
         
     def reset_password(self, username, code, password):
         return self._request('/account/reset_password', 'POST', dict(username=username, code=code, password=password))
-        
+    
     def get_user(self):
         # avoid hitting infobase when there is no cookie.
-        from infogami import config
         if web.cookies().get(config.login_cookie_name) is None:
             return None
         try:
@@ -781,7 +781,7 @@ class Type(Thing):
             if p.name == name:
                 return p
                 
-class Change:
+class Changeset:
     def __init__(self, site, data):
         self._site = site
         self._data = data
@@ -812,7 +812,7 @@ class Change:
     def init(self):
         pass
         
-    def url(self, format):
+    def url(self):
         kwargs = {
             "year": self.timestamp.year,
             "month": self.timestamp.month,
@@ -820,21 +820,24 @@ class Change:
             "kind": self.kind,
             "id": self.id
         }
+        default_format = "/recentchanges/%(year)s/%(month)02d/%(day)02d/%(kind)s/%(id)s"
+        format = config.get("recentchanges_view_link_format", default_format)
         return format % kwargs
     
     def __repr__(self):
-        return "<Change@%s of kind %s>" % (self.id, self.kind)
+        return "<Changeset@%s of kind %s>" % (self.id, self.kind)
         
     @staticmethod
     def create(site, data):
         kind = data['kind']
-        klass = _change_class_register.get(kind, Change)
+        klass = _changeset_class_register.get(kind) or _changeset_class_register.get(None)
         return klass(site, data)
 
-_change_class_register = {}
-def register_change_class(kind, klass):
-    _change_class_register[kind] = klass
-        
+_changeset_class_register = {}
+def register_changeset_class(kind, klass):
+    _changeset_class_register[kind] = klass
+    
+register_changeset_class(None, Changeset)
 register_thing_class('/type/type', Type)
 
 # hooks can be registered by extending the hook class

@@ -183,9 +183,9 @@ class write:
     @jsonify
     def POST(self, sitename):
         site = get_site(sitename)
-        i = input('query', comment=None, machine_comment=None, action=None)
+        i = input('query', comment=None, action=None)
         query = from_json(i.query)
-        result = site.write(query, comment=i.comment, machine_comment=i.machine_comment, action=i.action)
+        result = site.write(query, comment=i.comment, action=i.action)
         return result
 
 class withkey:

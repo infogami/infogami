@@ -627,7 +627,14 @@ def create_thing(site, key, data, revision=None):
     type = None
     try:
         if data is not None and data.get('type'):
-            type = data.get('type')['key']
+            type = data.get('type')
+            
+            #@@@ Fix this!
+            if isinstance(type, Thing):
+                type = type.key
+            elif isinstance(type, dict):
+                type = type['key']
+                
             # just to be safe
             if not isinstance(type, basestring):
                 type = None

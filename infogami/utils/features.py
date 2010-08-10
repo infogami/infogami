@@ -52,6 +52,9 @@ def filter_disabled():
 def filter_enabled():
     return True
     
+def filter_loggedin():
+    return context.user is not None
+    
 def filter_admin():
     return filter_usergroup("/usergroup/admin")
     
@@ -70,5 +73,6 @@ def filter_queryparam(name, value):
 register_filter("disabled", filter_disabled)
 register_filter("enabled", filter_enabled)
 register_filter("admin", filter_admin)
+register_filter("loggedin", filter_loggedin)
 register_filter("usergroup", filter_usergroup)
 register_filter("queryparam", filter_queryparam)

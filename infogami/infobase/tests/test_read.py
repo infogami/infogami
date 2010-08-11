@@ -21,13 +21,13 @@ class DBTest:
         self.tx.rollback()
 
 class TestRecentChanges(DBTest):
-    def _save(self, docs, author=None, comment="testing", kind="test_save", timestamp=None, data=None):
+    def _save(self, docs, author=None, ip="1.2.3.4", comment="testing", kind="test_save", timestamp=None, data=None):
         timestamp = timestamp=timestamp or datetime.datetime(2010, 01, 02, 03, 04, 05)
         s = SaveImpl(db)
         s.save(docs, 
             timestamp=timestamp,
             comment=comment, 
-            ip="1.2.3.4", 
+            ip=ip, 
             author=author,
             action=kind,
             data=data
@@ -88,6 +88,34 @@ class TestRecentChanges(DBTest):
         
         assert len(changes("/user/one")) == 1
         assert len(changes("/user/two")) == 1
+        
+    def test_ip(self):
+        db.insert("thing", key='/user/foo')
+        
+        def doc(key):
+            return {"key": key, "type": {"key": "/type/object"}}
+        
+        self._save([doc("/zero")])
+        self._save([doc("/one")], ip="1.1.1.1")
+        self._save([doc("/two")], ip="2.2.2.2")
+            
+        def changes(**kw):
+            return RecentChanges(db).recentchanges(**kw)
+
+        assert len(changes(ip="1.1.1.1")) == 1
+        assert len(changes(ip="2.2.2.2")) == 1        
+        
+        self._save([doc("/three")], author="/user/foo", ip="1.1.1.1")
+
+        # changes by logged in users should be ignored in ip queries
+        assert len(changes(ip="1.1.1.1")) == 1
+        
+        # query with bad ip should not fail.
+        assert len(changes(ip="bad.ip")) == 0
+        assert len(changes(ip="1.1.1.345")) == 0
+        assert len(changes(ip="1.1.1.-1")) == 0
+        assert len(changes(ip="1.2.3.4.5")) == 0
+        assert len(changes(ip="1.2.3")) == 0
         
     def test_bot(self):
         one_id = db.insert("thing", key='/user/one')

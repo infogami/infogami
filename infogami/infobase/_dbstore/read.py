@@ -56,6 +56,14 @@ class RecentChanges:
             else:
                 wheres.append("author_id=$author_id")
                 
+        ip = kwargs.pop("ip", None)
+        if ip is not None:
+            if not self._is_valid_ipv4(ip):
+                return {}
+            else:
+                # Don't include edits by logged in users when queried by ip. 
+                wheres.append("ip = $ip AND author_id is NULL")
+            
         kind = kwargs.pop('kind', None)
         if kind is not None:
             wheres.append('action = $kind')
@@ -129,5 +137,11 @@ class RecentChanges:
         else:
             d['data'] = {}
             
-        return d        
-
+        return d
+        
+    def _is_valid_ipv4(self, ip):
+        tokens = ip.split(".")
+        try:
+            return len(tokens) == 4 and all(0 <= int(t) < 256 for t in tokens)
+        except ValueError:
+            return False

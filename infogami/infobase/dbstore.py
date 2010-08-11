@@ -377,7 +377,7 @@ class DBSiteStore(common.SiteStore):
         limit = query.pop("limit", 1000)
         offset = query.pop("offset", 0)
         
-        keys = "author", "kind", "bot", "begin_date", "end_date"
+        keys = "author", "ip", "kind", "bot", "begin_date", "end_date"
         kwargs = dict((k, query[k]) for k in keys if k in query)
         
         return engine.recentchanges(limit=limit, offset=offset, **kwargs)

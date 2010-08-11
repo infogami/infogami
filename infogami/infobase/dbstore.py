@@ -154,9 +154,9 @@ class DBSiteStore(common.SiteStore):
             
         return result
         
-    def save(self, key, doc, timestamp=None, comment=None, data=None, ip=None, author=None, transaction_id=None):
+    def save(self, key, doc, timestamp=None, comment=None, data=None, ip=None, author=None, transaction_id=None, action=None):
         timestamp = timestamp or datetime.datetime.utcnow
-        return self.save_many([doc], timestamp, comment, data, ip, author, action="update")[0]
+        return self.save_many([doc], timestamp, comment, data, ip, author, action=action or "update")[0]
         
     def get_property_id(self, type, name):
         return self.property_manager.get_property_id(type, name)

@@ -143,7 +143,7 @@ class Site:
 
         return result2
     
-    def save(self, key, doc, timestamp=None, comment=None, data=None, ip=None, author=None):
+    def save(self, key, doc, timestamp=None, comment=None, data=None, ip=None, author=None, action=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
@@ -157,10 +157,10 @@ class Site:
         if not doc:
             return {}
         else:
-            saved_doc = self.store.save(key, doc, timestamp, comment, data, ip, author and author.key)
+            saved_doc = self.store.save(key, doc, timestamp, comment, data, ip, author and author.key, action=action)
             result={"key": saved_doc['key'], "revision": saved_doc['revision']}
             
-            event_data = dict(comment=comment, data=data, key=key, query=data, result=result)
+            event_data = dict(comment=comment, data=data, key=key, query=data, result=result, action=action)
             self._fire_event("save", timestamp, ip, author and author.key, event_data)
             self._fire_triggers([saved_doc])
             return result

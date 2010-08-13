@@ -39,11 +39,11 @@ class SaveImpl:
             
             # add transaction
             changeset = dict(
-                action=action,
-                author_id=author and self.get_thing_id(author),
+                kind=action,
+                author=author and {"key": author},
                 ip=ip,
                 comment=comment, 
-                created=timestamp, 
+                timestamp=timestamp.isoformat(), 
                 bot=bot,
                 changes=changes,
                 data=data or {},
@@ -69,15 +69,20 @@ class SaveImpl:
         return changeset
         
     def _add_transaction(self, changeset):
-        tx = dict(changeset)
-        
-        if not config.use_bot_column:
-            del tx['bot']
-
-        tx['changes'] = simplejson.dumps(tx['changes'])
-        tx['data'] = simplejson.dumps(tx['data'])
-        
-        return self.db.insert("transaction", **tx)
+        tx = {
+            "action": changeset['kind'],
+            "author_id": changeset['author'] and self.get_thing_id(changeset['author']['key']),
+            "ip": changeset['ip'],
+            "comment": changeset['comment'],
+            "created": changeset['timestamp'],
+            "changes": simplejson.dumps(changeset['changes']),
+            "data": simplejson.dumps(changeset['data']),
+        }
+        if config.use_bot_column:
+            tx['bot'] = changeset['bot']
+            
+        tx_id = self.db.insert("transaction", **tx)
+        return tx_id
         
     def reindex(self, keys):
         pass

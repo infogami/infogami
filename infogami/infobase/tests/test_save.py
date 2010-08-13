@@ -214,6 +214,28 @@ class Test_save(DBTest):
         timestamp = datetime.datetime(2010, 01, 01, 01, 01, 01)
         s.save(docs, timestamp=timestamp, comment="foo", ip="1.2.3.4", author=None, action="save")
         
+    def test_transaction(self, wildcard):
+        docs = [{
+            "key": "/foo",
+            "type": {"key": "/type/object"},
+        }]
+        s = SaveImpl(db)
+        timestamp = datetime.datetime(2010, 01, 01, 01, 01, 01)
+        changeset = s.save(docs, timestamp=timestamp, comment="foo", ip="1.2.3.4", author=None, action="save")
+        changeset.pop("docs")
+        
+        assert changeset == {
+            "id": wildcard,
+            "kind": "save",
+            "timestamp": timestamp.isoformat(),
+            "bot": False,
+            "comment": "foo",
+            "ip": "1.2.3.4",
+            "author": None,
+            "changes": [{"key": "/foo", "revision": 1}],
+            "data": {}
+        }
+        
 class MockDB:
     def __init__(self):
         self.reset()

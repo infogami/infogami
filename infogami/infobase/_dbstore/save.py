@@ -49,7 +49,7 @@ class SaveImpl:
                 data=data or {},
             )
             tx_id = self._add_transaction(changeset)
-            changeset['id'] = tx_id
+            changeset['id'] = str(tx_id)
                 
             # add versions
             versions = [dict(thing_id=r.id, revision=r.revision, transaction_id=tx_id) for r in records]
@@ -82,7 +82,17 @@ class SaveImpl:
             tx['bot'] = changeset['bot']
             
         tx_id = self.db.insert("transaction", **tx)
+        self._index_transaction_data(tx_id, changeset['data'])
         return tx_id
+        
+    def _index_transaction_data(self, tx_id, data):
+        d = []
+        for k, v in data.iteritems():
+            if isinstance(v, str):
+                d.append({"tx_id": tx_id, "key": k, "value": v})
+                
+        if d:
+            self.db.multiple_insert("transaction_index", d, seqname=False)
         
     def reindex(self, keys):
         pass

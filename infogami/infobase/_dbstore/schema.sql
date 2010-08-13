@@ -50,6 +50,15 @@ create table transaction (
 $for name in ['author_id', 'ip', 'created']:
     create index transaction_${name}_idx ON transaction($name);
 
+create table transaction_index (
+    tx_id int references transaction,
+    key text,
+    value text
+);
+
+create index transaction_index_key_value_idx ON transaction_index(key, value);
+create index transaction_index_tx_id_idx ON transaction_index(tx_id);
+
 create table version (
     id serial primary key,
     thing_id int references thing,

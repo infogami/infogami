@@ -145,18 +145,18 @@ class DBSiteStore(common.SiteStore):
         s.process_json = process_json
         
         docs = common.format_data(docs)
-        result = s.save(docs, timestamp=timestamp, comment=comment, ip=ip, author=author, action=action, data=data)
+        changeset = s.save(docs, timestamp=timestamp, comment=comment, ip=ip, author=author, action=action, data=data)
         
         # update cache. 
         # Use the docs from result as they contain the updated revision and last_modified fields.
-        for doc in result:
+        for doc in changeset.get('docs', []):
             web.ctx.new_objects[doc['key']] = simplejson.dumps(doc)
             
-        return result
+        return changeset
         
     def save(self, key, doc, timestamp=None, comment=None, data=None, ip=None, author=None, transaction_id=None, action=None):
         timestamp = timestamp or datetime.datetime.utcnow
-        return self.save_many([doc], timestamp, comment, data, ip, author, action=action or "update")[0]
+        return self.save_many([doc], timestamp, comment, data, ip, author, action=action or "update")
         
     def get_property_id(self, type, name):
         return self.property_manager.get_property_id(type, name)

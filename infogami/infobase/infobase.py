@@ -128,7 +128,8 @@ class Site:
         
         items = p.process(query)
         items = (item for item in items if item)
-        result = self.store.save_many(items, timestamp, comment, data, ip, author and author.key, action=action)
+        changeset = self.store.save_many(items, timestamp, comment, data, ip, author and author.key, action=action)
+        result = changeset.pop('docs', [])
 
         created = [r['key'] for r in result if r and r['revision'] == 1]
         updated = [r['key'] for r in result if r and r['revision'] != 1]
@@ -136,7 +137,7 @@ class Site:
         result2 = web.storage(created=created, updated=updated)
         
         if not _internal:
-            event_data = dict(comment=comment, data=data, query=query, result=result2)
+            event_data = dict(comment=comment, data=data, query=query, result=result2, changeset=changeset)
             self._fire_event("write", timestamp, ip, author and author.key, event_data)
             
         self._fire_triggers(result)
@@ -157,10 +158,12 @@ class Site:
         if not doc:
             return {}
         else:
-            saved_doc = self.store.save(key, doc, timestamp, comment, data, ip, author and author.key, action=action)
+            changeset = self.store.save(key, doc, timestamp, comment, data, ip, author and author.key, action=action)
+            saved_docs = changeset.pop("docs")
+            saved_doc = saved_docs[0] 
             result={"key": saved_doc['key'], "revision": saved_doc['revision']}
             
-            event_data = dict(comment=comment, data=data, key=key, query=data, result=result, action=action)
+            event_data = dict(comment=comment, key=key, query=doc, result=result, changeset=changeset)
             self._fire_event("save", timestamp, ip, author and author.key, event_data)
             self._fire_triggers([saved_doc])
             return result
@@ -173,10 +176,14 @@ class Site:
         p = writequery.SaveProcessor(self.store, author)
 
         items = p.process_many(query)
-        saved_docs = self.store.save_many(items, timestamp, comment, data, ip, author and author.key, action=action)
+        if not items:
+            return []
+            
+        changeset = self.store.save_many(items, timestamp, comment, data, ip, author and author.key, action=action)
+        saved_docs = changeset.pop('docs')
         
         result = [{"key": doc["key"], "revision": doc['revision']} for doc in saved_docs]
-        event_data = dict(comment=comment, data=data, query=query, result=result)
+        event_data = dict(comment=comment, query=query, result=result, changeset=changeset)
         self._fire_event("save_many", timestamp, ip, author and author.key, event_data)
 
         self._fire_triggers(saved_docs)

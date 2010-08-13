@@ -27,29 +27,29 @@ class SaveImpl:
         docs = common.format_data(docs)
         
         if not docs:
-            return []
+            return {}
             
-        tx = self.db.transaction()
+        dbtx = self.db.transaction()
         try:
             records = self._get_records_for_save(docs, timestamp)
             self._update_thing_table(records)
+
+            changes = [dict(key=r.key, revision=r.revision) for r in records]
+            bot = bool(author and (self.get_user_details(author) or {}).get('bot', False))
             
             # add transaction
-            kw = dict(
+            changeset = dict(
                 action=action,
                 author_id=author and self.get_thing_id(author),
                 ip=ip,
                 comment=comment, 
                 created=timestamp, 
+                bot=bot,
+                changes=changes,
+                data=data or {},
             )
-            if config.use_bot_column:
-                kw['bot'] = bool(author and (self.get_user_details(author) or {}).get('bot', False))
-
-            changes = [dict(key=r.key, revision=r.revision) for r in records]
-            kw['changes'] = simplejson.dumps(changes)
-            kw['data'] = simplejson.dumps(data or {})
-                
-            tx_id = self.db.insert("transaction", **kw)
+            tx_id = self._add_transaction(changeset)
+            changeset['id'] = tx_id
                 
             # add versions
             versions = [dict(thing_id=r.id, revision=r.revision, transaction_id=tx_id) for r in records]
@@ -61,11 +61,23 @@ class SaveImpl:
             
             self._update_index(records)
         except:
-            tx.rollback()
+            dbtx.rollback()
             raise
         else:
-            tx.commit()
-        return [r.data for r in records]
+            dbtx.commit()
+        tx['docs'] = [r.data for r in records]
+        return tx
+        
+    def _add_transaction(self, changeset):
+        tx = dict(changeset)
+        
+        if not config.use_bot_column:
+            del tx['bot']
+
+        tx['changes'] = simplejson.dumps(tx['changes'])
+        tx['data'] = simplejson.dumps(tx['data'])
+        
+        return self.db.insert("transaction", **tx)
         
     def reindex(self, keys):
         pass

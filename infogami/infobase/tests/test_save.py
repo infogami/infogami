@@ -101,7 +101,7 @@ class Test_save(DBTest):
                     comment="Testing create.", 
                     action="save")
                     
-        assert status[0]['revision'] == 1
+        assert status['changes'][0]['revision'] == 1
         assert self.get_json('/a') == update_doc(a, 1, timestamp, timestamp) 
         
         a['title'] = 'b'
@@ -112,7 +112,7 @@ class Test_save(DBTest):
                     author=None, 
                     comment="Testing update.", 
                     action="save")
-        assert status[0]['revision'] == 2
+        assert status['changes'][0]['revision'] == 2
         assert self.get_json('/a') == update_doc(a, 2, timestamp, timestamp2) 
         
     def test_type_change(self):
@@ -138,7 +138,7 @@ class Test_save(DBTest):
                     comment="Testing type change.", 
                     action="save")
         
-        assert status[0]['revision'] == 2
+        assert status['changes'][0]['revision'] == 2
         assert self.get_json('/a') == update_doc(a, 2, timestamp, timestamp2) 
         
         thing = db.select("thing", where="key='/a'")[0]

@@ -65,8 +65,8 @@ class SaveImpl:
             raise
         else:
             dbtx.commit()
-        tx['docs'] = [r.data for r in records]
-        return tx
+        changeset['docs'] = [r.data for r in records]
+        return changeset
         
     def _add_transaction(self, changeset):
         tx = dict(changeset)

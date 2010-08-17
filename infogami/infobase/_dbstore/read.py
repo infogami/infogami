@@ -32,6 +32,7 @@ class RecentChanges:
     
     def recentchanges(self, limit=100, offset=0, **kwargs):
         tables = ['transaction t']
+        what = 't.*'
         order = 't.created DESC'
         wheres = ["1 = 1"]
         
@@ -83,7 +84,7 @@ class RecentChanges:
             wheres.append("t.created < $end_date")
         
         where=" AND ".join(wheres)
-        rows = self.db.select(tables, where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
+        rows = self.db.select(tables, what=what, where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
 
         authors = self.get_keys(row.author_id for row in rows)        
         

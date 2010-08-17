@@ -22,6 +22,14 @@ def storify(d):
     else:
         return d
 
+def unstorify(d):
+    if isinstance(d, dict):
+        return dict((k, unstorify(v)) for k, v in d.iteritems())
+    elif isinstance(d, list):
+        return [unstorify(x) for x in d]
+    else:
+        return d
+
 class ClientException(Exception):
     def __init__(self, status, msg, json=None):
         self.status = status
@@ -814,7 +822,7 @@ class Changeset:
         return [self._site.get(c['key'], c['revision'], lazy=True) for c in self.changes]
             
     def dict(self):
-        return dict(self._data)
+        return unstorify(self._data)
         
     def init(self):
         pass

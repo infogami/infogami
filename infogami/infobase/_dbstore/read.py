@@ -31,49 +31,59 @@ class RecentChanges:
         return self._process_transaction(change, authors=authors)
     
     def recentchanges(self, limit=100, offset=0, **kwargs):
-        order = 'created DESC'
+        tables = ['transaction t']
+        order = 't.created DESC'
         wheres = ["1 = 1"]
-                
+        
+        key = kwargs.pop('key', None)
+        if key is not None:
+            thing_id = self.get_thing_id(key)
+            if thing_id is None:
+                return []
+            else:
+                tables.append('version v')
+                wheres.append('v.transaction_id = t.id AND v.thing_id = $thing_id')
+        
         bot = kwargs.pop('bot', None)
         if bot is not None:
             bot_ids = [r.thing_id for r in self.db.query("SELECT thing_id FROM account WHERE bot='t'")] or [-1]
             if bot is True or str(bot).lower() == "true":
-                wheres.append("author_id IN $bot_ids")
+                wheres.append("t.author_id IN $bot_ids")
             else:
-                wheres.append("(author_id NOT in $bot_ids OR author_id IS NULL)")
+                wheres.append("(t.author_id NOT in $bot_ids OR t.author_id IS NULL)")
 
         author = kwargs.pop('author', None)
         if author is not None:
             author_id = self.get_thing_id(author)
             if not author_id:
                 # Unknown author. Implies no changes by him.
-                return {}
+                return []
             else:
-                wheres.append("author_id=$author_id")
+                wheres.append("t.author_id=$author_id")
                 
         ip = kwargs.pop("ip", None)
         if ip is not None:
             if not self._is_valid_ipv4(ip):
-                return {}
+                return []
             else:
                 # Don't include edits by logged in users when queried by ip. 
-                wheres.append("ip = $ip AND author_id is NULL")
+                wheres.append("t.ip = $ip AND t.author_id is NULL")
             
         kind = kwargs.pop('kind', None)
         if kind is not None:
-            wheres.append('action = $kind')
+            wheres.append('t.action = $kind')
             
         begin_date = kwargs.pop('begin_date', None)
         if begin_date is not None:
-            wheres.append("created >= $begin_date")
+            wheres.append("t.created >= $begin_date")
         
         end_date = kwargs.pop('end_date', None)
         if end_date is not None:
             # end_date is not included in the interval.
-            wheres.append("created < $end_date")
+            wheres.append("t.created < $end_date")
         
         where=" AND ".join(wheres)
-        rows = self.db.select("transaction", where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
+        rows = self.db.select(tables, where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
 
         authors = self.get_keys(row.author_id for row in rows)        
         

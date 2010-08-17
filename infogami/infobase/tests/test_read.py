@@ -32,6 +32,20 @@ class TestRecentChanges(DBTest):
             action=kind,
             data=data
         )
+    def recentchanges(self, **kw):
+        return RecentChanges(db).recentchanges(**kw)
+
+    def doc(self, key, **kw):
+        doc = {
+            "key": key,
+            "type": {"key": "/type/object"}
+        }
+        doc.update(kw)
+        return doc
+
+    def save_doc(self, key, **kw):
+        docs = [self.doc(key)]
+        return self._save(docs, **kw)
         
     def test_all(self, wildcard):
         docs = [
@@ -76,90 +90,67 @@ class TestRecentChanges(DBTest):
         db.insert("thing", key='/user/one')
         db.insert("thing", key='/user/two')
         
-        def doc(key):
-            return {"key": key, "type": {"key": "/type/object"}}
-        
-        self._save([doc("/zero")])
-        self._save([doc("/one")], author="/user/one")
-        self._save([doc("/two")], author="/user/two")
-        
-        def changes(author):
-            return RecentChanges(db).recentchanges(author=author)
-        
-        assert len(changes("/user/one")) == 1
-        assert len(changes("/user/two")) == 1
+        self.save_doc('/zero')
+        self.save_doc("/one", author="/user/one")
+        self.save_doc("/two", author="/user/two")
+                
+        assert len(self.recentchanges(author="/user/one")) == 1
+        assert len(self.recentchanges(author="/user/two")) == 1
         
     def test_ip(self):
         db.insert("thing", key='/user/foo')
         
-        def doc(key):
-            return {"key": key, "type": {"key": "/type/object"}}
-        
-        self._save([doc("/zero")])
-        self._save([doc("/one")], ip="1.1.1.1")
-        self._save([doc("/two")], ip="2.2.2.2")
+        self.save_doc("/zero")
+        self.save_doc("/one", ip="1.1.1.1")
+        self.save_doc("/two", ip="2.2.2.2")
             
-        def changes(**kw):
-            return RecentChanges(db).recentchanges(**kw)
-
-        assert len(changes(ip="1.1.1.1")) == 1
-        assert len(changes(ip="2.2.2.2")) == 1        
+        assert len(self.recentchanges(ip="1.1.1.1")) == 1
+        assert len(self.recentchanges(ip="2.2.2.2")) == 1        
         
-        self._save([doc("/three")], author="/user/foo", ip="1.1.1.1")
+        self.save_doc("/three", author="/user/foo", ip="1.1.1.1")
 
-        # changes by logged in users should be ignored in ip queries
-        assert len(changes(ip="1.1.1.1")) == 1
+        # srecentchanges by logged in users should be ignored in ip queries
+        assert len(self.recentchanges(ip="1.1.1.1")) == 1
         
         # query with bad ip should not fail.
-        assert len(changes(ip="bad.ip")) == 0
-        assert len(changes(ip="1.1.1.345")) == 0
-        assert len(changes(ip="1.1.1.-1")) == 0
-        assert len(changes(ip="1.2.3.4.5")) == 0
-        assert len(changes(ip="1.2.3")) == 0
+        assert len(self.recentchanges(ip="bad.ip")) == 0
+        assert len(self.recentchanges(ip="1.1.1.345")) == 0
+        assert len(self.recentchanges(ip="1.1.1.-1")) == 0
+        assert len(self.recentchanges(ip="1.2.3.4.5")) == 0
+        assert len(self.recentchanges(ip="1.2.3")) == 0
         
     def test_bot(self):
         one_id = db.insert("thing", key='/user/one')
         two_id = db.insert("thing", key='/user/two')
         db.insert("account", thing_id=one_id, bot=True, seqname=False)
-
-        def doc(key):
-            return {"key": key, "type": {"key": "/type/object"}}
         
-        self._save([doc("/zero")])
-        self._save([doc("/one")], author="/user/one")
-        self._save([doc("/two")], author="/user/two")
-
-        def changes(bot):
-            return RecentChanges(db).recentchanges(bot=bot)
+        self.save_doc("/zero")
+        self.save_doc("/one", author="/user/one")
+        self.save_doc("/two", author="/user/two")
         
-        assert len(changes(bot=True)) == 1
-        assert len(changes(bot=False)) == 2
-        assert len(changes(bot=None)) == 3
+        assert len(self.recentchanges(bot=True)) == 1
+        assert len(self.recentchanges(bot=False)) == 2
+        assert len(self.recentchanges(bot=None)) == 3
+                
+    def test_key(self):
+        assert self.recentchanges(key='/foo') == []
+        
+        self.save_doc("/foo")
+        self.save_doc("/bar")
+        
+        assert len(self.recentchanges(key='/foo')) == 1
         
     def test_data(self):
-        def doc(key):
-            return {"key": key, "type": {"key": "/type/object"}}
-            
-        self._save([doc("/zero")], data={"foo": "bar"})
-        
-        def recentchange():
-            return RecentChanges(db).recentchanges(limit=1)[0]
-            
-        assert recentchange()['data'] == {"foo": "bar"}
+        self.save_doc("/zero", data={"foo": "bar"})
+        assert self.recentchanges(limit=1)[0]['data'] == {"foo": "bar"}
         
     def test_kind(self):
-        def doc(key):
-            return {"key": key, "type": {"key": "/type/object"}}
-        
-        self._save([doc("/zero")], kind="foo")
-        self._save([doc("/one")], kind="bar")
+        self.save_doc("/zero", kind="foo")
+        self.save_doc("/one", kind="bar")
 
-        def changes(kind):
-            return RecentChanges(db).recentchanges(kind=kind)
-            
-        assert len(changes(None)) == 2
-        assert len(changes("foo")) == 1
-        assert len(changes("bar")) == 1
+        assert len(self.recentchanges(kind=None)) == 2
+        assert len(self.recentchanges(kind="foo")) == 1
+        assert len(self.recentchanges(kind="bar")) == 1
         
     def test_query_by_date(self):
         def doc(key):
@@ -169,8 +160,8 @@ class TestRecentChanges(DBTest):
             y, m, d = datestr.split("-")
             return datetime.datetime(int(y), int(m), int(d))
         
-        self._save([doc("/a")], kind="foo", timestamp=date("2010-01-02"), comment="a")
-        self._save([doc("/b")], kind="bar", timestamp=date("2010-01-03"), comment="b")
+        self.save_doc("/a", kind="foo", timestamp=date("2010-01-02"), comment="a")
+        self.save_doc("/b", kind="bar", timestamp=date("2010-01-03"), comment="b")
         
         def changes(**kw):
             return [c['comment'] for c in RecentChanges(db).recentchanges(**kw)]

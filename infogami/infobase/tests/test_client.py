@@ -17,13 +17,17 @@ def teardown_module(mod):
     utils.teardown_conn(mod)
     
 class TestRecentChanges:
+    def save_doc(self, key, **kw):
+        doc = {"key": key, "type": {"key": "/type/object"}}
+        return site.save(doc, **kw)
+        
+    def recentchanges(self, **query):
+        return [c.dict() for c in site.recentchanges(query)]
+        
     def test_all(self, wildcard):
-        site.save({"key": "/foo", "type": {"key": "/type/object"}}, comment="test recentchanges")
-        
-        def recentchanges(query):
-            return [c.dict() for c in site.recentchanges(query)]
-        
-        changes = recentchanges({"limit": 1})
+        self.save_doc("/foo", comment="test recentchanges")
+                
+        changes = self.recentchanges(limit=1)
         assert changes == [{
             "id": wildcard,
             "kind": "update",
@@ -45,6 +49,13 @@ class TestRecentChanges:
             "changes": [{"key": "/foo", "revision": 1}],
             "data": {}
         }
+    
+    def test_key(self, wildcard):
+        self.save_doc("/foo")
+        self.save_doc("/bar")
+    
+        changes = self.recentchanges(key="/foo")
+        assert len(changes) == 1        
     
 class TestStore:
     def setup_method(self, method):

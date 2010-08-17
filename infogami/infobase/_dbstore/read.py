@@ -27,16 +27,11 @@ class RecentChanges:
         except IndexError:
             return None
         
-        if change.changes is None:
-            versions = self.get_versions([id])
-        else:
-            versions = {}
-        
         authors = self.get_keys([change.author_id])
-        return self._process_transaction(change, authors=authors, versions=versions)
+        return self._process_transaction(change, authors=authors)
     
     def recentchanges(self, limit=100, offset=0, **kwargs):
-        order = 'transaction.created DESC'
+        order = 'created DESC'
         wheres = ["1 = 1"]
                 
         bot = kwargs.pop('bot', None)
@@ -82,33 +77,9 @@ class RecentChanges:
 
         authors = self.get_keys(row.author_id for row in rows)        
         
-        ## It is too expensive to provide versions info with each transaction.
-        ## Supressing it temporarily.
-        #versions = self.get_versions([row.id for row in rows if row.changes is None])
-        versions = {}
+        return [self._process_transaction(row, authors) for row in rows]
         
-        return [self._process_transaction(row, authors, versions) for row in rows]
-        
-    def get_versions(self, tx_ids):
-        """Returns key,revision for each modified document in each transaction.
-        """
-        if not tx_ids:
-            return {}
-            
-        rows = self.db.query(
-            "SELECT version.transaction_id as id, version.thing_id, version.revision" + 
-            " FROM version" + 
-            " WHERE version.transaction_id IN $tx_ids",
-            vars=locals()).list()
-            
-        keys = self.get_keys(row.thing_id for row in rows)
-
-        d = defaultdict(list)
-        for row in rows:
-            d[row.id].append({"key": keys[row.thing_id], "revision": row.revision})
-        return d
-        
-    def _process_transaction(self, tx, authors, versions={}):
+    def _process_transaction(self, tx, authors):
         d = {
             "id": str(tx.id),
             "kind": tx.action or "edit",
@@ -116,10 +87,7 @@ class RecentChanges:
             "comment": tx.comment,
         }
         
-        if tx.changes is None:
-            d['changes'] = versions.get(tx.id, [])
-        else:
-            d['changes'] = simplejson.loads(tx.changes)
+        d['changes'] = tx.changes and simplejson.loads(tx.changes)
 
         if tx.author_id:
             d['author'] = {"key": authors[tx.author_id]}

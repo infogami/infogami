@@ -348,11 +348,13 @@ class Site:
         self._invalidate_cache(result.created + result.updated)
         return result
     
-    def save(self, query, comment=None):
+    def save(self, query, comment=None, action=None, data=None):
         query = dict(query)
         self._run_hooks('before_new_version', query)
         
         query['_comment'] = comment
+        query['_action'] = action
+        query['_data'] = data
         key = query['key']
         
         #@@ save sends payload of application/json instead of form data

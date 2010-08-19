@@ -143,7 +143,14 @@ class TestRecentChanges(DBTest):
     def test_data(self):
         self.save_doc("/zero", data={"foo": "bar"})
         assert self.recentchanges(limit=1)[0]['data'] == {"foo": "bar"}
-        
+
+    def test_query_by_data(self):
+        self.save_doc("/one", data={"x": "one"})
+        self.save_doc("/two", data={"x": "two"})
+
+        assert self.recentchanges(limit=1, data={"x": "one"})[0]['changes'] == [{"key": "/one", "revision": 1}]
+        assert self.recentchanges(limit=1, data={"x": "two"})[0]['changes'] == [{"key": "/two", "revision": 1}]        
+                
     def test_kind(self):
         self.save_doc("/zero", kind="foo")
         self.save_doc("/one", kind="bar")

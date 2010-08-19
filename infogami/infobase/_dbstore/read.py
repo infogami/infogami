@@ -2,6 +2,7 @@
 
 from collections import defaultdict
 import simplejson
+import web
 
 class RecentChanges:
     def __init__(self, db):
@@ -82,13 +83,33 @@ class RecentChanges:
         if end_date is not None:
             # end_date is not included in the interval.
             wheres.append("t.created < $end_date")
+            
+        data = kwargs.pop('data', None)
+        if data:
+            for i, (k, v) in enumerate(data.items()):
+                t = 'ti%d' % i
+                tables.append('transaction_index ' + t)
+                q = '%s.tx_id = t.id AND %s.key=$k AND %s.value=$v' % (t, t, t)
+                # k, v are going to change in the next iter of the loop.
+                # bind the current values by calling reparam.
+                wheres.append(web.reparam(q, locals())) 
         
-        where=" AND ".join(wheres)
+        
+        wheres = list(self._process_wheres(wheres, locals()))
+        where = web.SQLQuery.join(wheres, " AND ")
+        
         rows = self.db.select(tables, what=what, where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
 
         authors = self.get_keys(row.author_id for row in rows)        
         
         return [self._process_transaction(row, authors) for row in rows]
+        
+    def _process_wheres(self, wheres, vars):
+        for w in wheres:
+            if isinstance(w, basestring):
+                yield web.reparam(w, vars)
+            else:
+                yield w
         
     def _process_transaction(self, tx, authors):
         d = {

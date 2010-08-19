@@ -55,7 +55,17 @@ class TestRecentChanges:
         self.save_doc("/bar")
     
         changes = self.recentchanges(key="/foo")
-        assert len(changes) == 1        
+        assert len(changes) == 1
+        
+    def test_query_by_data(self):
+        self.save_doc("/one", data={"x": "one"}, comment="one")
+        self.save_doc("/two", data={"x": "two"}, comment="two")
+
+        changes = self.recentchanges(data={"x": "one"})
+        assert [c['data'] for c in changes] == [{"x": "one"}]
+
+        changes = self.recentchanges(data={"x": "two"})
+        assert [c['data'] for c in changes] == [{"x": "two"}]
     
 class TestStore:
     def setup_method(self, method):

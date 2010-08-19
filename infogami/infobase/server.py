@@ -211,13 +211,15 @@ class save:
     @jsonify
     def POST(self, sitename, key):
         #@@ This takes payload of json instead of form encoded data.
-        data = get_data()
-        data = from_json(data)
+        json = get_data()
+        data = from_json(json)
 
         comment = data.pop('_comment', None)
+        action = data.pop('_action', None)
+        _data = data.pop('_data', None)
         
         site = get_site(sitename)
-        return site.save(key, data, comment=comment)
+        return site.save(key, data, comment=comment, action=action, data=_data)
 
 class save_many:
     @jsonify

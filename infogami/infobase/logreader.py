@@ -6,6 +6,7 @@ import itertools
 import datetime
 import time
 import web
+import glob
 
 try:
     import _json as simplejson
@@ -152,6 +153,9 @@ class LogFile:
         self.advance()
         
     def update(self):
+        if self.current_filename is None:
+            self.advance()
+            
         date = self.file2date(self.current_filename)
         self.filelist = self.find_filelist(nextday(date))
         

@@ -129,7 +129,7 @@ class Site:
         items = p.process(query)
         items = (item for item in items if item)
         changeset = self.store.save_many(items, timestamp, comment, data, ip, author and author.key, action=action)
-        result = changeset.pop('docs', [])
+        result = changeset.get('docs', [])
 
         created = [r['key'] for r in result if r and r['revision'] == 1]
         updated = [r['key'] for r in result if r and r['revision'] != 1]
@@ -159,7 +159,7 @@ class Site:
             return {}
         else:
             changeset = self.store.save(key, doc, timestamp, comment, data, ip, author and author.key, action=action)
-            saved_docs = changeset.pop("docs")
+            saved_docs = changeset.get("docs")
             saved_doc = saved_docs[0] 
             result={"key": saved_doc['key'], "revision": saved_doc['revision']}
             
@@ -180,7 +180,7 @@ class Site:
             return []
             
         changeset = self.store.save_many(items, timestamp, comment, data, ip, author and author.key, action=action)
-        saved_docs = changeset.pop('docs')
+        saved_docs = changeset.get('docs')
         
         result = [{"key": doc["key"], "revision": doc['revision']} for doc in saved_docs]
         event_data = dict(comment=comment, query=query, result=result, changeset=changeset)

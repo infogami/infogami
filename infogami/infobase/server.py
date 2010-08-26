@@ -8,6 +8,7 @@ import infobase
 import _json as simplejson
 import time
 from infobase import config
+import time
 
 import common
 import cache
@@ -63,10 +64,13 @@ class JSON:
 
 def jsonify(f):
     def g(self, *a, **kw):
+        t_start = time.time()
+        web.ctx.setdefault("headers", [])
+                
         if not web.ctx.get('infobase_localmode'):
             cookies = web.cookies(infobase_auth_token=None)
             web.ctx.infobase_auth_token = cookies.infobase_auth_token
-                
+                        
         try:
             d = f(self, *a, **kw)
         except common.InfobaseException, e:
@@ -88,6 +92,13 @@ def jsonify(f):
             result = d.json
         else:
             result = simplejson.dumps(d)
+            
+        t_end = time.time()
+        totaltime = t_end - t_start
+        querytime = web.ctx.pop('querytime', 0.0)
+        queries = web.ctx.pop('queries', 0)
+        
+        web.header("X-STATS", "tt: %0.3f, tq: %0.3f, nq: %d" % (totaltime, querytime, queries))
 
         if web.ctx.get('infobase_localmode'):
             return result
@@ -96,6 +107,7 @@ def jsonify(f):
             if web.ctx.get('infobase_auth_token'):
                 web.setcookie('infobase_auth_token', web.ctx.infobase_auth_token)
             return result
+        
     return g
     
 def get_data():

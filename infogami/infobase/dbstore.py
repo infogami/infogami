@@ -545,7 +545,7 @@ class DBStore(common.Store):
     def __init__(self, schema):
         self.schema = schema
         self.sitestore = None
-        self.db = web.database(**web.config.db_parameters)
+        self.db = create_daatabase(**web.config.db_parameters)
         
     def has_initialized(self):
         try:
@@ -586,7 +586,7 @@ class MultiDBStore(DBStore):
     def __init__(self, schema):
         self.schema = schema
         self.sitestores = {}
-        self.db = web.database(**web.config.db_parameters)
+        self.db = create_daatabase(**web.config.db_parameters)
         
     def create(self, sitename):
         t = self.db.transaction()
@@ -649,7 +649,25 @@ class MultiDBSiteStore(DBSiteStore):
     
     def delete(self):
         pass
+
+def create_daatabase(**params):
+    db = web.database(**params)
+    
+    # monkey-patch query method to collect stats
+    _query = db.query
+    def query(*a, **kw):
+        t_start = time.time()
+        result = _query(*a, **kw)
+        t_end = time.time()
         
+        web.ctx.querytime = web.ctx.get("querytime", 0.0) + t_end - t_start
+        web.ctx.queries = web.ctx.get("queries", 0) + 1
+        
+        return result
+        
+    db.query = query
+    return db
+    
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

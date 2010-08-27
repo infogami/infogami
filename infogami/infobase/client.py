@@ -719,9 +719,9 @@ class Thing:
     def __iter__(self):
         return iter(self._data)
         
-    def _save(self, comment=None):
+    def _save(self, comment=None, action=None, data=None):
         d = self.dict()
-        return self._site.save(d, comment)
+        return self._site.save(d, comment, action=action, data=data)
         
     def _format(self, d):
         if isinstance(d, dict):

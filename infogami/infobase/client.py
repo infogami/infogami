@@ -9,6 +9,7 @@ import datetime
 import time
 
 from infogami import config
+from infogami.utils import stats
 
 DEBUG = False
 
@@ -189,7 +190,9 @@ class Site:
         self.seq = Sequence(conn, sitename)
         
     def _request(self, path, method='GET', data=None):
+        stats.begin("infobase", path=path, method=method, data=data)
         out = self._conn.request(self.name, path, method, data)
+        stats.end()
         out = simplejson.loads(out)
         return storify(out)
         

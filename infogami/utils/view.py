@@ -15,6 +15,7 @@ from template import render, render_template, get_template
 import macro
 import storage
 from flash import get_flash_messages, add_flash_message
+import stats
 
 wiki_processors = []
 def register_wiki_processor(p):
@@ -72,7 +73,8 @@ web.template.Template.globals.update(dict(
   debug = web.debug,
   get_flash_messages=get_flash_messages,
   render_template=render_template,
-  get_template=get_template
+  get_template=get_template,
+  stats_summary=stats.stats_summary
 ))
 
 def public(f):

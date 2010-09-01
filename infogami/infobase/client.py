@@ -84,10 +84,13 @@ class LocalConnection(Connection):
         path = "/" + sitename + path
         web.ctx.infobase_auth_token = self.get_auth_token()
         try:
+            stats.begin("infobase", path=path, method=method, data=data)                
             out = server.request(path, method, data)
+            stats.end()
             if 'infobase_auth_token' in web.ctx:
                 self.set_auth_token(web.ctx.infobase_auth_token)
         except common.InfobaseException, e:
+            stats.end(error=True)
             self.handle_error(e.status, str(e))
         return out
         
@@ -117,7 +120,8 @@ class RemoteConnection(Connection):
             if method == 'GET':
                 path += '?' + data
                 data = None
-                
+        
+        stats.begin("infobase", path=path, method=method, data=data)                
         conn = httplib.HTTPConnection(self.base_url)
         env = web.ctx.get('env') or {}
         
@@ -136,7 +140,9 @@ class RemoteConnection(Connection):
         try:
             conn.request(method, path, data, headers=headers)
             response = conn.getresponse()
+            stats.end()
         except socket.error:
+            stats.end(error=True)
             raise ClientException("503 Service Unavailable", "Unable to connect to infobase server")
 
         cookie = response.getheader('Set-Cookie')
@@ -190,9 +196,7 @@ class Site:
         self.seq = Sequence(conn, sitename)
         
     def _request(self, path, method='GET', data=None):
-        stats.begin("infobase", path=path, method=method, data=data)
         out = self._conn.request(self.name, path, method, data)
-        stats.end()
         out = simplejson.loads(out)
         return storify(out)
         

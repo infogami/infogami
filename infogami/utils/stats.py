@@ -23,7 +23,7 @@ def end(**kw):
     stats = _get_stats()
     s = stats[-1]
     
-    s.update(kw)
+    s.data.update(kw)
     s.t_end = time.time()
     s.time = s.t_end - s.t_start
     

@@ -1,0 +1,11 @@
+
+db_parameters:
+    engine: "postgres"
+    database: "infogami"
+    username: "anand"
+    password: ""
+
+plugins:
+    - links
+    - wikitemplates
+    - api

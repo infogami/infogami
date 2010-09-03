@@ -101,8 +101,15 @@ class SaveImpl:
             # Force reindex
             old_doc = {"key": r.key, "type": r.data['type'], "_force_reindex": True}
             r.prev = web.storage(r, data=old_doc)
-        
-        self.indexUtil.update_index(records)
+
+        tx = self.db.transaction()
+        try:
+            self.indexUtil.update_index(records)
+        except:
+            tx.rollback()
+            raise
+        else:
+            tx.commit()
         
     def _update_index(self, records):
         self.indexUtil.update_index(records)

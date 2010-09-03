@@ -95,8 +95,15 @@ class SaveImpl:
             self.db.multiple_insert("transaction_index", d, seqname=False)
         
     def reindex(self, keys):
-        pass
-    
+        records = self._load_records(keys).values()
+        
+        for r in records:
+            # put a dummy doc with no type to force reindexing
+            old_doc = {"key": r.key}
+            r.prev = web.storage(r, data=old_doc)
+        
+        self.indexUtil.update_index(records)
+        
     def _update_index(self, records):
         self.indexUtil.update_index(records)
         
@@ -113,31 +120,17 @@ class SaveImpl:
             
     def _get_records_for_save(self, docs, timestamp):
         docs = self.dedup(docs)
-        keys = [doc['key'] for doc in docs]
-        try:
-            rows = self.db.query("SELECT thing.*, data.data FROM thing, data" + 
-                " WHERE thing.key in $keys" + 
-                " AND data.thing_id=thing.id AND data.revision = thing.latest_revision" + 
-                " FOR UPDATE NOWAIT",
-                vars=locals())
-        except:
-            raise common.Conflict(keys=keys, reason="Edit conflict detected.")
-        
-        d = dict((r.key, r) for r in rows)
-        
+        keys = [doc['key'] for doc in docs]        
         type_ids = self.get_thing_ids(doc['type']['key'] for doc in docs)
+                
+        records = self._load_records(keys)
         
         def make_record(doc):
             doc = dict(doc) # make a copy to avoid modifying the original.
             
             key = doc['key']
-            r = d.get(key) or web.storage(id=None, key=key, latest_revision=0, type=None, data=None, created=timestamp)
-            
-            r.revision = r.pop('latest_revision')
-            
-            json = r.data and self.process_json(key, r.data)
-            r.data = json and simplejson.loads(json)
-            
+            r = records.get(key) or web.storage(id=None, key=key, revision=0, type=None, data=None, created=timestamp)
+                        
             r.prev = web.storage(r)
 
             r.type = type_ids.get(doc['type']['key'])
@@ -149,10 +142,31 @@ class SaveImpl:
             doc['revision'] = r.revision
             doc['created'] = {"type": "/type/datetime", "value": r.created.isoformat()}
             doc['last_modified'] = {"type": "/type/datetime", "value": r.last_modified.isoformat()}
-            
             return r
         
         return [make_record(doc) for doc in docs]
+    
+    def _load_records(self, keys):
+        """Returns a dictionary of records for the given keys.
+        
+        The records are queried FOR UPDATE to lock those rows from concurrent updates.
+        Each record is a storage object with (id, key, type, revision, last_modified, data) keys.
+        """
+        try:
+            rows = self.db.query("SELECT thing.*, data.data FROM thing, data" + 
+                " WHERE thing.key in $keys" + 
+                " AND data.thing_id=thing.id AND data.revision = thing.latest_revision" + 
+                " FOR UPDATE NOWAIT",
+                vars=locals())
+        except:
+            raise common.Conflict(keys=keys, reason="Edit conflict detected.")
+        
+        records = dict((r.key, r) for r in rows)        
+        for r in records.values():
+            r.revision = r.latest_revision
+            json = r.data and self.process_json(r.key, r.data)
+            r.data = simplejson.loads(json)            
+        return records
     
     def _fill_types(self, records):
         type_ids = self.get_thing_ids(r.data['type']['key'] for r in records)
@@ -312,7 +326,7 @@ class IndexUtil:
             deletes.update(_deletes)
             inserts.update(_inserts)
         return deletes, inserts
-            
+                
     def update_index(self, records):
         """Takes a list of records, computes the index to be deleted/inserted
         and updates the index tables in the database.
@@ -397,13 +411,19 @@ class IndexUtil:
     def delete_index(self, index):
         """Deletes the given index from database."""
         for table, group in self.group_index(index).iteritems():
+            
+            thing_ids = [] # thing_ids to delete all
+            
             # group all deletes for a thing_id
             d = defaultdict(list)
             for thing_id, property_id in group:
                 if property_id:
                     d[thing_id].append(property_id)
                 else:
-                    self.db.delete(table, where='thing_id=$thing_id', vars=locals())
+                    thing_ids.append(thing_id)
+                    
+            if thing_ids:    
+                self.db.delete(table, where='thing_id IN $thing_ids', vars=locals())
             
             for thing_id, pids in d.iteritems():
                 self.db.delete(table, where="thing_id=$thing_id AND key_id IN $pids", vars=locals())

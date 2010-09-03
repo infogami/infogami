@@ -379,8 +379,35 @@ class TestIndex:
         assert self.indexer._is_too_long(c * 1000) == True
         
 class TestIndexWithDB(DBTest):
-    def test_index(self):
-        record = web.storage()
+    def _save(self, docs):
+        s = SaveImpl(db)
+        timestamp = datetime.datetime(2010, 01, 01, 01, 01, 01)
+        return s.save(docs, timestamp=timestamp, comment="foo", ip="1.2.3.4", author=None, action="save")
+    
+    def test_reindex(self):
+        a = {"key": "/a", "type": {"key": "/type/object"}, "title": "a"}
+        self._save([a])
+        
+        thing = db.query("SELECT * FROM thing WHERE key='/a'")[0]
+        key_id = db.query("SELECT * FROM property WHERE type=$thing.type AND name='title'", vars=locals())[0].id
+
+        # there should be only one entry in the index
+        d = db.query("SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id",vars=locals())        
+        assert len(d) == 1
+        
+        # corrupt the index table by adding bad entries
+        for i in range(10):
+            db.insert("datum_str", thing_id=thing.id, key_id=key_id, value="foo %d" % i)
+            
+        # verify that the bad enties are added
+        d = db.query("SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id",vars=locals())        
+        assert len(d) == 11
+        
+        # reindex now and verify again that there is only one entry
+        SaveImpl(db).reindex(["/a"])
+        d = db.query("SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id",vars=locals())        
+        assert len(d) == 1
+            
         
 class TestPropertyManager(DBTest):
     def test_get_property_id(self):

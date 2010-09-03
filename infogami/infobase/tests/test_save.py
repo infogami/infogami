@@ -334,6 +334,15 @@ class TestIndex:
             ("/type/book", "/books/1", "str", "title"): ["foo"]
         }
         
+        # when type is changed all the old properties must be deleted
+        doc2 = dict(doc1, type={"key": "/type/object"})
+        deletes, inserts = self.indexer.diff_index(doc1, doc2)
+        assert deletes == {
+            ("/type/book", "/books/1", "ref", None): [],
+            ("/type/book", "/books/1", "str", None): [],
+            ("/type/book", "/books/1", "int", None): [],
+        }
+        
     def test_diff_records(self):
         doc1 = {
             "key": "/books/1",

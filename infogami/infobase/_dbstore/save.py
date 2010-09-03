@@ -98,8 +98,8 @@ class SaveImpl:
         records = self._load_records(keys).values()
         
         for r in records:
-            # put a dummy doc with no type to force reindexing
-            old_doc = {"key": r.key}
+            # Force reindex
+            old_doc = {"key": r.key, "type": r.data['type'], "_force_reindex": True}
             r.prev = web.storage(r, data=old_doc)
         
         self.indexUtil.update_index(records)
@@ -287,13 +287,14 @@ class IndexUtil:
         if not old_doc:
             return {}, new_index
             
-        if get_type(old_doc) != get_type(new_doc):
+        if get_type(old_doc) != get_type(new_doc) or old_doc.get("_force_reindex"):
             key = new_doc['key']
 
             old_index = {}
+            old_type = get_type(old_doc)
             for datatype in INDEXED_DATATYPES:
                 # name is None means all the names need be deleted. 
-                old_index[type, key, datatype, None] = []
+                old_index[old_type, key, datatype, None] = []
                 
             return old_index, new_index
         else:

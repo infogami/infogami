@@ -576,7 +576,7 @@ class Sequence:
         return self._request(name, method="GET")['value']
         
     def next_value(self, name):
-        return self._request(name, method="POST")['value']
+        return self._request(name, method="POST", data=" ")['value']
         
 def parse_datetime(datestring):
     """Parses from isoformat.

@@ -223,6 +223,7 @@ class Test_save(DBTest):
         timestamp = datetime.datetime(2010, 01, 01, 01, 01, 01)
         changeset = s.save(docs, timestamp=timestamp, comment="foo", ip="1.2.3.4", author=None, action="save")
         changeset.pop("docs")
+        changeset.pop("old_docs")
         
         assert changeset == {
             "id": wildcard,

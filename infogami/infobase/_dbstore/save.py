@@ -88,9 +88,16 @@ class SaveImpl:
         
     def _index_transaction_data(self, tx_id, data):
         d = []
+        
+        def index(key, value):
+            if isinstance(value, str):
+                d.append({"tx_id": tx_id, "key": key, "value": value})
+            elif isinstance(value, list):
+                for v in value:
+                    index(key, v)
+        
         for k, v in data.iteritems():
-            if isinstance(v, str):
-                d.append({"tx_id": tx_id, "key": k, "value": v})
+            index(k, v)
                 
         if d:
             self.db.multiple_insert("transaction_index", d, seqname=False)

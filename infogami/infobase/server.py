@@ -7,9 +7,10 @@ import web
 import infobase
 import _json as simplejson
 import time
-from infobase import config
 import time
+import os
 
+from infobase import config
 import common
 import cache
 import logreader
@@ -98,7 +99,8 @@ def jsonify(f):
         querytime = web.ctx.pop('querytime', 0.0)
         queries = web.ctx.pop('queries', 0)
         
-        web.header("X-STATS", "tt: %0.3f, tq: %0.3f, nq: %d" % (totaltime, querytime, queries))
+        if config.get("enabled_stats"):
+            web.header("X-STATS", "tt: %0.3f, tq: %0.3f, nq: %d" % (totaltime, querytime, queries))
 
         if web.ctx.get('infobase_localmode'):
             return result
@@ -536,12 +538,15 @@ def run():
 def parse_db_parameters(d):
     if d is None:
         return None
-
+        
     # support both <engine, database, username, password> and <dbn, db, user, pw>.
     if 'database' in d:
-        dbn, db, user, pw = d.get('engine', 'postgres'), d['database'], d['username'], d.get('password') or ''
+        dbn, db, user, pw = d.get('engine', 'postgres'), d['database'], d.get('username'), d.get('password') or ''
     else:
-        dbn, db, user, pw = d.get('dbn', 'postgres'), d['db'], d['user'], d.get('pw') or ''
+        dbn, db, user, pw = d.get('dbn', 'postgres'), d['db'], d.get('user'), d.get('pw') or ''
+        
+    if user is None:
+        user = os.getenv("USER")
      
     result = dict(dbn=dbn, db=db, user=user, pw=pw)
     if 'host' in d:

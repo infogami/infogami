@@ -136,13 +136,32 @@ def bootstrap(site, admin_password):
     query = make_query()
     site.save_many(query)
     
+    from infogami.infobase import config
+    import random
+    import string
+    
+    def random_password(length=20):
+        chars = string.letters + string.digits
+        return "".join(random.choice(chars) for i in range(length))
+
+    # Account Bot is not created till now. Set account_bot to None in config until he is created.
+    account_bot = config.get("account_bot")
+    config.account_bot = None
+
     a = site.get_account_manager()
     a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))
     a.update_user_details("admin", verified=True)
 
+    if account_bot:
+        username = account_bot.split("/")[-1]
+        a.register(username=username, email="userbot@example.com", password=random_password(), data=dict(displayname=username))
+        a.update_user_details(username, verified=True)
+    
     # add admin user to admin usergroup
     import account
     q = [usergroup('/usergroup/admin', 'Group of admin users.', [{"key": account.get_user_root() + "admin"}])]
     site.save_many(q)
+    
+    config.account_bot = account_bot
 
     web.ctx.infobase_bootstrap = False

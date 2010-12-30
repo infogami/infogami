@@ -100,10 +100,13 @@ class LogReader:
         return entry
 
 class LogFile:
-    """
-    Single file interface over entire log files.
+    """A file like interface over log files.
     
-    Read all enties from a given timestamp:
+    Infobase log files are ordered by date. The presence of multiple files
+    makes it difficult to read the them. This class provides a file like
+    interface to make reading easier.
+    
+    Read all enties from a given timestamp::
     
         log = LogFile("log")
         log.skip_till(datetime.datetime(2008, 01, 01))
@@ -111,7 +114,7 @@ class LogFile:
         for line in log:
             print log
 
-    Read log entries in chunks:
+    Read log entries in chunks::
     
         log = LogFile("log")
         while True:
@@ -122,7 +125,7 @@ class LogFile:
             else:
                 break
 
-    Read log entries infinitely:
+    Read log entries infinitely::
 
         log = LogFile("log")
         while True:
@@ -133,7 +136,7 @@ class LogFile:
             else:
                 time.sleep(10) # wait for more data to come
                 
-    Remember the offset and set the offset.
+    Remember the offset and set the offset::
     
         offset = log.tell()
         log.seek(offset)
@@ -153,25 +156,29 @@ class LogFile:
         self.advance()
         
     def update(self):
-        if self.current_filename is None:
+        self.update_filelist()
+        
+        if self.current_filename is None and self.filelist:
             self.advance()
             
-        date = self.file2date(self.current_filename)
-        self.filelist = self.find_filelist(nextday(date))
+    def update_filelist(self):
+        if self.current_filename:
+            current_date = self.file2date(self.current_filename)
+            self.filelist = self.find_filelist(nextday(current_date))
+        else:
+            self.filelist = self.find_filelist()
         
     def file2date(self, file):
         file, ext = os.path.splitext(file)
         _, year, month, day = file.rsplit('/', 3)
-        return datetime.datetime(int(year), int(month), int(day))
+        return datetime.date(int(year), int(month), int(day))
         
     def date2file(self, date):
         return "%s/%04d/%02d/%02d.log" % (self.root, date.year, date.month, date.day)
         
     def advance(self):
         """Move to next file."""
-        if self.filelist is None:
-            self.filelist = self.find_filelist()
-            
+        print "advance", self.filelist
         if self.filelist:
             self.current_filename = self.filelist.pop(0)
             self.file = open(self.current_filename)
@@ -243,6 +250,9 @@ class LogFile:
         self.file.seek(offset)
         
     def tell(self):
+        if self.current_filename is None:
+            return datetime.date.fromtimestamp(0).isoformat() + ":0"
+            
         date = self.file2date(self.current_filename)
         offset = self.file.tell()
         return "%04d-%02d-%02d:%d" % (date.year, date.month, date.day, offset)

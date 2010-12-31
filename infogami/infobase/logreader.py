@@ -156,14 +156,14 @@ class LogFile:
         self.advance()
         
     def update(self):
-        self.update_filelist()
+        self.update_filelist(self.current_filename)
         
         if self.current_filename is None and self.filelist:
             self.advance()
             
-    def update_filelist(self):
-        if self.current_filename:
-            current_date = self.file2date(self.current_filename)
+    def update_filelist(self, current_filename=None):
+        if current_filename:
+            current_date = self.file2date(current_filename)
             self.filelist = self.find_filelist(nextday(current_date))
         else:
             self.filelist = self.find_filelist()
@@ -178,7 +178,6 @@ class LogFile:
         
     def advance(self):
         """Move to next file."""
-        print "advance", self.filelist
         if self.filelist:
             self.current_filename = self.filelist.pop(0)
             self.file = open(self.current_filename)
@@ -240,14 +239,12 @@ class LogFile:
         year, month, day = date.split("-")
         year, month, day, offset = int(year), int(month), int(day), int(offset)
         
-        filename = self.date2file(datetime.date(year, month, day))
-        if filename != self.current_filename:
-            self.current_filename = filename
-            self.file = open(filename)
-            # filelist needs to be re-initialized
-            self.filelist = []
-            
-        self.file.seek(offset)
+        d = datetime.date(year, month, day)
+        self.filelist = self.find_filelist(d)
+        self.advance()
+        
+        if self.current_filename and self.file2date(self.current_filename) == d:
+            self.file.seek(offset)
         
     def tell(self):
         if self.current_filename is None:

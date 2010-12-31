@@ -72,4 +72,21 @@ class TestLogFile:
         assert logfile.readline() == 'hello 2\n'
         assert logfile.readline() == ''
 
-    
+    def test_seek(self, tmpdir):
+        root = tmpdir.mkdir("log")
+        logfile = logreader.LogFile(root.strpath)
+        
+        # seek should not have any effect when there are no log files.
+        pos = logfile.tell()
+        logfile.seek("2010-10-10:0")
+        pos2 = logfile.tell()
+        assert pos == pos2
+        
+        # when the requested file is not found, offset should go to the next available file.
+        root.mkdir("2010").mkdir("10")
+        f = root.join("2010/10/20.log")
+        f.write("")
+        
+        logfile.seek("2010-10-10:0")
+        assert logfile.tell() == "2010-10-20:0"
+        

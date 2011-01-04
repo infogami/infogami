@@ -290,9 +290,14 @@ def movetypes():
         q.update(kw)
         return q
         
-    def readfunc(text):
-        return eval(text, {'property': property, 'backreference': backreference})
-    #move("types", ".type", recursive=False, readfunc=readfunc)
+    def readfile(filename):
+        text = open(filename).read()
+        return eval(text, {
+            'property': property, 
+            'backreference': backreference,
+            'true': True,
+            'false': False
+        })
 
     import delegate
     extension = ".type"
@@ -303,7 +308,7 @@ def movetypes():
             files = [os.path.join(path, f) for f in sorted(os.listdir(path)) if f.endswith(extension)]
             for f in files:
                 print >> web.debug, 'moving types from ', f
-                d = eval(open(f).read(), {'property': property, 'backreference': backreference})
+                d = readfile(f)
                 if isinstance(d, list):
                     pages.extend(d)
                 else:

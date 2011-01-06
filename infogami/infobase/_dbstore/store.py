@@ -106,7 +106,7 @@ class Store:
         self.db.delete("store_index", where="store_id=$id", vars=locals())
         self.db.delete("store", where="id=$id", vars=locals())
         
-    def query(self, type, name, value, limit=100, offset=0):
+    def query(self, type, name, value, limit=100, offset=0, include_docs=False):
         """Query the json store.
         
         Returns keys of all documents of the given type which have (name, value) in the index.
@@ -123,9 +123,15 @@ class Store:
                 wheres.append("name='_key'")
             else:
                 wheres.append("name=$name AND value=$value")
-            rows = self.db.select(tables, what='store.key', where=" AND ".join(wheres), limit=limit, offset=offset, order="store.id desc", vars=locals())
+            rows = self.db.select(tables, what='store.key, store.json', where=" AND ".join(wheres), limit=limit, offset=offset, order="store.id desc", vars=locals())
             
-        return [{"key": r.key} for r in rows]
+        def process_row(row):
+            if include_docs:
+                return {"key": row.key, "doc": simplejson.loads(row.json)}
+            else:
+                return {"key": row.key}
+                
+        return [process_row(row) for row in rows]
     
     def delete_index(self, id):
         self.db.delete("store_index", where="store_id=$id", vars=locals())

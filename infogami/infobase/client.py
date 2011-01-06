@@ -545,16 +545,19 @@ class Store:
         return list(self.iterkeys(**kw))
         
     def itervalues(self, **kw):
-        return (self[k] for k in self.keys(**kw))
+        rows = self.query(include_docs=True, **kw)
+        return (row.doc for row in rows)
     
     def values(self, **kw):
-        return [self[k] for k in self.keys(**kw)]
+        return list(self.itervalues(**kw))
+        rows = self.query(**kw)
         
     def iteritems(self, **kw):
-        return ((k, self[k]) for k in self.keys(**kw))
+        rows = self.query(include_docs=True, **kw)
+        return ((row.key, row.doc) for row in rows)
         
     def items(self, **kw):
-        return [(k, self[k]) for k in self.keys(**kw)]
+        return list(self.iteritems(**kw))
         
 class Sequence:
     """Dynamic sequences. 
@@ -660,6 +663,8 @@ def create_thing(site, key, data, revision=None):
         print >> web.debug, 'ERROR:', str(e)
         type = None
 
+    if key and key.endswith("L"):
+        print "create_thing", key, type, _thing_class_registry.get(type, Thing)
     return _thing_class_registry.get(type, Thing)(site, key, data, revision)
     
 class Thing:

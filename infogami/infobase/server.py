@@ -311,13 +311,19 @@ class store_special:
     
     @jsonify
     def GET_query(self, sitename):
-        i = input(type=None, name=None, value=None, limit=100, offset=0)
+        i = input(type=None, name=None, value=None, limit=100, offset=0, include_docs="false")
         
         i.limit = common.safeint(i.limit, 100)
         i.offset = common.safeint(i.offset, 0)
         
         store = get_site(sitename).get_store()
-        return store.query(type=i.type, name=i.name, value=i.value, limit=i.limit, offset=i.offset)
+        return store.query(
+            type=i.type, 
+            name=i.name, 
+            value=i.value, 
+            limit=i.limit, 
+            offset=i.offset, 
+            include_docs=i.include_docs.lower()=="true")
 
 class store:
     @jsonify

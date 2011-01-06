@@ -499,7 +499,7 @@ class Store:
         if limit == -1:
             return self.unlimited_query(type, name, value, offset=offset)
             
-        params = dict(type=type, name=name, value=value, limit=limit, offset=offset)
+        params = dict(type=type, name=name, value=value, limit=limit, offset=offset, include_docs=str(include_docs))
         params = dict((k, v) for k, v in params.items() if v is not None)
         return self._request("_query", method="GET", data=params)
         
@@ -546,7 +546,7 @@ class Store:
         
     def itervalues(self, **kw):
         rows = self.query(include_docs=True, **kw)
-        return (row.doc for row in rows)
+        return (row['doc'] for row in rows)
     
     def values(self, **kw):
         return list(self.itervalues(**kw))
@@ -554,7 +554,7 @@ class Store:
         
     def iteritems(self, **kw):
         rows = self.query(include_docs=True, **kw)
-        return ((row.key, row.doc) for row in rows)
+        return ((row['key'], row['doc']) for row in rows)
         
     def items(self, **kw):
         return list(self.iteritems(**kw))

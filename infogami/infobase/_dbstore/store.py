@@ -114,7 +114,7 @@ class Store:
         All the documents are returned when the type is None.
         """
         if type is None:
-            rows = self.db.select("store", what="key", limit=limit, offset=offset, order="store.id desc", vars=locals())
+            rows = self.db.select("store", what="key, json", limit=limit, offset=offset, order="store.id desc", vars=locals())
         else:
             tables = ["store", "store_index"]
             wheres = ["store.id = store_index.store_id", "type = $type"]

@@ -68,11 +68,17 @@ class TestStore(DBTest):
         assert store.query(None, None, None) == [{"key": "b"}, {"key": "a"}, {"key": "two"}, {"key": "one"}]
 
     def test_query_include_docs(self):
+        assert store.query(None, None, None, include_docs=True) == []
+        
         store.put("one", {"type": "digit", "name": "one", "value": 1})
         store.put("two", {"type": "digit", "name": "two", "value": 2})
         
         assert store.query("digit", "name", "one", include_docs=True) == [
             {'key': "one", "doc": {"type": "digit", "name": "one", "value": 1}}
+        ]
+        assert store.query(None, None, None, include_docs=True) == [
+            {'key': "two", "doc": {"type": "digit", "name": "two", "value": 2}},
+            {'key': "one", "doc": {"type": "digit", "name": "one", "value": 1}},
         ]
 
     def test_indexer(self):

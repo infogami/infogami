@@ -103,7 +103,7 @@ def prepr(obj, indent=""):
         return repr(obj)
 
 def flatten(nested_list, result=None):
-    """Flattens a nested list.
+    """Flattens a nested list.::
     
         >>> flatten([1, [2, 3], [4, [5, 6]]])
         [1, 2, 3, 4, 5, 6]
@@ -119,7 +119,7 @@ def flatten(nested_list, result=None):
     return result
     
 def flatten_dict(d):
-    """Flattens a dictionary.
+    """Flattens a dictionary.::
     
         >>> flatten_dict({"key": "/books/foo", "type": {"key": "/type/book"}, "authors": [{"key": "/authors/a1"}, {"key": "/authors/a2"}]})
         [('type.key', '/type/book'), ('key', '/books/foo'), ('authors.key', '/authors/a1'), ('authors.key', '/authors/a2')]
@@ -139,7 +139,8 @@ def flatten_dict(d):
     return items
 
 def safeint(value, default):
-    """
+    """Converts a string to integer. Returns the specified default value on error.::
+     
         >>> safeint("1", 0)
         1
         >>> safeint("foo", 0)

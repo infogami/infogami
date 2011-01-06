@@ -24,6 +24,7 @@ def teardown_db(mod):
 def setup_conn(mod):
     setup_db(mod)
     web.config.db_parameters = mod.db_parameters
+    web.config.debug = False
     mod.conn = client.LocalConnection()
 
 def teardown_conn(mod):

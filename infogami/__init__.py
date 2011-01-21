@@ -46,6 +46,9 @@ def _setup():
     web.config.db_parameters = config.db_parameters
     web.config.db_printing = config.db_printing
 
+    if config.get("debug", None) is not None:
+        web.config.debug = config.debug
+
     from infogami.utils import delegate
     delegate._load()
     

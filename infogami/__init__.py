@@ -126,8 +126,7 @@ def run(args=None):
     else:
         run_action(args[0], args[1:])
 
-def main(config_file, *args):
-    """Start Infogami using config file."""
+def load_config(config_file):
     import yaml
     from infobase import config as infobase_config
     from infobase import server as infobase_server
@@ -168,4 +167,7 @@ def main(config_file, *args):
     if config.get('smtp_server'):
         web.config.smtp_server = config.smtp_server
 
+def main(config_file, *args):
+    """Start Infogami using config file."""
+    load_config(config_file)
     run(args)

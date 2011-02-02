@@ -214,7 +214,8 @@ class Site:
         
     def get_permissions(self, key):
         author = self.get_account_manager().get_user()
-        perm = writequery.has_permission(self.store, author, key)
+        engine = writequery.PermissionEngine(self.store)
+        perm = engine.has_permission(author, key)
         return web.storage(write=perm, admin=perm)
         
     def bootstrap(self, admin_password='admin123'):

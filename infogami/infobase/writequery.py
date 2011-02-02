@@ -477,48 +477,6 @@ def serialize(query):
     flatten(query, result)                         
     return result
 
-def has_permission(store, author, key):
-    # admin user can modify everything
-    if author and author.key == account.get_user_root() + 'admin':
-        return True
-    
-    permission = get_permission(store, key)
-    if permission is None:
-        return True
-    else:
-        groups = permission.get('writers') or [] 
-        # admin users can edit anything
-        groups = groups + [get_thing(store, '/usergroup/admin')]
-        for group in groups:
-            if group.key == '/usergroup/everyone':
-                return True
-            elif author is not None:
-                members = [m.key for m in group.get('members', [])]
-                if group.key == '/usergroup/allusers' or author.key in members:
-                    return True
-            else:
-                return False        
-        
-def get_permission(store, key):
-    """Returns permission for the specified key."""
-    def parent(key):
-        if key == "/":
-            return None
-        else:
-            return key.rsplit('/', 1)[0] or "/"
-
-    def _get_permission(key, child_permission=False):
-        if key is None:
-            return None
-        thing = get_thing(store, key)
-        if child_permission:
-            permission = thing and (thing.get("child_permission") or thing.get("permission"))
-        else:
-            permission = thing and thing.get("permission")
-        return permission or _get_permission(parent(key), child_permission=True)
-
-    return _get_permission(key)
-    
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

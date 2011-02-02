@@ -11,11 +11,68 @@ def get_thing(store, key, revision=None):
         key = unicode(key)
     json = store.get(key, revision)
     return json and common.Thing.from_json(store, key, json)
+    
+class PermissionEngine:
+    """Engine to check if a user has permission to modify a document.
+    """
+    def __init__(self):
+        self.things = {}
+        
+    def get_thing(self, key):
+        try:
+            return self.things[key]
+        except KeyError:
+            t = get_thing(self.store, key)
+            self.things[key] = t
+            return t
+            
+    def has_permission(self, author, key):
+        # admin user can modify everything
+        if author and author.key == account.get_user_root() + 'admin':
+            return True
+
+        permission = self.get_permission(key)
+        if permission is None:
+            return True
+        else:
+            groups = permission.get('writers') or [] 
+            # admin users can edit anything
+            groups = groups + [self.get_thing('/usergroup/admin')]
+            for group in groups:
+                if group.key == '/usergroup/everyone':
+                    return True
+                elif author is not None:
+                    members = [m.key for m in group.get('members', [])]
+                    if group.key == '/usergroup/allusers' or author.key in members:
+                        return True
+                else:
+                    return False        
+
+    def get_permission(self, key):
+        """Returns permission for the specified key."""
+        def parent(key):
+            if key == "/":
+                return None
+            else:
+                return key.rsplit('/', 1)[0] or "/"
+
+        def _get_permission(key, child_permission=False):
+            if key is None:
+                return None
+            thing = self.get_thing(key)
+            if child_permission:
+                permission = thing and (thing.get("child_permission") or thing.get("permission"))
+            else:
+                permission = thing and thing.get("permission")
+            return permission or _get_permission(parent(key), child_permission=True)
+
+        return _get_permission(key)
 
 class SaveProcessor:
     def __init__(self, store, author):
         self.store = store
         self.author = author
+        self.permission_engine = PermissionEngine()
         
         self.things = {}
         
@@ -137,6 +194,9 @@ class SaveProcessor:
             return None
         else:
             return data
+    
+    def has_permission(self, author, key):
+        return self.permission_engine.has_permission(author, key)
 
     def get_property(self, type, name):
         if name == 'type':
@@ -221,48 +281,6 @@ class SaveProcessor:
             raise common.BadData(message='expected %s, found %s' % (property.expected_type.key, type_found), at=at, value=value)
         return value
         
-    def has_permission(self, author, key):
-        # admin user can modify everything
-        if author and author.key == account.get_user_root() + 'admin':
-            return True
-
-        permission = self.get_permission(key)
-        if permission is None:
-            return True
-        else:
-            groups = permission.get('writers') or [] 
-            # admin users can edit anything
-            groups = groups + [self.get_thing('/usergroup/admin')]
-            for group in groups:
-                if group.key == '/usergroup/everyone':
-                    return True
-                elif author is not None:
-                    members = [m.key for m in group.get('members', [])]
-                    if group.key == '/usergroup/allusers' or author.key in members:
-                        return True
-                else:
-                    return False        
-
-    def get_permission(self, key):
-        """Returns permission for the specified key."""
-        def parent(key):
-            if key == "/":
-                return None
-            else:
-                return key.rsplit('/', 1)[0] or "/"
-
-        def _get_permission(key, child_permission=False):
-            if key is None:
-                return None
-            thing = self.get_thing(key)
-            if child_permission:
-                permission = thing and (thing.get("child_permission") or thing.get("permission"))
-            else:
-                permission = thing and thing.get("permission")
-            return permission or _get_permission(parent(key), child_permission=True)
-
-        return _get_permission(key)
-
 
 class WriteQueryProcessor:
     def __init__(self, store, author):

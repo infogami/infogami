@@ -15,7 +15,8 @@ def get_thing(store, key, revision=None):
 class PermissionEngine:
     """Engine to check if a user has permission to modify a document.
     """
-    def __init__(self):
+    def __init__(self, store):
+        self.store = store
         self.things = {}
         
     def get_thing(self, key):
@@ -72,7 +73,7 @@ class SaveProcessor:
     def __init__(self, store, author):
         self.store = store
         self.author = author
-        self.permission_engine = PermissionEngine()
+        self.permission_engine = PermissionEngine(self.store)
         
         self.things = {}
         

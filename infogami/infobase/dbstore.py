@@ -276,7 +276,11 @@ class DBSiteStore(common.SiteStore):
             d = web.storage(table=None)
             def f(table):
                 d.table = d.table or table
-                return '%s.ordering = %s.ordering' % (table, d.table)
+                if d.table == table:
+                    # avoid a comparsion when both tables are same. it fails when ordering is None
+                    return "1 = 1"
+                else:
+                    return '%s.ordering = %s.ordering' % (table, d.table)
             return f
             
         import readquery

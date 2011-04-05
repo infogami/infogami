@@ -560,6 +560,12 @@ def parse_db_parameters(d):
     return result
     
 def start(config_file, *args):
+    load_config(config_file)
+    # start running the server
+    sys.argv = [sys.argv[0]] + list(args)
+    run()
+
+def load_config(config_file):
     # load config
     import yaml
     runtime_config = yaml.load(open(config_file)) or {}
@@ -584,7 +590,3 @@ def start(config_file, *args):
     for p in plugins:
         m = getattr(p, 'init_plugin', None)
         m and m()
-        
-    # start running the server
-    sys.argv = [sys.argv[0]] + list(args)
-    run()

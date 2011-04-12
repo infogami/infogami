@@ -58,17 +58,30 @@ class Store:
         self.listener and self.listener(name, data)
 
     def get_json(self, key):
-        row = self.get_row(key)
-        return row and row.json
+        d = self.get(key)
+        return d and simplejson.dumps(d)
     
     def get(self, key):
-        json = self.get_json(key)
-        return json and simplejson.loads(json)
+        row = self.get_row(key)
+        return row and self._get_doc(row)
+            
+    def _get_doc(self, row):
+        doc = simplejson.loads(row.json)
+        doc['_key'] = row.key
+        doc['_rev'] = str(row.id)
+        return doc
     
     def put(self, key, data):
         self.put_json(key, simplejson.dumps(data))
     
     def put_json(self, key, json):
+        # remove _key and _rev from json
+        # Eventually, we should check allow put to successed only if _rev == row.id
+        d = simplejson.loads(json)
+        d.pop("_key", None)
+        d.pop("_rev", None)
+        json = simplejson.dumps(d)
+        
         tx = self.db.transaction()
         try:
             row = self.get_row(key, for_update=True)
@@ -114,7 +127,7 @@ class Store:
         All the documents are returned when the type is None.
         """
         if type is None:
-            rows = self.db.select("store", what="key, json", limit=limit, offset=offset, order="store.id desc", vars=locals())
+            rows = self.db.select("store", what="store.*", limit=limit, offset=offset, order="store.id desc", vars=locals())
         else:
             tables = ["store", "store_index"]
             wheres = ["store.id = store_index.store_id", "type = $type"]
@@ -123,11 +136,11 @@ class Store:
                 wheres.append("name='_key'")
             else:
                 wheres.append("name=$name AND value=$value")
-            rows = self.db.select(tables, what='store.key, store.json', where=" AND ".join(wheres), limit=limit, offset=offset, order="store.id desc", vars=locals())
+            rows = self.db.select(tables, what='store.*', where=" AND ".join(wheres), limit=limit, offset=offset, order="store.id desc", vars=locals())
             
         def process_row(row):
             if include_docs:
-                return {"key": row.key, "doc": simplejson.loads(row.json)}
+                return {"key": row.key, "doc": self._get_doc(row)}
             else:
                 return {"key": row.key}
                 

@@ -12,43 +12,46 @@ def teardown_module(mod):
     utils.teardown_db(mod)
     mod.store = None
 
-class DBTest(unittest.TestCase):
-    def setUp(self):
+class DBTest:
+    def setup_method(self, method):
         self.tx = db.transaction()
         db.insert("thing", key='/type/object')
         
-    def tearDown(self):
+    def teardown_method(self, method):
         self.tx.rollback()
 
 class TestStore(DBTest):
-    def test_insert(self):
+    def test_insert(self, wildcard):
         for i in range(10):
             d = {"name": str(i), "value": i}
             store.put(str(i), d)
             
         for i in range(10):
-            d = {"name": str(i), "value": i}
+            d = {"name": str(i), "value": i, "_key": str(i), "_rev": wildcard}
             assert store.get(str(i)) == d
 
-    def test_update(self):
-        self.test_insert()
-        self.test_insert()
+    def test_update(self, wildcard):
+        store.put("foo", {"name": "foo"})
+        assert store.get("foo") == dict(name="foo", _key="foo", _rev=wildcard)
+
+        store.put("foo", {"name": "bar"})
+        assert store.get("foo") == dict(name="bar", _key="foo", _rev=wildcard)
         
     def test_notfound(self):
         assert store.get("xxx") is None
         assert store.get_json("xxx") is None
         assert store.get_row("xxx") is None
         
-    def test_delete(self):
+    def test_delete(self, wildcard):
         d = {"name": "foo"}
         store.put("foo", d)        
-        assert store.get("foo") == d
+        assert store.get("foo") == dict(d, _key="foo", _rev=wildcard)
         
         store.delete("foo")
         assert store.get("foo") is None
         
         store.put("foo", {"name": "bar"})    
-        assert store.get("foo") == {"name": "bar"}
+        assert store.get("foo") == {"name": "bar", "_key": "foo", "_rev": wildcard}
                 
     def test_query(self):
         store.put("one", {"type": "digit", "name": "one", "value": 1})
@@ -67,18 +70,18 @@ class TestStore(DBTest):
         # query for all
         assert store.query(None, None, None) == [{"key": "b"}, {"key": "a"}, {"key": "two"}, {"key": "one"}]
 
-    def test_query_include_docs(self):
+    def test_query_include_docs(self, wildcard):
         assert store.query(None, None, None, include_docs=True) == []
         
         store.put("one", {"type": "digit", "name": "one", "value": 1})
         store.put("two", {"type": "digit", "name": "two", "value": 2})
         
         assert store.query("digit", "name", "one", include_docs=True) == [
-            {'key': "one", "doc": {"type": "digit", "name": "one", "value": 1}}
+            {'key': "one", "doc": {"type": "digit", "name": "one", "value": 1, "_key": "one", "_rev": wildcard}}
         ]
         assert store.query(None, None, None, include_docs=True) == [
-            {'key': "two", "doc": {"type": "digit", "name": "two", "value": 2}},
-            {'key': "one", "doc": {"type": "digit", "name": "one", "value": 1}},
+            {'key': "two", "doc": {"type": "digit", "name": "two", "value": 2, "_key": "two", "_rev": wildcard}},
+            {'key': "one", "doc": {"type": "digit", "name": "one", "value": 1, "_key": "one", "_rev": wildcard}},
         ]
 
     def test_indexer(self):

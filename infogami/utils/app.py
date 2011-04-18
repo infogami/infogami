@@ -210,11 +210,15 @@ def parse_accept(header):
             try:
                 k, v = part.split('=')
                 d[k.strip()] = v.strip()
-            except IndexError, ValueError:
+            except (IndexError, ValueError):
                 pass
-                
-        if 'q' in d:
-            d['q'] = float(d['q'])
+
+        try:
+            if 'q' in d:
+                d['q'] = float(d['q'])
+        except ValueError:
+            del d['q']
+
         result.append(d)
     result.sort(key=lambda m: m.get('q', 1.0), reverse=True)
     return result

@@ -37,6 +37,9 @@ class RecentChanges:
         order = 't.created DESC'
         wheres = ["1 = 1"]
         
+        if offset < 0:
+            offset = 0
+        
         key = kwargs.pop('key', None)
         if key is not None:
             thing_id = self.get_thing_id(key)

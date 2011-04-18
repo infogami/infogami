@@ -663,8 +663,6 @@ def create_thing(site, key, data, revision=None):
         print >> web.debug, 'ERROR:', str(e)
         type = None
 
-    if key and key.endswith("L"):
-        print "create_thing", key, type, _thing_class_registry.get(type, Thing)
     return _thing_class_registry.get(type, Thing)(site, key, data, revision)
     
 class Thing:

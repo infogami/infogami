@@ -9,11 +9,14 @@ import _json as simplejson
 import time
 import time
 import os
+import logging
 
 from infobase import config
 import common
 import cache
 import logreader
+
+logger = logging.getLogger("infobase")
 
 def setup_remoteip():
     web.ctx.ip = web.ctx.env.get('HTTP_X_REMOTE_IP', web.ctx.ip)

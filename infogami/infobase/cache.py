@@ -93,8 +93,8 @@ def loadhook():
 def unloadhook():
     """Called at the end of every request."""
     d = {}
-    d.update(web.ctx.new_objects)
     d.update(web.ctx.locally_added)
+    d.update(web.ctx.new_objects)
 
     if d:
         global_cache.update(d)

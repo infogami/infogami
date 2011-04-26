@@ -21,7 +21,7 @@ def setup_remoteip():
 urls = (
     "/", "server",
     "/_echo", "echo",
-    "/([^/]*)", "db",
+    "/([^_/][^/]*)", "db",
     "/([^/]*)/get", "withkey",
     "/([^/]*)/get_many", "get_many",
     '/([^/]*)/save(/.*)', 'save',
@@ -578,7 +578,7 @@ def load_config(config_file):
     plugins = []
     for p in config.get('plugins') or []:
         plugins.append(__import__(p, None, None, ["x"]))
-        print >> web.debug, "loaded plugin", p
+        logger.info("loading plugin %s", p)
         
     web.config.db_parameters = parse_db_parameters(config.db_parameters)    
 

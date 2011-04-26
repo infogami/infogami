@@ -6,6 +6,7 @@ import web
 import _json as simplejson
 import datetime, time
 from collections import defaultdict
+import logging
 
 from _dbstore import store, sequence
 from _dbstore.schema import Schema, INDEXED_DATATYPES
@@ -14,6 +15,8 @@ from _dbstore.save import SaveImpl, PropertyManager
 from _dbstore.read import RecentChanges
 
 default_schema = None
+
+logger = logging.getLogger("infobase")
 
 def process_json(key, json):
     """Hook to process json.
@@ -139,6 +142,8 @@ class DBSiteStore(common.SiteStore):
                     
     def save_many(self, docs, timestamp, comment, data, ip, author, action=None):
         action = action or "bulk_update"
+        logger.debug("saving %d docs - %s", len(docs), dict(timestamp=timestamp, comment=comment, data=data, ip=ip, author=author, action=action))
+
         s = SaveImpl(self.db, self.schema, self.indexer, self.property_manager)
         
         # Hack to allow processing of json before using. Required for OL legacy.
@@ -155,6 +160,7 @@ class DBSiteStore(common.SiteStore):
         return changeset
         
     def save(self, key, doc, timestamp=None, comment=None, data=None, ip=None, author=None, transaction_id=None, action=None):
+        logger.debug("saving %s", key)
         timestamp = timestamp or datetime.datetime.utcnow
         return self.save_many([doc], timestamp, comment, data, ip, author, action=action or "update")
         

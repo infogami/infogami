@@ -387,9 +387,9 @@ class account:
         user = a.login(i.username, i.password)
         
         if not user:
-            raise common.BadData(message='Invalid username or password')
+            raise common.BadData(message='Invalid username or password', code="invalid_username_or_password")
         elif config.verify_user_email and user.get('verified') is False:
-            raise common.BadData(message="User is not verified")
+            raise common.BadData(message="User is not verified", code="email_not_verified")
         else:
             return user.format_data()
 

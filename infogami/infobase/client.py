@@ -37,6 +37,12 @@ class ClientException(Exception):
         self.json = json
         Exception.__init__(self, msg)
 
+    def get_data(self):
+        if self.json:
+            return simplejson.loads(self.json)
+        else:
+            return {}
+
 class NotFound(ClientException):
     def __init__(self, msg):
         ClientException.__init__(self, "404 Not Found", msg)

@@ -30,6 +30,8 @@ The following indexer allows querying for books using lowercase titles and books
             
 """
 
+from __future__ import with_statement
+
 import simplejson
 import web
 
@@ -73,6 +75,14 @@ class Store:
     
     def put(self, key, data):
         self.put_json(key, simplejson.dumps(data))
+
+    def put_many(self, docs):
+        """Stores multiple docs in a single transaction.
+        """
+        with self.db.transaction():
+            for doc in docs:
+                key = doc['_key']
+                self.put(key, doc)
     
     def put_json(self, key, json):
         # remove _key and _rev from json

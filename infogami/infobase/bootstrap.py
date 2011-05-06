@@ -149,19 +149,19 @@ def bootstrap(site, admin_password):
     config.account_bot = None
 
     a = site.get_account_manager()
-    a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"))
+    a.register(username="admin", email="admin@example.com", password=admin_password, data=dict(displayname="Administrator"), _activate=True)
     a.update_user_details("admin", verified=True)
 
     if account_bot:
         username = account_bot.split("/")[-1]
-        a.register(username=username, email="userbot@example.com", password=random_password(), data=dict(displayname=username))
+        a.register(username=username, email="userbot@example.com", password=random_password(), data=dict(displayname=username), _activate=True)
         a.update_user_details(username, verified=True)
-    
+
     # add admin user to admin usergroup
     import account
     q = [usergroup('/usergroup/admin', 'Group of admin users.', [{"key": account.get_user_root() + "admin"}])]
     site.save_many(q)
-    
+
     config.account_bot = account_bot
 
     web.ctx.infobase_bootstrap = False

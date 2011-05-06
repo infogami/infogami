@@ -8,6 +8,7 @@ db_parameters = dict(dbn='postgres', db='infobase_test', user=os.getenv('USER'),
 def setup_db(mod):
     assert os.system('dropdb infobase_test; createdb infobase_test') == 0
     mod.db_parameters = db_parameters.copy()    
+    web.config.db_parameters = db_parameters.copy()
     mod.db = web.database(**mod.db_parameters)
 
     schema = dbstore.default_schema or dbstore.Schema()
@@ -41,6 +42,7 @@ def setup_server(mod):
     server._infobase = None # clear earlier reference, if any.
     server.get_site("test") # initialize server._infobase
     mod.site = server._infobase.create("test") # create a new site
+    mod.db = mod.site.store.db
 
 def teardown_server(mod):
     server._infobase.store.db.ctx.clear()

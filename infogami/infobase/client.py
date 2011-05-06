@@ -422,7 +422,11 @@ class Site:
         data = dict(username=username, displayname=displayname, email=email, password=password)
         _run_hooks("before_register", data)
         return self._request('/account/register', 'POST', data)
-            
+
+    def activate_account(self, email, activation_code):
+        data = dict(email=email, activation_code=activation_code)
+        return self._request('/account/activate', 'POST', data)
+
     def update_user(self, old_password, new_password, email):
         return self._request('/account/update_user', 'POST', 
             dict(old_password=old_password, new_password=new_password, email=email))

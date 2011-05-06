@@ -83,6 +83,8 @@ def jsonify(f):
             
             process_exception(e)
         except Exception, e:
+            logger.error("Error in processing request %s %s", web.ctx.method, web.ctx.path, exc_info=True)
+
             common.record_exception()
             # call web.internalerror to send email when web.internalerror is set to web.emailerrors
             process_exception(common.InfobaseException(error="internal_error", message=str(e)))
@@ -399,8 +401,16 @@ class account:
         username = i.pop('username')
         password = i.pop('password')
         email = i.pop('email')
-        a.register(username=username, email=email, password=password, data=i)
-        return ""
+        
+        activation_code = a.register(username=username, email=email, password=password, data=i)
+        return {"activation_code": activation_code, "email": email}
+
+    def POST_activate(self, site):
+        i = input('email', 'activation_code')
+
+        a = site.get_account_manager()
+        username = a.activate(email=i.email, activation_code=i.activation_code)
+        return {"ok": "true", "username": username}
 
     def GET_get_user(self, site):
         a = site.get_account_manager()

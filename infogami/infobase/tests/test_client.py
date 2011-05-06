@@ -164,4 +164,25 @@ class TestSanity:
     def test_reindex(self):
         keys = ['/type/page']
         site._request("/reindex", method="POST", data={"keys": simplejson.dumps(keys)})
-        
+
+class TestAccount:
+    """Test account creation, forgot password etc."""
+    def test_register(self):
+        email = "joe@example.com"
+        response = site.register(username="joe", displayname="Joe", email=email, password="secret")
+        assert 'activation_code' in response.keys()
+
+        assert site.activate_account(email, response['activation_code']) == {
+            'ok': 'true',
+            'username': 'joe'
+        }
+
+        # login should succed
+        site.login("joe", "secret")
+
+        try:
+            site.login("joe", "secret2")
+        except client.ClientException:
+            pass
+        else:
+            assert False, "Login should fail when used with wrong password"

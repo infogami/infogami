@@ -3,9 +3,12 @@ import random
 import datetime
 import time
 import web
+import logging
 
 import common
 import config
+
+logger = logging.getLogger("infobase.account")
 
 def get_user_root():
     user_root = config.get("user_root", "/user")
@@ -41,44 +44,114 @@ class AccountManager:
         self.site = site
         self.secret_key = secret_key
         
-    def register(self, username, email, password, data):
+    def register(self, username, email, password, data, _activate=False):
+        logger.info("new account registration username=%s", username)
         enc_password = self._generate_salted_hash(self.secret_key, password)
+
         try:
-            self.register1(username, email, enc_password, data)
+            activation_code = self.store_account_info(username, email, enc_password, data)
+            if _activate:
+                self.activate(email, activation_code)
+            return activation_code
         except:
-            import traceback
-            traceback.print_exc()
+            logger.error("Failed to store registration info. username=%s", username, exc_info=True)
             raise
+
+    def store_account_info(self, username, email, enc_password, data):
+        """Store account info in the store so that the account can be created after verifying the email.
+        """
+        user_key = get_user_root() + username
+        if self.site.store.get(user_key) or self.site.store.store.get("account/" + username):
+            raise common.BadData(message="User already exists: %s" % username)
+
+        if self.site.store.find_user(email):
+            raise common.BadData(message='Email is already used: ' + email)
+
+        if self.site.store.store.query(type="pending-account", name="email", value=email):
+            raise common.BadData(message='Email is already used: ' + email)
+
+        activation_code = self._generate_salted_hash(self.secret_key, email).split("$")[-1]
+
+        now = datetime.datetime.utcnow()
+        expires_on = now + datetime.timedelta(days=14) # 2 weeks
+
+        key = "account/" + username
+        doc = {
+            "_key": key,
+            "type": "pending-account",
+            "registered_on": now.isoformat(),
+            "expires_on": expires_on.isoformat(),
+
+            "activation_code": activation_code,
+
+            "username": username,
+            "email": email,
+            "password": enc_password,
+            "data": data
+        }
+        store = self.site.store.store
+        store.put(key, doc)
+        return activation_code
+
+    def activate(self, email, activation_code):
+        store = self.site.store.store
+        rows = store.query(type="pending-account", name="email", value=email, include_docs=True)
         
+        now = datetime.datetime.utcnow()
+
+        docs = [row['doc'] for row in rows
+                if row['doc'].get("activation_code") == activation_code
+                and str(row['doc'].get("expires_on", "9999")) > now.isoformat()]
+                
+        if not docs:
+            raise common.BadData(message="Invalid actication code.")
+
+        doc = docs[0]
+        return self.register1(doc['username'], doc['email'], doc['password'], doc['data'])
+
     def register1(self, username, email, enc_password, data, ip=None, timestamp=None):
         ip = ip or web.ctx.ip
         key = get_user_root() + username
         if self.site.get(key):
             raise common.BadData(message="User already exists: " + username)
-        
+
         if self.site.store.find_user(email):
             raise common.BadData(message='Email is already used: ' + email)
 
         def f():
             web.ctx.disable_permission_check = True
-            
+
             d = web.storage({"key": key, "type": {"key": "/type/user"}})
             d.update(data)
             self.site.save(key, d, timestamp=timestamp, author=d, comment="Created new account")
-            
+
             q = make_query(d)
             account_bot = config.get('account_bot')
             account_bot = account_bot and web.storage({"key": account_bot, "type": {"key": "/type/user"}})
             self.site.save_many(q, ip=ip, timestamp=timestamp, author=account_bot, action='register', comment="Setup new account")
             self.site.store.register(key, email, enc_password)
-        
+            self.update_user_details(username, verified=True, active=True)
+
+            # Add account doc to store
+            olddoc = self.site.store.store.get("account/" + username) or {}
+            
+            doc = {
+                "_key": "account/" + username,
+                "type": "account",
+                "registered_on": olddoc['registered_on'],
+                "activated_on": timestamp.isoformat(),
+                "last_login": timestamp.isoformat()
+            }
+            self.site.store.store.put("account/" + username, doc)
+
         timestamp = timestamp or datetime.datetime.utcnow()
         self.site.store.transact(f)
-        
+
         event_data = dict(data, username=username, email=email, password=enc_password)
         self.site._fire_event("register", timestamp=timestamp, ip=ip or web.ctx.ip, username=None, data=event_data)
-        
+
         self.set_auth_token(key)
+        return username
                         
     def update_user(self, old_password, new_password, email):
         user = self.get_user()

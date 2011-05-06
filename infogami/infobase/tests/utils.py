@@ -5,9 +5,15 @@ import web
 
 db_parameters = dict(dbn='postgres', db='infobase_test', user=os.getenv('USER'), pw='', pooling=False)
 
+db_created = False
+
 def setup_db(mod):
-    assert os.system('dropdb infobase_test; createdb infobase_test') == 0
-    mod.db_parameters = db_parameters.copy()    
+    global db_created
+    if not db_created:
+        assert os.system('dropdb infobase_test; createdb infobase_test') == 0
+        db_created = False
+    
+    mod.db_parameters = db_parameters.copy()
     web.config.db_parameters = db_parameters.copy()
     mod.db = web.database(**mod.db_parameters)
 
@@ -15,7 +21,16 @@ def setup_db(mod):
     sql = str(schema.sql())
     mod.db.query(sql)
     
+    mod._create_database = dbstore.create_database
+    dbstore.create_database = lambda *a, **kw: mod.db
+    
+    mod._tx = mod.db.transaction()
+    
 def teardown_db(mod):
+    dbstore.create_database = mod._create_database
+    
+    mod._tx.rollback()
+    
     mod.db.ctx.clear()
     try:
         del mod.db
@@ -42,11 +57,10 @@ def setup_server(mod):
     server._infobase = None # clear earlier reference, if any.
     server.get_site("test") # initialize server._infobase
     mod.site = server._infobase.create("test") # create a new site
-    mod.db = mod.site.store.db
 
 def teardown_server(mod):
-    server._infobase.store.db.ctx.clear()
     server._infobase = None
+            
     try:
         del mod.site
     except:

@@ -89,8 +89,8 @@ class Store:
         try:
             row = self.get_row(key, for_update=True)
             if row:
-                if enable_conflict_check and str(row.id) != rev:
-                    raise common.Conflict(key=key, reason="Document update conflict")
+                if enable_conflict_check and str(row.id) != str(rev):
+                    raise common.Conflict(key=key, message="Document update conflict")
                 
                 self.delete_index(row.id)
                 

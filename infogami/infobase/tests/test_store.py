@@ -70,6 +70,16 @@ class TestStore(DBTest):
         # query for all
         assert store.query(None, None, None) == [{"key": "b"}, {"key": "a"}, {"key": "two"}, {"key": "one"}]
 
+    def test_query_order(self):
+        store.put("one", {"type": "digit", "name": "one", "value": 1})
+        store.put("two", {"type": "digit", "name": "two", "value": 2})
+
+        assert store.query("digit", None, None) == [{"key": "two"}, {"key": "one"}]
+
+        # after updating "one", it should show up first in the query results
+        store.put("one", {"type": "digit", "name": "one", "value": 1, "x": 1})
+        assert store.query("digit", None, None) == [{"key": "one"}, {"key": "two"}]
+
     def test_query_include_docs(self, wildcard):
         assert store.query(None, None, None, include_docs=True) == []
         

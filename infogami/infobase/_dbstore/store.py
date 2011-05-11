@@ -96,9 +96,14 @@ class Store:
         try:
             row = self.get_row(key, for_update=True)
             if row:
-                self.db.query("UPDATE store SET json=$json WHERE key=$key", vars=locals())
                 self.delete_index(row.id)
-                id = row.id
+                
+                # store query results are always order by id column.
+                # It is important to update the id so that the newly modified
+                # records show up first in the results.
+                self.db.query("UPDATE store SET json=$json, id=nextval('store_id_seq') WHERE key=$key", vars=locals())
+                
+                id = self.get_row(key=key).id
             else:
                 id = self.db.insert("store", key=key, json=json)
 

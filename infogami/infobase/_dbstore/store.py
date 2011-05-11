@@ -116,7 +116,7 @@ class Store:
     def delete(self, key):
         tx = self.db.transaction()
         try:
-            row = self.get_row(key)
+            row = self.get_row(key, for_update=True)
             if row:
                 self.delete_row(row.id)
         except:

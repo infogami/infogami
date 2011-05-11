@@ -73,24 +73,10 @@ class Store:
         doc['_rev'] = str(row.id)
         return doc
     
-    def put(self, key, data):
-        self.put_json(key, simplejson.dumps(data))
-
-    def put_many(self, docs):
-        """Stores multiple docs in a single transaction.
-        """
-        with self.db.transaction():
-            for doc in docs:
-                key = doc['_key']
-                self.put(key, doc)
-    
-    def put_json(self, key, json):
-        # remove _key and _rev from json
-        # Eventually, we should check allow put to successed only if _rev == row.id
-        d = simplejson.loads(json)
-        d.pop("_key", None)
-        d.pop("_rev", None)
-        json = simplejson.dumps(d)
+    def put(self, key, doc):
+        doc.pop("_key", None)
+        doc.pop("_rev", None)
+        json = simplejson.dumps(doc)
         
         tx = self.db.transaction()
         try:
@@ -108,13 +94,24 @@ class Store:
                 id = self.db.insert("store", key=key, json=json)
 
             data = simplejson.loads(json)                
-            self.add_index(id, key, data)
+            self.add_index(id, key, doc)
         except:
             tx.rollback()
             raise
         else:
             tx.commit()
-            self.fire_event("store.put", {"key": key, "data": data})
+            self.fire_event("store.put", {"key": key, "data": doc})
+
+    def put_many(self, docs):
+        """Stores multiple docs in a single transaction.
+        """
+        with self.db.transaction():
+            for doc in docs:
+                key = doc['_key']
+                self.put(key, doc)
+    
+    def put_json(self, key, json):
+        self.put(key, simplejson.loads(json))
     
     def delete(self, key):
         tx = self.db.transaction()

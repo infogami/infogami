@@ -74,14 +74,24 @@ class Store:
         return doc
     
     def put(self, key, doc):
+        # conflict check is enabled by default. It can be disabled by passing _rev=None in the document.
+        if "_rev" in doc and doc["_rev"] is None:
+            enable_conflict_check = False
+        else:
+            enable_conflict_check = True
+            
         doc.pop("_key", None)
-        doc.pop("_rev", None)
+        rev = doc.pop("_rev", None)
+        
         json = simplejson.dumps(doc)
         
         tx = self.db.transaction()
         try:
             row = self.get_row(key, for_update=True)
             if row:
+                if enable_conflict_check and str(row.id) != rev:
+                    raise common.Conflict(key=key, reason="Document update conflict")
+                
                 self.delete_index(row.id)
                 
                 # store query results are always order by id column.
@@ -93,14 +103,18 @@ class Store:
             else:
                 id = self.db.insert("store", key=key, json=json)
 
-            data = simplejson.loads(json)                
             self.add_index(id, key, doc)
+            
+            doc['_key'] = key
+            doc['_rev'] = str(id)
         except:
             tx.rollback()
             raise
         else:
             tx.commit()
             self.fire_event("store.put", {"key": key, "data": doc})
+            
+        return doc
 
     def put_many(self, docs):
         """Stores multiple docs in a single transaction.

@@ -342,7 +342,9 @@ class store:
     @jsonify
     def PUT(self, sitename, path):
         store = get_site(sitename).get_store()
-        store.put_json(path, get_data())
+        json = get_data()
+        doc = simplejson.loads(json)
+        store.put(path, doc)
         return JSON('{"ok": true}')
         
     @jsonify

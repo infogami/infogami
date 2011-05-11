@@ -82,7 +82,7 @@ class TestStore:
         s["x"] = {"name": "x"}
         assert s["x"] == {"name": "x", "_key": "x", "_rev": wildcard}
         
-        s["x"] = {"name": "xx"}
+        s["x"] = {"name": "xx", "_rev": None}
         assert s["x"] == {"name": "xx", "_key": "x", "_rev": wildcard}
         
     def test_contains(self):

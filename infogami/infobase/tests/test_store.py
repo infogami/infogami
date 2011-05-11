@@ -1,8 +1,10 @@
 from infogami.infobase._dbstore.store import Store, TypewiseIndexer
+from infogami.infobase import common
+
 import utils
 
-import unittest
 import simplejson
+import py.test
 
 def setup_module(mod):
     utils.setup_db(mod)
@@ -34,8 +36,25 @@ class TestStore(DBTest):
         store.put("foo", {"name": "foo"})
         assert store.get("foo") == dict(name="foo", _key="foo", _rev=wildcard)
 
-        store.put("foo", {"name": "bar"})
+        store.put("foo", {"name": "bar", "_rev": None})
         assert store.get("foo") == dict(name="bar", _key="foo", _rev=wildcard)
+        
+    def test_conflicts(self):
+        foo = store.put("foo", {"name": "foo"})
+        
+        # calling without _rev should fail
+        assert py.test.raises(common.Conflict, store.put, "foo", {"name": "bar"}) 
+        
+        # Calling with _rev should update foo
+        foo2 = store.put("foo", {"name": "foo2", "_rev": foo['_rev']})
+        assert foo2['_key'] == foo['_key']
+        assert foo2['_rev'] != foo['_rev']
+
+        # calling with _rev=None should also pass
+        foo3 = store.put("foo", {"name": "foo3", "_rev": None})
+        
+        # calling with bad/stale _rev should fail
+        assert py.test.raises(common.Conflict, store.put, "foo", {"name": "foo4", "_rev": foo['_rev']})        
         
     def test_notfound(self):
         assert store.get("xxx") is None
@@ -77,7 +96,7 @@ class TestStore(DBTest):
         assert store.query("digit", None, None) == [{"key": "two"}, {"key": "one"}]
 
         # after updating "one", it should show up first in the query results
-        store.put("one", {"type": "digit", "name": "one", "value": 1, "x": 1})
+        store.put("one", {"type": "digit", "name": "one", "value": 1, "x": 1, "_rev": None})
         assert store.query("digit", None, None) == [{"key": "one"}, {"key": "two"}]
 
     def test_query_include_docs(self, wildcard):
@@ -129,8 +148,8 @@ class TestStore(DBTest):
         
     def test_multiput(self):
         store.put("x", {"name": "foo"})
-        store.put("x", {"name": "foo"})
-        store.put("x", {"name": "foo"})
+        store.put("x", {"name": "foo", "_rev": None})
+        store.put("x", {"name": "foo", "_rev": None})
                 
         assert store.query(None, None, None) == [{"key": "x"}]
         assert store.query("", None, None) == [{"key": "x"}]

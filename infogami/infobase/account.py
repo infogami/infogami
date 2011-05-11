@@ -137,6 +137,7 @@ class AccountManager:
             
             doc = {
                 "_key": "account/" + username,
+                "_rev": olddoc.get("_rev"),
                 "type": "account",
                 "registered_on": olddoc['registered_on'],
                 "activated_on": timestamp.isoformat(),

@@ -5,21 +5,26 @@ import web
 
 db_parameters = dict(dbn='postgres', db='infobase_test', user=os.getenv('USER'), pw='', pooling=False)
 
-db_created = False
-
-def setup_db(mod):
-    global db_created
-    if not db_created:
-        assert os.system('dropdb infobase_test; createdb infobase_test') == 0
-        db_created = False
+@web.memoize
+def recreate_database():
+    """drop and create infobase_test database.
     
-    mod.db_parameters = db_parameters.copy()
-    web.config.db_parameters = db_parameters.copy()
-    mod.db = web.database(**mod.db_parameters)
-
+    This function is memoized to recreate the db only once per test session.
+    """
+    assert os.system('dropdb infobase_test; createdb infobase_test') == 0
+    
+    db = web.database(**db_parameters)
+    
     schema = dbstore.default_schema or dbstore.Schema()
     sql = str(schema.sql())
-    mod.db.query(sql)
+    db.query(sql)
+
+def setup_db(mod):
+    recreate_database()
+
+    mod.db_parameters = db_parameters.copy()
+    web.config.db_parameters = db_parameters.copy()
+    mod.db = web.database(**db_parameters)
     
     mod._create_database = dbstore.create_database
     dbstore.create_database = lambda *a, **kw: mod.db

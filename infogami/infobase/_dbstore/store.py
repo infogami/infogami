@@ -127,11 +127,13 @@ class Store:
     def put_json(self, key, json):
         self.put(key, simplejson.loads(json))
     
-    def delete(self, key):
+    def delete(self, key, rev=None):
         tx = self.db.transaction()
         try:
             row = self.get_row(key, for_update=True)
             if row:
+                if rev is not None and str(row.id) != str(rev):
+                    raise common.Conflict(key=key, message="Document update conflict")
                 self.delete_row(row.id)
         except:
             tx.rollback()

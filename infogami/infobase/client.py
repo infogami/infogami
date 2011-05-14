@@ -504,10 +504,9 @@ class Store:
         return self._request(key, method='DELETE')
         
     def update(self, d={}, **kw):
-        for k, v in d.items():
-            self[k] = v
-        for k, v in kw.items():
-            self[k] = v
+        d2 = dict(d, **kw)
+        docs = [dict(doc, _key=key) for key, doc in d2.items()]
+        self._request("_save_many", method="POST", data=simplejson.dumps(docs))
             
     def clear(self):
         """Removes all keys from the store. Use this with caution!"""

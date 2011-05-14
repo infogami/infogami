@@ -183,7 +183,7 @@ class db:
             raise web.HTTPError("412 Precondition Failed", {}, "")
         else:
             site = _infobase.create(name)
-            return {"ok": True}
+            return {"ok": "true"}
             
     @jsonify
     def DELETE(self, name):
@@ -315,7 +315,20 @@ class store_special:
             return self.GET_query(sitename)
         else:
             raise web.notfound("")
-    
+            
+    def POST(self, sitename, path):
+        if path == '_save_many':
+            return self.POST_save_many(sitename)
+        else:
+            raise web.notfound("")
+            
+    @jsonify
+    def POST_save_many(self, sitename):
+        store = get_site(sitename).get_store()
+        json = get_data()
+        docs = simplejson.loads(json)
+        store.put_many(docs)
+        
     @jsonify
     def GET_query(self, sitename):
         i = input(type=None, name=None, value=None, limit=100, offset=0, include_docs="false")

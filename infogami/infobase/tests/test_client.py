@@ -151,6 +151,15 @@ class TestStore:
             ("y", {"type": "bar", "name": "y", "_key": "y", "_rev": wildcard}),
         ]
         
+    def test_update(self):
+        docs = {
+            "x": {"type": "foo", "name": "x"},
+            "y": {"type": "bar", "name": "y"},
+            "z": {"type": "bar", "name": "z"},
+        }
+        s.update(docs)
+        assert sorted(s.keys()) == (["x", "y", "z"])
+        
 class TestSeq:
     def test_seq(self):
         seq.get_value("foo") == 0

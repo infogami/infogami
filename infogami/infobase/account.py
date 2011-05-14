@@ -30,6 +30,7 @@ def make_query(user):
     user.permission = {'key': user.key + '/permission'}
     q.append(user)
     return q
+
 def admin_only(f):
     """Decorator to limit a function to admin user only."""
     def g(self, *a, **kw):
@@ -49,10 +50,9 @@ class AccountManager:
         enc_password = self._generate_salted_hash(self.secret_key, password)
 
         try:
-            activation_code = self.store_account_info(username, email, enc_password, data)
+            self.store_account_info(username, email, enc_password, data)
             if _activate:
-                self.activate(email, activation_code)
-            return activation_code
+                self.activate(username)
         except:
             logger.error("Failed to store registration info. username=%s", username, exc_info=True)
             raise
@@ -70,8 +70,6 @@ class AccountManager:
         if self.site.store.store.query(type="pending-account", name="email", value=email):
             raise common.BadData(message='Email is already used: ' + email)
 
-        activation_code = self._generate_salted_hash(self.secret_key, email).split("$")[-1]
-
         now = datetime.datetime.utcnow()
         expires_on = now + datetime.timedelta(days=14) # 2 weeks
 
@@ -82,8 +80,6 @@ class AccountManager:
             "registered_on": now.isoformat(),
             "expires_on": expires_on.isoformat(),
 
-            "activation_code": activation_code,
-
             "username": username,
             "email": email,
             "password": enc_password,
@@ -91,23 +87,56 @@ class AccountManager:
         }
         store = self.site.store.store
         store.put(key, doc)
-        return activation_code
-
-    def activate(self, email, activation_code):
-        store = self.site.store.store
-        rows = store.query(type="pending-account", name="email", value=email, include_docs=True)
         
-        now = datetime.datetime.utcnow()
+    def find_account(self, email=None, username=None):
+        if email:
+            return self._find_account_by_email(email)
+        elif username:
+            return self._find_account_by_username(username)
+            
+    def _find_account_by_email(self, email):
+        username = a.find_user_by_email(i.email)
+        
+        if username:
+            # account exists
+            key = get_user_root() + username
+            return self.site.store.get_user_details(key)
+        else:
+            store = self.site.store.store
+            rows = store.query(type="pending-account", name="email", value=i.email, include_docs=True)
+            if rows:
+                return rows[0]['doc']
+        
+    def _find_account_by_username(self, username):
+        key = get_user_root() + username
+        details = self.site.store.get_user_details(key)
 
-        docs = [row['doc'] for row in rows
-                if row['doc'].get("activation_code") == activation_code
-                and str(row['doc'].get("expires_on", "9999")) > now.isoformat()]
-                
-        if not docs:
-            raise common.BadData(message="Invalid actication code.")
+        if details:
+            # Account exists
+            return details
+        else:
+            # Acccount does not exist. see if there is any pending-account.
+            return self.site.store.store.get("account/" + username)        
 
-        doc = docs[0]
-        return self.register1(doc['username'], doc['email'], doc['password'], doc['data'])
+    def activate(self, username):
+        store = self.site.store.store
+        
+        doc = store.get("account/" + username)
+        if doc:
+            logger.info("activated account: %s", username)
+            self.register1(doc['username'], doc['email'], doc['password'], doc['data'])
+            return "ok"
+        
+        key = get_user_root() + username
+        details = self.site.store.get_user_details(key)
+        
+        if details:
+            self.update_user_details(username, verified=True)
+            logger.info("Marked account as verified: %s", username)
+            return "ok"
+        else:
+            logger.error("account activation failed: %s", username)
+            return "account_not_found" 
 
     def register1(self, username, email, enc_password, data, ip=None, timestamp=None):
         ip = ip or web.ctx.ip
@@ -153,6 +182,16 @@ class AccountManager:
 
         self.set_auth_token(key)
         return username
+
+    def update(self, username, **kw):
+        key = get_user_root() + username
+        details = self.site.store.get_user_details(key)
+        
+        if not details:
+            return "account_not_found"
+        else:
+            self.site.store.update_user_details(key, **kw)
+            return "ok"
                         
     def update_user(self, old_password, new_password, email):
         user = self.get_user()
@@ -193,12 +232,29 @@ class AccountManager:
             
     @admin_only
     def get_user_email(self, username):
+        logger.debug("get_user_email", username)
+        
+        if username.startswith("/"):
+            # this is user key
+            userkey = username
+            username = username.split("/")[-1]
+        else:
+            userkey = get_user_root() + username
+        
         details = self.site.store.get_user_details(username)
         
-        if not details:
-            raise common.BadData(message='No user registered with username: ' + username)
-        else:
+        logger.debug("get_user_email details %s %s", username, details)
+        
+        if details:
             return details.email
+        
+        doc = self.site.store.store.get("account/" + username)
+        logger.debug("get_user_email doc %s", doc)
+        
+        if doc and doc.get("type") == "pending-account":
+            return doc['email']
+        
+        raise common.BadData(message='No user registered with username: ' + username, error="account_not_found")
             
     def get_email(self, user):
         """Used internally by server."""
@@ -226,7 +282,7 @@ class AccountManager:
         return self.site.store.find_user(email)
 
     def reset_password(self, username, code, password):
-        self.check_reset_code(username, code)        
+        self.check_reset_code(username, code)
         enc_password = self._generate_salted_hash(self.secret_key, password)
         self.site.store.update_user_details(get_user_root() + username, password=enc_password, verified=True)
             
@@ -250,22 +306,49 @@ class AccountManager:
             raise common.BadData(message="Invaid password reset code")
         
     def login(self, username, password):
+        """Returns "ok" on success and an error code on failure.
+        
+        Error code can be one of:
+            * account_bad_password
+            * account_not_found
+            * account_not_verified
+            * account_not_active
+        """
         if username == 'admin':
             self.assert_trusted_machine()
             
-        username = get_user_root() + username
-        if self.checkpassword(username, password):
-            self.set_auth_token(username)
-            user = self.site._get_thing(username)
-            details = self.site.store.get_user_details(username)
-            
-            for k in ['bot', 'active', 'verified']:
-                if k in details:
-                    user[k] = details[k]
-                    
-            return user
+        key = get_user_root() + username
+        details = self.site.store.get_user_details(key)
+        
+        if details:
+            # Account exists
+            return self._login_account(details, password)
         else:
-            return None
+            # Acccount does not exist. 
+            # If there is a pending-account and the password match, return not-verified.
+            doc = self.site.store.store.get("account/" + username)
+            return self._login_pending_account(doc, password)
+    
+    def _login_account(self, details, password):
+        if "active" in details and details['active'] != True:
+            return "account_not_active"
+            
+        matched = self.verify_password(password, details["password"])
+        
+        if not matched:
+            return "account_bad_password"
+        elif not details.get("verified"):
+            return "account_not_verified"
+        else:
+            return "ok"
+            
+    def _login_pending_account(self, doc, password):
+        if not doc:
+            return "account_not_found"
+        elif doc.get("type") == "pending-account" and self.verify_password(password, doc['password']):
+            return "account_not_verified"
+        else:
+            return "account_bad_password"
     
     def get_user(self):
         """Returns the current user from the session."""
@@ -300,3 +383,7 @@ class AccountManager:
             return False
         else:
             return self._check_salted_hash(self.secret_key, raw_password, details.password)
+            
+    def verify_password(self, raw_password, enc_password):
+        """Verifies if the raw_password and encrypted password match."""
+        return self._check_salted_hash(self.secret_key, raw_password, enc_password)

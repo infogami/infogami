@@ -170,12 +170,8 @@ class TestAccount:
     def test_register(self):
         email = "joe@example.com"
         response = site.register(username="joe", displayname="Joe", email=email, password="secret")
-        assert 'activation_code' in response.keys()
 
-        assert site.activate_account(email, response['activation_code']) == {
-            'ok': 'true',
-            'username': 'joe'
-        }
+        assert site.activate_account(username="joe") == {'ok': 'true'}
 
         # login should succed
         site.login("joe", "secret")

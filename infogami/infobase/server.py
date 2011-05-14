@@ -16,6 +16,8 @@ import common
 import cache
 import logreader
 
+from account import get_user_root
+
 logger = logging.getLogger("infobase")
 
 def setup_remoteip():
@@ -83,7 +85,7 @@ def jsonify(f):
             
             process_exception(e)
         except Exception, e:
-            logger.error("Error in processing request %s %s", web.ctx.method, web.ctx.path, exc_info=True)
+            logger.error("Error in processing request %s %s", web.ctx.get("method", "-"), web.ctx.get("path","-"), exc_info=True)
 
             common.record_exception()
             # call web.internalerror to send email when web.internalerror is set to web.emailerrors
@@ -388,15 +390,14 @@ class account:
     def POST_login(self, site):
         i = input('username', 'password')
         a = site.get_account_manager()
-        user = a.login(i.username, i.password)
+        status = a.login(i.username, i.password)
         
-        if not user:
-            raise common.BadData(message='Invalid username or password', code="invalid_username_or_password")
-        elif config.verify_user_email and user.get('verified') is False:
-            raise common.BadData(message="User is not verified", code="email_not_verified")
+        if status == "ok":
+            a.set_auth_token(get_user_root() + i.username)
+            return {"ok": True}
         else:
-            return user.format_data()
-
+            raise common.BadData(code=status, message="Login failed")
+        
     def POST_register(self, site):
         i = input('username', 'password', 'email')
         a = site.get_account_manager()
@@ -408,11 +409,32 @@ class account:
         return {"activation_code": activation_code, "email": email}
 
     def POST_activate(self, site):
-        i = input('email', 'activation_code')
+        i = input('username')
 
         a = site.get_account_manager()
-        username = a.activate(email=i.email, activation_code=i.activation_code)
-        return {"ok": "true", "username": username}
+        status = a.activate(i.username)
+        if status == "ok":
+            return {"ok": "true"}
+        else:
+            raise common.BadData(error_code=status, message="Account activation failed.")
+            
+    def POST_update(self, site):
+        i = input('username')
+        username = i.pop("username")
+        
+        a = site.get_account_manager()
+        status = a.update(username, **i)
+        
+        if status == "ok":
+            return {"ok": "true"}
+        else:
+            raise common.BadData(error_code=status, message="Account activation failed.")
+
+        
+    def GET_find(self, site):
+        i = input(email=None, username=None)
+        a = site.get_account_manager()
+        return a.find_account(email=i.email, username=i.username)
 
     def GET_get_user(self, site):
         a = site.get_account_manager()

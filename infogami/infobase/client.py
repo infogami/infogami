@@ -423,9 +423,22 @@ class Site:
         _run_hooks("before_register", data)
         return self._request('/account/register', 'POST', data)
 
-    def activate_account(self, email, activation_code):
-        data = dict(email=email, activation_code=activation_code)
+    def activate_account(self, username):
+        data = dict(username=username)
         return self._request('/account/activate', 'POST', data)
+        
+    def update_account(self, username, **kw):
+        """Updates an account.
+        """
+        data = dict(kw, username=username)
+        return self._request('/account/update', 'POST', data)
+        
+    def find_account(self, username=None, email=None):
+        """Finds account by username or email."""
+        if username is None and email is None:
+            return None
+        data = dict(username=username, email=email)
+        return self._request("/account/find", "GET", data)    
 
     def update_user(self, old_password, new_password, email):
         return self._request('/account/update_user', 'POST', 

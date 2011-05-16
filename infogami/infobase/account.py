@@ -79,8 +79,10 @@ class AccountManager:
             "type": "account",
             "status": "pending",            
             "created_on": now.isoformat(),
-            
+
             "username": username,
+            "lusername": username.lower(), # lowercase username
+
             "email": email,
             "enc_password": enc_password,
             "data": data
@@ -274,7 +276,7 @@ class AccountManager:
                 "type": "account",
                 "registered_on": olddoc['registered_on'],
                 "activated_on": timestamp.isoformat(),
-                "last_login": timestamp.isoformat()
+                "last_login": timestamp.isoformat(),
             }
             self.site.store.store.put("account/" + username, doc)
 

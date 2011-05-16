@@ -240,9 +240,12 @@ class SaveImpl:
 
     def get_user_details(self, key):
         """Returns a storage object with user email and encrypted password."""
-        thing_id = self.get_thing_id(key)
-        d = self.db.query("SELECT * FROM account WHERE thing_id=$thing_id", vars=locals())
-        return d and d[0] or None        
+        account_key = "account/" + key.split("/")[-1]
+        rows = self.db.query("SELECT * FROM store WHERE key=$account_key", vars=locals())
+        if rows:
+            return simplejson.loads(rows[0].json)
+        else:
+            return None
 
 class IndexUtil:
     """

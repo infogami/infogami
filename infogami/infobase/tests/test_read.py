@@ -1,5 +1,6 @@
 from infogami.infobase import dbstore
 from infogami.infobase._dbstore.save import SaveImpl
+from infogami.infobase._dbstore.store import Store
 from infogami.infobase._dbstore.read import RecentChanges
 
 import utils
@@ -32,9 +33,10 @@ class TestRecentChanges(DBTest):
             action=kind,
             data=data
         )
+        
     def recentchanges(self, **kw):
         return RecentChanges(db).recentchanges(**kw)
-
+        
     def doc(self, key, **kw):
         doc = {
             "key": key,
@@ -119,11 +121,21 @@ class TestRecentChanges(DBTest):
         assert len(self.recentchanges(ip="1.2.3.4.5")) == 0
         assert len(self.recentchanges(ip="1.2.3")) == 0
         
-    def test_bot(self):
-        one_id = db.insert("thing", key='/user/one')
-        two_id = db.insert("thing", key='/user/two')
-        db.insert("account", thing_id=one_id, bot=True, seqname=False)
+    def new_account(self, username, **kw):
+        # backdoor to create new account
         
+        db.insert("thing", key='/user/' + username)
+        
+        store = Store(db)
+        store.put("account/" + username, dict(kw,
+            type="account",
+            status="active"
+        ))
+        
+    def test_bot(self):        
+        self.new_account("one", bot=False)
+        self.new_account("two", bot=True)
+                
         self.save_doc("/zero")
         self.save_doc("/one", author="/user/one")
         self.save_doc("/two", author="/user/two")

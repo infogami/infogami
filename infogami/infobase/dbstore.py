@@ -12,7 +12,7 @@ from _dbstore import store, sequence
 from _dbstore.schema import Schema, INDEXED_DATATYPES
 from _dbstore.indexer import Indexer
 from _dbstore.save import SaveImpl, PropertyManager
-from _dbstore.read import RecentChanges
+from _dbstore.read import RecentChanges, get_bot_users
 
 default_schema = None
 
@@ -437,7 +437,7 @@ class DBSiteStore(common.SiteStore):
                 else:
                     # 'bot' column is not enabled
                     if key == 'bot' and not config.use_bot_column:
-                        bots = [r.thing_id for r in self.db.query("SELECT thing_id FROM account WHERE bot='t'")] or [-1]
+                        bots = get_bot_users(self.db)
                         if value == True or str(value).lower() == "true":
                             where += web.reparam(" AND transaction.author_id IN $bots", {"bots": bots})
                         else:

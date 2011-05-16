@@ -3,6 +3,22 @@
 from collections import defaultdict
 import simplejson
 import web
+from infogami.infobase import config
+
+def get_user_root():
+    user_root = config.get("user_root", "/user")
+    return user_root.rstrip("/") + "/"
+
+def get_bot_users(db):
+    """Returns thing_id of all bot users.
+    """
+    rows = db.query("SELECT store.key FROM store, store_index WHERE store.id=store_index.store_id AND type='account' AND name='bot' and value='true'")
+    bots = [get_user_root() + row.key.split("/")[-1] for row in rows]
+    if bots:
+        bot_ids = [row.id for row in db.query("SELECT id FROM thing WHERE key in $bots", vars=locals())]
+        return bot_ids or [-1]
+    else:
+        return [-1]
 
 class RecentChanges:
     def __init__(self, db):
@@ -51,7 +67,7 @@ class RecentChanges:
         
         bot = kwargs.pop('bot', None)
         if bot is not None:
-            bot_ids = [r.thing_id for r in self.db.query("SELECT thing_id FROM account WHERE bot='t'")] or [-1]
+            bot_ids = get_bot_users(self.db)
             if bot is True or str(bot).lower() == "true":
                 wheres.append("t.author_id IN $bot_ids")
             else:

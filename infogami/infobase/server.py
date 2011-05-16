@@ -442,7 +442,6 @@ class account:
             return {"ok": "true"}
         else:
             raise common.BadData(error_code=status, message="Account activation failed.")
-
         
     def GET_find(self, site):
         i = input(email=None, username=None)
@@ -453,17 +452,17 @@ class account:
         a = site.get_account_manager()
         user = a.get_user()
         if user:
-            d = user.format_data()
-            d['email'] = a.get_email(user)
-            return d
+            return user.format_data()
 
     def GET_get_reset_code(self, site):
+        # TODO: remove this
         i = input('email')
         a = site.get_account_manager()
         username, code = a.get_user_code(i.email)
         return dict(username=username, code=code)
         
     def GET_check_reset_code(self, site):
+        # TODO: remove this
         i = input('username', 'code')
         a = site.get_account_manager()
         a.check_reset_code(i.username, i.code)
@@ -472,16 +471,16 @@ class account:
     def GET_get_user_email(self, site):
         i = input('username')
         a = site.get_account_manager()
-        email = a.get_user_email(i.username)
-        return dict(email=email)
+        return a.find(username=i.username)
         
     def GET_find_user_by_email(self, site):
         i = input("email")
         a = site.get_account_manager()
-        username = a.find_user_by_email(i.email)
-        return username
+        account = a.find(email=i.email)
+        return account and account['key'].split("/")[-1]
 
     def POST_reset_password(self, site):
+        # TODO: remove this
         i = input('username', 'code', 'password')
         a = site.get_account_manager()
         return a.reset_password(i.username, i.code, i.password)
@@ -489,14 +488,27 @@ class account:
     def POST_update_user(self, site):
         i = input('old_password', new_password=None, email=None)
         a = site.get_account_manager()
-        return a.update_user(i.old_password, i.new_password, i.email)
+        
+        user = a.get_user()
+        username = user.key.split("/")[-1]
+        
+        status = a.login(username, i.old_password)
+        if status == "ok":
+            kw = {}
+            if new_password:
+                kw['password'] = new_password
+            if email:
+                kw['email'] = email 
+            a.update(username, **kw)
+        else:
+            raise common.BadData(code=status, message="Invalid password")
         
     def POST_update_user_details(self, site):
         i = input('username')
         username = i.pop('username')
         
         a = site.get_account_manager()
-        return a.update_user_details(username, **i)
+        return a.update(username, **i)
 
 class readlog:
     def get_log(self, offset, i):

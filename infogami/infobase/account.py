@@ -4,6 +4,7 @@ import datetime
 import time
 import web
 import logging
+import simplejson
 
 import common
 import config
@@ -15,7 +16,8 @@ def get_user_root():
     return user_root.rstrip("/") + "/"
 
 def make_query(user):
-    q = [{
+    q = [dict(user, permission={'key': user.key + '/permission'}),
+    {
         'key': user.key + '/usergroup',
         'type': {'key': '/type/usergroup'},
         'members': [{'key': user.key}]
@@ -27,8 +29,6 @@ def make_query(user):
         'writers': [{'key': user.key + '/usergroup'}],
         'admins': [{'key': user.key + '/usergroup'}]
     }]
-    user.permission = {'key': user.key + '/permission'}
-    q.append(user)
     return q
 
 def admin_only(f):
@@ -60,83 +60,186 @@ class AccountManager:
     def store_account_info(self, username, email, enc_password, data):
         """Store account info in the store so that the account can be created after verifying the email.
         """
-        user_key = get_user_root() + username
-        if self.site.store.get(user_key) or self.site.store.store.get("account/" + username):
+        store = self.site.store.store
+        
+        account_key = "account/" + username
+        email_key = "account-email/" + email
+        
+        if store.get(account_key):
             raise common.BadData(message="User already exists: %s" % username)
 
-        if self.site.store.find_user(email):
-            raise common.BadData(message='Email is already used: ' + email)
-
-        if self.site.store.store.query(type="pending-account", name="email", value=email):
+        if store.get(email_key):
             raise common.BadData(message='Email is already used: ' + email)
 
         now = datetime.datetime.utcnow()
         expires_on = now + datetime.timedelta(days=14) # 2 weeks
 
-        key = "account/" + username
-        doc = {
-            "_key": key,
-            "type": "pending-account",
-            "registered_on": now.isoformat(),
-            "expires_on": expires_on.isoformat(),
-
+        account_doc = {
+            "_key": account_key,
+            "type": "account",
+            "status": "pending",            
+            "created_on": now.isoformat(),
+            
             "username": username,
             "email": email,
-            "password": enc_password,
+            "enc_password": enc_password,
             "data": data
         }
-        store = self.site.store.store
-        store.put(key, doc)
-        
-    def find_account(self, email=None, username=None):
-        if email:
-            return self._find_account_by_email(email)
-        elif username:
-            return self._find_account_by_username(username)
-            
-    def _find_account_by_email(self, email):
-        username = a.find_user_by_email(i.email)
-        
-        if username:
-            # account exists
-            key = get_user_root() + username
-            return self.site.store.get_user_details(key)
-        else:
-            store = self.site.store.store
-            rows = store.query(type="pending-account", name="email", value=i.email, include_docs=True)
-            if rows:
-                return rows[0]['doc']
-        
-    def _find_account_by_username(self, username):
-        key = get_user_root() + username
-        details = self.site.store.get_user_details(key)
-
-        if details:
-            # Account exists
-            return details
-        else:
-            # Acccount does not exist. see if there is any pending-account.
-            return self.site.store.store.get("account/" + username)        
-
+        email_doc = {
+            "_key": email_key,
+            "type": "account-email",
+            "username": username
+        }
+        store.put_many([account_doc, email_doc])
+    
     def activate(self, username):
         store = self.site.store.store
-        
-        doc = store.get("account/" + username)
+        account_key = "account/" + username
+
+        doc = store.get(account_key)
         if doc:
             logger.info("activated account: %s", username)
-            self.register1(doc['username'], doc['email'], doc['password'], doc['data'])
-            return "ok"
-        
-        key = get_user_root() + username
-        details = self.site.store.get_user_details(key)
-        
-        if details:
-            self.update_user_details(username, verified=True)
-            logger.info("Marked account as verified: %s", username)
+            
+            # update the status
+            doc['status'] = 'active'
+            store.put(account_key, doc)
+            
+            self._create_profile(username, doc['data'])
             return "ok"
         else:
-            logger.error("account activation failed: %s", username)
-            return "account_not_found" 
+            return "account_not_found"
+            
+    def _create_profile(self, username, data):
+        key = get_user_root() + username
+        
+        if self.site.get(key):
+            logger.warn("profile already created: %s", key)
+        
+        web.ctx.disable_permission_check = True
+
+        user_doc = web.storage({"key": key, "type": {"key": "/type/user"}})
+        user_doc.update(data)
+
+        q = make_query(user_doc)
+        self.site.save_many(q, author=user_doc, action='new-account', comment="Created new account.")
+
+    def login(self, username, password):
+        """Returns "ok" on success and an error code on failure.
+
+        Error code can be one of:
+            * account_bad_password
+            * account_not_found
+            * account_not_verified
+            * account_not_active
+        """
+        if username == 'admin':
+            self.assert_trusted_machine()
+
+        doc = self.site.store.store.get("account/" + username)
+        return self._verify_login(doc, password)
+
+    def _verify_login(self, doc, password):
+        if not doc:
+            return "account_not_found"
+
+        if not self.verify_password(password, doc['enc_password']):
+            return "account_bad_password"
+        elif doc.get("status") == "pending":
+            return "account_not_verified"
+        else:
+            return "ok"
+    
+    def update(self, username, **kw):
+        account_key = "account/" + username
+        store = self.site.store.store
+        
+        account = store.get(account_key)
+        if not account:
+            return "account_not_found"
+        
+        docs = []
+        if 'email' in kw and kw['email'] != account['email']:
+            email_doc = store.get("account-email/" + account['email'])
+            email_doc['_delete'] = True
+            docs.append(email_doc)
+            
+            new_email_doc = {
+                "_key": "account-email/" + kw['email'],
+                "username": username
+            }
+            docs.append(new_email_doc)
+        
+        if "password" in kw:
+            raw_password = kw.pop("password")
+            kw['enc_password'] = self.generate_hash(raw_password)
+        
+        account.update(kw)
+        docs.append(account)
+        store.put_many(docs)
+        return "ok"
+    
+    def find_account(self, email=None, username=None):
+        store = self.site.store.store
+        
+        if email:
+            rows = store.query(type="account", name="email", value=email, include_docs=True)
+            return rows and rows[0]['doc'] or None
+        elif username:
+            account_key = "account/" + username
+            return store.get(account_key)
+    
+    def set_auth_token(self, user_key):
+        t = datetime.datetime(*time.gmtime()[:6]).isoformat()
+        text = "%s,%s" % (user_key, t)
+        text += "," + self._generate_salted_hash(self.secret_key, text)
+        web.ctx.infobase_auth_token = text
+
+    #### Utilities
+    
+    def _generate_salted_hash(self, key, text, salt=None):
+        salt = salt or hmac.HMAC(key, str(random.random())).hexdigest()[:5]
+        hash = hmac.HMAC(key, web.utf8(salt) + web.utf8(text)).hexdigest()
+        return '%s$%s' % (salt, hash)
+        
+    def _check_salted_hash(self, key, text, salted_hash):
+        salt, hash = salted_hash.split('$', 1)
+        return self._generate_salted_hash(key, text, salt) == salted_hash
+
+    def checkpassword(self, username, raw_password):
+        details = self.site.store.get_user_details(username)
+        if details is None or details.get('active', True) == False:
+            return False
+        else:
+            return self._check_salted_hash(self.secret_key, raw_password, details.password)
+            
+    def verify_password(self, raw_password, enc_password):
+        """Verifies if the raw_password and encrypted password match."""
+        return self._check_salted_hash(self.secret_key, raw_password, enc_password)
+        
+    def generate_hash(self, raw_password):
+        return self._generate_salted_hash(self.secret_key, raw_password)
+
+    #### Lagacy
+    
+    def find_user_by_email(self, email):
+        """Returns key of the user with given email."""
+        account = self.find_account(email=email)
+        if account:
+            return get_user_root() + account['_key'].split("/")[-1]
+    
+    def get_user(self):
+        """Returns the current user from the session."""
+        #@@ TODO: call assert_trusted_machine when user is admin.
+        auth_token = web.ctx.get('infobase_auth_token')
+        if auth_token:
+            try:
+                user_key, login_time, digest = auth_token.split(',')
+            except ValueError:
+                return
+            if self._check_salted_hash(self.secret_key, user_key + "," + login_time, digest):
+                return self.site._get_thing(user_key)
+    
+    #### Old, may be unused        
 
     def register1(self, username, email, enc_password, data, ip=None, timestamp=None):
         ip = ip or web.ctx.ip
@@ -183,7 +286,7 @@ class AccountManager:
         self.set_auth_token(key)
         return username
 
-    def update(self, username, **kw):
+    def _update(self, username, **kw):
         key = get_user_root() + username
         details = self.site.store.get_user_details(key)
         
@@ -278,9 +381,6 @@ class AccountManager:
         text = details.password + '$' + timestamp
         return username, timestamp + '$' + self._generate_salted_hash(self.secret_key, text)
     
-    def find_user_by_email(self, email):
-        return self.site.store.find_user(email)
-
     def reset_password(self, username, code, password):
         self.check_reset_code(username, code)
         enc_password = self._generate_salted_hash(self.secret_key, password)
@@ -304,86 +404,3 @@ class AccountManager:
         
         if not self._check_salted_hash(self.secret_key, text, code):
             raise common.BadData(message="Invaid password reset code")
-        
-    def login(self, username, password):
-        """Returns "ok" on success and an error code on failure.
-        
-        Error code can be one of:
-            * account_bad_password
-            * account_not_found
-            * account_not_verified
-            * account_not_active
-        """
-        if username == 'admin':
-            self.assert_trusted_machine()
-            
-        key = get_user_root() + username
-        details = self.site.store.get_user_details(key)
-        
-        if details:
-            # Account exists
-            return self._login_account(details, password)
-        else:
-            # Acccount does not exist. 
-            # If there is a pending-account and the password match, return not-verified.
-            doc = self.site.store.store.get("account/" + username)
-            return self._login_pending_account(doc, password)
-    
-    def _login_account(self, details, password):
-        if "active" in details and details['active'] != True:
-            return "account_not_active"
-            
-        matched = self.verify_password(password, details["password"])
-        
-        if not matched:
-            return "account_bad_password"
-        elif not details.get("verified"):
-            return "account_not_verified"
-        else:
-            return "ok"
-            
-    def _login_pending_account(self, doc, password):
-        if not doc:
-            return "account_not_found"
-        elif doc.get("type") == "pending-account" and self.verify_password(password, doc['password']):
-            return "account_not_verified"
-        else:
-            return "account_bad_password"
-    
-    def get_user(self):
-        """Returns the current user from the session."""
-        #@@ TODO: call assert_trusted_machine when user is admin.
-        auth_token = web.ctx.get('infobase_auth_token')
-        if auth_token:
-            try:
-                user_key, login_time, digest = auth_token.split(',')
-            except ValueError:
-                return
-            if self._check_salted_hash(self.secret_key, user_key + "," + login_time, digest):
-                return self.site._get_thing(user_key)
-
-    def set_auth_token(self, user_key):
-        t = datetime.datetime(*time.gmtime()[:6]).isoformat()
-        text = "%s,%s" % (user_key, t)
-        text += "," + self._generate_salted_hash(self.secret_key, text)
-        web.ctx.infobase_auth_token = text
-
-    def _generate_salted_hash(self, key, text, salt=None):
-        salt = salt or hmac.HMAC(key, str(random.random())).hexdigest()[:5]
-        hash = hmac.HMAC(key, web.utf8(salt) + web.utf8(text)).hexdigest()
-        return '%s$%s' % (salt, hash)
-        
-    def _check_salted_hash(self, key, text, salted_hash):
-        salt, hash = salted_hash.split('$', 1)
-        return self._generate_salted_hash(key, text, salt) == salted_hash
-
-    def checkpassword(self, username, raw_password):
-        details = self.site.store.get_user_details(username)
-        if details is None or details.get('active', True) == False:
-            return False
-        else:
-            return self._check_salted_hash(self.secret_key, raw_password, details.password)
-            
-    def verify_password(self, raw_password, enc_password):
-        """Verifies if the raw_password and encrypted password match."""
-        return self._check_salted_hash(self.secret_key, raw_password, enc_password)

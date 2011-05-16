@@ -3,6 +3,8 @@ import web
 
 from infogami.infobase import server, account, bootstrap, common
 
+import pytest
+
 def setup_module(mod):
     utils.setup_site(mod)
 
@@ -20,18 +22,17 @@ class TestAccount:
 
     def test_register(self):
         a = site.account_manager
-        activation_code = a.register(username="joe", email="joe@example.com", password="secret", data={})
-        assert activation_code is not None
+        a.register(username="joe", email="joe@example.com", password="secret", data={})
         
         # login should fail before activation 
-        assert a.login('joe', 'secret') == "not_verified"
-        assert a.login('joe', 'wrong-password') == "failed"
+        assert a.login('joe', 'secret') == "account_not_verified"
+        assert a.login('joe', 'wrong-password') == "account_bad_password"
 
-        a.activate(email='joe@example.com', activation_code=activation_code)
+        a.activate(username="joe")
 
         assert a.login('joe', 'secret') == "ok"
-        assert a.login('joe', 'wrong-password') == "failed"
-    
+        assert a.login('joe', 'wrong-password') == "account_bad_password"
+        
     def test_register_failures(self, _activate=True):
         a = site.account_manager
         a.register(username="joe", email="joe@example.com", password="secret", data={}, _activate=_activate)
@@ -47,7 +48,7 @@ class TestAccount:
             assert False
         except common.BadData, e:
             assert e.d['message'] == "Email is already used: joe@example.com"
-
+            
     def test_register_failures2(self):
         # test registeration without activation + registration with same username/email
         self.test_register_failures(_activate=False)
@@ -58,25 +59,38 @@ class TestAccount:
         return a._generate_salted_hash(a.secret_key, password)
         
     def test_login_account(self):
-        f = site.account_manager._login_account
+        f = site.account_manager._verify_login
         enc_password = self.encrypt("secret")
         
-        assert f(dict(password=enc_password, verified=True, active=True), "secret") == "ok"
-        assert f(dict(password=enc_password, verified=True, active=True), "bad-password") == "failed"
+        assert f(dict(enc_password=enc_password, status="active"), "secret") == "ok"
+        assert f(dict(enc_password=enc_password, status="active"), "bad-password") == "account_bad_password"
 
-        # when active is False, it should return "non_active" without checking the password
-        assert f(dict(password=enc_password, verified=True, active=False), "secret") == "not_active"
-        assert f(dict(password=enc_password, verified=True, active=False), "bad-password") == "not_active"
-        
-        # when verified is False, it should return "not_verified" only if the password is correct
-        assert f(dict(password=enc_password, verified=False, active=True), "secret") == "not_verified"
-        assert f(dict(password=enc_password, verified=False, active=True), "bad-password") == "failed"
+        # pending accounts should return "account_not_verified" if the password is correct
+        assert f(dict(enc_password=enc_password, status="pending"), "secret") == "account_not_verified"
+        assert f(dict(enc_password=enc_password, status="pending"), "bad-password") == "account_bad_password"
 
-    def test_login_pending_account(self):
-        f = site.account_manager._login_pending_account
-        enc_password = self.encrypt("secret")
+    def test_update(self):
+        a = site.account_manager
+        a.register(username="foo", email="foo@example.com", password="secret", data={})
+        a.activate("foo")
+        assert a.login("foo", "secret") == "ok"
+
+        # test update password
+        assert a.update("foo", password="more-secret") == "ok"
+        assert a.login("foo", "secret") == "account_bad_password"
+        assert a.login("foo", "more-secret") == "ok"
+
+        ## test update email
         
-        f(None, "secret") == "not_found"
-        f(dict(type="pending-account", password=enc_password), "secret") == "not_verified"
-        f(dict(type="pending-account", password=enc_password), "bad-password") == "failed"
-        f(dict(), "bad-password") == "not_found"
+        # registering with the same email should fail.
+        assert pytest.raises(common.BadData, a.register, username="bar", email="foo@example.com", password="secret", data={})
+        
+        assert a.update("foo", email="foo2@example.com") == "ok"
+        
+        # someone else should be able to register with the old email
+        a.register(username="bar", email="foo@example.com", password="secret", data={})
+        
+        # and no one should be allowed to register with new email
+        assert pytest.raises(common.BadData, a.register, username="bar", email="foo2@example.com", password="secret", data={})
+        
+        

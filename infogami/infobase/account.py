@@ -104,7 +104,7 @@ class AccountManager:
             doc['status'] = 'active'
             store.put(account_key, doc)
             
-            self._create_profile(username, doc['data'])
+            self._create_profile(username, doc.get('data', {}))
             return "ok"
         else:
             return "account_not_found"
@@ -114,14 +114,15 @@ class AccountManager:
         
         if self.site.get(key):
             logger.warn("profile already created: %s", key)
-        
-        web.ctx.disable_permission_check = True
+            return
+        else:
+            web.ctx.disable_permission_check = True
 
-        user_doc = web.storage({"key": key, "type": {"key": "/type/user"}})
-        user_doc.update(data)
+            user_doc = web.storage({"key": key, "type": {"key": "/type/user"}})
+            user_doc.update(data)
 
-        q = make_query(user_doc)
-        self.site.save_many(q, author=user_doc, action='new-account', comment="Created new account.")
+            q = make_query(user_doc)
+            self.site.save_many(q, author=user_doc, action='new-account', comment="Created new account.")
 
     def login(self, username, password):
         """Returns "ok" on success and an error code on failure.

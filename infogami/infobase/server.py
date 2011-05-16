@@ -471,12 +471,12 @@ class account:
     def GET_get_user_email(self, site):
         i = input('username')
         a = site.get_account_manager()
-        return a.find(username=i.username)
+        return a.find_account(username=i.username)
         
     def GET_find_user_by_email(self, site):
         i = input("email")
         a = site.get_account_manager()
-        account = a.find(email=i.email)
+        account = a.find_account(email=i.email)
         return account and account['key'].split("/")[-1]
 
     def POST_reset_password(self, site):

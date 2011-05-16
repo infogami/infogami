@@ -112,8 +112,22 @@ class TestStore(DBTest):
             {'key': "two", "doc": {"type": "digit", "name": "two", "value": 2, "_key": "two", "_rev": wildcard}},
             {'key': "one", "doc": {"type": "digit", "name": "one", "value": 1, "_key": "one", "_rev": wildcard}},
         ]
-
+        
     def test_indexer(self):
+        s = Store(db)
+        s.put("foo", {"type": "account", "name": "foo", "bot": False, "age": 42, "d": {"x": 1}})
+        rows = db.query("SELECT name, value from store_index")
+        d = dict((row.name, row.value) for row in rows)
+
+        assert d == {
+            "_key": "foo",
+            "name": "foo",
+            "bot": "false",
+            "age": "42",
+            "d.x": "1"
+        }
+
+    def test_indexer2(self):
         s = Store(db)
         s.indexer = BookIndexer()
         

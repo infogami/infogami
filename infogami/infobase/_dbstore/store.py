@@ -74,6 +74,9 @@ class Store:
         return doc
     
     def put(self, key, doc):
+        if doc.get("_delete") == True:
+            return self.delete(key, doc.get("_rev"))
+        
         # conflict check is enabled by default. It can be disabled by passing _rev=None in the document.
         if "_rev" in doc and doc["_rev"] is None:
             enable_conflict_check = False
@@ -186,6 +189,8 @@ class Store:
         ignored = ["type"]
         for name, value in set(self.indexer.index(data)):
             if not name.startswith("_") and name not in ignored:
+                if isinstance(value, bool):
+                    value = str(value).lower()
                 d.append(web.storage(store_id=id, type=type, name=name, value=value))
         if d:
             self.db.multiple_insert('store_index', d)

@@ -168,6 +168,7 @@ class AccountManager:
             
             new_email_doc = {
                 "_key": "account-email/" + kw['email'],
+                "type": "account-email",
                 "username": username
             }
             docs.append(new_email_doc)

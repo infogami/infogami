@@ -498,10 +498,10 @@ class account:
         status = a.login(username, i.old_password)
         if status == "ok":
             kw = {}
-            if new_password:
-                kw['password'] = new_password
-            if email:
-                kw['email'] = email 
+            if i.new_password:
+                kw['password'] = i.new_password
+            if i.email:
+                kw['email'] = i.email 
             a.update(username, **kw)
         else:
             raise common.BadData(code=status, message="Invalid password")

@@ -452,7 +452,10 @@ class account:
         a = site.get_account_manager()
         user = a.get_user()
         if user:
-            return user.format_data()
+            d = user.format_data()
+            username = d['key'].split("/")[-1]
+            d['email'] = a.find_account(username=username)['email']
+            return d
 
     def GET_get_reset_code(self, site):
         # TODO: remove this

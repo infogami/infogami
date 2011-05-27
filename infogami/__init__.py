@@ -97,16 +97,29 @@ def install():
         a()
 
 @action
-def shell():
+def shell(args):
     """Interactive Shell"""
-    from code import InteractiveConsole
-    console = InteractiveConsole()
-    console.push("import infogami")
-    console.push("from infogami.utils import delegate")
-    console.push("from infogami.core import db")
-    console.push("from infogami.utils.context import context as ctx")
-    console.push("delegate.fakeload()")
-    console.interact()
+    if not "--ipython" in args:
+        from code import InteractiveConsole
+        console = InteractiveConsole()
+        console.push("import infogami")
+        console.push("from infogami.utils import delegate")
+        console.push("from infogami.core import db")
+        console.push("from infogami.utils.context import context as ctx")
+        console.push("delegate.fakeload()")
+        console.interact()
+    else:
+        """IPython Interactive Shell - IPython must be installed to use."""
+        # remove an argument that confuses ipython
+        sys.argv.pop(sys.argv.index("--ipython"))
+        from IPython.Shell import IPShellEmbed
+        import infogami
+        from infogami.utils import delegate
+        from infogami.core import db
+        from infogami.utils.context import context as ctx
+        delegate.fakeload()
+        ipshell = IPShellEmbed()
+        ipshell()
 
 def run_action(name, args=[]):
     a = find_action(name)

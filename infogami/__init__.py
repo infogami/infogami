@@ -108,6 +108,18 @@ def shell():
     console.push("delegate.fakeload()")
     console.interact()
 
+@action
+def ipython():
+    """IPython Interactive Shell - IPython must be installed to use."""
+    from IPython.Shell import IPShellEmbed
+    import infogami
+    from infogami.utils import delegate
+    from infogami.core import db
+    from infogami.utils.context import context as ctx
+    delegate.fakeload()
+    ipshell = IPShellEmbed()
+    ipshell()
+
 def run_action(name, args=[]):
     a = find_action(name)
     if a:

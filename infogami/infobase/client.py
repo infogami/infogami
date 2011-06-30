@@ -7,9 +7,12 @@ import web
 import socket
 import datetime
 import time
+import logging
 
 from infogami import config
 from infogami.utils import stats
+
+logger = logging.getLogger("infobase.client")
 
 DEBUG = False
 
@@ -149,6 +152,7 @@ class RemoteConnection(Connection):
             stats.end()
         except socket.error:
             stats.end(error=True)
+            logger.error("Unable to connect to infobase server", exc_info=True)
             raise ClientException("503 Service Unavailable", "Unable to connect to infobase server")
 
         cookie = response.getheader('Set-Cookie')

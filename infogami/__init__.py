@@ -97,7 +97,7 @@ def install():
         a()
 
 @action
-def shell(args):
+def shell(*args):
     """Interactive Shell"""
     if not "--ipython" in args:
         from code import InteractiveConsole

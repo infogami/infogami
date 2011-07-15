@@ -141,6 +141,7 @@ class DBSiteStore(common.SiteStore):
         return "".join(process(query))
                     
     def save_many(self, docs, timestamp, comment, data, ip, author, action=None):
+        docs = list(docs)
         action = action or "bulk_update"
         logger.debug("saving %d docs - %s", len(docs), dict(timestamp=timestamp, comment=comment, data=data, ip=ip, author=author, action=action))
 

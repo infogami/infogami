@@ -7,5 +7,4 @@ db_parameters:
 
 plugins:
     - links
-    - wikitemplates
     - api

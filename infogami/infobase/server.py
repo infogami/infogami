@@ -591,7 +591,15 @@ def request(path, method, data):
         # hack to make cache work for local infobase connections
         cache.loadhook()
 
-        for pattern, classname in web.group(app.mapping, 2):
+        mapping = app.mapping
+
+        # Before web.py<0.36, the mapping is a list and need to be grouped. 
+        # From web.py 0.36 onwards, the mapping is already grouped.
+        # Checking the type to see if we need to group them here.
+        if mapping and not isinstance(mapping[0], (list, tuple)):
+            mapping = web.group(mapping, 2)
+
+        for pattern, classname in mapping:
             m = web.re_compile('^' + pattern + '$').match(path)
             if m:
                 args = m.groups()

@@ -121,6 +121,14 @@ def shell(*args):
         ipshell = IPShellEmbed()
         ipshell()
 
+@action
+def runscript(filename, *args):
+    """Executes given script after setting up the plugins.
+    """
+    sys.argv = [filename] + list(args)
+    g = {"__name__": "__main__"}
+    execfile(filename, g, g)
+
 def run_action(name, args=[]):
     a = find_action(name)
     if a:

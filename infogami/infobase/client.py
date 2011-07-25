@@ -688,8 +688,9 @@ def create_thing(site, key, data, revision=None):
         # just for extra safety
         print >> web.debug, 'ERROR:', str(e)
         type = None
-
-    return _thing_class_registry.get(type, Thing)(site, key, data, revision)
+        
+    klass = _thing_class_registry.get(type) or _thing_class_registry.get(None)
+    return klass(site, key, data, revision)
     
 class Thing:
     def __init__(self, site, key, data=None, revision=None):
@@ -891,6 +892,7 @@ def register_changeset_class(kind, klass):
     _changeset_class_register[kind] = klass
     
 register_changeset_class(None, Changeset)
+register_thing_class(None, Thing)
 register_thing_class('/type/type', Type)
 
 # hooks can be registered by extending the hook class

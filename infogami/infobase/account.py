@@ -100,13 +100,12 @@ class AccountManager:
 
         doc = store.get(account_key)
         if doc:
-            logger.info("activated account: %s", username)
-            
-            # update the status
+            # create profile first
+            self._create_profile(username, doc.get('data', {}))
+            # and then update the status
             doc['status'] = 'active'
             store.put(account_key, doc)
-            
-            self._create_profile(username, doc.get('data', {}))
+            logger.info("activated account: %s", username)
             return "ok"
         else:
             return "account_not_found"

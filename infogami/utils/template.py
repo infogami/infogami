@@ -10,7 +10,7 @@ template from multiple template sources and error handling.
 """
 import web
 import os
-
+import time
 import storage
 
 # There are some backward-incompatible changes in web.py 0.34 which makes Infogami fail. 
@@ -46,43 +46,43 @@ class LazyTemplate:
         
     def __repr__(self):
         return "<LazyTemplate: %s>" % repr(self.name)
-
+        
 class DiskTemplateSource(web.storage):
     """Template source of templates on disk.
     Supports loading of templates from a search path instead of single dir.
     """
     def load_templates(self, path, lazy=False):
-        def get_template(render, name):
-            tokens = name.split(os.path.sep)
-            render = getattr(render, name)
-            render.filepath = '%s/%s.html' % (path, name)
-            return render
-            
-        def set_template(render, name):
-            t = get_template(render, name)
-            # disable caching in debug mode
-            if not web.config.debug:
-                self[name] = t
-            return t
-            
-        render = web.template.render(path)
         # assuming all templates have .html extension
         names = [web.rstrips(p, '.html') for p in find(path) if p.endswith('.html')]
         for name in names:
+            filepath = path + '/' + name + '.html'
             if lazy:
-                def load(render=render, name=name):
-                    return set_template(render, name)
-                    
-                self[name] = LazyTemplate(load, name=path + '/' + name, filepath=path + '/' + name + '.html')
+                def load(render=render, name=name, filepath=filepath):
+                    self[name] = self.get_template(filepath)
+                    return self[name]
+                self[name] = LazyTemplate(load, name=name, filepath=filepath)
             else:
-                self[name] = get_template(render, name)
-            
+                self[name] = self.get_template(filepath)
+                            
+    def get_template(self, filepath):
+        mtime = time.time()
+        t = web.template.frender(filepath)
+        t.mtime = mtime
+        t.filepath = filepath
+        return t
+        
+    def is_template_modified(self, t):
+        return os.path.exists(t.filepath) and os.stat(t.filepath).st_mtime > t.mtime
+        
     def __getitem__(self, name):
-        value = dict.__getitem__(self, name)
-        if isinstance(value, LazyTemplate):
-            value = value.func()
+        t = dict.__getitem__(self, name)
+        if isinstance(t, LazyTemplate):
+            t = t.func()
+        elif web.config.debug == True and self.is_template_modified(t):
+            t = self.get_template(t.filepath)
+            self[name] = t
             
-        return value
+        return t
            
     def __repr__(self):
         return "<DiskTemplateSource at %d>" % id(self)

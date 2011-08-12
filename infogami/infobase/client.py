@@ -137,7 +137,7 @@ class RemoteConnection(Connection):
         if self.auth_token:
             import Cookie
             c = Cookie.SimpleCookie()
-            c['infobase_auth_token'] = self.auth_token
+            c['infobase_auth_token'] = urllib.quote(self.auth_token)
             cookie = c.output(header='').strip()
             headers = {'Cookie': cookie}
         else:
@@ -161,7 +161,11 @@ class RemoteConnection(Connection):
             c = Cookie.SimpleCookie()
             c.load(cookie)
             if 'infobase_auth_token' in c:
-                self.set_auth_token(c['infobase_auth_token'].value)                
+                auth_token = c['infobase_auth_token'].value
+                # The auth token will be in urlquoted form, unquote it before use.
+                # Otherwise, it will be quoted twice this value is set as cookie.
+                auth_token = auth_token and urllib.unquote(auth_token)
+                self.set_auth_token(auth_token)
                 
         if web.config.debug:
             b = time.time()

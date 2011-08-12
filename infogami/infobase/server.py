@@ -642,7 +642,9 @@ def load_config(config_file):
     # load config
     import yaml
     runtime_config = yaml.load(open(config_file)) or {}
-
+    update_config(runtime_config)
+    
+def update_config(runtime_config):
     # update config
     for k, v in runtime_config.items():
         setattr(config, k, v)

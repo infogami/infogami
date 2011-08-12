@@ -58,6 +58,13 @@ class page:
     def GET(self, *a):
         return web.nomethod(web.ctx.method)
         
+@web.memoize
+def get_sorted_paths():
+    """Sort path such that wildcards go at the end.
+    This is called only once. After that the value is memoized.
+    """
+    return sorted(pages, key=lambda path: ('.*' in path, path))
+        
 def find_page():
     path = web.ctx.path
     encoding = web.ctx.get('encoding')
@@ -70,12 +77,8 @@ def find_page():
     if encoding:
         path = web.rstrips(path, "." + encoding)
         
-    def sort_paths(paths):
-        """Sort path such that wildcards go at the end."""
-        return sorted(paths, key=lambda path: ('.*' in path, path))
-        
-    for p in sort_paths(pages):
-        m = re.match('^' + p + '$', path)
+    for p in get_sorted_paths():
+        m = web.re_compile('^' + p + '$').match(path)
         if m:
             cls = pages[p].get(encoding) or pages[p].get(None)
             args = m.groups()

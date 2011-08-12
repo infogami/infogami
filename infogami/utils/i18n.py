@@ -126,12 +126,16 @@ def i18n_loadhook():
         
     def parse_lang_cookie():
         """Parses HTTP_LANG cookie."""
-        cookies = web.cookies()
-        return cookies.get('HTTP_LANG')
+        # Quick check to avoid making cookies call
+        if "HTTP_LANG" in web.ctx.get("HTTP_COOKIE", ""):
+            cookies = web.cookies()
+            return cookies.get('HTTP_LANG')
 
     def parse_query_string():
-        i = web.input(lang=None, _method="GET")
-        return i.lang
+        # Quick check to avoid parsing query string
+        if "lang=" in web.ctx.get("QUERY_STRING", ""):
+            i = web.input(lang=None, _method="GET")
+            return i.lang
     
     try:    
         web.ctx.lang = parse_query_string() or parse_lang_cookie() or parse_lang_header() or ''

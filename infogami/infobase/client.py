@@ -308,7 +308,9 @@ class Site:
                 return None        
         return create_thing(self, key, data, revision=revision)
 
-    def get_many(self, keys):
+    def get_many(self, keys, raw=False):
+        """When raw=True, the raw data is returned instead of objects.
+        """
         if not keys:
             return []
         
@@ -328,9 +330,12 @@ class Site:
             #@@ what if key is not there?
             if key in result:
                 data = result[key]
-                data = web.storage(common.parse_query(data))
-                self._cache[key, None] = data
-                things.append(create_thing(self, key, self._process_dict(data)))
+                if raw:
+                    things.append(data)
+                else:
+                    data = web.storage(common.parse_query(data))
+                    self._cache[key, None] = data
+                    things.append(create_thing(self, key, self._process_dict(data)))
         return things
         
     def new_key(self, type):

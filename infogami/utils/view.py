@@ -228,8 +228,15 @@ def thingdiff(type, name, v1, v2):
         v1 += [""] * (len(v2) - len(v1))
         v2 += [""] * (len(v1) - len(v2))
         return "".join(thingdiff(type, name, a, b) for a, b in zip(v1, v2))
+        
+    def strip(v):
+        if isinstance(v, basestring):
+            return v.strip()
+        else:
+            return v
     
-    if v1 == v2:
+    # ignore white-space changes and treat empty dictionaries as nothing
+    if v1 == v2 or (not strip(v1) and not strip(v2)):
         return ""
     else:
         return unicode(render.xdiff(thingify(type, v1), thingify(type, v2), name))

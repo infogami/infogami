@@ -715,7 +715,17 @@ class Thing:
         # no back-references for embeddable objects
         if self.key is None:
             self._backreferences = {}
-        
+            
+    def __hash__(self):
+        if self.key:
+            return hash(self.key)
+        else:
+            d = self.dict()
+            # dict is not hashable and converting it to tuple of items isn't #
+            # enough as values might again be dictionaries. The simplest
+            # solution seems to be converting it to JSON.
+            return hash(simplejson.dumps(d, sort_keys=True))
+            
     def _getdata(self):
         if self._data is None:
             self._data = self._site._load(self.key, self._revision)

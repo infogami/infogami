@@ -68,6 +68,10 @@ class page:
 class view:
     __metaclass__ = metaview
     suffix = None
+    types = None
+
+    def is_enabled_for(self, type_key):
+        return self.types is None or type_key in self.types
 
     def delegate(self):
         method = web.ctx.method.upper()
@@ -76,10 +80,10 @@ class view:
         if handler:
             key = web.rstrips(web.ctx.path, "/%s" % suffix)
             page = web.ctx.site.get(key)
-            if not page:
-                raise app.notfound(path = key)
-            else:
+            if page and self.is_enabled_for(page.type.key):
                 return handler(page)
+            else:
+                raise app.notfound(path = key)
         else:
             raise web.nomethod(web.ctx.method)
         

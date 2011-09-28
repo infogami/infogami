@@ -14,6 +14,7 @@ app = web.application(urls, globals(), autoreload=False)
 # Whenever any class extends from page/mode, an entry is added to pages/modes.
 modes = {}
 pages = {}
+views = {}
 
 encodings = set()
 media_types = {"application/json": "json"}
@@ -29,7 +30,7 @@ class metapage(type):
         pages.setdefault(path, {})
         pages[path][enc] = self
 
-class metamode (type):
+class metamode(type):
     def __init__(self, *a, **kw):
         type.__init__(self, *a, **kw)
 
@@ -39,6 +40,13 @@ class metamode (type):
         encodings.add(enc)
         modes.setdefault(name, {})
         modes[name][enc] = self
+
+class metaview(type):
+    def __init__(self, *a, **kw):
+        type.__init__(self, *a, **kw)
+
+        suffix = getattr(self, 'suffix', self.__name__)
+        views[suffix] = self
 
 class mode:
     __metaclass__ = metamode
@@ -57,6 +65,24 @@ class page:
         
     def GET(self, *a):
         return web.nomethod(web.ctx.method)
+
+class view:
+    __metaclass__ = metaview
+    suffix = None
+
+    def delegate(self):
+        method = web.ctx.method.upper()
+        handler = getattr(self, method, None)
+        suffix = self.suffix or self.__class__.__name__
+        if handler:
+            key = web.rstrips(web.ctx.path, "/%s" % suffix)
+            page = web.ctx.site.get(key)
+            if not page:
+                raise web.notfound()
+            else:
+                return handler(page)
+        else:
+            raise web.nomethod(web.ctx.method)
         
 @web.memoize
 def get_sorted_paths():
@@ -117,6 +143,11 @@ def find_mode():
     else:
         return None, None
 
+def find_view():
+    path = web.ctx.path
+    suffix = path.rsplit("/", 1)[-1]
+    return views.get(suffix)
+        
 # mode and page are just base classes.
 del modes['mode']
 del pages['/page']
@@ -131,11 +162,17 @@ def delegate():
 
     # look for special pages
     cls, args = find_page()
-    if cls is None:
+
+    if cls is None: # Check for view handlers
+        cls, args = find_view(), []
+
+    if cls is None: # Check for mode handlers
         cls, args = find_mode()
         
     if cls is None:
         raise web.seeother(web.changequery(m=None))
+    elif hasattr(cls, "delegate"):
+        return cls().delegate()
     elif not hasattr(cls, method):
         raise web.nomethod(method)
     else:

@@ -10,7 +10,7 @@ import features
 
 from app import *
 
-import view
+from view import render_site, public
 import i18n
 
 def create_site():
@@ -84,7 +84,7 @@ def layout_processor(handler):
     if hasattr(out, 'rawtext'):
         html = out.rawtext
     else:
-        html = view.render_site(config.site, out)
+        html = render_site(config.site, out)
         
     # cleanup references to avoid memory leaks
     web.ctx.site._cache.clear()
@@ -103,7 +103,7 @@ class RawText(web.storage):
         web.storage.__init__(self, rawtext=text, **kw)
 
 plugins = []
-@view.public
+@public
 def get_plugins():
     """Return names of all the plugins."""
     return [p.name for p in plugins]

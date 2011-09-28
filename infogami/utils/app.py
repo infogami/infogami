@@ -1,4 +1,3 @@
-
 """Infogami application.
 """
 import web
@@ -78,7 +77,7 @@ class view:
             key = web.rstrips(web.ctx.path, "/%s" % suffix)
             page = web.ctx.site.get(key)
             if not page:
-                raise web.notfound()
+                raise app.notfound(path = key)
             else:
                 return handler(page)
         else:
@@ -217,7 +216,7 @@ def path_processor(handler):
             # that causes infinite redicts when web.ctx.path startswith "//" 
             raise web.seeother(web.ctx.home + npath + web.ctx.query)
         else:
-            raise web.notfound()
+            raise app.notfound()
     else:
         return handler()
 

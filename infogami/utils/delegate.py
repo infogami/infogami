@@ -94,9 +94,15 @@ def layout_processor(handler):
 
     return html
 
+def notfound(path = None):
+    path = path or web.ctx.path
+    html = template.render_template("notfound", path)
+    return web.notfound(render_site(config.site, html))
+
 app.add_processor(web.loadhook(initialize_context))
 app.add_processor(layout_processor)
 app.add_processor(web.loadhook(features.loadhook))
+app.notfound = notfound
 
 class RawText(web.storage):
     def __init__(self, text, **kw):

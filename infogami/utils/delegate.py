@@ -94,9 +94,9 @@ def layout_processor(handler):
 
     return html
 
-def notfound(path = None):
+def notfound(path = None, create = True):
     path = path or web.ctx.path
-    html = template.render_template("notfound", path)
+    html = template.render_template("notfound", path, create = create)
     return web.notfound(render_site(config.site, html))
 
 app.add_processor(web.loadhook(initialize_context))

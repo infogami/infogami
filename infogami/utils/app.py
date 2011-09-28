@@ -83,7 +83,7 @@ class view:
             if page and self.is_enabled_for(page.type.key):
                 return handler(page)
             else:
-                raise app.notfound(path = key)
+                raise app.notfound(create = False)
         else:
             raise web.nomethod(web.ctx.method)
         

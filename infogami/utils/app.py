@@ -1,5 +1,7 @@
 """Infogami application.
 """
+import collections
+
 import web
 import os
 import re
@@ -13,7 +15,7 @@ app = web.application(urls, globals(), autoreload=False)
 # Whenever any class extends from page/mode, an entry is added to pages/modes.
 modes = {}
 pages = {}
-views = {}
+views = collections.defaultdict(dict)
 
 encodings = set()
 media_types = {"application/json": "json"}
@@ -45,7 +47,11 @@ class metaview(type):
         type.__init__(self, *a, **kw)
 
         suffix = getattr(self, 'suffix', self.__name__)
-        views[suffix] = self
+        if self.types is None:
+            views[suffix][None] = self
+        else:
+            for t in self.types:
+                views[suffix][t] = self
 
 class mode:
     __metaclass__ = metamode
@@ -70,20 +76,11 @@ class view:
     suffix = None
     types = None
 
-    def is_enabled_for(self, type_key):
-        return self.types is None or type_key in self.types
-
-    def delegate(self):
+    def delegate(self, page):
         method = web.ctx.method.upper()
-        handler = getattr(self, method, None)
-        suffix = self.suffix or self.__class__.__name__
-        if handler:
-            key = web.rstrips(web.ctx.path, "/%s" % suffix)
-            page = web.ctx.site.get(key)
-            if page and self.is_enabled_for(page.type.key):
-                return handler(page)
-            else:
-                raise app.notfound(create = False)
+        f = getattr(self, method, None)
+        if f:
+            return f(page)
         else:
             raise web.nomethod(web.ctx.method)
         
@@ -148,9 +145,19 @@ def find_mode():
 
 def find_view():
     path = web.ctx.path
-    suffix = path.rsplit("/", 1)[-1]
-    return views.get(suffix)
-        
+    key, suffix = path.rsplit("/", 1)
+    if suffix in views:
+        page = web.ctx.site.get(key)
+        d = views[suffix]
+        if not page:
+            raise app.notfound(create = False)
+        type_key = page.type.key
+        handler = d.get(type_key) or d.get(None)
+        if not handler:
+            raise app.notfound(create = False)
+        return handler, [page]
+    return None, None
+
 # mode and page are just base classes.
 del modes['mode']
 del pages['/page']
@@ -167,7 +174,7 @@ def delegate():
     cls, args = find_page()
 
     if cls is None: # Check for view handlers
-        cls, args = find_view(), []
+        cls, args = find_view()
 
     if cls is None: # Check for mode handlers
         cls, args = find_mode()
@@ -175,7 +182,7 @@ def delegate():
     if cls is None:
         raise web.seeother(web.changequery(m=None))
     elif hasattr(cls, "delegate"):
-        return cls().delegate()
+        return cls().delegate(*args)
     elif not hasattr(cls, method):
         raise web.nomethod(method)
     else:

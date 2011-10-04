@@ -1,12 +1,14 @@
 """Infogami application.
 """
 import collections
-
-import web
 import os
 import re
+import simplejson
+
+import web
 
 import flash
+import delegate as infogami_delegate
 
 urls = ("/.*", "item")
 app = web.application(urls, globals(), autoreload=False)
@@ -76,14 +78,26 @@ class view:
     suffix = None
     types = None
 
+    def emit_json(self, data):
+        web.header('Content-Type', 'application/json')
+        return infogami_delegate.RawText(simplejson.dumps(data))
+    
     def delegate(self, page):
+        converters = {"json" : self.emit_json}
         method = web.ctx.method.upper()
         f = getattr(self, method, None)
+        encoding = find_encoding()
+        if encoding and hasattr(self, "%s_%s" % (method,encoding.lower())):
+            f = getattr(self, "%s_%s" % (method, encoding.lower()))
         if f:
-            return f(page)
+            ret = f(page)
+            converter = converters.get(encoding)
+            if converter:
+                ret = converter(ret)
+            return ret
         else:
             raise web.nomethod(web.ctx.method)
-        
+
 @web.memoize
 def get_sorted_paths():
     """Sort path such that wildcards go at the end.
@@ -144,9 +158,13 @@ def find_mode():
         return None, None
 
 def find_view():
+    def normalize_suffix(s):
+        if "." in s:
+            return s.split(".")[0]
     path = web.ctx.path
     key, suffix = path.rsplit("/", 1)
-    if suffix in views:
+    suffix = normalize_suffix(suffix) # Review this!
+    if key and suffix in views:
         page = web.ctx.site.get(key)
         d = views[suffix]
         if not page:
@@ -169,16 +187,12 @@ def delegate():
     """Delegate the request to appropriate class."""
     path = web.ctx.path
     method = web.ctx.method
-
     # look for special pages
     cls, args = find_page()
-
     if cls is None: # Check for view handlers
         cls, args = find_view()
-
     if cls is None: # Check for mode handlers
         cls, args = find_mode()
-        
     if cls is None:
         raise web.seeother(web.changequery(m=None))
     elif hasattr(cls, "delegate"):

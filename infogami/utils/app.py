@@ -49,11 +49,14 @@ class metaview(type):
         type.__init__(self, *a, **kw)
 
         suffix = getattr(self, 'suffix', self.__name__)
-        if self.types is None:
-            views[suffix][None] = self
-        else:
-            for t in self.types:
-                views[suffix][t] = self
+
+        if suffix:
+            if self.types is None:
+                views[suffix][None] = self
+            else:
+                for t in self.types:
+                    views[suffix][t] = self
+
 
 class mode:
     __metaclass__ = metamode

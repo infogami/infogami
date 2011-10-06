@@ -164,6 +164,8 @@ def find_view():
     def normalize_suffix(s):
         if "." in s:
             return s.split(".")[0]
+        else:
+            return s
     path = web.ctx.path
     key, suffix = path.rsplit("/", 1)
     suffix = normalize_suffix(suffix) # Review this!

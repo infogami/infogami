@@ -59,6 +59,8 @@ def connect(type, **params):
     raise Exception('Invalid connection type: ' + type)
                 
 class Connection:
+    response_type = "json"
+    
     def __init__(self):
         self.auth_token = None
         
@@ -68,7 +70,7 @@ class Connection:
     def get_auth_token(self):
         return self.auth_token
 
-    def request(self, path, method='GET', data=None):
+    def request(self, sitename, path, method='GET', data=None):
         raise NotImplementedError
         
     def handle_error(self, status, error):
@@ -208,10 +210,13 @@ class Site:
         
         self.store = Store(conn, sitename)
         self.seq = Sequence(conn, sitename)
-        
+                
     def _request(self, path, method='GET', data=None):
         out = self._conn.request(self.name, path, method, data)
-        out = simplejson.loads(out)
+        
+        # Allow connection to return dict
+        if self._conn.response_type != "dict":
+            out = simplejson.loads(out)
         return storify(out)
         
     def _get(self, key, revision=None):

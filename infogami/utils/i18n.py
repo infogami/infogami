@@ -133,7 +133,7 @@ def i18n_loadhook():
 
     def parse_query_string():
         # Quick check to avoid parsing query string
-        if "lang=" in web.ctx.get("QUERY_STRING", ""):
+        if "lang=" in web.ctx.env.get("QUERY_STRING", ""):
             i = web.input(lang=None, _method="GET")
             return i.lang
     

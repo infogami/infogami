@@ -323,7 +323,7 @@ class Site:
         if len(keys) > 100:
             things = []
             while keys:
-                things += self.get_many(keys[:100])
+                things += self.get_many(keys[:100], raw=raw)
                 keys = keys[100:]
             return things
 

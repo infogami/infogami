@@ -1,8 +1,9 @@
-$def with (path)
+$def with (path, create = True)
 
 $var title: $path
 
 <p>
 $_.page_does_not_exist. 
-<a href="$url(m='edit')">$_.create</a>
+$if create:
+  <a href="$url(m='edit')">$_.create</a>
 </p>

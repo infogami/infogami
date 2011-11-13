@@ -1,11 +1,14 @@
-
 """Infogami application.
 """
-import web
+import collections
 import os
 import re
+import simplejson
+
+import web
 
 import flash
+import delegate as infogami_delegate
 
 urls = ("/.*", "item")
 app = web.application(urls, globals(), autoreload=False)
@@ -14,6 +17,7 @@ app = web.application(urls, globals(), autoreload=False)
 # Whenever any class extends from page/mode, an entry is added to pages/modes.
 modes = {}
 pages = {}
+views = collections.defaultdict(dict)
 
 encodings = set()
 media_types = {"application/json": "json"}
@@ -29,7 +33,7 @@ class metapage(type):
         pages.setdefault(path, {})
         pages[path][enc] = self
 
-class metamode (type):
+class metamode(type):
     def __init__(self, *a, **kw):
         type.__init__(self, *a, **kw)
 
@@ -39,6 +43,20 @@ class metamode (type):
         encodings.add(enc)
         modes.setdefault(name, {})
         modes[name][enc] = self
+
+class metaview(type):
+    def __init__(self, *a, **kw):
+        type.__init__(self, *a, **kw)
+
+        suffix = getattr(self, 'suffix', self.__name__)
+
+        if suffix:
+            if self.types is None:
+                views[suffix][None] = self
+            else:
+                for t in self.types:
+                    views[suffix][t] = self
+
 
 class mode:
     __metaclass__ = metamode
@@ -57,7 +75,32 @@ class page:
         
     def GET(self, *a):
         return web.nomethod(web.ctx.method)
-        
+
+class view:
+    __metaclass__ = metaview
+    suffix = None
+    types = None
+
+    def emit_json(self, data):
+        web.header('Content-Type', 'application/json')
+        return infogami_delegate.RawText(simplejson.dumps(data))
+    
+    def delegate(self, page):
+        converters = {"json" : self.emit_json}
+        method = web.ctx.method.upper()
+        f = getattr(self, method, None)
+        encoding = find_encoding()
+        if encoding and hasattr(self, "%s_%s" % (method,encoding.lower())):
+            f = getattr(self, "%s_%s" % (method, encoding.lower()))
+        if f:
+            ret = f(page)
+            converter = converters.get(encoding)
+            if converter:
+                ret = converter(ret)
+            return ret
+        else:
+            raise web.nomethod(web.ctx.method)
+
 @web.memoize
 def get_sorted_paths():
     """Sort path such that wildcards go at the end.
@@ -117,6 +160,27 @@ def find_mode():
     else:
         return None, None
 
+def find_view():
+    def normalize_suffix(s):
+        if "." in s:
+            return s.split(".")[0]
+        else:
+            return s
+    path = web.ctx.path
+    key, suffix = path.rsplit("/", 1)
+    suffix = normalize_suffix(suffix) # Review this!
+    if key and suffix in views:
+        page = web.ctx.site.get(key)
+        d = views[suffix]
+        if not page:
+            raise app.notfound(create = False)
+        type_key = page.type.key
+        handler = d.get(type_key) or d.get(None)
+        if not handler:
+            raise app.notfound(create = False)
+        return handler, [page]
+    return None, None
+
 # mode and page are just base classes.
 del modes['mode']
 del pages['/page']
@@ -128,14 +192,16 @@ def delegate():
     """Delegate the request to appropriate class."""
     path = web.ctx.path
     method = web.ctx.method
-
     # look for special pages
     cls, args = find_page()
-    if cls is None:
+    if cls is None: # Check for view handlers
+        cls, args = find_view()
+    if cls is None: # Check for mode handlers
         cls, args = find_mode()
-        
     if cls is None:
         raise web.seeother(web.changequery(m=None))
+    elif hasattr(cls, "delegate"):
+        return cls().delegate(*args)
     elif not hasattr(cls, method):
         raise web.nomethod(method)
     else:
@@ -180,7 +246,7 @@ def path_processor(handler):
             # that causes infinite redicts when web.ctx.path startswith "//" 
             raise web.seeother(web.ctx.home + npath + web.ctx.query)
         else:
-            raise web.notfound()
+            raise app.notfound()
     else:
         return handler()
 

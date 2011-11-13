@@ -10,7 +10,7 @@ import features
 
 from app import *
 
-import view
+from view import render_site, public
 import i18n
 
 def create_site():
@@ -84,7 +84,7 @@ def layout_processor(handler):
     if hasattr(out, 'rawtext'):
         html = out.rawtext
     else:
-        html = view.render_site(config.site, out)
+        html = render_site(config.site, out)
         
     # cleanup references to avoid memory leaks
     web.ctx.site._cache.clear()
@@ -94,16 +94,22 @@ def layout_processor(handler):
 
     return html
 
+def notfound(path = None, create = True):
+    path = path or web.ctx.path
+    html = template.render_template("notfound", path, create = create)
+    return web.notfound(render_site(config.site, html))
+
 app.add_processor(web.loadhook(initialize_context))
 app.add_processor(layout_processor)
 app.add_processor(web.loadhook(features.loadhook))
+app.notfound = notfound
 
 class RawText(web.storage):
     def __init__(self, text, **kw):
         web.storage.__init__(self, rawtext=text, **kw)
 
 plugins = []
-@view.public
+@public
 def get_plugins():
     """Return names of all the plugins."""
     return [p.name for p in plugins]

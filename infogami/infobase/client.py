@@ -123,11 +123,14 @@ class RemoteConnection(Connection):
             a = time.time()
             _path = path
             _data = data
+            
+        headers = {}
         
         if data:
             if isinstance(data, dict):
                 data = dict((web.safestr(k), web.safestr(v)) for k, v in data.items())
                 data = urllib.urlencode(data)
+                headers['Content-Type'] = 'application/x-www-form-urlencoded'
             if method == 'GET':
                 path += '?' + data
                 data = None
@@ -141,9 +144,7 @@ class RemoteConnection(Connection):
             c = Cookie.SimpleCookie()
             c['infobase_auth_token'] = urllib.quote(self.auth_token)
             cookie = c.output(header='').strip()
-            headers = {'Cookie': cookie}
-        else:
-            headers = {}
+            headers['Cookie'] = cookie
             
         # pass the remote ip to the infobase server
         headers['X-REMOTE-IP'] = web.ctx.get('ip')

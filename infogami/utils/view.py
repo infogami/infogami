@@ -314,13 +314,15 @@ def movetypes():
         if os.path.exists(path) and os.path.isdir(path):
             files = [os.path.join(path, f) for f in sorted(os.listdir(path)) if f.endswith(extension)]
             for f in files:
-                print >> web.debug, 'moving types from ', f
                 d = readfile(f)
+                print >> web.debug, 'moving types from', f
                 if isinstance(d, list):
                     pages.extend(d)
                 else:
                     pages.append(d)
-    web.ctx.site.save_many(pages, 'install')
+
+    pagedict = dict((p['key'], p) for p in pages)
+    web.ctx.site.save_many(pagedict.values(), 'install')
 
 @infogami.install_hook
 def movepages():

@@ -338,8 +338,11 @@ def move(dir, extension, recursive=False, readfunc=None):
         if os.path.exists(path) and os.path.isdir(path):
             files = [os.path.join(path, f) for f in os.listdir(path) if f.endswith(extension)]
             for f in files:
-                type = readfunc(open(f).read())
-                pages.append(type)
+                page = readfunc(open(f).read())
+                if isinstance(page, list):
+                    pages.extend(page) 
+                else:
+                    pages.append(page)
 
     delegate.admin_login()
     result = web.ctx.site.save_many(pages, "install")

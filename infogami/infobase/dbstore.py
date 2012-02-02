@@ -242,7 +242,7 @@ class DBSiteStore(common.SiteStore):
                 c.value = metadata.id
             if c.op == '~':
                 op = Literal('LIKE')
-                c.value = c.value.replace('*', '%')
+                c.value = c.value.replace('*', '%').replace('_', r'\_')
             else:
                 op = Literal(c.op)
                 

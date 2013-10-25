@@ -538,15 +538,15 @@ class Store:
             [{"key": "a"}, {"key": "b"}, {"key": "c"}]
         """
         if limit == -1:
-            return self.unlimited_query(type, name, value, offset=offset)
+            return self.unlimited_query(type, name, value, offset=offset, include_docs=include_docs)
             
         params = dict(type=type, name=name, value=value, limit=limit, offset=offset, include_docs=str(include_docs))
         params = dict((k, v) for k, v in params.items() if v is not None)
         return self._request("_query", method="GET", data=params)
         
-    def unlimited_query(self, type, name, value, offset=0):
+    def unlimited_query(self, type, name, value, offset=0, include_docs=False):
         while True:
-            result = self.query(type, name, value, limit=1000, offset=offset)
+            result = self.query(type, name, value, limit=1000, offset=offset, include_docs=include_docs)
             if not result:
                 break
                 

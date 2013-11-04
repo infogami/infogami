@@ -141,7 +141,8 @@ def _make_plugin_module(modname):
     This works like _make_plugin, but takes a module name instead of plugin name.
     """
     m = __import__(modname, globals(), locals(), modname.split("."))
-    return web.storage(name=modname, path=m.__file__, module=modname)
+    path = os.path.dirname(m.__file__)
+    return web.storage(name=modname, path=path, module=modname)
 
 def _list_plugins(dir):
     if os.path.isdir(dir):

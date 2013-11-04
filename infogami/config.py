@@ -18,6 +18,7 @@ infobase_host = None
 site = "infogami.org"
 
 plugins = ['links']
+plugin_modules = []
 
 plugin_path = ['infogami.plugins']
 

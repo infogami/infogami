@@ -135,6 +135,14 @@ def _make_plugin(name):
             
     return web.storage(name=name, path=path, module=module)
 
+def _make_plugin_module(modname):
+    """Makes a plugin object from module name.
+
+    This works like _make_plugin, but takes a module name instead of plugin name.
+    """
+    m = __import__(modname, globals(), locals(), modname.split("."))
+    return web.storage(name=modname, path=m.__file__, module=modname)
+
 def _list_plugins(dir):
     if os.path.isdir(dir):
         return [_make_plugin(name) for name in os.listdir(dir) if os.path.isdir(dir + '/' + name)]
@@ -158,6 +166,9 @@ def _load():
             m = __import__(p)
             root = os.path.dirname(m)
             plugins += _list_plugins(root)
+
+    if config.plugin_modules is not None:
+        plugins += [_make_plugin_module(name) for name in config.plugin_modules]
             
     for plugin in plugins:
         template.load_templates(plugin.path, lazy=True)

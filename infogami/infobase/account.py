@@ -63,7 +63,7 @@ class AccountManager:
         store = self.site.store.store
         
         account_key = "account/" + username
-        email_key = "account-email/" + email
+        email_key = "account-email/" + email.lower()
         
         if store.get(account_key):
             raise common.BadData(message="User already exists: %s" % username)

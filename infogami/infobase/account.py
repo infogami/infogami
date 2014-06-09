@@ -161,12 +161,12 @@ class AccountManager:
         
         docs = []
         if 'email' in kw and kw['email'] != account['email']:
-            email_doc = store.get("account-email/" + account['email'])
+            email_doc = store.get("account-email/" + account['email'].lower())
             email_doc['_delete'] = True
             docs.append(email_doc)
             
             new_email_doc = {
-                "_key": "account-email/" + kw['email'],
+                "_key": "account-email/" + kw['email'].lower(),
                 "type": "account-email",
                 "username": username
             }

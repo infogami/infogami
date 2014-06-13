@@ -161,9 +161,14 @@ class AccountManager:
         
         docs = []
         if 'email' in kw and kw['email'] != account['email']:
-            email_doc = store.get("account-email/" + account['email'].lower())
-            email_doc['_delete'] = True
-            docs.append(email_doc)
+            # Find the old email doc and delete it.
+            # we are going to create a new doc with the new email.
+            # Note: There'll be only one matching record, but using a
+            # for loop to avoid unexpected errors in case of bad data.
+            old_email_docs = store.query("account-email", 'username', username)
+            for email_doc in old_email_docs:
+                email_doc['_delete'] = True
+                docs.append(email_doc)
             
             new_email_doc = {
                 "_key": "account-email/" + kw['email'].lower(),

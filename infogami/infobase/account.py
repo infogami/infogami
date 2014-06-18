@@ -167,7 +167,7 @@ class AccountManager:
             # for loop to avoid unexpected errors in case of bad data.
             old_email_docs = store.query("account-email", 'username', username)
             for email_doc in old_email_docs:
-                doc = dict(key=email_doc['key'], _delete= True)
+                doc = dict(_key=email_doc['key'], _delete= True)
                 docs.append(doc)
             
             new_email_doc = {

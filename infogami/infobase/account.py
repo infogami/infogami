@@ -61,6 +61,8 @@ class AccountManager:
         """Store account info in the store so that the account can be created after verifying the email.
         """
         store = self.site.store.store
+
+        email = email.strip()
         
         account_key = "account/" + username
         email_key = "account-email/" + email.lower()
@@ -171,7 +173,7 @@ class AccountManager:
                 docs.append(doc)
             
             new_email_doc = {
-                "_key": "account-email/" + kw['email'].lower(),
+                "_key": "account-email/" + kw['email'].lower().strip(),
                 "type": "account-email",
                 "username": username
             }

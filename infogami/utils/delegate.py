@@ -176,7 +176,7 @@ def register_exception():
     for h in exception_hooks:
         h()
         
-def email_excetpions():
+def email_exceptions():
     if config.bugfixer:
         web.emailerrors(config.bugfixer, lambda: None)()
-add_exception_hook(email_excetpions)
+add_exception_hook(email_exceptions)

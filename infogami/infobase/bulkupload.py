@@ -1,5 +1,5 @@
 """
-bulkupload script to upload multiple objects at once. 
+bulkupload script to upload multiple objects at once.
 All the inserts are merged to give better performance.
 """
 import web
@@ -7,6 +7,7 @@ from infobase import TYPES, DATATYPE_REFERENCE
 import datetime
 import re
 import tempfile
+from six import string_types
 
 def sqlin(name, values):
     """
@@ -29,9 +30,9 @@ def sqlin(name, values):
         values = [web.reparam('$v', locals()) for v in values]
         return name + ' IN ('+ sqljoin(values, ", ") + ')'
 
-@web.memoize        
+@web.memoize
 def get_table_columns(table):
-    # Postgres query to get all column names. 
+    # Postgres query to get all column names.
     # Got by runing sqlalchemy with echo=True.
     q = """
     SELECT a.attname,
@@ -49,7 +50,7 @@ def get_table_columns(table):
              AND c.relname = $table AND c.relkind in ('r','v')
     ) AND a.attnum > 0 AND NOT a.attisdropped
     ORDER BY a.attnum;
-    """ 
+    """
     return [r.attname for r in web.query(q, locals())]
 
 def multiple_insert(table, values, seqname=None):
@@ -57,7 +58,7 @@ def multiple_insert(table, values, seqname=None):
     def escape(value):
         if value is None:
             return r'\N'
-        elif isinstance(value, basestring): 
+        elif isinstance(value, string_types):
             value = value.replace('\\', r'\\') # this must be the first one
             value = value.replace('\t', r'\t')
             value = value.replace('\r', r'\r')
@@ -71,7 +72,7 @@ def multiple_insert(table, values, seqname=None):
     def increment_sequence(seqname, n):
         """Increments a sequence by the given amount."""
         d = web.query(
-            "SELECT setval('%s', $n + (SELECT last_value FROM %s), true) + 1 - $n AS START" % (seqname, seqname), 
+            "SELECT setval('%s', $n + (SELECT last_value FROM %s), true) + 1 - $n AS START" % (seqname, seqname),
             locals())
         return d[0].start
 
@@ -158,7 +159,7 @@ class BulkUpload:
     def process_creates(self, query):
         keys = set(self.find_keys(query))
         tobe_created = set(self.find_creates(query))
-        tobe_created = [k for k in tobe_created if k not in key2id] 
+        tobe_created = [k for k in tobe_created if k not in key2id]
 
         # insert things
         d = dict(site_id=self.site.id, created=self.now, last_modified=self.now, latest_revision=1, deleted=False)
@@ -168,7 +169,7 @@ class BulkUpload:
             key2id[v['key']] = id
 
         # insert versions
-        d = dict(created=self.now, revision=1, author_id=self.author_id, ip=None, comment=self.comment, machine_comment=self.machine_comment)    
+        d = dict(created=self.now, revision=1, author_id=self.author_id, ip=None, comment=self.comment, machine_comment=self.machine_comment)
         multiple_insert('version', [dict(d, thing_id=key2id[k], comment=self.comment[k], machine_comment=self.machine_comment[k]) for k in tobe_created])
         self.created = set(tobe_created)
 
@@ -177,7 +178,7 @@ class BulkUpload:
             result = []
 
         if isinstance(query, list):
-            for q in query: 
+            for q in query:
                 self.find_keys(q, result)
         elif isinstance(query, dict) and 'key' in query:
             assert re.match('^/[^ \t\n]*$', query['key']), 'Bad key: ' + repr(query['key'])
@@ -189,7 +190,7 @@ class BulkUpload:
     def find_creates(self, query, result=None):
         """Find keys of all queries which have 'create' key.
         """
-        if result is None: 
+        if result is None:
             result = []
 
         if isinstance(query, list):
@@ -201,7 +202,7 @@ class BulkUpload:
                 self.find_creates(query.values(), result)
                 #@@ side-effect
                 self.comment[query['key']] = query.pop('comment', None)
-                self.machine_comment[query['key']] = query.pop('machine_comment', None) 
+                self.machine_comment[query['key']] = query.pop('machine_comment', None)
         return result
 
     def process_inserts(self, query):
@@ -211,18 +212,18 @@ class BulkUpload:
         multiple_insert('datum', values, seqname=False)
 
     def prepare_datum(self, query, result, path=""):
-        """This is a funtion with side effect. 
+        """This is a funtion with side effect.
         It append values to be inserted to datum table into result and return (value, datatype) for that query.
         """
         max_rev = 2 ** 31 - 1
         def append(thing_id, key, value, datatype, ordering):
             result.append(dict(
-                thing_id=thing_id, 
+                thing_id=thing_id,
                 begin_revision=1,
-                end_revision = max_rev, 
-                key=key, 
-                value=value, 
-                datatype=datatype, 
+                end_revision = max_rev,
+                key=key,
+                value=value,
+                datatype=datatype,
                 ordering=ordering))
 
         if isinstance(query, dict):
@@ -233,7 +234,7 @@ class BulkUpload:
                 if query['key'] in self.created:
                     self.created.remove(query['key'])
                     for key, value in query.items():
-                        if key == 'create': 
+                        if key == 'create':
                             continue
                         if isinstance(value, list):
                             for i, v in enumerate(value):
@@ -245,7 +246,7 @@ class BulkUpload:
                                 datatype = 1
                             append(thing_id, key, _value, datatype, None)
                 return (thing_id, DATATYPE_REFERENCE)
-        elif isinstance(query, basestring):
+        elif isinstance(query, string_types):
             return (query, TYPES['/type/string'])
         elif isinstance(query, int):
             return (query, TYPES['/type/int'])
@@ -259,7 +260,7 @@ class BulkUpload:
 if __name__ == "__main__":
     import sys
 
-    web.config.db_parameters = dict(dbn='postgres', host='pharosdb', db='infobase_data2', user='anand', pw='') 
+    web.config.db_parameters = dict(dbn='postgres', host='pharosdb', db='infobase_data2', user='anand', pw='')
     web.config.db_printing = True
     web.load()
     from infobase import Infobase

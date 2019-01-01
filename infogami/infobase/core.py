@@ -3,6 +3,7 @@
 import web
 import _json as simplejson
 import copy
+from six import text_type
 
 class InfobaseException(Exception):
     status = "500 Internal Server Error"
@@ -50,15 +51,15 @@ class TypeMismatch(BadData):
     def __init__(self, type_expected, type_found, **kw):
         BadData.__init__(self, message="expected %s, found %s" % (type_expected, type_found), **kw)
 
-class Text(unicode):
+class Text(text_type):
     """Python type for /type/text."""
     def __repr__(self):
-        return "<text: %s>" % unicode.__repr__(self)
+        return "<text: %s>" % text_type.__repr__(self)
 
-class Reference(unicode):
+class Reference(text_type):
     """Python type for reference type."""
     def __repr__(self):
-        return "<ref: %s>" % unicode.__repr__(self)
+        return "<ref: %s>" % text_type.__repr__(self)
 
 class Thing:
     def __init__(self, store, key, data):
@@ -73,7 +74,7 @@ class Thing:
             return web.storage((k, self._process(v)) for k, v in value.iteritems())
         elif isinstance(value, Reference):
             json = self._store.get(value)
-            return Thing.from_json(self._store, unicode(value), json)
+            return Thing.from_json(self._store, text_type(value), json)
         else:
             return value
 
@@ -126,13 +127,13 @@ class Thing:
     @staticmethod
     def from_dict(store, key, data):
         import common
-        data = common.parse_query(data)        
+        data = common.parse_query(data)
         return Thing(store, key, data)
 
 class Store:
     """Storage for Infobase.
 
-    Store manages one or many SiteStores. 
+    Store manages one or many SiteStores.
     """
     def create(self, sitename):
         """Creates a new site with the given name and returns store for it."""
@@ -152,9 +153,9 @@ class SiteStore:
         raise NotImplementedError
 
     def new_key(self, type, kw):
-        """Generates a new key to create a object of specified type. 
+        """Generates a new key to create a object of specified type.
         The store guarentees that it never returns the same key again.
-        Optional keyword arguments can be specified to give more hints 
+        Optional keyword arguments can be specified to give more hints
         to the store in generating the new key.
         """
         import uuid

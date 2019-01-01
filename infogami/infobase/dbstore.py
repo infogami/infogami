@@ -7,6 +7,7 @@ import _json as simplejson
 import datetime, time
 from collections import defaultdict
 import logging
+from six import text_type
 
 from _dbstore import store, sequence
 from _dbstore.schema import Schema, INDEXED_DATATYPES
@@ -46,7 +47,7 @@ class DBSiteStore(common.SiteStore):
     def get_metadata(self, key, for_update=False):
         # postgres doesn't seem to like Reference objects even though Referece extends from unicode.
         if isinstance(key, common.Reference):
-            key = unicode(key)
+            key = text_type(key)
 
         if for_update:
             d = self.db.query('SELECT * FROM thing WHERE key=$key FOR UPDATE NOWAIT', vars=locals())
@@ -101,9 +102,9 @@ class DBSiteStore(common.SiteStore):
                     self.cache[key] = json
         return process_json(key, json)
 
-    def _get(self, key, revision):    
+    def _get(self, key, revision):
         metadata = self.get_metadata(key)
-        if not metadata: 
+        if not metadata:
             return None
         revision = revision or metadata.latest_revision
         d = self.db.query('SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision', vars=locals())
@@ -153,7 +154,7 @@ class DBSiteStore(common.SiteStore):
         docs = common.format_data(docs)
         changeset = s.save(docs, timestamp=timestamp, comment=comment, ip=ip, author=author, action=action, data=data)
 
-        # update cache. 
+        # update cache.
         # Use the docs from result as they contain the updated revision and last_modified fields.
         for doc in changeset.get('docs', []):
             web.ctx.new_objects[doc['key']] = simplejson.dumps(doc)
@@ -168,7 +169,7 @@ class DBSiteStore(common.SiteStore):
     def reindex(self, keys):
         s = SaveImpl(self.db, self.schema, self.indexer, self.property_manager)
         # Hack to allow processing of json before using. Required for OL legacy.
-        s.process_json = process_json        
+        s.process_json = process_json
         return s.reindex(keys)
 
     def get_property_id(self, type, name):
@@ -187,7 +188,7 @@ class DBSiteStore(common.SiteStore):
             type_id = None
 
         # type is required if there are conditions/sort on keys other than [key, type, created, last_modified]
-        common_properties = ['key', 'type', 'created', 'last_modified'] 
+        common_properties = ['key', 'type', 'created', 'last_modified']
         _sort = query.sort and query.sort.key
         if _sort and _sort.startswith('-'):
             _sort = _sort[1:]
@@ -221,7 +222,7 @@ class DBSiteStore(common.SiteStore):
 
         def get_table(datatype, key):
             if key not in tables:
-                assert type is not None, "Missing type"            
+                assert type is not None, "Missing type"
                 table = self.schema.find_table(type, datatype, key)
                 label = 'd%d' % len(tables)
                 tables[key] = DBTable(table, label)
@@ -236,7 +237,7 @@ class DBSiteStore(common.SiteStore):
             if c.datatype == 'ref':
                 metadata = self.get_metadata(c.value)
                 if metadata is None:
-                    # required object is not found so the query result wil be empty. 
+                    # required object is not found so the query result wil be empty.
                     # Raise StopIteration to indicate empty result.
                     raise StopIteration
                 c.value = metadata.id
@@ -248,7 +249,7 @@ class DBSiteStore(common.SiteStore):
 
             if c.key in ['key', 'type', 'created', 'last_modified']:
                 #@@ special optimization to avoid join with thing.type when there are non-common properties in the query.
-                #@@ Since type information is already present in property table, 
+                #@@ Since type information is already present in property table,
                 #@@ getting property id is equivalent to join with type.
                 if c.key == 'type' and type_required:
                     return
@@ -311,8 +312,8 @@ class DBSiteStore(common.SiteStore):
                 if sort_key in ['key', 'type', 'created', 'last_modified']:
                     order = 'thing.' + sort_key # make sure c.key is valid
                     # Add thing table explicitly because get_table is not called
-                    tables['_thing'] = DBTable("thing")                
-                else:   
+                    tables['_thing'] = DBTable("thing")
+                else:
                     table = get_table(query.sort.datatype, sort_key)
                     key_id = self.get_property_id(type, sort_key)
                     if key_id is None:
@@ -354,21 +355,21 @@ class DBSiteStore(common.SiteStore):
 
         if 'thing' in table_names:
             result = self.db.select(
-                what='thing.key', 
-                tables=table_names, 
-                where=self.sqljoin(wheres, ' AND '), 
+                what='thing.key',
+                tables=table_names,
+                where=self.sqljoin(wheres, ' AND '),
                 order=order,
-                limit=query.limit, 
+                limit=query.limit,
                 offset=query.offset,
                 )
             keys = [r.key for r in result]
         else:
             result = self.db.select(
-                what='d0.thing_id', 
-                tables=table_names, 
-                where=self.sqljoin(wheres, ' AND '), 
+                what='d0.thing_id',
+                tables=table_names,
+                where=self.sqljoin(wheres, ' AND '),
                 order=order,
-                limit=query.limit, 
+                limit=query.limit,
                 offset=query.offset,
             )
             ids = [r.thing_id for r in result]
@@ -556,7 +557,7 @@ class DBSiteStore(common.SiteStore):
         self.cache.clear()
 
 class DBStore(common.Store):
-    """StoreFactory that works with single site. 
+    """StoreFactory that works with single site.
     It always returns a the same site irrespective of the sitename.
     """
     def __init__(self, schema):
@@ -588,7 +589,7 @@ class DBStore(common.Store):
             self.sitestore = sitestore
 
         if not self.sitestore.initialized():
-            return None            
+            return None
         return self.sitestore
 
     def delete(self, sitename):

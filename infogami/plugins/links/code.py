@@ -18,7 +18,6 @@ class backlinks (delegate.mode):
     def GET(self, site, path):
         #@@ fix later
         return []
-
-        links = tdb.Things(type=db.get_type(site, 'type/page'), parent=site, links=path)
+        # unreachable code...
+        links = db.Things(type=db.get_type(site, 'type/page'), parent=site, links=path)
         return render.backlinks(links)
-

@@ -1,7 +1,7 @@
 import web
 
-import utils
-from .. import common, writequery
+from infogami.infobase import common, writequery
+from infogami.infobase.tests import utils
 
 
 def setup_module(mod):

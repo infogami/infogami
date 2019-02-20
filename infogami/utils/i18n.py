@@ -184,7 +184,7 @@ def load_strings(plugin_path):
         return env
 
     root = os.path.join(plugin_path, 'i18n')
-    for p in find(root, 'strings\..*'):
+    for p in find(root, r'strings\..*'):
         try:
             namespace, lang = parse_path(dirstrip(p, root))
             data = read_strings(p)

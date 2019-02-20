@@ -182,6 +182,7 @@ def load_config(config_file):
 
     # setup infobase
     if config.get('cache_size'):
+        from infogami.infobase import cache
         cache.global_cache = lru.LRU(config.cache_size)
 
     if config.get('secret_key'):

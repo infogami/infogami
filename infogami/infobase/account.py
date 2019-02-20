@@ -6,8 +6,7 @@ import web
 import logging
 import simplejson
 
-import common
-import config
+from infogami.infobase import common, config
 
 logger = logging.getLogger("infobase.account")
 
@@ -21,7 +20,7 @@ def make_query(user):
         'key': user.key + '/usergroup',
         'type': {'key': '/type/usergroup'},
         'members': [{'key': user.key}]
-    }, 
+    },
     {
         'key': user.key + '/permission',
         'type': {'key': '/type/permission'},
@@ -79,7 +78,7 @@ class AccountManager:
         account_doc = {
             "_key": account_key,
             "type": "account",
-            "status": "pending",            
+            "status": "pending",
             "created_on": now.isoformat(),
 
             "username": username,
@@ -249,7 +248,7 @@ class AccountManager:
             if self._check_salted_hash(self.secret_key, user_key + "," + login_time, digest):
                 return self.site._get_thing(user_key)
 
-    #### Old, may be unused        
+    #### Old, may be unused
 
     def register1(self, username, email, enc_password, data, ip=None, timestamp=None):
         ip = ip or web.ctx.ip
@@ -385,7 +384,7 @@ class AccountManager:
         username = web.lstrips(key, get_user_root())
         details = self.site.store.get_user_details(key)
 
-        # generate code by combining encrypt password and timestamp. 
+        # generate code by combining encrypt password and timestamp.
         # encrypted_password for verification and timestamp for expriry check.
         timestamp = str(int(time.time()))
         text = details.password + '$' + timestamp
@@ -404,7 +403,7 @@ class AccountManager:
         if int(timestamp) + SEC_PER_WEEK < int(time.time()):
             raise common.BadData(message='Password Reset code expired')
 
-        username = get_user_root() + username 
+        username = get_user_root() + username
         details = self.site.store.get_user_details(username)
 
         if not details:

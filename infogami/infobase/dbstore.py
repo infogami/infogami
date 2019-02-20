@@ -1,19 +1,21 @@
 """Infobase Implementation based on database.
 """
-import common
-import config
-import web
-import _json as simplejson
-import datetime, time
-from collections import defaultdict
+
+import datetime
 import logging
+import time
+from collections import defaultdict
+
 from six import text_type
 
-from _dbstore import store, sequence
-from _dbstore.schema import Schema, INDEXED_DATATYPES
-from _dbstore.indexer import Indexer
-from _dbstore.save import SaveImpl, PropertyManager
-from _dbstore.read import RecentChanges, get_bot_users
+import web
+
+from infogami.infobase import common, config, _json as simplejson
+from infogami.infobase._dbstore import store, sequence
+from infogami.infobase._dbstore.schema import Schema, INDEXED_DATATYPES
+from infogami.infobase._dbstore.indexer import Indexer
+from infogami.infobase._dbstore.save import SaveImpl, PropertyManager
+from infogami.infobase._dbstore.read import RecentChanges, get_bot_users
 
 default_schema = None
 

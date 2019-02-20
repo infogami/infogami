@@ -4,17 +4,20 @@ Macro extension to markdown.
 Macros take argument string as input and returns result as markdown text.
 """
 from __future__ import print_function
-from markdown import markdown
-import web
+
 import os
 
-import template
-import storage
+from markdown import markdown
+
+import web
+
+from infogami.utils import storage, template
+
 
 # macros loaded from disk
 diskmacros = template.DiskTemplateSource()
 # macros specified in the code
-codemacros = web.storage()  
+codemacros = web.storage()
 
 macrostore = storage.DictPile()
 macrostore.add_dict(diskmacros)
@@ -33,7 +36,7 @@ def load_macros(plugin_root, lazy=False):
     if os.path.isdir(path):
         diskmacros.load_templates(path, lazy=lazy)
 
-#-- macro execution 
+#-- macro execution
 
 def safeeval_args(args):
     """Evalues the args string safely using templator."""
@@ -73,7 +76,7 @@ class MacroPattern(markdown.BasePattern):
     def handleMatch(self, m, doc):
         name, args = m.group(2), m.group(3)
 
-        # markdown uses place-holders to replace html blocks. 
+        # markdown uses place-holders to replace html blocks.
         # markdown.HtmlStash stores the html blocks to be replaced
         placeholder = self.store(self.markdown, (name, args))
         return doc.createTextNode(placeholder)
@@ -85,7 +88,7 @@ class MacroPattern(markdown.BasePattern):
         return placeholder
 
 def replace_macros(html, macros):
-    """Replaces the macro place holders with real macro output."""    
+    """Replaces the macro place holders with real macro output."""
     for placeholder, macro_info in macros.items():
         name, args = macro_info
         html = html.replace("<p>%s\n</p>" % placeholder, web.utf8(call_macro(name, args)))
@@ -98,10 +101,10 @@ class MacroExtension(markdown.Extension):
         md.macro_count = 0
         md.macros = {}
 
-def makeExtension(configs={}): 
+def makeExtension(configs={}):
     return MacroExtension(configs=configs)
 
-#-- sample macros 
+#-- sample macros
 
 @macro
 def HelloWorld():

@@ -3,21 +3,16 @@
 from __future__ import print_function
 __version__ = "0.5dev"
 
-import sys
-import web
-import infobase
-import _json as simplejson
-import time
-import time
-import os
 import logging
+import os
+import sys
+import time
 
-from infobase import config
-import common
-import cache
-import logreader
+import web
 
-from account import get_user_root
+from infogami.infobase import cache, common, config, infobase, logreader
+from infogami.infobase import _json as simplejson
+from infogami.infobase.account import get_user_root
 
 logger = logging.getLogger("infobase")
 
@@ -339,11 +334,11 @@ class store_special:
 
         store = get_site(sitename).get_store()
         return store.query(
-            type=i.type, 
-            name=i.name, 
-            value=i.value, 
-            limit=i.limit, 
-            offset=i.offset, 
+            type=i.type,
+            name=i.name,
+            value=i.value,
+            limit=i.limit,
+            offset=i.offset,
             include_docs=i.include_docs.lower()=="true")
 
 class store:
@@ -502,7 +497,7 @@ class account:
             if i.new_password:
                 kw['password'] = i.new_password
             if i.email:
-                kw['email'] = i.email 
+                kw['email'] = i.email
             a.update(username, **kw)
         else:
             raise common.BadData(code=status, message="Invalid password")
@@ -551,7 +546,7 @@ class readlog:
             log = self.get_log(offset, i)
             limit = min(1000, common.safeint(i.limit, 1000))
 
-            try:                
+            try:
                 web.header('Content-Type', 'application/json')
                 yield '{"data": [\n'
 
@@ -594,7 +589,7 @@ def request(path, method, data):
 
         mapping = app.mapping
 
-        # Before web.py<0.36, the mapping is a list and need to be grouped. 
+        # Before web.py<0.36, the mapping is a list and need to be grouped.
         # From web.py 0.36 onwards, the mapping is already grouped.
         # Checking the type to see if we need to group them here.
         if mapping and not isinstance(mapping[0], (list, tuple)):
@@ -656,7 +651,7 @@ def update_config(runtime_config):
         plugins.append(__import__(p, None, None, ["x"]))
         logger.info("loading plugin %s", p)
 
-    web.config.db_parameters = parse_db_parameters(config.db_parameters)    
+    web.config.db_parameters = parse_db_parameters(config.db_parameters)
 
     # initialize cache
     cache_params = config.get('cache', {'type': 'none'})

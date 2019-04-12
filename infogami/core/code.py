@@ -409,7 +409,7 @@ class feed(delegate.page):
             b = db.get_version(key, revision)
 
             rev_a = revision -1
-            if rev_a is 0:
+            if rev_a == 0:
                 a = web.ctx.site.new(key, {})
                 a.revision = 0
             else: 

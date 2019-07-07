@@ -37,10 +37,10 @@ logger = logging.getLogger("infobase.cache")
 class NoneDict:
     def __getitem__(self, key):
         raise KeyError, key
-        
+
     def __setitem__(self, key, value):
         pass
-        
+
     def update(self, d):
         pass
 
@@ -50,31 +50,31 @@ class MemcachedDict:
             import memcache
             memcache_client = memcache.Client(servers)
         self.memcache_client = memcache_client
-        
+
     def __getitem__(self, key):
         key = web.safestr(key)
         value = self.memcache_client.get(key)
         if value is None:
             raise KeyError, key
         return value
-        
+
     def __setitem__(self, key, value):
         key = web.safestr(key)
         logger.debug("MemcachedDict.set: %s", key)
         self.memcache_client.set(key, value)
-        
+
     def update(self, d):
         d = dict((web.safestr(k), v) for k, v in d.items())
         logger.debug("MemcachedDict.update: %s", d.keys())
         self.memcache_client.set_multi(d)
-        
+
     def clear(self):
         self.memcache_client.flush_all()
 
 _cache_classes = {}
 def register_cache(type, klass):
     _cache_classes[type] = klass
-    
+
 register_cache('lru', lru.LRU)
 register_cache('memcache', MemcachedDict)
 
@@ -89,7 +89,7 @@ def loadhook():
     web.ctx.new_objects = {}
     web.ctx.local_cache = {}
     web.ctx.locally_added = {}
-    
+
 def unloadhook():
     """Called at the end of every request."""
     d = {}
@@ -98,35 +98,35 @@ def unloadhook():
 
     if d:
         global_cache.update(d)
-    
+
 class Cache:
     def __getitem__(self, key):
         ctx = web.ctx
         obj = ctx.new_objects.get(key) \
             or special_cache.get(key)  \
             or ctx.local_cache.get(key) \
-        
+
         if not obj:    
             obj = global_cache[key]
             ctx.local_cache[key] = obj
-            
+
         return obj
-        
+
     def get(self, key, default=None):
         try:
             return self[key]
         except:
             return default
-    
+
     def __contains__(self, key):
         """Tests whether an element is present in the cache.
         This function call is expensive. Provided for the sake of completeness.
-        
+
         Use:
             obj = cache.get(key)
             if obj is None:
                 do_something()
-        
+
         instead of:
             if key in cache:
                 obj = cache[key]
@@ -138,7 +138,7 @@ class Cache:
             return True
         except KeyError:
             return False
-        
+
     def __setitem__(self, key, value):
         web.ctx.local_cache[key] = value
         web.ctx.locally_added[key] = value

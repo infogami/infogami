@@ -88,7 +88,7 @@ create table account (
     active boolean default 't',
     bot  boolean default 'f',
     verified boolean default 'f',
-    
+
     $if multisite:
         UNIQUE(site_id, email)
     $else:
@@ -118,11 +118,11 @@ $for table, datatype in tables:
     );
     create index ${table}_idx ON ${table}(key_id, value);
     create index ${table}_thing_id_idx ON ${table}(thing_id);
-    
+
 -- sequences --
 $for seq in sequences:
     CREATE SEQUENCE $seq;
-    
+
 create table store (
     id serial primary key,
     key text unique,
@@ -139,7 +139,7 @@ create table store_index (
 
 create index store_index_store_id_idx ON store_index (store_id);
 create index store_idx ON store_index(type, name, value);
-    
+
 create table seq (
     id serial primary key,
     name text unique,

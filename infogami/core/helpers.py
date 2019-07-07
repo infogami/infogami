@@ -16,7 +16,7 @@ class xdict:
 
 def flatten(d):
     """Make a dictionary flat.
-    
+
     >>> d = {'a': 1, 'b': [2, 3], 'c': {'x': 4, 'y': 5}}
     >>> xdict(flatten(d))
     {'a': 1, 'b#0': 2, 'b#1': 3, 'c.x': 4, 'c.y': 5}
@@ -37,10 +37,10 @@ def flatten(d):
     d2 = {}
     traverse(d, "", "", visit)
     return d2
-    
+
 def unflatten(d):
     """Inverse of flatten.
-    
+
     >>> xdict(unflatten({'a': 1, 'b#0': 2, 'b#1': 3, 'c.x': 4, 'c.y': 5}))
     {'a': 1, 'b': [2, 3], 'c': {'x': 4, 'y': 5}}
     >>> unflatten({'a#1#2.b': 1})
@@ -50,7 +50,7 @@ def unflatten(d):
         # error check: This can happen when d has both foo.x and foo as keys
         if not isinstance(d, (dict, betterlist)):
             return
-            
+
         if '.' in k:
             a, b = k.split('.', 1)
             return setdefault(setdefault(d, a, {}), b, v)
@@ -86,7 +86,7 @@ class betterlist(list):
 
 def trim(x):
     """Remove empty elements from a list or dictionary.
-        
+
     >>> trim([2, 3, None, None, '', 42])
     [2, 3, 42]
     >>> trim([{'x': 1}, {'x': ''}, {'x': 3}])
@@ -105,7 +105,7 @@ def trim(x):
             elif isinstance(v, dict): v = trimdict(v)
             if v: y.append(v)
         return y
-        
+
     def trimdict(x):
         y = {}
         for k, v in x.iteritems():
@@ -113,14 +113,14 @@ def trim(x):
             elif isinstance(v, dict): v = trimdict(v)
             if v: y[k] = v
         return y
-    
+
     if isinstance(x, list): return trimlist(x)
     elif isinstance(x, dict): return trimdict(x)
     else: return x
 
 def subdict(d, keys):
     """Subset like operation on dictionary.
-    
+
     >>> subdict({'a': 1, 'b': 2, 'c': 3}, ['a', 'c'])
     {'a': 1, 'c': 3}
     >>> subdict({'a': 1, 'b': 2, 'c': 3}, ['a', 'c', 'd'])

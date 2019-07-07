@@ -15,7 +15,7 @@ def _type(key, name, desc, properties=[], backreferences=[], kind='regular'):
 
 def _property(name, expected_type, unique=True, description='', **kw):
     return dict(kw, name=name, type={'key': '/type/property'}, expected_type={"key": expected_type}, unique={'type': '/type/boolean', 'value': unique}, description=description)
-    
+
 def _backreference(name, expected_type, property_name):
     pass
 
@@ -23,7 +23,7 @@ def primitive_types():
     """Subqueries to create all primitive types."""
     def f(key, name, description):
         return _type(key, name, description, kind='primitive')
-    
+
     return [
         f('/type/key', 'Key', 'Type to store keys. A key is a string constrained to the regular expression [a-z][a-z/_]*.'),
         f('/type/string', 'String', 'Type to store unicode strings up to a maximum length of 2048.'),
@@ -33,7 +33,7 @@ def primitive_types():
         f('/type/float', 'Floating Point Number', 'Type to store 32-bit floating point numbers'),
         f('/type/datetime', 'Datetime', 'Type to store datetimes from 4713 BC to 5874897 AD with 1 millisecond resolution.'),
     ]
-    
+
 def system_types():
     return [
         _type('/type/property', 'Property', '', kind="embeddable",
@@ -98,7 +98,7 @@ def usergroup(key, description, members=[]):
         'description': description, 
         'members': members
     }
-    
+
 def permission(key, readers, writers, admins):
     return {
         'key': key,
@@ -111,7 +111,7 @@ def permission(key, readers, writers, admins):
 def system_objects():        
     def t(key):
         return {'key': key}
-    
+
     return [
         usergroup('/usergroup/everyone', 'Group of all users including anonymous users.'),
         usergroup('/usergroup/allusers', 'Group of all registred users.'),
@@ -120,7 +120,7 @@ def system_objects():
         permission('/permission/restricted', [t('/usergroup/everyone')], [t('/usergroup/admin')], [t('/usergroup/admin')]),
         permission('/permission/secret', [t('/usergroup/admin')], [t('/usergroup/admin')], [t('/usergroup/admin')]),
     ]
-    
+
 def make_query():
     return primitive_types() + system_types() + system_objects()
 
@@ -129,17 +129,17 @@ def bootstrap(site, admin_password):
     """
     import cache
     cache.loadhook()
-    
+
     import web
     web.ctx.infobase_bootstrap = True
-    
+
     query = make_query()
     site.save_many(query)
-    
+
     from infogami.infobase import config
     import random
     import string
-    
+
     def random_password(length=20):
         chars = string.letters + string.digits
         return "".join(random.choice(chars) for i in range(length))

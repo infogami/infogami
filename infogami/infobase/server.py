@@ -61,7 +61,7 @@ def process_exception(e):
 
     msg = str(e)
     raise web.HTTPError(status, {}, msg)
-    
+
 class JSON:
     """JSON marker. instances of this class not escaped by jsonify.
     """
@@ -72,17 +72,17 @@ def jsonify(f):
     def g(self, *a, **kw):
         t_start = time.time()
         web.ctx.setdefault("headers", [])
-                
+
         if not web.ctx.get('infobase_localmode'):
             cookies = web.cookies(infobase_auth_token=None)
             web.ctx.infobase_auth_token = cookies.infobase_auth_token
-                        
+
         try:
             d = f(self, *a, **kw)
         except common.InfobaseException, e:
             if web.ctx.get('infobase_localmode'):
                 raise
-            
+
             process_exception(e)
         except Exception, e:
             logger.error("Error in processing request %s %s", web.ctx.get("method", "-"), web.ctx.get("path","-"), exc_info=True)
@@ -90,22 +90,22 @@ def jsonify(f):
             common.record_exception()
             # call web.internalerror to send email when web.internalerror is set to web.emailerrors
             process_exception(common.InfobaseException(error="internal_error", message=str(e)))
-            
+
             if web.ctx.get('infobase_localmode'):
                 raise common.InfobaseException(message=str(e))
             else:
                 process_exception(e)
-        
+
         if isinstance(d, JSON):
             result = d.json
         else:
             result = simplejson.dumps(d)
-            
+
         t_end = time.time()
         totaltime = t_end - t_start
         querytime = web.ctx.pop('querytime', 0.0)
         queries = web.ctx.pop('queries', 0)
-        
+
         if config.get("enabled_stats"):
             web.header("X-STATS", "tt: %0.3f, tq: %0.3f, nq: %d" % (totaltime, querytime, queries))
 
@@ -116,41 +116,41 @@ def jsonify(f):
             if web.ctx.get('infobase_auth_token'):
                 web.setcookie('infobase_auth_token', web.ctx.infobase_auth_token)
             return result
-        
+
     return g
-    
+
 def get_data():
     if 'infobase_input' in web.ctx:
         return web.ctx.infobase_input
     else:
         return web.data()
-    
+
 def input(*required, **defaults):
     if 'infobase_input' in web.ctx:
         d = web.ctx.infobase_input
     else:
         d = web.input()
-        
+
     for k in required:
         if k not in d:
             raise common.BadData(message="Missing argument: " + repr(k))
-            
+
     result = web.storage(defaults)
     result.update(d)
     return result
-    
+
 def to_int(value, key):
     try:
         return int(value)
     except:
         raise common.BadData(message="Bad integer value for %s: %s" % (repr(key), repr(value)))
-        
+
 def from_json(s):
     try:
         return simplejson.loads(s)
     except ValueError, e:
         raise common.BadData(message="Bad JSON: " + str(e))
-        
+
 _infobase = None
 def get_site(sitename):
     import config
@@ -161,12 +161,12 @@ def get_site(sitename):
         store = dbstore.DBStore(schema)
         _infobase = infobase.Infobase(store, config.secret_key)
     return _infobase.get(sitename)
-    
+
 class server:
     @jsonify
     def GET(self):
         return {"infobase": "welcome", "version": __version__}
-        
+
 class db:
     @jsonify
     def GET(self, name):
@@ -175,7 +175,7 @@ class db:
             raise common.NotFound(error="db_notfound", name=name)
         else:
             return {"name": site.sitename}
-        
+
     @jsonify
     def PUT(self, name):
         site = get_site(name)
@@ -184,7 +184,7 @@ class db:
         else:
             site = _infobase.create(name)
             return {"ok": "true"}
-            
+
     @jsonify
     def DELETE(self, name):
         site = get_site(name)
@@ -238,7 +238,7 @@ class save:
         comment = data.pop('_comment', None)
         action = data.pop('_action', None)
         _data = data.pop('_data', None)
-        
+
         site = get_site(sitename)
         return site.save(key, data, comment=comment, action=action, data=_data)
 
@@ -259,7 +259,7 @@ class reindex:
         site = get_site(sitename)
         site.store.reindex(keys)
         return {"status": "ok"}
-        
+
 class new_key:
     @jsonify
     def GET(self, sitename):
@@ -274,7 +274,7 @@ class things:
         i = input('query', details="false")
         q = from_json(i.query)
         result = site.things(q)
-        
+
         if i.details.lower() == "false":
             return [r['key'] for r in result]
         else:
@@ -287,7 +287,7 @@ class versions:
         i = input('query')
         q = from_json(i.query)
         return site.versions(q)
-        
+
 class recentchanges:
     @jsonify
     def GET(self, sitename):
@@ -295,47 +295,47 @@ class recentchanges:
         i = input('query')
         q = from_json(i.query)
         return site.recentchanges(q)
-        
+
 class change:
     @jsonify
     def GET(self, sitename, id):
         site = get_site(sitename)
         return site.get_change(int(id))
-        
+
 class permission:
     @jsonify
     def GET(self, sitename):
         site = get_site(sitename)
         i = input('key')
         return site.get_permissions(i.key)
-        
+
 class store_special:
     def GET(self, sitename, path):
         if path == '_query':
             return self.GET_query(sitename)
         else:
             raise web.notfound("")
-            
+
     def POST(self, sitename, path):
         if path == '_save_many':
             return self.POST_save_many(sitename)
         else:
             raise web.notfound("")
-            
+
     @jsonify
     def POST_save_many(self, sitename):
         store = get_site(sitename).get_store()
         json = get_data()
         docs = simplejson.loads(json)
         store.put_many(docs)
-        
+
     @jsonify
     def GET_query(self, sitename):
         i = input(type=None, name=None, value=None, limit=100, offset=0, include_docs="false")
-        
+
         i.limit = common.safeint(i.limit, 100)
         i.offset = common.safeint(i.offset, 0)
-        
+
         store = get_site(sitename).get_store()
         return store.query(
             type=i.type, 
@@ -361,13 +361,13 @@ class store:
         doc = simplejson.loads(json)
         store.put(path, doc)
         return JSON('{"ok": true}')
-        
+
     @jsonify
     def DELETE(self, sitename, path):
         store = get_site(sitename).get_store()
         store.delete(path)
         return JSON('{"ok": true}')
-        
+
 class seq:
     @jsonify
     def GET(self, sitename, name):
@@ -378,7 +378,7 @@ class seq:
     def POST(self, sitename, name):
         seq = get_site(sitename).get_seq()
         return {"name": name, "value": seq.next_value(name)}
-        
+
 class account:
     """Code for handling /account/.*"""
     def get_method(self):
@@ -386,38 +386,38 @@ class account:
             return web.ctx.infobase_method
         else:
             return web.ctx.method
-    
+
     @jsonify
     def delegate(self, sitename, method):
         site = get_site(sitename)
         methodname = "%s_%s" % (self.get_method(), method)
-        
+
         m = getattr(self, methodname, None)
         if m:
             return m(site)
         else:
             raise web.notfound()
-        
+
     GET = POST = delegate
 
     def POST_login(self, site):
         i = input('username', 'password')
         a = site.get_account_manager()
         status = a.login(i.username, i.password)
-        
+
         if status == "ok":
             a.set_auth_token(get_user_root() + i.username)
             return {"ok": True}
         else:
             raise common.BadData(code=status, message="Login failed")
-        
+
     def POST_register(self, site):
         i = input('username', 'password', 'email')
         a = site.get_account_manager()
         username = i.pop('username')
         password = i.pop('password')
         email = i.pop('email')
-        
+
         activation_code = a.register(username=username, email=email, password=password, data=i)
         return {"activation_code": activation_code, "email": email}
 
@@ -430,19 +430,19 @@ class account:
             return {"ok": "true"}
         else:
             raise common.BadData(error_code=status, message="Account activation failed.")
-            
+
     def POST_update(self, site):
         i = input('username')
         username = i.pop("username")
-        
+
         a = site.get_account_manager()
         status = a.update(username, **i)
-        
+
         if status == "ok":
             return {"ok": "true"}
         else:
             raise common.BadData(error_code=status, message="Account activation failed.")
-        
+
     def GET_find(self, site):
         i = input(email=None, username=None)
         a = site.get_account_manager()
@@ -463,19 +463,19 @@ class account:
         a = site.get_account_manager()
         username, code = a.get_user_code(i.email)
         return dict(username=username, code=code)
-        
+
     def GET_check_reset_code(self, site):
         # TODO: remove this
         i = input('username', 'code')
         a = site.get_account_manager()
         a.check_reset_code(i.username, i.code)
         return {'ok': True}
-        
+
     def GET_get_user_email(self, site):
         i = input('username')
         a = site.get_account_manager()
         return a.find_account(username=i.username)
-        
+
     def GET_find_user_by_email(self, site):
         i = input("email")
         a = site.get_account_manager()
@@ -487,14 +487,14 @@ class account:
         i = input('username', 'code', 'password')
         a = site.get_account_manager()
         return a.reset_password(i.username, i.code, i.password)
-    
+
     def POST_update_user(self, site):
         i = input('old_password', new_password=None, email=None)
         a = site.get_account_manager()
-        
+
         user = a.get_user()
         username = user.key.split("/")[-1]
-        
+
         status = a.login(username, i.old_password)
         if status == "ok":
             kw = {}
@@ -505,11 +505,11 @@ class account:
             a.update(username, **kw)
         else:
             raise common.BadData(code=status, message="Invalid password")
-        
+
     def POST_update_user_details(self, site):
         i = input('username')
         username = i.pop('username')
-        
+
         a = site.get_account_manager()
         return a.update(username, **i)
 
@@ -517,7 +517,7 @@ class readlog:
     def get_log(self, offset, i):
         log = logreader.LogFile(config.writelog)
         log.seek(offset)
-        
+
         # when the offset is not known, skip_till parameter can be used to query.
         if i.timestamp:
             try:
@@ -525,35 +525,35 @@ class readlog:
                 logreader.LogReader(log).skip_till(timestamp)
             except Exception, e:
                 raise web.internalerror(str(e))
-        
+
         return log
-        
+
     def assert_valid_json(self, line):
         try:
             simplejson.loads(line)
         except ValueError:
             raise web.BadRequest()
-            
+
     def valid_json(self, line):
         try:
             simplejson.loads(line)
             return True
         except ValueError:
             return False
-        
+
     def GET(self, sitename, offset):
         i = web.input(timestamp=None, limit=1000)
-        
+
         if not config.writelog:
             raise web.notfound("")
         else:
             log = self.get_log(offset, i)
             limit = min(1000, common.safeint(i.limit, 1000))
-            
+
             try:                
                 web.header('Content-Type', 'application/json')
                 yield '{"data": [\n'
-                
+
                 sep = ""
                 for i in range(limit):
                     line = log.readline().strip()
@@ -569,7 +569,7 @@ class readlog:
                 yield '"offset": ' + simplejson.dumps(log.tell()) + "\n}\n"
             except Exception, e:
                 print 'ERROR:', str(e)
-                
+
 def request(path, method, data):
     """Fakes the web request.
     Useful when infobase is not run as a separate process.
@@ -577,7 +577,7 @@ def request(path, method, data):
     web.ctx.infobase_localmode = True
     web.ctx.infobase_input = data or {}
     web.ctx.infobase_method = method
-    
+
     def get_class(classname):
         if '.' in classname:
             modname, classname = classname.rsplit('.', 1)
@@ -610,28 +610,28 @@ def request(path, method, data):
     finally:
         # hack to make cache work for local infobase connections
         cache.unloadhook()
-            
+
 def run():
     app.run()
-    
+
 def parse_db_parameters(d):
     if d is None:
         return None
-        
+
     # support both <engine, database, username, password> and <dbn, db, user, pw>.
     if 'database' in d:
         dbn, db, user, pw = d.get('engine', 'postgres'), d['database'], d.get('username'), d.get('password') or ''
     else:
         dbn, db, user, pw = d.get('dbn', 'postgres'), d['db'], d.get('user'), d.get('pw') or ''
-        
+
     if user is None:
         user = os.getenv("USER")
-     
+
     result = dict(dbn=dbn, db=db, user=user, pw=pw)
     if 'host' in d:
         result['host'] = d['host']
     return result
-    
+
 def start(config_file, *args):
     load_config(config_file)
     # start running the server
@@ -643,24 +643,24 @@ def load_config(config_file):
     import yaml
     runtime_config = yaml.load(open(config_file)) or {}
     update_config(runtime_config)
-    
+
 def update_config(runtime_config):
     # update config
     for k, v in runtime_config.items():
         setattr(config, k, v)
-        
+
     # import plugins
     plugins = []
     for p in config.get('plugins') or []:
         plugins.append(__import__(p, None, None, ["x"]))
         logger.info("loading plugin %s", p)
-        
+
     web.config.db_parameters = parse_db_parameters(config.db_parameters)    
 
     # initialize cache
     cache_params = config.get('cache', {'type': 'none'})
     cache.global_cache = cache.create_cache(**cache_params)
-    
+
     # init plugins
     for p in plugins:
         m = getattr(p, 'init_plugin', None)

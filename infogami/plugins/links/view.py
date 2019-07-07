@@ -17,7 +17,7 @@ def get_links(text):
     links = set()
     for a in doc.find(is_link):
         links.add(keyencode(a.attribute_values['href']))
-    
+
     return links
 
 link_re = web.re_compile(r'(?<!\\)\[\[(.*?)(?:\|(.*?))?\]\]')

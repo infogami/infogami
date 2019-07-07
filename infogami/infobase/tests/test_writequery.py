@@ -5,7 +5,7 @@ from .. import common, writequery
 
 def setup_module(mod):
     utils.setup_site(mod)
-    
+
     type_book = {
         "key": "/type/book",
         "kind": "regular",
@@ -53,7 +53,7 @@ def setup_module(mod):
         }]
     }
     mod.site.save_many([type_book, type_author, type_link])
-    
+
 def teardown_module(mod):
     utils.teardown_site(mod)
 
@@ -76,7 +76,7 @@ class TestSaveProcessor(DBTest):
             "key": "/authors/1",
         }
         assert save_many([q]) == {'error': 'bad_data', 'message': 'missing type', 'at': {'key': '/authors/1'}}
-        
+
         q = {
             "key": "/authors/1",
             "type": "/type/author",
@@ -136,7 +136,7 @@ class TestSaveProcessor(DBTest):
             },
             'value': 'foo'
         }
-        
+
         q = {
             "key": "/books/1",
             "type": "/type/book",
@@ -151,7 +151,7 @@ class TestSaveProcessor(DBTest):
             },
             'value': 1
         }
-        
+
     def test_process_value(self):
         def property(expected_type, unique=True, name='foo'):
             return web.storage(expected_type=web.storage(key=expected_type, kind='regular'), unique=unique, name=name)

@@ -81,7 +81,7 @@ def removeBOM(text, encoding):
 # and uses the actual name of the executable called.)
 
 EXECUTABLE_NAME_FOR_USAGE = "python markdown.py"
-                    
+
 
 # --------------- CONSTANTS YOU _SHOULD NOT_ HAVE TO CHANGE ----------
 
@@ -306,7 +306,7 @@ class Element :
             childBuffer += "/>"
 
 
-            
+
         buffer += "<" + self.nodeName
 
         if self.nodeName in ['p', 'li', 'ul', 'ol',
@@ -317,10 +317,10 @@ class Element :
                     bidi = self.bidi
                 else :
                     bidi = self.doc.bidi
-                    
+
                 if bidi=="rtl" :
                     self.setAttribute("dir", "rtl")
-        
+
         for attr in self.attributes :
             value = self.attribute_values[attr]
             value = self.doc.normalizeEntities(value,
@@ -359,7 +359,7 @@ class TextNode :
         text = self.value
 
         self.parent.setBidi(getBidiType(text))
-        
+
         if not text.startswith(HTML_PLACEHOLDER_PREFIX):
             if self.parent.nodeName == "p" :
                 text = text.replace("\n", "\n   ")
@@ -479,7 +479,7 @@ LINE_BREAKS_PREPROCESSOR = LineBreaksPreprocessor()
 
 class HtmlBlockPreprocessor (Preprocessor):
     """Removes html blocks from self.lines"""
-    
+
     def _get_left_tag(self, block):
         return block[1:].replace(">", " ", 1).split()[0].lower()
 
@@ -488,7 +488,7 @@ class HtmlBlockPreprocessor (Preprocessor):
         return block.rstrip()[-len(left_tag)-2:-1].lower()
 
     def _equal_tags(self, left_tag, right_tag):
-        
+
         if left_tag in ['?', '?php', 'div'] : # handle PHP, etc.
             return True
         if ("/" + left_tag) == right_tag:
@@ -504,18 +504,18 @@ class HtmlBlockPreprocessor (Preprocessor):
     def _is_oneliner(self, tag):
         return (tag in ['hr', 'hr/'])
 
-    
+
     def run (self, lines) :
 
         new_blocks = []
         text = "\n".join(lines)
         text = text.split("\n\n")
-        
+
         items = []
         left_tag = ''
         right_tag = ''
         in_tag = False # flag
-        
+
         for block in text:
             if block.startswith("\n") :
                 block = block[1:]
@@ -523,7 +523,7 @@ class HtmlBlockPreprocessor (Preprocessor):
             if not in_tag:
 
                 if block.startswith("<"):
-                    
+
                     left_tag = self._get_left_tag(block)
                     right_tag = self._get_right_tag(left_tag, block)
 
@@ -535,13 +535,13 @@ class HtmlBlockPreprocessor (Preprocessor):
                     if self._is_oneliner(left_tag):
                         new_blocks.append(block.strip())
                         continue
-                        
+
                     if block[1] == "!":
                         # is a comment block
                         left_tag = "--"
                         right_tag = self._get_right_tag(left_tag, block)
                         # keep checking conditions below and maybe just append
-                        
+
                     if block.rstrip().endswith(">") \
                         and self._equal_tags(left_tag, right_tag):
                         new_blocks.append(
@@ -557,9 +557,9 @@ class HtmlBlockPreprocessor (Preprocessor):
 
             else:
                 items.append(block.strip())
-                
+
                 right_tag = self._get_right_tag(left_tag, block)
-                
+
                 if self._equal_tags(left_tag, right_tag):
                     # if find closing tag
                     in_tag = False
@@ -570,7 +570,7 @@ class HtmlBlockPreprocessor (Preprocessor):
         if items :
             new_blocks.append(self.stash.store('\n\n'.join(items)))
             new_blocks.append('\n')
-            
+
         return "\n\n".join(new_blocks).split("\n")
 
 HTML_BLOCK_PREPROCESSOR = HtmlBlockPreprocessor()
@@ -1087,7 +1087,7 @@ class Markdown:
                                      # inserted later                                 
 
         self.prePatterns = []
-        
+
 
         self.inlinePatterns = [ DOUBLE_BACKTICK_PATTERN,
                                 BACKTICK_PATTERN,
@@ -1205,7 +1205,7 @@ class Markdown:
             else :
                 buffer.append(line)
         self._processSection(self.top_element, buffer)
-        
+
         #self._processSection(self.top_element, self.lines)
 
         # Not sure why I put this in but let's leave it for now.
@@ -1494,7 +1494,7 @@ class Markdown:
             i = 0
 
             while i < len(parts) :
-                
+
                 x = parts[i]
 
                 if isinstance(x, (str, unicode)) :
@@ -1514,7 +1514,7 @@ class Markdown:
                 parts[i] = self.doc.createTextNode(x)
 
         return parts
-        
+
 
     def _handleInline(self,  line):
         """Transform a Markdown line with inline elements to an XHTML
@@ -1540,7 +1540,7 @@ class Markdown:
         """ Given a pattern name, this function checks if the line
         fits the pattern, creates the necessary elements, and returns
         back a list consisting of NanoDom elements and/or strings.
-        
+
         @param line: the text to be processed
         @param pattern: the pattern to be checked
 
@@ -1568,19 +1568,19 @@ class Markdown:
             if not node.nodeName in ["code", "pre"] :
                 for child in node.childNodes :
                     if isinstance(child, TextNode):
-                        
+
                         result = self._handleInlineWrapper(child.value)
-                        
+
                         if result:
 
                             if result == [child] :
                                 continue
-                                
+
                             result.reverse()
                             #to make insertion easier
 
                             position = node.childNodes.index(child)
-                            
+
                             node.removeChild(child)
 
                             for item in result:
@@ -1591,7 +1591,7 @@ class Markdown:
                                              self.doc.createTextNode(item))
                                 else:
                                     node.insertChild(position, item)
-                
+
 
 
 
@@ -1618,7 +1618,7 @@ class Markdown:
 
         self.source = removeBOM(self.source, self.encoding)
 
-        
+
         doc = self._transform()
         xml = doc.toxml()
 
@@ -1631,7 +1631,7 @@ class Markdown:
             html = self.htmlStash.rawHtmlBlocks[i]
             if self.safeMode :
                 html = HTML_REMOVED_TEXT
-                
+
             xml = xml.replace("<p>%s\n</p>" % (HTML_PLACEHOLDER % i),
                               html + "\n")
             xml = xml.replace(HTML_PLACEHOLDER % i,
@@ -1650,7 +1650,7 @@ class Markdown:
 
     __str__ = convert   # deprecated - will be changed in 1.7 to report
                         # information about the MD instance
-    
+
     toString = __str__  # toString() method is deprecated
 
 
@@ -1701,12 +1701,12 @@ def markdown(text,
              extensions = [],
              encoding = None,
              safe_mode = False) :
-    
+
     message(VERBOSE, "in markdown.markdown(), received text:\n%s" % text)
 
     extension_names = []
     extension_configs = {}
-    
+
     for ext in extensions :
         pos = ext.find("(") 
         if pos == -1 :
@@ -1723,7 +1723,7 @@ def markdown(text,
                   safe_mode = safe_mode)
 
     return md.convert(text)
-        
+
 
 class Extension :
 
@@ -1748,7 +1748,7 @@ Python 2.3 or higher required for advanced command line options.
 For lower versions of Python use:
 
       %s INPUT_FILE > OUTPUT_FILE
-    
+
 """ % EXECUTABLE_NAME_FOR_USAGE
 
 def parse_options() :
@@ -1784,7 +1784,7 @@ def parse_options() :
     parser.add_option("-s", "--safe",
                       action="store_const", const=True, dest="safe",
                       help="same mode (strip user's HTML tag)")
-    
+
     parser.add_option("--noisy",
                       action="store_const", const=VERBOSE, dest="verbose",
                       help="print debug messages")
@@ -1818,7 +1818,7 @@ if __name__ == '__main__':
 
     if not options :
         sys.exit(0)
-    
+
     markdownFromFile(**options)
 
 

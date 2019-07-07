@@ -22,7 +22,7 @@ def sqlin(name, values):
                 result = result + sep
             result = result + q
         return result
-    
+
     if not values:
         return web.reparam('1 = 2', {})
     else:
@@ -51,7 +51,7 @@ def get_table_columns(table):
     ORDER BY a.attnum;
     """ 
     return [r.attname for r in web.query(q, locals())]
-    
+
 def multiple_insert(table, values, seqname=None):
     """Inserts multiple rows into a table using sql copy."""
     def escape(value):
@@ -67,27 +67,27 @@ def multiple_insert(table, values, seqname=None):
             return value and 't' or 'f'
         else:
             return str(value)
-            
+
     def increment_sequence(seqname, n):
         """Increments a sequence by the given amount."""
         d = web.query(
             "SELECT setval('%s', $n + (SELECT last_value FROM %s), true) + 1 - $n AS START" % (seqname, seqname), 
             locals())
         return d[0].start
-        
+
     def write(path, data):
         f = open(path, 'w')
         f.write(web.utf8(data))
         f.close()
-        
+
     if not values:
         return []
-        
+
     if seqname is None:
         seqname = table + "_id_seq"
-        
+
     #print "inserting %d rows into %s" % (len(values), table)
-        
+
     columns = get_table_columns(table)
     if seqname:
         n = len(values)
@@ -97,17 +97,17 @@ def multiple_insert(table, values, seqname=None):
             v['id'] = id
     else:
         ids = None
-        
+
     data = []
     for v in values:
         assert set(v.keys()) == set(columns)
         data.append("\t".join([escape(v[c]) for c in columns]))
-        
+
     filename = tempfile.mktemp(suffix='.copy', prefix=table)
     write(filename, "\n".join(data))
     web.query("COPY %s FROM '%s'" % (table, filename))
     return ids
-    
+
 def get_key2id():
     """Return key to id mapping for all things in the database."""
     key2id = {}
@@ -128,7 +128,7 @@ def get_key2id():
     return key2id
 
 key2id = None
-        
+
 class BulkUpload:
     def __init__(self, site, author=None):
         self.site = site
@@ -141,7 +141,7 @@ class BulkUpload:
         # initialize key2id, if it is not initialzed already.
         global key2id
         key2id = key2id or get_key2id()
-        
+
     def upload(self, query):
         """Inserts"""
         assert isinstance(query, list)
@@ -154,28 +154,28 @@ class BulkUpload:
             raise
         else:
             web.commit()
-            
+
     def process_creates(self, query):
         keys = set(self.find_keys(query))
         tobe_created = set(self.find_creates(query))
         tobe_created = [k for k in tobe_created if k not in key2id] 
-        
+
         # insert things
         d = dict(site_id=self.site.id, created=self.now, last_modified=self.now, latest_revision=1, deleted=False)
         values = [dict(d, key=k) for k in tobe_created]
         ids = multiple_insert('thing', values)
         for v, id in zip(values, ids):
             key2id[v['key']] = id
-        
+
         # insert versions
         d = dict(created=self.now, revision=1, author_id=self.author_id, ip=None, comment=self.comment, machine_comment=self.machine_comment)    
         multiple_insert('version', [dict(d, thing_id=key2id[k], comment=self.comment[k], machine_comment=self.machine_comment[k]) for k in tobe_created])
         self.created = set(tobe_created)
-        
+
     def find_keys(self, query, result=None):
         if result is None:
             result = []
-            
+
         if isinstance(query, list):
             for q in query: 
                 self.find_keys(q, result)
@@ -185,13 +185,13 @@ class BulkUpload:
             for k, v in query.items():
                 self.find_keys(v, result)
         return result
-    
+
     def find_creates(self, query, result=None):
         """Find keys of all queries which have 'create' key.
         """
         if result is None: 
             result = []
-            
+
         if isinstance(query, list):
             for q in query:
                 self.find_creates(q, result)
@@ -203,13 +203,13 @@ class BulkUpload:
                 self.comment[query['key']] = query.pop('comment', None)
                 self.machine_comment[query['key']] = query.pop('machine_comment', None) 
         return result
-        
+
     def process_inserts(self, query):
         values = []
         for q in query:
             self.prepare_datum(q, values)
         multiple_insert('datum', values, seqname=False)
-        
+
     def prepare_datum(self, query, result, path=""):
         """This is a funtion with side effect. 
         It append values to be inserted to datum table into result and return (value, datatype) for that query.
@@ -224,7 +224,7 @@ class BulkUpload:
                 value=value, 
                 datatype=datatype, 
                 ordering=ordering))
-        
+
         if isinstance(query, dict):
             if 'value' in query:
                 return (query['value'], TYPES[query['type']])
@@ -258,7 +258,7 @@ class BulkUpload:
 
 if __name__ == "__main__":
     import sys
-    
+
     web.config.db_parameters = dict(dbn='postgres', host='pharosdb', db='infobase_data2', user='anand', pw='') 
     web.config.db_printing = True
     web.load()

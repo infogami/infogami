@@ -46,9 +46,9 @@ class review (delegate.mode):
 
         view.add_stylesheet('core', 'diff.css')
         diff = render.diff(map, xa, xb)
-        
+
         return render.review(path, diff, i.a, i.b, i.c)
-        
+
 class approve (delegate.mode):
     @require_login
     def POST(self, site, path):
@@ -75,7 +75,7 @@ class revert (delegate.mode):
 
         if i.c != core.db.get_version(site, path).revision:
             return render.parallel_modification()
-   
+
         if i.a == i.b:
 	        return approve().POST(site, path)
         else:

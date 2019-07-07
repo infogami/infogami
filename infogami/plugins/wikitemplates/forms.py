@@ -8,9 +8,9 @@ class BetterButton(Button):
         safename = net.websafe(self.name)
         x = '<button name="%s"%s>%s</button>' % (safename, self.addatts(), label)
         return x
-    
+
 _ = i18n.strings.get_namespace('/account/preferences')
-    
+
 template_preferences = Form(
     Textbox("path", description=_.template_root),
     BetterButton('save', label=_.save)

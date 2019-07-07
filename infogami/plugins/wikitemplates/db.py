@@ -15,7 +15,7 @@ def get_all_macros(site):
     q = {'type': '/type/macro', 'limit': 1000}
     #return [site.get(key) for key in site.things(q)]
     return site.get_many([key for key in site.things(q)])
-    
+
 def get_all_sites():
     if web.ctx.site.exists():
         return [web.ctx.site]

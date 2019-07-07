@@ -10,7 +10,7 @@ commands = {}
 def command(f):
     commands[f.__name__] = f
     return f
-    
+
 @command
 def help():
     """Prints this help."""
@@ -31,15 +31,15 @@ def startserver(*args):
     sys.argv = [sys.argv[0]] + list(args)
     import server
     server.run()
-    
+
 def run():
     if len(sys.argv) > 1:
         action = sys.argv[1]
     else:
         action = 'startserver'
-        
+
     return commands[action](*sys.argv[2:])
-    
+
 if __name__ == "__main__":
     import os
     dbname = os.environ.get('INFOBASE_DB', 'infobase')

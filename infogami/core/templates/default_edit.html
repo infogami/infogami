@@ -18,7 +18,7 @@ function moveup(e) {
     if (!e) e = window.event;
     if (e.preventDefault)
         e.preventDefault();
-    
+
     var parents = \$(this).parents().filter("tr[@repeat]");
     var a = parents[0];
     var b = parents.prev()[0]
@@ -30,7 +30,7 @@ function movedown(e) {
     if (!e) e = window.event;
     if (e.preventDefault)
         e.preventDefault();
-    
+
     var parents = \$(this).parents().filter("tr[@repeat]");
     var a = parents[0];
     var b = parents.next()[0]
@@ -41,7 +41,7 @@ function movedown(e) {
 function swapvalues(a, b) {
     var ia = \$(':input', a);
     var ib = \$(':input', b);
-    
+
     for (var i=0; i<ia.length; i++)
         swap(ia[i], ib[i]);
 }
@@ -99,13 +99,13 @@ $def display_multiple(property, value):
 
 $def display_regular(p, value):
     $:thinginput(value, p)
-    
+
 $def display(property, value):
     $if property.unique:
         $:display_regular(property, value)
     $else:
         $:display_multiple(property, value)
-        
+
 $def move_buttons(key):
     <td>
         <button type="remove" template="row_$key">-</button>
@@ -143,7 +143,7 @@ $for p in page.type.properties:
         </tr>
     </tbody>
 </table>
-    
+
 <p>$:_.edit_summary<br />
 <input type="text" name="_comment" value="$page.comment_" />
 </p>

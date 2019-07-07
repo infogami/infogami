@@ -24,39 +24,39 @@ class WikiSource(DictMixin):
     """Template source for templates in the wiki"""
     def __init__(self, templates):
         self.templates = templates
-        
+
     def getroot(self):
         return config.get("default_template_root", "/")
-        
+
     def __getitem__(self, key):
         key = self.process_key(key)
         root = self.getroot()
         if root is None or context.get('rescue_mode'):
             raise KeyError, key
-        
+
         root = web.rstrips(root or "", "/")
         value = self.templates[root + key]    
         if isinstance(value, LazyTemplate):
             value = value.func()
-                    
+
         return value
-        
+
     def keys(self):
         return [self.unprocess_key(k) for k in self.templates.keys()]
-        
+
     def process_key(self, key):
         return '/templates/%s.tmpl' % key
-            
+
     def unprocess_key(self, key):
         key = web.lstrips(key, '/templates/')
         key = web.rstrips(key, '.tmpl')
         return key
-    
+
 class MacroSource(WikiSource):
     def process_key(self, key):
         # macro foo is availble at path macros/foo
         return '/macros/' + key
-        
+
     def unprocess_key(self, key):
         return web.lstrips(key, '/macros/')
 
@@ -72,7 +72,7 @@ def get_user_root():
         return i.template_root.strip()
     preferences = get_user_preferences()
     return preferences and preferences.get("template_root", None)
-    
+
 class UserSource(WikiSource):
     """Template source for user templates."""
     def getroot(self):
@@ -103,15 +103,15 @@ class hooks(client.hook):
                 del wikitemplates[page.key]
             if page.name in wikimacros:
                 del wikimacros[page.key]
-    
+
     def before_new_version(self, page):
         """Validates template/macro, before it is saved, by compiling it."""
         if page.type.key == '/type/template':
             _compile_template(page.key, page.body)
         elif page.type.key == '/type/macro':
             _compile_template(page.key, page.macro)
-            
-            
+
+
 def _stringify(value):
     if isinstance(value, dict):
         return value['value']
@@ -120,7 +120,7 @@ def _stringify(value):
 
 def _compile_template(name, text):
     text = web.utf8(_stringify(text))
-            
+
     try:
         return web.template.Template(text, filter=web.websafe, filename=name)
     except (web.template.ParseError, SyntaxError), e:
@@ -136,7 +136,7 @@ def _load_template(page, lazy=False):
         wikitemplates[page.key] = LazyTemplate(lambda: _load_template(page))
     else:
         wikitemplates[page.key] = _compile_template(page.key, page.body)
-    
+
 def _load_macro(page, lazy=False):
     if lazy:
         page = web.storage(key=page.key, macro=web.utf8(_stringify(page.macro)), description=page.description or "")
@@ -145,35 +145,35 @@ def _load_macro(page, lazy=False):
         t = _compile_template(page.key, page.macro)
         t.__doc__ = page.description or ''
         wikimacros[page.key] = t
-        
+
 def load_all():
     def load_macros(site): 
         for m in db.get_all_macros(site):
             _load_macro(m, lazy=True)
-    
+
     def load_templates(site):
         for t in db.get_all_templates(site):
             _load_template(t, lazy=True)
-    
+
     for site in db.get_all_sites():
         context.site = site
         load_macros(site)
         load_templates(site)
-    
+
 def setup():
     delegate.fakeload()
-    
+
     load_all()
-    
+
     from infogami.utils import types
     types.register_type('/templates/.*\.tmpl$', '/type/template')
     types.register_type('^/type/[^/]*$', '/type/type')
     types.register_type('/macros/.*$', '/type/macro')
-    
+
 def reload():
     """Reload all templates and macros."""
     load_all()
-    
+
 @infogami.install_hook
 @infogami.action
 def movetemplates(prefix_pattern=None):
@@ -185,7 +185,7 @@ def movetemplates(prefix_pattern=None):
         else:
             title = '%s template' % (name)
         return title
-    
+
     templates = []
 
     for name, t in template.disktemplates.items():
@@ -195,7 +195,7 @@ def movetemplates(prefix_pattern=None):
             except:
                 print >> web.debug, 'unable to load template', t.name
                 raise
-    
+
     for name, t in template.disktemplates.items():
         prefix = '/templates/'
         wikipath = _wikiname(name, prefix, '.tmpl')
@@ -204,14 +204,14 @@ def movetemplates(prefix_pattern=None):
             body = open(t.filepath).read()
             d = web.storage(create='unless_exists', key=wikipath, type={"key": '/type/template'}, title=title, body=dict(connect='update', value=body))
             templates.append(d)
-            
+
     delegate.admin_login()
     result = web.ctx.site.write(templates)
     for p in result.created:
         print "created", p
     for p in result.updated:
         print "updated", p
-        
+
 @infogami.install_hook
 @infogami.action
 def movemacros():
@@ -221,7 +221,7 @@ def movemacros():
     for name, t in macro.diskmacros.items():
         if isinstance(t, LazyTemplate):
             t.func()
-    
+
     for name, m in macro.diskmacros.items():
         key = _wikiname(name, '/macros/', '')
         body = open(m.filepath).read()
@@ -237,7 +237,7 @@ def movemacros():
 def _wikiname(name, prefix, suffix):
     base, extn = os.path.splitext(name)
     return prefix + base + suffix
-        
+
 def _new_version(name, typename, d):
     from infogami.core import db
     type = db.get_type(context.site, typename)
@@ -247,7 +247,7 @@ class template_preferences(delegate.page):
     """Preferences to choose template root."""
     path = "/account/preferences/template_preferences"
     title = "Change Template Root"
-    
+
     @require_login
     def GET(self):
         import forms
@@ -271,7 +271,7 @@ class template_preferences(delegate.page):
         }
         web.ctx.site.write(q)
         raise web.seeother('/account/preferences')
-        
+
 def monkey_patch_debugerror():
     """Monkey patch web.debug error to display template code."""
     def xopen(filename):
@@ -283,7 +283,7 @@ def monkey_patch_debugerror():
             return StringIO(page.body + "\n" * 100)
         else:
             return open(filename)
-            
+
     web.debugerror.func_globals['open'] = xopen
 
 from infogami.core.code import register_preferences

@@ -25,10 +25,10 @@ media_types = {"application/json": "json"}
 class metapage(type):
     def __init__(self, *a, **kw):
         type.__init__(self, *a, **kw)
-        
+
         enc = getattr(self, 'encoding', None)        
         path = getattr(self, 'path', '/' + self.__name__)
-        
+
         encodings.add(enc)
         pages.setdefault(path, {})
         pages[path][enc] = self
@@ -39,7 +39,7 @@ class metamode(type):
 
         enc = getattr(self, 'encoding', None)        
         name = getattr(self, 'name', self.__name__)
-        
+
         encodings.add(enc)
         modes.setdefault(name, {})
         modes[name][enc] = self
@@ -60,10 +60,10 @@ class metaview(type):
 
 class mode:
     __metaclass__ = metamode
-    
+
     def HEAD(self, *a):
         return self.GET(*a)
-        
+
     def GET(self, *a):
         return web.nomethod(web.ctx.method)        
 
@@ -72,7 +72,7 @@ class page:
 
     def HEAD(self, *a):
         return self.GET(*a)
-        
+
     def GET(self, *a):
         return web.nomethod(web.ctx.method)
 
@@ -84,7 +84,7 @@ class view:
     def emit_json(self, data):
         web.header('Content-Type', 'application/json')
         return infogami_delegate.RawText(simplejson.dumps(data))
-    
+
     def delegate(self, page):
         converters = {"json" : self.emit_json}
         method = web.ctx.method.upper()
@@ -107,11 +107,11 @@ def get_sorted_paths():
     This is called only once. After that the value is memoized.
     """
     return sorted(pages, key=lambda path: ('.*' in path, path))
-        
+
 def find_page():
     path = web.ctx.path
     encoding = web.ctx.get('encoding')
-    
+
     # I don't about this mode.
     if encoding not in encodings:
         raise web.HTTPError("406 Not Acceptable", {})
@@ -119,42 +119,42 @@ def find_page():
     # encoding can be specified as part of path, strip the encoding part of path.
     if encoding:
         path = web.rstrips(path, "." + encoding)
-        
+
     for p in get_sorted_paths():
         m = web.re_compile('^' + p + '$').match(path)
         if m:
             cls = pages[p].get(encoding) or pages[p].get(None)
             args = m.groups()
-            
+
             # FeatureFlags support. 
             # A handler can be enabled only if a feature is active.
             if hasattr(cls, "is_enabled") and bool(cls().is_enabled()) is False:
                continue 
-                
+
             return cls, args
     return None, None
 
 def find_mode():
     what = web.input(_method='GET').get('m', 'view')
-    
+
     path = web.ctx.path
     encoding = web.ctx.get('encoding')
-    
+
     # I don't about this mode.
     if encoding not in encodings:
         raise web.HTTPError("406 Not Acceptable", {})
-    
+
     # encoding can be specified as part of path, strip the encoding part of path.
     if encoding:
         path = web.rstrips(path, "." + encoding)
-        
+
     if what in modes:
         cls = modes[what].get(encoding)
-        
+
         # mode is available, but not for the requested encoding
         if cls is None:
             raise web.HTTPError("406 Not Acceptable", {})
-            
+
         args = [path]
         return cls, args
     else:
@@ -211,7 +211,7 @@ def delegate():
 
 def normpath(path):
     """Normalized path.
-    
+
         >>> normpath("/a b")
         '/a_b'
         >>> normpath("/a//b")
@@ -224,11 +224,11 @@ def normpath(path):
         path.encode('utf-8')
     except UnicodeEncodeError:
         return '/'
-        
+
     # path is taken as empty by web.py dev server when given path starts with //
     if path == '':
         return '/'
-        
+
     # correct trailing / and ..s in the path
     path = os.path.normpath(path)
     # os.path.normpath doesn't remove double/triple /'s at the begining    
@@ -236,7 +236,7 @@ def normpath(path):
     path = path.replace(' ', '_') # replace space with underscore
     path = path.replace('\n', '_').replace('\r', '_')
     return path
-    
+
 def path_processor(handler):
     """Processor to make sure path is normalized."""
     npath = normpath(web.ctx.path)
@@ -263,10 +263,10 @@ def hook_processor(handler):
     finally:
         for h in web.unloadhooks.values():
             h()
-            
+
 def parse_accept(header):
     """Parses Accept: header.
-    
+
         >>> parse_accept("text/plain; q=0.5, text/html")
         [{'media_type': 'text/html'}, {'q': 0.5, 'media_type': 'text/plain'}]
     """
@@ -291,14 +291,14 @@ def parse_accept(header):
         result.append(d)
     result.sort(key=lambda m: m.get('q', 1.0), reverse=True)
     return result
-            
+
 def find_encoding():
     def find_from_extension():
         for enc in encodings:
             if enc is None: continue
             if web.ctx.path.endswith('.' + enc):
                 return enc
-                
+
     if web.ctx.method == 'GET':
         if 'HTTP_ACCEPT' in web.ctx.environ:
             accept = parse_accept(web.ctx.environ['HTTP_ACCEPT'])

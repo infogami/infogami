@@ -20,13 +20,13 @@ import stats
 wiki_processors = []
 def register_wiki_processor(p):
     wiki_processors.append(p)
-    
+
 def _register_mdx_extensions(md):
     """Register required markdown extensions."""
     # markdown's interface to specifying extensions is really painful.
     mdx_footnotes.makeExtension({}).extendMarkdown(md, markdown.__dict__)
     macro.makeExtension({}).extendMarkdown(md, markdown.__dict__)
-    
+
 def get_markdown(text, safe_mode=False):
     md = markdown.Markdown(source=text, safe_mode=safe_mode)
     _register_mdx_extensions(md)
@@ -47,7 +47,7 @@ web.template.Template.globals.update(dict(
   diff = simple_diff,
   better_diff = better_diff,
   find_i18n_namespace = i18n.find_i18n_namespace,
-    
+
   # common utilities
   int = int,
   str = str,
@@ -108,17 +108,17 @@ def http_status(status):
     Useful to implement notfound and redirect.
     """
     web.ctx.status = status
-    
+
 @public
 def join(sep, items):
     items = [web.utf8(item or "") for item in items]
     return web.utf8(sep).join(items)
-    
+
 @public
 def format(text, safe_mode=False):
     html, macros = _format(text, safe_mode=safe_mode)
     return macro.replace_macros(html, macros)
-    
+
 def _format(text, safe_mode=False):
     text = web.safeunicode(text)
     md = get_markdown(text, safe_mode=safe_mode)
@@ -138,7 +138,7 @@ def add_stylesheet(path):
     if web.url(path) not in context.stylesheets:
         context.stylesheets.append(web.url(path))
     return ""
-    
+
 @public
 def add_javascript(path):
     if web.url(path) not in context.javascripts:
@@ -155,7 +155,7 @@ def spacesafe(text):
 def value_to_thing(value, type):
     if value is None: value = ""
     return web.storage(value=value, is_primitive=True, type=type)
-    
+
 def set_error(msg):
     if not context.error: context.error = ''
     context.error += '\n' + msg
@@ -167,21 +167,21 @@ def render_site(url, page):
 def thingrepr(value, type=None):
     if isinstance(value, list):
         return ', '.join(thingrepr(t, type).strip() for t in value)
-        
+
     from infogami.infobase import client        
     if type is None and value is client.nothing:
         return ""
-    
+
     if isinstance(value, client.Thing):
         type = value.type
-        
+
     return unicode(render.repr(thingify(type, value)))
-        
+
 #@public
 #def thinginput(type, name, value, **attrs):
 #    """Renders html input field of given type."""
 #    return unicode(render.input(thingify(type, value), name))
-    
+
 @public
 def thinginput(value, property=None, **kw):
     if property is None:
@@ -198,26 +198,26 @@ def thingify(type, value):
     # if type is given as string then get the type from db
     if type is None:
         type = '/type/string'
-        
+
     if isinstance(type, basestring):
         from infogami.core import db
         type = db.get_version(type)
-        
+
     PRIMITIVE_TYPES = "/type/key", "/type/string", "/type/text", "/type/int", "/type/float", "/type/boolean", "/type/uri"    
     from infogami.infobase import client
-        
+
     if type.key not in PRIMITIVE_TYPES and isinstance(value, basestring) and not value.strip():
         value = web.ctx.site.new('', {'type': type})
 
     if type.key not in PRIMITIVE_TYPES and (value is None or isinstance(value, client.Nothing)):
         value = web.ctx.site.new('', {'type': type})
-    
+
     # primitive values
     if not isinstance(value, client.Thing):
         value = web.storage(value=value, is_primitive=True, type=type, key=value)
     else:
         value.type = type # value.type might be string, make it Thing object
-    
+
     return value
 
 @public
@@ -228,19 +228,19 @@ def thingdiff(type, name, v1, v2):
         v1 += [""] * (len(v2) - len(v1))
         v2 += [""] * (len(v1) - len(v2))
         return "".join(thingdiff(type, name, a, b) for a, b in zip(v1, v2))
-        
+
     def strip(v):
         if isinstance(v, basestring):
             return v.strip()
         else:
             return v
-    
+
     # ignore white-space changes and treat empty dictionaries as nothing
     if v1 == v2 or (not strip(v1) and not strip(v2)):
         return ""
     else:
         return unicode(render.xdiff(thingify(type, v1), thingify(type, v2), name))
-        
+
 @public
 def thingview(page):
     return render.view(page)
@@ -258,7 +258,7 @@ def movefiles():
     def cp_r(src, dest):
         if not os.path.exists(src):
             return
-            
+
         if os.path.isdir(src):
             if not os.path.exists(dest):
                 os.mkdir(dest)
@@ -269,7 +269,7 @@ def movefiles():
         else:
             print 'copying %s to %s' % (src, dest)
             shutil.copy(src, dest)
-    
+
     static_dir = os.path.join(os.getcwd(), "static")
     for plugin in delegate.plugins:
         src = os.path.join(plugin.path, "files")
@@ -286,7 +286,7 @@ def movetypes():
         }
         q.update(kw)
         return q
-        
+
     def backreference(name, expected_type, property_name, **kw):
         q = {
             'name': name,
@@ -296,7 +296,7 @@ def movetypes():
         }
         q.update(kw)
         return q
-        
+
     def readfile(filename):
         text = open(filename).read()
         return eval(text, {
@@ -330,7 +330,7 @@ def movepages():
 
 def move(dir, extension, recursive=False, readfunc=None):
     import delegate
-        
+
     readfunc = readfunc or eval
     pages = []    
     for p in delegate.plugins:
@@ -353,7 +353,7 @@ def move(dir, extension, recursive=False, readfunc=None):
 def write(filename):
     q = open(filename).read()
     print web.ctx.site.write(q)
-    
+
 # this is not really the right place to move this, but couldn't find a better place than this.     
 def require_login(f):
     def g(*a, **kw):
@@ -372,11 +372,11 @@ def login_redirect(path=None):
 
 def permission_denied(error):
     return render.permission_denied(web.ctx.fullpath, error)
-    
+
 @public
 def datestr(then, now=None):
     """Internationalized version of web.datestr"""
-    
+
     # Examples:
     # 2 seconds from now
     # 2 microseconds ago
@@ -387,10 +387,10 @@ def datestr(then, now=None):
     # 2 days ago
     # January 21
     # Jaunary 21, 2003
-    
+
     result = web.datestr(then, now)
     _ = i18n.strings.get_namespace('/utils/date')
-    
+
     import string
     if result[0] in string.digits: # eg: 2 milliseconds ago
         t, unit, ago = result.split(' ', 2)
@@ -451,4 +451,4 @@ def parse_db_url(dburl):
         return d
     else:
         raise ValueError("Invalid database url: %s" % repr(dburl))
-    
+

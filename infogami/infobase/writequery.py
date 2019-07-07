@@ -11,14 +11,14 @@ def get_thing(store, key, revision=None):
         key = unicode(key)
     json = store.get(key, revision)
     return json and common.Thing.from_json(store, key, json)
-    
+
 class PermissionEngine:
     """Engine to check if a user has permission to modify a document.
     """
     def __init__(self, store):
         self.store = store
         self.things = {}
-        
+
     def get_thing(self, key):
         try:
             return self.things[key]
@@ -26,7 +26,7 @@ class PermissionEngine:
             t = get_thing(self.store, key)
             self.things[key] = t
             return t
-            
+
     def has_permission(self, author, key):
         # admin user can modify everything
         if author and author.key == account.get_user_root() + 'admin':
@@ -74,17 +74,17 @@ class SaveProcessor:
         self.store = store
         self.author = author
         self.permission_engine = PermissionEngine(self.store)
-        
+
         self.things = {}
-        
+
         self.types = {}
-        
+
         self.key = None
-        
+
     def process_many(self, docs):
         keys = [doc['key'] for doc in docs]
         self.things = dict((doc['key'], common.Thing.from_dict(self.store, doc['key'], doc)) for doc in docs)
-        
+
         def parse_type(value):
             if isinstance(value, basestring):
                 return value
@@ -99,28 +99,28 @@ class SaveProcessor:
             self.types[doc['key']] = parse_type(doc.get('type'))
         refs = list(k for k in self.find_references(docs) if k not in self.types)
         self.types.update(self.find_types(refs))
-        
+
         prev_data = self.get_many(keys)
         docs = [self._process(doc['key'], doc, prev_data.get(doc['key'])) for doc in docs]
-        
+
         return [doc for doc in docs if doc]
-        
+
     def find_types(self, keys):
         types = {}
-        
+
         if keys:
             d = self.store.get_metadata_list(keys)
             type_ids = list(set(row.type for row in d.values())) 
             typedict = self.store.get_metadata_list_from_ids(type_ids)
-            
+
             for k, row in d.items():
                 types[k] = typedict[row.type].key
         return types
-        
+
     def find_references(self, d, result=None):
         if result is None:
             result = set()
-            
+
         if isinstance(d, dict):
             if len(d) == 1 and d.keys() == ["key"]:
                 result.add(d['key'])
@@ -132,7 +132,7 @@ class SaveProcessor:
             for v in d:
                 self.find_references(v, result)
         return result
-            
+
     def get_thing(self, key):
         try:
             return self.things[key]
@@ -140,14 +140,14 @@ class SaveProcessor:
             t = get_thing(self.store, key)
             self.things[key] = t
             return t
-            
+
     def get_type(self, key):
         try:
             return self.types[key]
         except KeyError:
             t = get_thing(self.store, key)
             return t and t.type.key
-            
+
     def get_many(self, keys):
         d = self.store.get_many_as_dict(keys)
         return dict((k, simplejson.loads(json)) for k, json in d.items())
@@ -155,14 +155,14 @@ class SaveProcessor:
     def process(self, key, data):
         prev_data = self.get_many([key])
         return self._process(key, data, prev_data.get(key))
-        
+
     def _process(self, key, data, prev_data=None):
         self.key = key # hack to make key available when raising exceptions.
-        
-        
+
+
         if 'key' not in data:
             data['key'] = key
-            
+
         if web.ctx.get('infobase_bootstrap', False):
             return data
 
@@ -171,16 +171,16 @@ class SaveProcessor:
         data = common.parse_query(data)
         self.validate_properties(data)
         prev_data = prev_data and common.parse_query(prev_data)
-        
+
         if not web.ctx.get('disable_permission_check', False) and not self.has_permission(self.author, key):
             raise common.PermissionDenied(message='Permission denied to modify %s' % repr(key))
-        
+
         type = data.get('type')
         if type is None:
             raise common.BadData(message="missing type", at=dict(key=key))
         type = self.process_value(type, self.get_property(None, 'type'))
         type = self.get_thing(type)
-        
+
         # when type is changed, consider as all object is modified and don't compare with prev data.
         if prev_data and prev_data.get('type') != type.key:
             prev_data = None
@@ -190,12 +190,12 @@ class SaveProcessor:
         for k in common.READ_ONLY_PROPERTIES:
             data.pop(k, None)
             prev_data and prev_data.pop(k, None)
-            
+
         if data == prev_data:
             return None
         else:
             return data
-    
+
     def has_permission(self, author, key):
         return self.permission_engine.has_permission(author, key)
 
@@ -208,7 +208,7 @@ class SaveProcessor:
             for p in type.get('properties', []):
                 if p.get('name') == name:
                     return p
-                    
+
     def validate_properties(self, data):
         rx = web.re_compile('^[a-z][a-z0-9_]*$')
         for key in data:
@@ -229,28 +229,28 @@ class SaveProcessor:
                     d[k] = v
         if type:
             d['type'] = common.Reference(type.key)
-            
+
         return d
 
     def process_value(self, value, property, prefix=""):
         unique = property.get('unique', True)
         expected_type = property.expected_type.key
-        
+
         at = {"key": self.key, "property": prefix + property.name}
 
         if isinstance(value, list):
             if unique is True:
                 raise common.BadData(message='expected atom, found list', at=at, value=value)
-            
+
             p = web.storage(property.copy())
             p.unique = True
             return [self.process_value(v, p) for v in value]
-    
+
         if unique is False:    
             raise common.BadData(message='expected list, found atom', at=at, value=value)
 
         type_found = common.find_type(value)
-    
+
         if expected_type in common.primitive_types:
             # string can be converted to any type and int can be converted to float
             try:
@@ -268,12 +268,12 @@ class SaveProcessor:
         else:
             if type_found == '/type/string':
                 value = common.Reference(value)
-    
+
         type_found = common.find_type(value)
-    
+
         if type_found == '/type/object':
             type_found = self.get_type(value)
-            
+
             # type is not found only when the thing id not found.
             if type_found is None:
                 raise common.NotFound(key=unicode(value), at=at)
@@ -281,26 +281,26 @@ class SaveProcessor:
         if expected_type != type_found:
             raise common.BadData(message='expected %s, found %s' % (property.expected_type.key, type_found), at=at, value=value)
         return value
-        
+
 
 class WriteQueryProcessor:
     def __init__(self, store, author):
         self.store = store
         self.author = author
-        
+
     def process(self, query):
         p = SaveProcessor(self.store, self.author)
-        
+
         for q in serialize(query):
             q = common.parse_query(q)
-            
+
             if not isinstance(q, dict) or q.get('key') is None:
                 continue
 
             key = q['key']                
             thing = get_thing(self.store, key)
             create = q.pop('create', None)
-            
+
             if thing is None:
                 if create:
                     q = self.remove_connects(q)
@@ -308,9 +308,9 @@ class WriteQueryProcessor:
                     raise common.NotFound(key=key)
             else:
                 q = self.connect_all(thing._data, q)
-            
+
             yield p.process(key, q)
-    
+
     def remove_connects(self, query):
         for k, v in query.items():
             if isinstance(v, dict) and 'connect' in v:
@@ -320,17 +320,17 @@ class WriteQueryProcessor:
                     value = v['value']
                 query[k] = value
         return query
-            
+
     def connect_all(self, data, query):
         """Applys all connects specified in the query to data.
-        
+
             >>> p = WriteQueryProcessor(None, None)
             >>> data = {'a': 'foo', 'b': ['foo', 'bar']}
-            
+
             >>> query = {'a': {'connect': 'update', 'value': 'bar'}, 'b': {'connect': 'insert', 'value': 'foobar'}}
             >>> p.connect_all(data, query)
             {'a': 'bar', 'b': ['foo', 'bar', 'foobar']}
-            
+
             >>> query = {'a': {'connect': 'update', 'value': 'bar'}, 'b': {'connect': 'delete', 'value': 'foo'}}
             >>> p.connect_all(data, query)
             {'a': 'bar', 'b': ['bar']}
@@ -341,7 +341,7 @@ class WriteQueryProcessor:
         """
         import copy
         data = copy.deepcopy(data)
-        
+
         for k, v in query.items():
             if isinstance(v, dict):
                 if 'connect' in v:
@@ -351,13 +351,13 @@ class WriteQueryProcessor:
                         value = v['value']            
                     self.connect(data, k, v['connect'], value)
         return data
-        
+
     def connect(self, data, name, connect, value):
         """Modifies the data dict by performing the specified connect.
-        
+
             >>> getdata = lambda: {'a': 'foo', 'b': ['foo', 'bar']}
             >>> p = WriteQueryProcessor(None, None)
-            
+
             >>> p.connect(getdata(), 'a', 'update', 'bar')
             {'a': 'bar', 'b': ['foo', 'bar']}
             >>> p.connect(getdata(), 'b', 'update_list', ['foobar'])
@@ -378,7 +378,7 @@ class WriteQueryProcessor:
             if value in data[name]:
                 data[name].remove(value)
         return data
-            
+
 def serialize(query):
     ""
     r"""Serializes a nested query such that each subquery acts on a single object.
@@ -456,10 +456,10 @@ def serialize(query):
             q = query.copy()
             for k, v in q.items():
                 q[k] = flatten(v, result, path + [k])
-                
+
             if 'key' in q:
                 result.append(q)
-                
+
             if from_list:
                 #@@ quick fix
                 if 'key' in q:
@@ -473,7 +473,7 @@ def serialize(query):
             return data
         else:
             return query
-            
+
     result = []
     flatten(query, result)                         
     return result

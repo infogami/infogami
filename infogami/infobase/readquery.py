@@ -11,19 +11,19 @@ def get_thing(store, key, revision=None):
 def run_things_query(store, query):
     query = make_query(store, query)
     keys = store.things(query)
-        
+
     xthings = {}
     def load_things(keys, query):
         _things = simplejson.loads(store.get_many(keys))
         xthings.update(_things)
-        
+
         for k, v in query.requested.items():
             k = web.lstrips(k, query.prefix)
             if isinstance(v, Query):
                 keys2 = common.flatten([d.get(k) for d in _things.values() if d.get(k)])
                 keys2 = [k['key'] for k in keys2]
                 load_things(set(keys2), v)
-    
+
     def get_nested_data(value, query):
         if isinstance(value, list):
             return [get_nested_data(v, query) for v in value]
@@ -32,17 +32,17 @@ def run_things_query(store, query):
             return get_data(thingdata, query)
         else:
             return value
-    
+
     def get_data(thingdata, query):
         fields = dict((web.lstrips(k, query.prefix), v) for k, v in query.requested.items())
-        
+
         # special care for '*'
         if '*' in fields:
             f = dict((k, None) for k in thingdata.keys())
             fields.pop('*')
             f.update(fields)
             fields = f
-        
+
         d = {}
         for k, v in fields.items():
             value = thingdata.get(k)
@@ -51,13 +51,13 @@ def run_things_query(store, query):
             else:
                 d[k] = value
         return d
-    
+
     data = [{'key': key} for key in keys]
     if query.requested.keys() == ['key']:
         return data
     else:
         load_things(keys, query)
-        
+
         # @@@ Sometimes thing.latest_revision is not same as max(data.revision) due to some data error.
         # @@@ Temporary work-around to handle that case.
         data = [d for d in data if d['key'] in xthings]
@@ -66,7 +66,7 @@ def run_things_query(store, query):
 class Query:
     """Query is a list of conditions.
     Each condition is a storage object with ("key", "op", "datatype", "value") as keys.
-    
+
         >>> q = Query()
         >>> q
         <query: []>
@@ -86,7 +86,7 @@ class Query:
         self.offset = None
         self.prefix = None
         self.requested = {"key": None}
-        
+
     def get_type(self):
         """Returns the value of the condition for type if there is any.
         """
@@ -94,7 +94,7 @@ class Query:
             #@@ also make sure op is =
             if c.key == 'type':
                 return c.value
-                
+
     def assert_type_required(self):
         type_required = any(c.key not in common.COMMON_PROPERTIES for c in self.conditions if not isinstance(c, Query))
         if type_required and self.get_type() is None:
@@ -102,7 +102,7 @@ class Query:
 
     def add_condition(self, key, op, datatype, value):
         self.conditions.append(web.storage(key=key, op=op, datatype=datatype, value=value))
-        
+
     def __repr__(self):
         def f(c):
             if isinstance(c, Query):
@@ -130,9 +130,9 @@ def make_query(store, query, prefix=""):
     if q.limit > 1000:
         q.limit = 1000
     sort = query.pop('sort', None)
-    
+
     nested = (prefix != "")
-    
+
     for k, v in query.items():
         # key foo can also be written as label:foo
         k = k.split(':')[-1]
@@ -152,24 +152,24 @@ def make_query(store, query, prefix=""):
         else:
             k, op = parse_key(k)
             q.add_condition(k, op, None, v)
-             
+
     if not nested:
         q.assert_type_required()
-        
+
     type = get_thing(store, q.get_type())
     #assert type is not None, 'Not found: ' + q.get_type()
     for c in q.conditions:
         if not isinstance(c, Query):
             c.datatype = find_datatype(type, c.key, c.value)
-            
+
     if sort:
         parse_key(sort) # to validate key
         q.sort = web.storage(key=sort, datatype=find_datatype(type, sort, None))
     else:
         q.sort = None
-            
+
     return q
-    
+
 def find_datatype(type, key, value):
     """
         >>> find_datatype(None, "foo", 1)
@@ -187,10 +187,10 @@ def find_datatype(type, key, value):
         child_permission="ref",
         created="datetime", 
         last_modified="datetime")
-    
+
     if key in d:
         return d[key]
-    
+
     if isinstance(value, bool):
         return "boolean"
     elif isinstance(value, int):
@@ -207,11 +207,11 @@ def find_datatype(type, key, value):
         '/type/boolean': 'boolean',
         '/type/datetime': 'datetime'
     }
-    
+
     # if possible, get the datatype from the type schema
     p = type and type.get_property(key)
     return (p and type2datatype.get(p.expected_type.key, 'ref')) or "str"
-    
+
 def parse_key(key):
     """Parses key and returns key and operator.
         >>> parse_key('foo')
@@ -234,25 +234,25 @@ def parse_key(key):
             break
 
     return key, operator
-    
+
 def make_versions_query(store, query):
     """Creates a versions query object from query dict.
     """
     q = Query()
-    
+
     q.offset = common.safeint(query.pop('offset', None), 0)
     q.limit = common.safeint(query.pop('limit', 20), 20)
     if q.limit > 1000:
         q.limit = 1000
     q.sort = query.pop('sort', '-created')
-    
+
     columns = ['key', 'type', 'revision', 'author', 'comment', 'machine_comment', 'ip', 'created', 'bot']
-    
+
     for k, v in query.items():
         if k not in columns:
             raise ValueError, k
         q.add_condition(k, '=', None, v)
-        
+
     return q
 
 if __name__ == "__main__":

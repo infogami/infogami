@@ -15,19 +15,19 @@ import i18n
 
 def create_site():
     from infogami.infobase import client
-    
+
     if config.site is None:
         site = web.ctx.host.split(':')[0] # strip port
     else:
         site = config.site
-    
+
     web.ctx.conn = client.connect(**config.infobase_parameters)
-    
+
     # set auto token in the connection
     if web.ctx.get('env'): # do this only if web.load is already called
         auth_token = web.cookies().get(config.login_cookie_name)
         web.ctx.conn.set_auth_token(auth_token)
-    
+
     return client.Site(web.ctx.conn, site)
 
 def fakeload():
@@ -41,10 +41,10 @@ def fakeload():
     context.javascripts = []
     context.site = config.site
     context.path = '/'
-    
+
     # hack to disable permissions
     web.ctx.disable_permisson_check = True
-    
+
     context.user = None
     web.ctx.site = create_site()
 
@@ -57,22 +57,22 @@ def initialize_context():
     context.user = web.ctx.site.get_user()
     context.site = config.site
     context.path = web.ctx.path
-    
+
     i = web.input(_method='GET', rescue="false")
     context.rescue_mode = (i.rescue.lower() == 'true')
-        
+
 def layout_processor(handler):
     """Processor to wrap the output in site template."""
     out = handler()
-    
+
     path = web.ctx.path[1:]
-    
+
     if out is None:
         out = RawText("")
-    
+
     if isinstance(out, basestring):
         out = web.template.TemplateResult(__body__=out)
-     
+
     if 'title' not in out:
         out.title = path
 
@@ -80,12 +80,12 @@ def layout_processor(handler):
     if 'content_type' in out:
         web.ctx.headers = [h for h in web.ctx.headers if h[0].lower() != 'content-type']
         web.header('Content-Type', out.content_type)
-        
+
     if hasattr(out, 'rawtext'):
         html = out.rawtext
     else:
         html = render_site(config.site, out)
-        
+
     # cleanup references to avoid memory leaks
     web.ctx.site._cache.clear()
     web.ctx.pop('site', None)
@@ -132,7 +132,7 @@ def _make_plugin(name):
                 break
         else:
             raise Exception, 'Plugin not found: ' + name
-            
+
     return web.storage(name=name, path=path, module=module)
 
 def _make_plugin_module(modname):
@@ -149,17 +149,17 @@ def _list_plugins(dir):
         return [_make_plugin(name) for name in os.listdir(dir) if os.path.isdir(dir + '/' + name)]
     else:
         return []
-    
+
 def infogami_root():
     import infogami
     return os.path.dirname(infogami.__file__)
-        
+
 def _load():
     """Imports the files from the plugins directories and loads templates."""
     global plugins
-    
+
     plugins = [_make_plugin('core')]
-    
+
     if config.plugins is not None:
         plugins += [_make_plugin(p) for p in config.plugins]
     else:        
@@ -170,13 +170,13 @@ def _load():
 
     if config.plugin_modules is not None:
         plugins += [_make_plugin_module(name) for name in config.plugin_modules]
-            
+
     for plugin in plugins:
         template.load_templates(plugin.path, lazy=True)
         macro.load_macros(plugin.path, lazy=True)
         i18n.load_strings(plugin.path)
         __import__(plugin.module + '.code', globals(), locals(), ['plugins'])
-        
+
     features.set_feature_flags(config.get("features", {}))
 
 def admin_login(site=None):
@@ -193,7 +193,7 @@ def register_exception():
     """Called to on exceptions to log exception or send exception mail."""
     for h in exception_hooks:
         h()
-        
+
 def email_exceptions():
     if config.bugfixer:
         web.emailerrors(config.bugfixer, lambda: None)()

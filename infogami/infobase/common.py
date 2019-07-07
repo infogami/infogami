@@ -49,7 +49,7 @@ def parse_data(d, level=0):
         >>> text = {'type': '/type/text', 'value': 'foo'}
         >>> date= {'type': '/type/datetime', 'value': '2009-01-02T03:04:05'}
         >>> true = {'type': '/type/boolean', 'value': 'true'}
-        
+
         >>> parse_data(text)
         <text: u'foo'>
         >>> parse_data(date)
@@ -84,7 +84,7 @@ def parse_data(d, level=0):
 
 def format_data(d):
     """Convert a data to a representation that can be saved.
-    
+
         >>> format_data(1)
         1
         >>> format_data('hello')
@@ -111,7 +111,7 @@ def format_data(d):
 
 def record_exception():
     """This function is called whenever there is any exception in Infobase.
-    
+
     Overwrite this function if some action (like logging the exception) needs to be taken on exceptions.
     """
     import traceback
@@ -119,7 +119,7 @@ def record_exception():
 
 def create_test_store():
     """Creates a test implementation for using in doctests.
-    
+
     >>> store = create_test_store()
     >>> json = store.get('/type/type')
     >>> t = Thing.from_json(store, u'/type/type', json)
@@ -134,21 +134,21 @@ def create_test_store():
     class Store(web.storage):
         def get(self, key, revision=None):
             return simplejson.dumps(self[key].format_data())
-            
+
     store = Store()
-    
+
     def add_primitive_type(key):
         add_object({
             'key': key,
             'type': {'key': '/type/type'},
             'king': 'primitive'
         })
-        
+
     def add_object(data):
         key = data.pop('key')
         store[key] = Thing(store, key, parse_data(data))
         return store[key]
-    
+
     add_object({
         'key': '/type/type',
         'type': {'key': '/type/type'},
@@ -168,7 +168,7 @@ def create_test_store():
             'unique': False
         }]
     })
-    
+
     add_object({
         'key': '/type/property',
         'type': '/type/type',
@@ -187,14 +187,14 @@ def create_test_store():
             'unique': True
         }]    
     })
-    
+
     add_primitive_type('/type/string')
     add_primitive_type('/type/int')
     add_primitive_type('/type/float')
     add_primitive_type('/type/boolean')
     add_primitive_type('/type/text')
     add_primitive_type('/type/datetime')
-    
+
     add_object({
         'key': '/type/page',
         'type': '/type/page',
@@ -213,18 +213,18 @@ class LazyThing:
         self.__dict__['_store'] = store
         self.__dict__['_json'] = json
         self.__dict__['_thing'] = None
-        
+
     def _get(self):
         if self._thing is None:
             self._thing = Thing.from_json(self._store, self._key, self._json)
         return self._thing
-        
+
     def __getattr__(self, key):
         return getattr(self._get(), key)
-        
+
     def __json__(self):
         return self._json
-        
+
     def __repr__(self):
         return "<LazyThing: %s>" % repr(self._key)
 

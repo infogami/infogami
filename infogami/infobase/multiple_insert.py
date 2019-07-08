@@ -28,7 +28,7 @@ def multiple_insert(tablename, values, seqname=None, _test=False):
             return result
         else:
             return None
-        
+
     if not values:
         return []
 
@@ -48,9 +48,9 @@ def multiple_insert(tablename, values, seqname=None, _test=False):
     for row in values:
         d = join([web.SQLQuery(web.aparam(), [row[k]]) for k in keys], ', ')
         data.append('(' + d + ')')
-         
+
     q += join(data, ',')
-    
+
     if seqname is not False:
         if seqname is None:
             seqname = tablename + "_id_seq"

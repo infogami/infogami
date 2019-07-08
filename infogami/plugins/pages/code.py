@@ -24,7 +24,7 @@ def listfiles(root, filter=None):
     """
     if not root.endswith(os.sep):
         root += os.sep
-        
+
     for dirname, dirnames, filenames in os.walk(root):
         for f in filenames:
             path = os.path.join(dirname, f)
@@ -34,7 +34,7 @@ def listfiles(root, filter=None):
 
 def storify(d):
     """Recursively converts dict to web.storage object.
-    
+
         >>> d = storify({'x: 1, y={'z': 2}})
         >>> d.x
         1
@@ -47,7 +47,7 @@ def storify(d):
         return [storify(x) for x in d]
     else:
         return d
-            
+
 def _readpages(root):
     """Reads and parses all root/*.page files and returns results as a dict."""
     def read(root, path):
@@ -102,11 +102,11 @@ def _savepage(page, create_dependents=True, comment=None):
     name = page.name
     type = getthing(page.type.name, create=True)
     d = {}
-    
+
     getself = lambda: getthing(name, create=True)
     for k, v in page.d.items():
         d[k] = thingify(v, getself)
-            
+
     _page = db.new_version(context.site, name, type, d)
     _page.save(author=context.user, comment=comment, ip=web.ctx.ip)
     return _page
@@ -127,7 +127,7 @@ def thing2dict(page):
             return [simplify(a, page) for a in x]
         else:
             return x
-            
+
     data = dict(name=page.name, type={'name': page.type.name})
     d = data['d'] = {}
     for k, v in page.d.iteritems():
@@ -169,7 +169,7 @@ def push(root):
     """Move pages from disk to wiki."""
     pages = _readpages(root)
     _pushpages(pages)
-    
+
 def _pushpages(pages):
     tdb.transact()
     try:
@@ -191,14 +191,14 @@ def moveallpages():
         path = os.path.join(plugin.path, 'pages')
         pages.update(_readpages(path))
     _pushpages(pages)
-    
+
 @infogami.action
 def tdbdump(filename, created_after=None, created_before=None):
     """Creates tdb log of entire database."""
     from infogami.tdb import logger
     f = open(filename, 'w')
     logger.set_logfile(f)
-    
+
     # get in chunks of 10000 to limit the load on db.
     N = 10000
     offset = 0
@@ -208,7 +208,7 @@ def tdbdump(filename, created_after=None, created_before=None):
         offset += N
         if not versions:
             break
-            
+
         # fill the cache with things corresponding to the versions. 
         # otherwise, every thing must be queried separately.
         tdb.withIDs([v.thing_id for v in versions])            
@@ -217,7 +217,7 @@ def tdbdump(filename, created_after=None, created_before=None):
             logger.transact()
             if v.revision == 1:
                 logger.log('thing', t.id, name=t.name, parent_id=t.parent.id)
-                
+
             logger.log('version', v.id, thing_id=t.id, author_id=v.author_id, ip=v.ip, 
                     comment=v.comment, revision=v.revision, created=v.created.isoformat())           
             logger.log('data', v.id, __type__=t.type, **t.d)
@@ -246,12 +246,12 @@ def datadump(filename):
                 data = thing2dict(t)
                 f.write(str(data))
                 f.write('\n')
-    
+
     f = open(filename, 'w')
     # dump the everything except users
     dump(lambda t: t.type.name != 'type/user')
     f.close()
-    
+
 @infogami.action
 def dataload(filename):
     """"Loads data dumped using datadump action into the database."""

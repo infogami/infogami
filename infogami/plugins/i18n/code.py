@@ -27,7 +27,7 @@ def load_strings(site):
     pages = db.get_all_strings(site)
     for page in pages:
         load(page.key, page._getdata())
-            
+
 def load(key, data):
     result = re_i18n.match(key)
     if result:
@@ -39,21 +39,21 @@ def setup():
     delegate.fakeload()    
     from infogami.utils import types
     types.register_type('/i18n(/.*)?/strings.[^/]*', '/type/i18n')
-    
+
     for site in db.get_all_sites():
         load_strings(site)
-        
+
 def stringify(d):
     """Prefix string_ for every key in a dictionary.
-    
+
         >>> stringify({'a': 1, 'b': 2})
         {'string_a': 1, 'string_b': 2}
     """
     return dict([('string_' + k, v) for k, v in d.items()])
-    
+
 def unstringify(d):
     """Removes string_ prefix from every key in a dictionary.
-    
+
         >>> unstringify({'string_a': 1, 'string_b': 2})
         {'a': 1, 'b': 2}    
     """
@@ -61,7 +61,7 @@ def unstringify(d):
 
 def pathjoin(a, *p):
     """Join two or more pathname components, inserting '/' as needed.
-    
+
         >>> pathjoin('/i18n', '/type/type', 'strings.en')
         '/i18n/type/type/strings.en'
     """
@@ -74,7 +74,7 @@ def pathjoin(a, *p):
         else:
             path += '/' + b
     return path
-    
+
 @infogami.install_hook
 @infogami.action
 def movestrings():

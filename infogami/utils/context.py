@@ -14,7 +14,7 @@ class InfogamiContext(web.ThreadedDict):
     """
     def load(self):
         self.update(defaults)
-        
+
     def __getattr__(self, name):
         # In some error conditions, context is not initialzied. 
         # Using the default as fallback.
@@ -22,5 +22,5 @@ class InfogamiContext(web.ThreadedDict):
             return web.ThreadedDict.__getattr__(self, name)
         except AttributeError:
             return getattr(defaults, name)
-    
+
 context = InfogamiContext()

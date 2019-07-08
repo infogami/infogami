@@ -20,13 +20,13 @@ def synchronize(f):
     def g(self, *a, **kw):
         if not getattr(self, '_lock'):
             self._lock = threading.Lock()
-            
+
         self._lock.acquire()
         try:
             return f(self, *a, **kw)
         finally:
             self._lock.release()
-            
+
     return f
 
 def to_timestamp(iso_date_string):
@@ -42,23 +42,23 @@ def to_timestamp(iso_date_string):
     H, M, S = time.split(':')
     S, ms = S.split('.')
     return datetime.datetime(*map(int, [y, m, d, H, M, S, ms]))
-            
+
 class DummyLogger:
     def __init__(self, *a, **kw):
         pass
-    
+
     def on_write(self, *a, **kw):
         pass
-        
+
     def on_new_account(self, *a, **kw):
         pass
-        
+
     def on_update_account(self, *a, **kw):
         pass
-        
+
     def __call__(self, event):
         pass
-    
+
 class Logger:
     def __init__(self, root, compress=False):
         self.root = root
@@ -69,12 +69,12 @@ class Logger:
         else:
             self.extn = ".log"
             self._open = open
-        
+
     def get_path(self, timestamp=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         date = timestamp.date()
         return os.path.join(self.root, "%02d" % date.year, "%02d" % date.month, "%02d" % date.day) + self.extn
-            
+
     def __call__(self, event):
         import web
         data = event.data.copy()
@@ -94,9 +94,9 @@ class Logger:
             name = event.name
         else:
             return
-            
+
         self.write(name, event.sitename, event.timestamp, data)
-        
+
     @synchronize
     def write(self, action, sitename, timestamp, data):
         path = self.get_path(timestamp)

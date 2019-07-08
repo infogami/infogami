@@ -19,7 +19,7 @@ if web.__version__ == "0.34":
     from UserDict import DictMixin
     web.template.TemplateResult.__bases__ = (DictMixin, web.storage)
     web.template.StatementNode.emit = lambda self, indent, text_indent="": indent + self.stmt
-    
+
 web_render = web.template.render
 
 class TemplateRender(web_render):
@@ -32,7 +32,7 @@ class TemplateRender(web_render):
             return 'dir', path
         else:
             return 'none', None
-            
+
     def __repr__(self):
         return "<TemplateRender: %s>" % repr(self._loc)
 
@@ -43,10 +43,10 @@ class LazyTemplate:
         self.func = func
         self.name = name
         self.__dict__.update(kw)
-        
+
     def __repr__(self):
         return "<LazyTemplate: %s>" % repr(self.name)
-        
+
 class DiskTemplateSource(web.storage):
     """Template source of templates on disk.
     Supports loading of templates from a search path instead of single dir.
@@ -63,17 +63,17 @@ class DiskTemplateSource(web.storage):
                 self[name] = LazyTemplate(load, name=name, filepath=filepath)
             else:
                 self[name] = self.get_template(filepath)
-                            
+
     def get_template(self, filepath):
         mtime = time.time()
         t = web.template.frender(filepath)
         t.mtime = mtime
         t.filepath = filepath
         return t
-        
+
     def is_template_modified(self, t):
         return os.path.exists(t.filepath) and os.stat(t.filepath).st_mtime > t.mtime
-        
+
     def __getitem__(self, name):
         t = dict.__getitem__(self, name)
         if isinstance(t, LazyTemplate):
@@ -81,12 +81,12 @@ class DiskTemplateSource(web.storage):
         elif web.config.debug == True and self.is_template_modified(t):
             t = self.get_template(t.filepath)
             self[name] = t
-            
+
         return t
-           
+
     def __repr__(self):
         return "<DiskTemplateSource at %d>" % id(self)
-            
+
 def find(path):
     """Find all files in the file hierarchy rooted at path.
         >> find('..../web')
@@ -101,7 +101,7 @@ def find(path):
 #@@ Find a better name
 class Render(storage.DictPile):
     add_source = storage.DictPile.add_dict        
-        
+
     def __getitem__(self, key):
         # take templates from all sources
         templates = [s[key] for s in self.dicts[::-1] if key in s]
@@ -109,11 +109,11 @@ class Render(storage.DictPile):
             return lambda *a, **kw: saferender(templates, *a, **kw)
         else:
             raise KeyError, key
-            
+
     def __getattr__(self, key):
         if key.startswith('__'):
             raise AttributeError, key
-    
+
         try:
             return self[key]
         except KeyError:
@@ -153,13 +153,13 @@ def saferender(templates, *a, **kw):
             i = web.input(_method='GET', debug="false")
             if i.debug.lower() == "true":
                 raise
-            
+
             import delegate
             delegate.register_exception()
-            
+
             import traceback
             traceback.print_exc()
-            
+
             import view            
             message = str(t.filename) + ': error in processing template: ' + e.__class__.__name__ + ': ' + str(e) + ' (falling back to default template)'
             view.add_flash_message('error', message)
@@ -174,7 +174,7 @@ def typetemplate(name):
         t = getattr(render, web.utf8(key), default_template)
         return t(page, *a, **kw)
     return template
-    
+
 def load_templates(plugin_root, lazy=True):
     """Adds $plugin_root/templates to template search path"""
     path = os.path.join(plugin_root, 'templates')

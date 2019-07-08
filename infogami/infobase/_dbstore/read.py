@@ -23,7 +23,7 @@ def get_bot_users(db):
 class RecentChanges:
     def __init__(self, db):
         self.db = db
-        
+
     def get_keys(self, ids):
         ids = list(set(id for id in ids if id is not None))
         if ids:
@@ -31,31 +31,31 @@ class RecentChanges:
             return dict((row.id, row.key) for row in rows)
         else:
             return {}
-            
+
     def get_thing_id(self, key):
         try:
             return self.db.where("thing", key=key)[0].id
         except IndexError:
             return None
-            
+
     def get_change(self, id):
         try:
             change = self.db.select("transaction", where="id=$id", vars=locals())[0]
         except IndexError:
             return None
-        
+
         authors = self.get_keys([change.author_id])
         return self._process_transaction(change, authors=authors)
-    
+
     def recentchanges(self, limit=100, offset=0, **kwargs):
         tables = ['transaction t']
         what = 't.*'
         order = 't.created DESC'
         wheres = ["1 = 1"]
-        
+
         if offset < 0:
             offset = 0
-        
+
         key = kwargs.pop('key', None)
         if key is not None:
             thing_id = self.get_thing_id(key)
@@ -64,7 +64,7 @@ class RecentChanges:
             else:
                 tables.append('version v')
                 wheres.append('v.transaction_id = t.id AND v.thing_id = $thing_id')
-        
+
         bot = kwargs.pop('bot', None)
         if bot is not None:
             bot_ids = get_bot_users(self.db)
@@ -81,7 +81,7 @@ class RecentChanges:
                 return []
             else:
                 wheres.append("t.author_id=$author_id")
-                
+
         ip = kwargs.pop("ip", None)
         if ip is not None:
             if not self._is_valid_ipv4(ip):
@@ -89,20 +89,20 @@ class RecentChanges:
             else:
                 # Don't include edits by logged in users when queried by ip. 
                 wheres.append("t.ip = $ip AND t.author_id is NULL")
-            
+
         kind = kwargs.pop('kind', None)
         if kind is not None:
             wheres.append('t.action = $kind')
-            
+
         begin_date = kwargs.pop('begin_date', None)
         if begin_date is not None:
             wheres.append("t.created >= $begin_date")
-        
+
         end_date = kwargs.pop('end_date', None)
         if end_date is not None:
             # end_date is not included in the interval.
             wheres.append("t.created < $end_date")
-            
+
         data = kwargs.pop('data', None)
         if data:
             for i, (k, v) in enumerate(data.items()):
@@ -112,24 +112,24 @@ class RecentChanges:
                 # k, v are going to change in the next iter of the loop.
                 # bind the current values by calling reparam.
                 wheres.append(web.reparam(q, locals())) 
-        
-        
+
+
         wheres = list(self._process_wheres(wheres, locals()))
         where = web.SQLQuery.join(wheres, " AND ")
-        
+
         rows = self.db.select(tables, what=what, where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
 
         authors = self.get_keys(row.author_id for row in rows)        
-        
+
         return [self._process_transaction(row, authors) for row in rows]
-        
+
     def _process_wheres(self, wheres, vars):
         for w in wheres:
             if isinstance(w, basestring):
                 yield web.reparam(w, vars)
             else:
                 yield w
-        
+
     def _process_transaction(self, tx, authors):
         d = {
             "id": str(tx.id),
@@ -137,7 +137,7 @@ class RecentChanges:
             "timestamp": tx.created.isoformat(),
             "comment": tx.comment,
         }
-        
+
         d['changes'] = tx.changes and simplejson.loads(tx.changes)
 
         if tx.author_id:
@@ -155,9 +155,9 @@ class RecentChanges:
             d['data'] = simplejson.loads(tx.machine_comment)
         else:
             d['data'] = {}
-            
+
         return d
-        
+
     def _is_valid_ipv4(self, ip):
         tokens = ip.split(".")
         try:

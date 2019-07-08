@@ -36,7 +36,7 @@ class FootnoteExtension (markdown.Extension):
 
         for key, value in configs :
             self.config[key][0] = value
-            
+
         self.reset()
 
     def extendMarkdown(self, md, md_globals) :
@@ -62,7 +62,7 @@ class FootnoteExtension (markdown.Extension):
         postprocessor.extension = self
 
         md.postprocessors.append(postprocessor)
-        
+
         textPostprocessor = FootnoteTextPostprocessor(self)
 
         md.textPostprocessors.append(textPostprocessor)

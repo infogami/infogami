@@ -1,12 +1,12 @@
 
 function setup_autocomplete(e) {
     var e = $(e);
-    
+
     var name = e.attr('ac_name');
     var type = e.attr('ac_type');
     var property = e.attr('ac_property');
     var limit = e.attr("ac_limit");
-    
+
     e.autocomplete("/getthings", {
         extraParams: {
             type: type,

@@ -41,15 +41,15 @@ class view (delegate.mode):
 class edit (delegate.mode):
     def GET(self, path):
         i = web.input(v=None, t=None)
-        
+
         if not web.ctx.site.can_write(path):
             return render.permission_denied(web.ctx.fullpath, "Permission denied to edit " + path + ".")
 
         if i.v is not None and safeint(i.v, None) is None:
             raise web.seeother(web.changequery(v=None))
-		        
+
         p = db.get_version(path, i.v) or db.new_version(path, types.guess_type(path))
-        
+
         if i.t:
             type = db.get_type(i.t)
             if type is None:
@@ -62,7 +62,7 @@ class edit (delegate.mode):
 
     def trim(self, d):
         """Trims empty value from d. 
-        
+
         >>> trim = edit().trim
 
         >>> trim("hello ")
@@ -94,22 +94,22 @@ class edit (delegate.mode):
                 return d
         else:
             return d.strip()
-        
+
     def POST(self, path):
         i = web.input(_method='post')
         i = web.storage(helpers.unflatten(i))
         i.key = path
-        
+
         _ = web.storage((k, i.pop(k)) for k in i.keys() if k.startswith('_'))
         action = self.get_action(_)
         comment = _.get('_comment', None)
-        
+
         for k, v in i.items():
             i[k] = self.trim(v)
-            
+
         p = web.ctx.site.get(path) or web.ctx.site.new(path, {})
         p.update(i)
-        
+
         if action == 'preview':
             p['comment_'] = comment
             return render.editpage(p, preview=True)
@@ -124,16 +124,16 @@ class edit (delegate.mode):
                 return render.editpage(p)
         elif action == 'delete':
             q = dict(key=i['key'], type=dict(key='/type/delete'))
-            
+
             try:
                 web.ctx.site.save(q, comment)
             except (ClientException, db.ValidationException), e:            
                 add_flash_message('error', str(e))
                 p['comment_'] = comment                
                 return render.editpage(p)
-            
+
             raise web.seeother(web.changequery(query={}))
-    
+
     def get_action(self, i):
         """Finds the action from input."""
         if '_save' in i: return 'save'
@@ -147,12 +147,12 @@ class permission(delegate.mode):
         if not p:
             raise web.seeother(path)
         return render.permission(p)
-        
+
     def POST(self, path):
         p = db.get_version(path)
         if not p:
             raise web.seeother(path)
-            
+
         i = web.input('permission.key', 'child_permission.key')
         q = {
             'key': path,
@@ -165,7 +165,7 @@ class permission(delegate.mode):
                 'key': i['child_permission.key'] or None,
             }
         }
-        
+
         try:
             web.ctx.site.write(q)
         except Exception, e:
@@ -173,9 +173,9 @@ class permission(delegate.mode):
             traceback.print_exc(e)
             add_flash_message('error', str(e))
             return render.permission(p)
-    
+
         raise web.seeother(web.changequery({}, m='permission'))
-            
+
 class history (delegate.mode):
     def GET(self, path):
         page = web.ctx.site.get(path)
@@ -186,26 +186,26 @@ class history (delegate.mode):
         limit = 20
         history = db.get_recent_changes(key=path, limit=limit, offset=offset)
         return render.history(page, history)
-        
+
 class recentchanges(delegate.page):
     def GET(self):
         return render.recentchanges()
-                
+
 class diff (delegate.mode):
     def GET(self, path):  
         i = web.input(b=None, a=None)
         # default value of b is latest revision and default value of a is b-1
-        
+
         def get(path, revision):
             if revision == 0:
                 page = web.ctx.site.new(path, {'revision': 0, 'type': {'key': '/type/object'}, 'key': path})
             else:
                 page = web.ctx.site.get(path, revision)
             return page
-        
+
         def is_int(n):
             return n is None or safeint(n, None) is not None
-            
+
         # if either or i.a or i.b is bad, then redirect to latest diff
         if not is_int(i.b) or not is_int(i.a):
             return web.redirect(web.changequery(b=None, a=None))
@@ -215,13 +215,13 @@ class diff (delegate.mode):
         # if the page is not there go to view page
         if b is None:
             raise web.seeother(web.changequery(query={}))
-        
+
         a = get(path, max(1, safeint(i.a, b.revision-1)))
         return render.diff(a, b)
 
 class login(delegate.page):
     path = "/account/login"
-    
+
     def GET(self):
         referer = web.ctx.env.get('HTTP_REFERER', '/')
         i = web.input(redirect=referer)
@@ -245,13 +245,13 @@ class login(delegate.page):
         expires = (i.remember and 3600*24*7) or ""
         web.setcookie(config.login_cookie_name, web.ctx.conn.get_auth_token(), expires=expires)
         raise web.seeother(i.redirect)
-        
+
 class register(delegate.page):
     path = "/account/register"
-    
+
     def GET(self):
         return render.register(forms.register())
-        
+
     def POST(self):
         i = web.input(remember=False, redirect='/')
         f = forms.register()
@@ -269,7 +269,7 @@ class register(delegate.page):
 
 class logout(delegate.page):
     path = "/account/logout"
-    
+
     def POST(self):
         web.setcookie(config.login_cookie_name, "", expires=-1)
         referer = web.ctx.env.get('HTTP_REFERER', '/')
@@ -281,7 +281,7 @@ class forgot_password(delegate.page):
     def GET(self):
         f = forms.forgot_password()
         return render.forgot_password(f)
-        
+
     def POST(self):
         i = web.input()
         f = forms.forgot_password()
@@ -300,7 +300,7 @@ class forgot_password(delegate.page):
                 # clear the cookie set by delegate.admin_login
                 # Otherwise user will be able to work as admin user.
                 web.ctx.headers = []
-                
+
             msg = render.password_mailer(web.ctx.home, d.username, d.code)            
             web.sendmail(config.from_address, i.email, msg.subject.strip(), str(msg))
             return render.passwordsent(i.email)
@@ -310,7 +310,7 @@ class reset_password(delegate.page):
     def GET(self):
         f = forms.reset_password()
         return render.reset_password(f)
-        
+
     def POST(self):
         i = web.input("code", "username")
         f = forms.reset_password()
@@ -323,14 +323,14 @@ class reset_password(delegate.page):
                 raise web.seeother('/')
             except Exception, e:
                 return "Failed to reset password.<br/><br/> Reason: "  + str(e)
-        
+
 _preferences = []
 def register_preferences(cls):
     _preferences.append((cls.title, cls.path))
 
 class preferences(delegate.page):
     path = "/account/preferences"
-    
+
     @require_login
     def GET(self):
         return render.preferences(_preferences)
@@ -338,12 +338,12 @@ class preferences(delegate.page):
 class change_password(delegate.page):
     path = "/account/preferences/change_password"
     title = "Change Password"
-    
+
     @require_login
     def GET(self):
         f = forms.login_preferences()
         return render.login_preferences(f)
-        
+
     @require_login
     def POST(self):
         i = web.input("oldpassword", "password", "password2")
@@ -373,7 +373,7 @@ class getthings(delegate.page):
         things = [web.ctx.site.get(t, lazy=True) for t in web.ctx.site.things(q)]
         data = "\n".join("%s|%s" % (t[i.property], t.key) for t in things)
         raise web.HTTPError('200 OK', {}, data)
-    
+
 class favicon(delegate.page):
     path = "/favicon.ico"
     def GET(self):
@@ -383,7 +383,7 @@ class feed(delegate.page):
     def _format_date(self, dt):
         """convert a datetime into an RFC 822 formatted date
         Input date must be in GMT.
-        
+
         Source: PyRSS2Gen.py
         """
         # Looks like:
@@ -399,7 +399,7 @@ class feed(delegate.page):
                 ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
                  "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.month-1],
                 dt.year, dt.hour, dt.minute, dt.second)
-    
+
     def GET(self):
         i = web.input(key=None)
         changes = db.get_recent_changes(key=i.key, limit=50)
@@ -414,14 +414,14 @@ class feed(delegate.page):
                 a.revision = 0
             else: 
                 a = db.get_version(key, revision=rev_a)
-                
+
             diff = render.diff(a, b)
 
             #@@ dirty hack to extract diff table from diff
             import re
             rx = re.compile(r"^.*(<table.*<\/table>).*$", re.S)
             return rx.sub(r'\1', str(diff))
-            
+
         web.header('Content-Type', 'application/rss+xml')
 
         for c in changes:

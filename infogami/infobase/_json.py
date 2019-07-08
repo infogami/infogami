@@ -26,7 +26,7 @@ def unicodify(d):
         return d.isoformat()
     else:
         return d
-        
+
 class JSONEncoder(simplejson.JSONEncoder):
     def default(self, o):
         if hasattr(o, '__json__'):

@@ -41,7 +41,7 @@ class OrderedDict(dict):
             self.__dict__[key] = value
         else:
             self[key] = value
-    
+
     def __delattr__(self, key):
         try:
             del self[key]
@@ -121,14 +121,14 @@ class DefaultDict(dict):
         else:
             ## Need copy in case self.default is something like []
             return self.setdefault(key, copy.deepcopy(self.default))
-    
+
     def __getattr__(self, key):
         # special care special methods
         if key.startswith('__'):
             return dict.__getattr__(self, key)
         else:
             return self[key]
-            
+
     __setattr__ = dict.__setitem__
 
     def __copy__(self):
@@ -149,16 +149,16 @@ class SiteLocalDict:
     """    
     def __init__(self):
         self.__dict__['_SiteLocalDict__d'] = {}
-        
+
     def __getattr__(self, name):
         return getattr(self._getd(), name)
-        
+
     def __setattr__(self, name, value):
         setattr(self._getd(), name, value)
 
     def __delattr__(self, name):
         delattr(self._getd(), name)
-        
+
     def _getd(self):
         from context import context
         site = web.ctx.get('site')
@@ -171,10 +171,10 @@ class ReadOnlyDict:
     """Dictionary wrapper to provide read-only access to a dictionary."""
     def __init__(self, d):
         self._d = d
-    
+
     def __getitem__(self, key):
         return self._d[key]
-    
+
     def __getattr__(self, key):
         try:
             return self._d[key]
@@ -184,7 +184,7 @@ class ReadOnlyDict:
 class DictPile(DictMixin):
     """Pile of ditionaries. 
     A key in top dictionary covers the key with the same name in the bottom dictionary.
-    
+
         >>> a = {'x': 1, 'y': 2}
         >>> b = {'y': 5, 'z': 6}
         >>> d = DictPile([a, b])
@@ -200,25 +200,25 @@ class DictPile(DictMixin):
     """
     def __init__(self, dicts=[]):
         self.dicts = dicts[:]
-        
+
     def add_dict(self, d):
         """Adds d to the pile of dicts at the top.
         """
         self.dicts.append(d)
-        
+
     def __getitem__(self, key):
         for d in self.dicts[::-1]:
             if key in d:
                 return d[key]
         else:
             raise KeyError, key
-    
+
     def keys(self):
         keys = set()
         for d in self.dicts:
             keys.update(d.keys())
         return list(keys)
-            
+
 if __name__ == "__main__":
     import doctest
     doctest.testmod()

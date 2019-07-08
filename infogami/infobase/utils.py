@@ -11,7 +11,7 @@ except ImportError:
         for x in seq:
             if x:
                 return True
-                
+
     def all(seq):
         for x in seq:
             if not x:
@@ -20,7 +20,7 @@ except ImportError:
 
 def parse_datetime(value):
     """Creates datetime object from isoformat.
-    
+
         >>> t = '2008-01-01T01:01:01.010101'
         >>> parse_datetime(t).isoformat()
         '2008-01-01T01:01:01.010101'
@@ -30,17 +30,17 @@ def parse_datetime(value):
     else:
         tokens = re.split('-|T|:|\.| ', value)
         return datetime.datetime(*map(int, tokens))
-    
+
 def parse_boolean(value):
     return web.safeunicode(value).lower() in ["1", "true"]
 
 def dict_diff(d1, d2):
     """Compares 2 dictionaries and returns the following.
-    
+
         * all keys in d1 whose values are changed in d2
         * all keys in d1 which have same values in d2
         * all keys in d2 whose values are changed in d1
-    
+
         >>> a, b, c = dict_diff({'x': 1, 'y': 2, 'z': 3}, {'x': 11, 'z': 3, 'w': 23})
         >>> sorted(a), sorted(b), sorted(c)
         (['x', 'y'], ['z'], ['w', 'x'])
@@ -49,7 +49,7 @@ def dict_diff(d1, d2):
     left = set(d1.keys()).difference(same)
     right = set(d2.keys()).difference(same)
     return left, same, right
-                        
+
 def pprint(obj):
     """Pretty prints given object.
     >>> pprint(1)
@@ -85,7 +85,7 @@ def pprint(obj):
     }
     """
     print prepr(obj)
-    
+
 def prepr(obj, indent=""):
     """Pretty representaion."""
     if isinstance(obj, list):
@@ -104,23 +104,23 @@ def prepr(obj, indent=""):
 
 def flatten(nested_list, result=None):
     """Flattens a nested list.::
-    
+
         >>> flatten([1, [2, 3], [4, [5, 6]]])
         [1, 2, 3, 4, 5, 6]
     """
     if result is None:
         result = []
-        
+
     for x in nested_list:
         if isinstance(x, list):
             flatten(x, result)
         else:
             result.append(x)
     return result
-    
+
 def flatten_dict(d):
     """Flattens a dictionary.::
-    
+
         >>> flatten_dict({"key": "/books/foo", "type": {"key": "/type/book"}, "authors": [{"key": "/authors/a1"}, {"key": "/authors/a2"}]})
         [('type.key', '/type/book'), ('key', '/books/foo'), ('authors.key', '/authors/a1'), ('authors.key', '/authors/a2')]
     """
@@ -140,7 +140,7 @@ def flatten_dict(d):
 
 def safeint(value, default):
     """Converts a string to integer. Returns the specified default value on error.::
-     
+
         >>> safeint("1", 0)
         1
         >>> safeint("foo", 0)

@@ -13,7 +13,7 @@ def get_db_version():
     return tdb.root.d.get('__version__', 0)
 
 upgrades = []
-    
+
 def upgrade(f):
     upgrades.append(f)
     return f
@@ -26,7 +26,7 @@ def apply_upgrades():
         for u in upgrades[v:]:
             print >> web.debug, 'applying upgrade:', u.__name__
             u()
-        
+
         mark_upgrades()
         tdb.commit()
         print >> web.debug, 'upgrade successful.'
@@ -35,11 +35,11 @@ def apply_upgrades():
         import traceback
         traceback.print_exc()
         tdb.rollback()
-        
+
 @infogami.action        
 def dbupgrade():
     apply_upgrades()
-    
+
 def mark_upgrades():
     tdb.root.__version__ = len(upgrades)
     tdb.root.save()
@@ -47,10 +47,10 @@ def mark_upgrades():
 @upgrade    
 def hash_passwords():
     from infogami.core import auth
-    
+
     tuser = db.get_type(ctx.site, 'type/user')
     users = tdb.Things(parent=ctx.site, type=tuser).list()
-    
+
     for u in users:
         try:
             preferences = u._c('preferences')
@@ -58,14 +58,14 @@ def hash_passwords():
             # setup preferences for broken accounts, so that they can use forgot password.
             preferences = db.new_version(u, 'preferences', db.get_type(ctx.site,'type/thing'), dict(password=''))
             preferences.save()
-        
+
         if preferences.password:
             auth.set_password(u, preferences.password)
-    
+
 @upgrade
 def upgrade_types():
     from infogami.core.db import _create_type, tdbsetup
-    
+
     tdbsetup()
     type = db.get_type(ctx.site, "type/type")
     types = tdb.Things(parent=ctx.site, type=type)
@@ -89,7 +89,7 @@ def upgrade_types():
                 p.property_name = property_name
                 backreferences.append(p)
                 continue
-                
+
             if typename.endswith('*'):
                 typename = typename[:-1]
                 p.unique = False

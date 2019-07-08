@@ -14,7 +14,7 @@ def add_hook(name, cls):
 
 class api(delegate.page):
     path = "/api/(.*)"
-    
+
     def delegate(self, suffix):
         # Have an option of setting content-type to text/plain
         i = web.input(_method='GET', text="false")
@@ -33,18 +33,18 @@ class api(delegate.page):
                 web.ctx.status = '405 Method Not Allowed'
         else:
             web.ctx.status = '404 Not Found'
-            
+
     GET = POST = delegate
 
 def get_custom_headers():
     opt = web.ctx.env.get('HTTP_OPT')
     if opt is None:
         return {}
-        
+
     import re
     rx = web.re_compile(r'"(.*)"; ns=(\d\d)')
     m = rx.match(opt.strip())
-    
+
     if m:
         decl_uri, ns = m.groups()
         expected_decl_uri = infogami.config.get('http_ext_header_uri', 'http://infogami.org/api')
@@ -60,45 +60,45 @@ class infobase_request:
         path = web.lstrips(web.ctx.path, "/api")
         method = web.ctx.method
         data = web.input()
-        
+
         conn = self.create_connection()
-        
+
         try:
             out = conn.request(sitename, path, method, data)
             return '{"status": "ok", "result": %s}' % out
         except client.ClientException, e:
             return '{"status": "fail", "message": "%s"}' % str(e)
-    
+
     GET = delegate
-    
+
     def create_connection(self):
         conn = client.connect(**infogami.config.infobase_parameters)
         auth_token = web.cookies().get(infogami.config.login_cookie_name)
         conn.set_auth_token(auth_token)
         return conn
-    
+
     def POST(self):
         """RESTful write API."""
         if not can_write():
             raise Forbidden("Permission Denied")
-        
+
         sitename = web.ctx.site.name
         path = web.lstrips(web.ctx.path, "/api")
         method = "POST"
-            
+
         query = web.data()
         h = get_custom_headers()
         comment = h.get('comment')
         action = h.get('action')
         data = dict(query=query, comment=comment, action=action)
-        
+
         conn = self.create_connection()
-        
+
         try:
             out = conn.request(sitename, path, method, data)
         except client.ClientException, e:
             raise BadRequest(e.json or str(e))
-            
+
         #@@ this should be done in the connection.
         try:
             if path == "/save_many":
@@ -129,53 +129,53 @@ def jsonapi(f):
             out = f(*a, **kw)
         except client.ClientException, e:
             raise web.HTTPError(e.status, {}, e.json or str(e))
-        
+
         i = web.input(_method='GET', callback=None)
-        
+
         if i.callback:
             out = '%s(%s);' % (i.callback, out)
-            
+
         if web.input(_method="GET", text="false").text.lower() == "true":
             content_type = "text/plain"
         else:
             content_type = "application/json"
-        
+
         return delegate.RawText(out, content_type=content_type)
     return g
 
 def request(path, method='GET', data=None):
     return web.ctx.site._conn.request(web.ctx.site.name, path, method=method, data=data)
-    
+
 class Forbidden(web.HTTPError):
     def __init__(self, msg=""):
         web.HTTPError.__init__(self, "403 Forbidden", {}, msg)
-            
+
 class BadRequest(web.HTTPError):
     def __init__(self, msg=""):
         web.HTTPError.__init__(self, "400 Bad Request", {}, msg)
-        
+
 def can_write():
     user = delegate.context.user and delegate.context.user.key
     usergroup = web.ctx.site.get('/usergroup/api') or {}
     usergroup_admin = web.ctx.site.get('/usergroup/admin') or {}
     api_users = usergroup.get('members', []) + usergroup_admin.get('members', [])
     return user in [u.key for u in api_users]
-    
+
 class view(delegate.mode):
     encoding = "json"
-    
+
     @jsonapi
     def GET(self, path):
         i = web.input(v=None)
         v = safeint(i.v, None)        
         data = dict(key=path, revision=v)
         return request('/get', data=data)
-        
+
     @jsonapi
     def PUT(self, path):
         if not can_write():
             raise Forbidden("Permission Denied.")
-            
+
         data = web.data()
         h = get_custom_headers()
         comment = h.get('comment')
@@ -183,16 +183,16 @@ class view(delegate.mode):
             data = simplejson.loads(data)
             data['_comment'] = comment
             data = simplejson.dumps(data)
-            
+
         result = request('/save' + path, 'POST', data)
-        
+
         #@@ this should be done in the connection.
         web.ctx.site._run_hooks("on_new_version", data)
         return result
-        
+
 def make_query(i, required_keys=None):
     """Removes keys starting with _ and limits the keys to required_keys, if it is specified.
-    
+
     >>> make_query(dict(a=1, _b=2))
     {'a': 1}
     >>> make_query(dict(a=1, _b=2, c=3), required_keys=['a'])
@@ -208,7 +208,7 @@ def make_query(i, required_keys=None):
             v = None
         query[k] = v
     return query
-        
+
 class history(delegate.mode):
     encoding = "json"
 
@@ -218,10 +218,10 @@ class history(delegate.mode):
         query['key'] = path
         query['sort'] = '-created'
         return request('/versions', data=dict(query=simplejson.dumps(query)))
-        
+
 class recentchanges(delegate.page):
     encoding = "json"
-    
+
     @jsonapi
     def GET(self):
         i = web.input(query=None)
@@ -236,7 +236,7 @@ class recentchanges(delegate.page):
 
 class query(delegate.page):
     encoding = "json"
-    
+
     @jsonapi
     def GET(self):
         i = web.input(query=None)
@@ -249,7 +249,7 @@ class query(delegate.page):
 class login(delegate.page):
     encoding = "json"
     path = "/account/login"
-    
+
     def POST(self):
         try:
             d = simplejson.loads(web.data())

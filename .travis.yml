@@ -8,6 +8,7 @@ matrix:
     - python: 3.6
 install:
   - pip install flake8 pytest
+  - pip install -r requirements.txt
 before_script:
   # stop the build if there are Python syntax errors
   - flake8 . --count --select=E9,F63,F72 --show-source --statistics

@@ -96,7 +96,7 @@ create table account (
 );
 
 create index account_thing_id_idx ON account(thing_id);
-create index account_thing_email_idx ON account(active);
+create index account_thing_email_idx ON account(email);
 create index account_thing_active_idx ON account(active);
 create index account_thing_bot_idx ON account(bot);
 

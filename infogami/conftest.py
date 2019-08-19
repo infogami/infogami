@@ -1,6 +1,3 @@
-
-pytest_plugins = ["pytest_unittest"]
-
 collect_ignore = ['failing']
 
 def pytest_addoption(parser):

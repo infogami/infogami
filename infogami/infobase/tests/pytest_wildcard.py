@@ -1,6 +1,8 @@
 """py.test wildcard plugin.
 """
 
+import pytest
+
 class Wildcard:
     """Wildcard object is equal to anything.
 
@@ -26,7 +28,8 @@ def test_wildcard():
     assert 1 == wildcard
     assert ["foo", 1, 2] == [wildcard, 1, 2]
 
-def pytest_funcarg__wildcard(request):
+@pytest.fixture
+def wildcard(request):
     """Returns the wildcard object.
 
     Wildcard object is equal to anything. It is useful in testing datastuctures with some random parts. 

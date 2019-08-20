@@ -13,7 +13,7 @@ services:
   - postgresql
 before_script:
   - psql -c 'create database infobase_test;' -U postgres
-  - psql -c 'create database infogami_test;' -U postgres
+  #- psql -c 'create database infogami_test;' -U postgres # required for tests/test_infogami
   # stop the build if there are Python syntax errors
   - flake8 . --count --select=E9,F63,F72 --show-source --statistics
   # exit-zero if there are Python undefined names
@@ -21,8 +21,7 @@ before_script:
   # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
   - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 script:
-  - pytest infogami/infobase
-  - pytest infogami/utils
+  - pytest infogami
   - pytest test
   - pytest tests
 notifications:

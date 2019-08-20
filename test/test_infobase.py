@@ -1,6 +1,7 @@
 from infogami.infobase import server
 import web
 
+import pytest
 import unittest
 import urllib, urllib2
 import simplejson
@@ -94,6 +95,7 @@ class InfobaseTestCase(unittest.TestCase):
         else:
             self.assertEquals(a, b)
 
+@pytest.mark.skip(reason="Unsure how these browser tests were run. Try ./scripts/test infobase -d infobase_test")
 class DocumentTest(InfobaseTestCase):
     def test_simple(self):
         self.assertEquals2(request('/'), {'infobase': 'welcome', 'version': '*'})

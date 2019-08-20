@@ -9,7 +9,7 @@ class Wildcard:
     Useful to compare datastructures which contain some random numbers or db sequences.
 
         >>> import random
-        >>> asseert [random.random(), 1, 2] == [wildcard, 1, 2]
+        >>> assert [random.random(), 1, 2] == [Wildcard(), 1, 2]
     """
     def __eq__(self, other):
         return True
@@ -20,9 +20,8 @@ class Wildcard:
     def __repr__(self):
         return '<?>'
 
-wildcard = Wildcard()
-
 def test_wildcard():
+    wildcard = Wildcard()
     assert wildcard == 1
     assert wildcard == [1, 2, 3]
     assert 1 == wildcard
@@ -35,6 +34,6 @@ def wildcard(request):
     Wildcard object is equal to anything. It is useful in testing datastuctures with some random parts. 
 
         >>> import random
-        >>> asseert [random.random(), 1, 2] == [wildcard, 1, 2]
+        >>> assert [random.random(), 1, 2] == [Wildcard(), 1, 2]
     """
-    return wildcard
+    return Wildcard()

@@ -3,6 +3,7 @@ from infogami.infobase._dbstore.save import SaveImpl, IndexUtil, PropertyManager
 
 import utils
 
+import pytest
 import web
 import simplejson
 import os
@@ -255,7 +256,8 @@ class MockSchema:
     def find_table(self, type, datatype, name):
         return "datum_" + datatype
 
-def pytest_funcarg__testdata(request):        
+@pytest.fixture
+def testdata(request):
     return {
         "doc1": {
             "key": "/doc1",

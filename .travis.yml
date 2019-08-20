@@ -13,6 +13,7 @@ services:
   - postgresql
 before_script:
   - psql -c 'create database infobase_test;' -U postgres
+  - psql -c 'create database infogami_test;' -U postgres
   # stop the build if there are Python syntax errors
   - flake8 . --count --select=E9,F63,F72 --show-source --statistics
   # exit-zero if there are Python undefined names

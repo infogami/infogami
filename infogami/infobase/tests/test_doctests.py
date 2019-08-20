@@ -14,6 +14,7 @@ modules = [
     "infogami.infobase.logreader",
     "infogami.infobase.lru",
     "infogami.infobase.readquery",
+    "infogami.infobase.tests.pytest_wildcard",
     "infogami.infobase.utils",
     "infogami.infobase.writequery",
 ]

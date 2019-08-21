@@ -1,4 +1,5 @@
 # infogami
+[![Build Status](https://travis-ci.org/internetarchive/infogami.svg?branch=master)](https://travis-ci.org/internetarchive/infogami)
 
 The Open Library interface is powered by infogami -- a cleaner, simpler alternative to other wiki applications. But unlike other wikis, Infogami has the flexibility to handle different classes of data. Most wikis let you store unstructured pages -- big blocks of text. Infogami lets you store structured data.
 

@@ -14,7 +14,7 @@ def test_login():
 
     try:
         b.submit()
-    except web.BrowserError, e:
+    except web.BrowserError as e:
         assert str(e) == 'Invalid username or password'
     else:
         assert False, 'Expected exception'

@@ -38,7 +38,7 @@ def test_delete():
     b.select_form(name="edit")
     try:
         b.submit(name="_delete")
-    except web.BrowserError, e:
+    except web.BrowserError as e:
         pass
     else:
         assert False, "expected 404"

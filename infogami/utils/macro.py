@@ -49,7 +49,7 @@ def call_macro(name, args):
             macro = macrostore[name]
             args, kwargs = safeeval_args(args)
             result = macro(*args, **kwargs)
-        except Exception, e:
+        except Exception as e:
             i = web.input(_method="GET", debug="false")
             if i.debug.lower() == "true":
                 raise

@@ -66,7 +66,7 @@ class infobase_request:
         try:
             out = conn.request(sitename, path, method, data)
             return '{"status": "ok", "result": %s}' % out
-        except client.ClientException, e:
+        except client.ClientException as e:
             return '{"status": "fail", "message": "%s"}' % str(e)
 
     GET = delegate
@@ -96,7 +96,7 @@ class infobase_request:
 
         try:
             out = conn.request(sitename, path, method, data)
-        except client.ClientException, e:
+        except client.ClientException as e:
             raise BadRequest(e.json or str(e))
 
         #@@ this should be done in the connection.
@@ -108,7 +108,7 @@ class infobase_request:
                 result = simplejson.loads(out)
                 for k in result.get('created', []) + result.get('updated', []):
                     web.ctx.site._run_hooks("on_new_version", request("/get", data=dict(key=k)))
-        except Exception, e:
+        except Exception as e:
             import traceback
             traceback.print_exc()
         return out
@@ -127,7 +127,7 @@ def jsonapi(f):
     def g(*a, **kw):
         try:
             out = f(*a, **kw)
-        except client.ClientException, e:
+        except client.ClientException as e:
             raise web.HTTPError(e.status, {}, e.json or str(e))
 
         i = web.input(_method='GET', callback=None)
@@ -255,5 +255,5 @@ class login(delegate.page):
             d = simplejson.loads(web.data())
             web.ctx.site.login(d['username'], d['password'])
             web.setcookie(infogami.config.login_cookie_name, web.ctx.conn.get_auth_token())
-        except Exception, e:
+        except Exception as e:
             raise BadRequest(str(e))

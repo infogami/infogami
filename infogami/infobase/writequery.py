@@ -258,7 +258,7 @@ class SaveProcessor:
                     value = common.primitive_types[expected_type](value)
                 elif type_found == '/type/int' and expected_type == '/type/float':
                     value = float(value)
-            except ValueError, e:
+            except ValueError as e:
                 raise common.BadData(message=str(e), at=at, value=value)
         elif property.expected_type.kind == 'embeddable':
             if isinstance(value, dict):

@@ -79,12 +79,12 @@ def jsonify(f):
 
         try:
             d = f(self, *a, **kw)
-        except common.InfobaseException, e:
+        except common.InfobaseException as e:
             if web.ctx.get('infobase_localmode'):
                 raise
 
             process_exception(e)
-        except Exception, e:
+        except Exception as e:
             logger.error("Error in processing request %s %s", web.ctx.get("method", "-"), web.ctx.get("path","-"), exc_info=True)
 
             common.record_exception()
@@ -148,7 +148,7 @@ def to_int(value, key):
 def from_json(s):
     try:
         return simplejson.loads(s)
-    except ValueError, e:
+    except ValueError as e:
         raise common.BadData(message="Bad JSON: " + str(e))
 
 _infobase = None
@@ -523,7 +523,7 @@ class readlog:
             try:
                 timestamp = common.parse_datetime(i.timestamp)
                 logreader.LogReader(log).skip_till(timestamp)
-            except Exception, e:
+            except Exception as e:
                 raise web.internalerror(str(e))
 
         return log
@@ -567,7 +567,7 @@ class readlog:
                         break
                 yield '], \n'
                 yield '"offset": ' + simplejson.dumps(log.tell()) + "\n}\n"
-            except Exception, e:
+            except Exception as e:
                 print 'ERROR:', str(e)
 
 def request(path, method, data):

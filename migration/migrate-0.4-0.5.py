@@ -1,5 +1,6 @@
 """Script to migrate data from 0.4 to 0.5
 """
+from __future__ import print_function
 from optparse import OptionParser
 import os, sys
 import web
@@ -80,7 +81,7 @@ def fix_property_keys():
         copy_
     """
     def fix_type(type, type_id):
-        print >> web.debug, 'fixing type', type
+        print('fixing type', type, file=web.debug)
         prefix, multiple_types = get_table_prefix(type)
         keys_table = prefix + "_keys"
         keys = dict((r.key, r.id) for r in db.query('SELECT * FROM ' + keys_table))
@@ -94,7 +95,7 @@ def fix_property_keys():
         #@@ Making id of property table more than max_id of datum_keys makes sure that this case never happen.
         id1 = db.query('SELECT max(id) as x FROM ' + keys_table)[0].x
         id2 = db.query('SELECT max(id) as x FROM property')[0].x
-        print >> web.debug, 'max ids', id1, id2
+        print('max ids', id1, id2, file=web.debug)
         if id1 > id2:
             db.query("SELECT setval('property_id_seq', $id1)", vars=locals())
         
@@ -105,7 +106,7 @@ def fix_property_keys():
         
         for d in ['str', 'int', 'float', 'boolean', 'ref']:
             table = prefix + '_' + d            
-            print >> web.debug, 'fixing', type, table
+            print('fixing', type, table, file=web.debug)
             for key in keys:
                 old_key_id = keys[key]
                 new_key_id = newkeys[key]
@@ -115,10 +116,10 @@ def fix_property_keys():
                     updated = db.update(table, key_id=new_key_id, where='key_id=$old_key_id', vars=locals())
                 
                 total_updated[key] = total_updated.get(key, 0) + updated
-                print >> web.debug, 'updated', updated
+                print('updated', updated, file=web.debug)
                 
         unused = [k for k in total_updated if total_updated[k] == 0]
-        print >> web.debug, 'unused', unused
+        print('unused', unused, file=web.debug)
         db.delete('property', where=web.sqlors('id =', [newkeys[k] for k in unused]))
                 
     primitive = ['/type/key', '/type/int', '/type/float', '/type/boolean', '/type/string', '/type/datetime']
@@ -158,7 +159,7 @@ def process_keys(table):
         + " GROUP BY type, key_id")
         
     for r in result:
-        print r
+        print(r)
         
 def fix_version_table():
     """Add transaction table and move columns from version table to transaction table."""

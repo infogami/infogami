@@ -4,6 +4,7 @@ Infobase: structured database.
 Infobase is a structured database which contains multiple sites.
 Each site is an independent collection of objects. 
 """
+from __future__ import print_function
 import web
 import datetime
 import simplejson
@@ -242,7 +243,7 @@ class Site:
                 try:
                     t(self, old, new)
                 except:
-                    print >> web.debug, 'Failed to execute trigger', t
+                    print('Failed to execute trigger', t, file=web.debug)
                     import traceback
                     traceback.print_exc()
 

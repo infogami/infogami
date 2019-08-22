@@ -1,6 +1,7 @@
 """
 Log file reader.
 """
+from __future__ import print_function
 import os
 import itertools
 import datetime
@@ -282,7 +283,7 @@ class RsyncLogFile(LogFile):
 
     def rsync(self):
         cmd = "rsync -r %s %s" % (self.rsync_root, self.root)
-        print cmd
+        print(cmd)
         os.system(cmd)
 
 class LogPlayback:

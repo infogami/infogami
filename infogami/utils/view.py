@@ -1,3 +1,4 @@
+from __future__ import print_function
 
 import web
 import os
@@ -267,7 +268,7 @@ def movefiles():
                 to = os.path.join(dest, f)
                 cp_r(frm, to)
         else:
-            print 'copying %s to %s' % (src, dest)
+            print('copying %s to %s' % (src, dest))
             shutil.copy(src, dest)
 
     static_dir = os.path.join(os.getcwd(), "static")
@@ -315,7 +316,7 @@ def movetypes():
             files = [os.path.join(path, f) for f in sorted(os.listdir(path)) if f.endswith(extension)]
             for f in files:
                 d = readfile(f)
-                print >> web.debug, 'moving types from', f
+                print('moving types from', f, file=web.debug)
                 if isinstance(d, list):
                     pages.extend(d)
                 else:
@@ -347,12 +348,12 @@ def move(dir, extension, recursive=False, readfunc=None):
     delegate.admin_login()
     result = web.ctx.site.save_many(pages, "install")
     for r in result:
-        print r
+        print(r)
 
 @infogami.action
 def write(filename):
     q = open(filename).read()
-    print web.ctx.site.write(q)
+    print(web.ctx.site.write(q))
 
 # this is not really the right place to move this, but couldn't find a better place than this.     
 def require_login(f):

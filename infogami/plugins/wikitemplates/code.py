@@ -1,6 +1,7 @@
 """
 wikitemplates: allow keeping templates and macros in wiki
 """
+from __future__ import print_function
 
 import web
 import os
@@ -124,7 +125,7 @@ def _compile_template(name, text):
     try:
         return web.template.Template(text, filter=web.websafe, filename=name)
     except (web.template.ParseError, SyntaxError) as e:
-        print >> web.debug, 'Template parsing failed for ', name
+        print('Template parsing failed for ', name, file=web.debug)
         import traceback
         traceback.print_exc()
         raise ValidationException("Template parsing failed: " + str(e))
@@ -193,7 +194,7 @@ def movetemplates(prefix_pattern=None):
             try:
                 t.func()
             except:
-                print >> web.debug, 'unable to load template', t.name
+                print('unable to load template', t.name, file=web.debug)
                 raise
 
     for name, t in template.disktemplates.items():
@@ -208,9 +209,9 @@ def movetemplates(prefix_pattern=None):
     delegate.admin_login()
     result = web.ctx.site.write(templates)
     for p in result.created:
-        print "created", p
+        print("created", p)
     for p in result.updated:
-        print "updated", p
+        print("updated", p)
 
 @infogami.install_hook
 @infogami.action
@@ -230,9 +231,9 @@ def movemacros():
     delegate.admin_login()
     result = web.ctx.site.write(macros)
     for p in result.created:
-        print "created", p
+        print("created", p)
     for p in result.updated:
-        print "updated", p
+        print("updated", p)
 
 def _wikiname(name, prefix, suffix):
     base, extn = os.path.splitext(name)

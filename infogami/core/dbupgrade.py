@@ -1,6 +1,7 @@
 """
 module for doing database upgrades when code changes. 
 """
+from __future__ import print_function
 import infogami
 from infogami import tdb
 
@@ -24,14 +25,14 @@ def apply_upgrades():
     try:
         v = get_db_version()
         for u in upgrades[v:]:
-            print >> web.debug, 'applying upgrade:', u.__name__
+            print('applying upgrade:', u.__name__, file=web.debug)
             u()
 
         mark_upgrades()
         tdb.commit()
-        print >> web.debug, 'upgrade successful.'
+        print('upgrade successful.', file=web.debug)
     except:
-        print >> web.debug, 'upgrade failed'
+        print('upgrade failed', file=web.debug)
         import traceback
         traceback.print_exc()
         tdb.rollback()
@@ -76,7 +77,7 @@ def upgrade_types():
     for t in types:
         properties = []
         backreferences = []
-        print >> web.debug, t, t.d
+        print(t, t.d, file=web.debug)
         if t.name == 'type/site':
             continue
         for name, value in t.d.items():

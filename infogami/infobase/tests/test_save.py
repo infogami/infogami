@@ -1,4 +1,3 @@
-from infogami.infobase import dbstore
 from infogami.infobase._dbstore.save import SaveImpl, IndexUtil, PropertyManager
 
 import utils
@@ -6,15 +5,16 @@ import utils
 import pytest
 import web
 import simplejson
-import os
 import datetime
-import unittest
+
 
 def setup_module(mod):
     utils.setup_db(mod)
 
+
 def teardown_module(mod):
     utils.teardown_db(mod)
+
 
 class DBTest:
     def setup_method(self, method):
@@ -25,17 +25,20 @@ class DBTest:
     def teardown_method(self, method):
         self.tx.rollback()
 
+
 def update_doc(doc, revision, created, last_modified):
     """Add revision, latest_revision, created and latest_revision properties to the given doc.
-    """    
+    """
     last_modified_repr = {"type": "/type/datetime", "value": last_modified.isoformat()}
     created_repr = {"type": "/type/datetime", "value": created.isoformat()}
 
-    return dict(doc, 
+    return dict(
+        doc,
         revision=revision,
         latest_revision=revision,
         created=created_repr,
         last_modified=last_modified_repr)
+
 
 def assert_record(record, doc, revision, created, timestamp):
     d = update_doc(doc, revision, created, timestamp)
@@ -52,6 +55,7 @@ def assert_record(record, doc, revision, created, timestamp):
     else:
         assert record.id is not None
         assert record.prev.data is not None
+
 
 class Test_get_records_for_save(DBTest):
     """Tests for _dbstore_save._get_records_for_save.
@@ -72,20 +76,21 @@ class Test_get_records_for_save(DBTest):
 
     def test_existing(self):
         def insert(doc, revision, created, last_modified):
-            id =  db.insert('thing', key=doc['key'], latest_revision=revision, created=created, last_modified=last_modified)
+            id = db.insert('thing', key=doc['key'], latest_revision=revision, created=created, last_modified=last_modified)
             db.insert('data', seqname=False, thing_id=id, revision=revision, data=simplejson.dumps(doc))
 
-        created = datetime.datetime(2010, 01, 01, 01, 01, 01)            
+        created = datetime.datetime(2010, 01, 01, 01, 01, 01)
         a = {"key": "/a", "type": {"key": "/type/object"}, "title": "a"}
         insert(a, 1, created, created)
 
         s = SaveImpl(db)
-        timestamp = datetime.datetime(2010, 02, 02, 02, 02, 02)            
+        timestamp = datetime.datetime(2010, 02, 02, 02, 02, 02)
         records = s._get_records_for_save([a], timestamp)
 
         assert_record(records[0], a, 2, created, timestamp)
 
-class Test_save(DBTest):        
+
+class Test_save(DBTest):
     def get_json(self, key):
         d = db.query("SELECT data.data FROM thing, data WHERE data.thing_id=thing.id AND data.revision = thing.latest_revision AND thing.key = '/a'")
         return simplejson.loads(d[0].data)
@@ -95,52 +100,56 @@ class Test_save(DBTest):
         timestamp = datetime.datetime(2010, 01, 01, 01, 01, 01)
         a = {"key": "/a", "type": {"key": "/type/object"}, "title": "a"}
 
-        status = s.save([a], 
-                    timestamp=timestamp, 
+        status = s.save(
+                    [a],
+                    timestamp=timestamp,
                     ip="1.2.3.4",
-                    author=None, 
-                    comment="Testing create.", 
+                    author=None,
+                    comment="Testing create.",
                     action="save")
 
         assert status['changes'][0]['revision'] == 1
-        assert self.get_json('/a') == update_doc(a, 1, timestamp, timestamp) 
+        assert self.get_json('/a') == update_doc(a, 1, timestamp, timestamp)
 
         a['title'] = 'b'
-        timestamp2 = datetime.datetime(2010, 02, 02, 02, 02, 02) 
-        status = s.save([a], 
-                    timestamp=timestamp2, 
-                    ip="1.2.3.4", 
-                    author=None, 
-                    comment="Testing update.", 
+        timestamp2 = datetime.datetime(2010, 02, 02, 02, 02, 02)
+        status = s.save(
+                    [a],
+                    timestamp=timestamp2,
+                    ip="1.2.3.4",
+                    author=None,
+                    comment="Testing update.",
                     action="save")
         assert status['changes'][0]['revision'] == 2
-        assert self.get_json('/a') == update_doc(a, 2, timestamp, timestamp2) 
+        assert self.get_json('/a') == update_doc(a, 2, timestamp, timestamp2)
 
     def test_type_change(self):
         s = SaveImpl(db)
         timestamp = datetime.datetime(2010, 01, 01, 01, 01, 01)
         a = {"key": "/a", "type": {"key": "/type/object"}, "title": "a"}
-        status = s.save([a], 
-                    timestamp=timestamp, 
+        status = s.save(
+                    [a],
+                    timestamp=timestamp,
                     ip="1.2.3.4",
-                    author=None, 
-                    comment="Testing create.", 
+                    author=None,
+                    comment="Testing create.",
                     action="save")
 
         # insert new type
         type_delete_id = db.insert("thing", key='/type/delete')
         a['type']['key'] = '/type/delete'
 
-        timestamp2 = datetime.datetime(2010, 02, 02, 02, 02, 02) 
-        status = s.save([a], 
-                    timestamp=timestamp2, 
-                    ip="1.2.3.4", 
-                    author=None, 
-                    comment="Testing type change.", 
+        timestamp2 = datetime.datetime(2010, 02, 02, 02, 02, 02)
+        status = s.save(
+                    [a],
+                    timestamp=timestamp2,
+                    ip="1.2.3.4",
+                    author=None,
+                    comment="Testing type change.",
                     action="save")
 
         assert status['changes'][0]['revision'] == 2
-        assert self.get_json('/a') == update_doc(a, 2, timestamp, timestamp2) 
+        assert self.get_json('/a') == update_doc(a, 2, timestamp, timestamp2)
 
         thing = db.select("thing", where="key='/a'")[0]
         assert thing.type == type_delete_id
@@ -168,7 +177,7 @@ class Test_save(DBTest):
         author, book = self._get_book_author(1)
         self._save([author, book])
 
-        author, book = self._get_book_author(2)  
+        author, book = self._get_book_author(2)
         self._save([book, author])
 
     def _save(self, docs):
@@ -238,6 +247,7 @@ class Test_save(DBTest):
             "data": {}
         }
 
+
 class MockDB:
     def __init__(self):
         self.reset()
@@ -252,9 +262,11 @@ class MockDB:
         self.inserts = []
         self.deletes = []
 
+
 class MockSchema:
     def find_table(self, type, datatype, name):
         return "datum_" + datatype
+
 
 @pytest.fixture
 def testdata(request):
@@ -281,6 +293,7 @@ def testdata(request):
             ("/type/object", "/doc1", "str", "z.b"): ["zb"],
         },
     }
+
 
 class TestIndex:
     def setup_method(self, method):
@@ -385,10 +398,11 @@ class TestIndex:
         }
 
     def test_too_long(self):
-        assert self.indexer._is_too_long("a" * 10000) == True
-        assert self.indexer._is_too_long("a" * 2047) == False
-        c = u'\u20AC' # 3 bytes in utf-8
-        assert self.indexer._is_too_long(c * 1000) == True
+        assert self.indexer._is_too_long("a" * 10000) is True
+        assert self.indexer._is_too_long("a" * 2047) is False
+        c = u'\u20AC'  # 3 bytes in utf-8
+        assert self.indexer._is_too_long(c * 1000) is True
+
 
 class TestIndexWithDB(DBTest):
     def _save(self, docs):
@@ -404,7 +418,7 @@ class TestIndexWithDB(DBTest):
         key_id = db.query("SELECT * FROM property WHERE type=$thing.type AND name='title'", vars=locals())[0].id
 
         # there should be only one entry in the index
-        d = db.query("SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id",vars=locals())        
+        d = db.query("SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id", vars=locals())
         assert len(d) == 1
 
         # corrupt the index table by adding bad entries
@@ -412,19 +426,21 @@ class TestIndexWithDB(DBTest):
             db.insert("datum_str", thing_id=thing.id, key_id=key_id, value="foo %d" % i)
 
         # verify that the bad enties are added
-        d = db.query("SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id",vars=locals())        
+        d = db.query("SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id", vars=locals())
         assert len(d) == 11
 
         # reindex now and verify again that there is only one entry
         SaveImpl(db).reindex(["/a"])
-        d = db.query("SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id",vars=locals())        
+        d = db.query("SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id", vars=locals())
         assert len(d) == 1
 
 
 class TestPropertyManager(DBTest):
+    global db
+
     def test_get_property_id(self):
         p = PropertyManager(db)
-        assert p.get_property_id("/type/object", "title") == None
+        assert p.get_property_id("/type/object", "title") is None
 
         pid = p.get_property_id("/type/object", "title", create=True)
         assert pid is not None
@@ -453,5 +469,5 @@ class TestPropertyManager(DBTest):
         # changes to the cache of the copy shouldn't effect the source.
         tx = db.transaction()
         p2.get_property_id("/type/object", "title2", create=True)
-        tx.rollback()        
+        tx.rollback()
         assert p.get_property_id("/type/object", "title2") is None

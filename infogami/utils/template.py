@@ -147,7 +147,7 @@ def saferender(templates, *a, **kw):
             content_type = getattr(result, 'ContentType', 'text/html; charset=utf-8').strip()
             web.header('Content-Type', content_type, unique=True)
             return result
-        except Exception, e:
+        except Exception as e:
             # help to debug template errors.
             # when called with debug=true, the debug error is displayed.
             i = web.input(_method='GET', debug="false")

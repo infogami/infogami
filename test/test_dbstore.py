@@ -45,7 +45,7 @@ class TestSaveTest():
         try:
             key = d['key']
             assert site.save(key, d) == {'key': key, 'revision': 1}
-        except common.InfobaseException, e:
+        except common.InfobaseException as e:
             assert str(e) == error
 
     def test_type(self, site):

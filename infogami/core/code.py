@@ -118,7 +118,7 @@ class edit (delegate.mode):
                 p._save(comment)
                 path = web.input(_method='GET', redirect=None).redirect or web.changequery(query={})
                 raise web.seeother(path)
-            except (ClientException, db.ValidationException), e:            
+            except (ClientException, db.ValidationException) as e:            
                 add_flash_message('error', str(e))
                 p['comment_'] = comment                
                 return render.editpage(p)
@@ -127,7 +127,7 @@ class edit (delegate.mode):
 
             try:
                 web.ctx.site.save(q, comment)
-            except (ClientException, db.ValidationException), e:            
+            except (ClientException, db.ValidationException) as e:            
                 add_flash_message('error', str(e))
                 p['comment_'] = comment                
                 return render.editpage(p)
@@ -168,7 +168,7 @@ class permission(delegate.mode):
 
         try:
             web.ctx.site.write(q)
-        except Exception, e:
+        except Exception as e:
             import traceback
             traceback.print_exc(e)
             add_flash_message('error', str(e))
@@ -233,7 +233,7 @@ class login(delegate.page):
         i = web.input(remember=False, redirect='/')
         try:
             web.ctx.site.login(i.username, i.password, i.remember)
-        except Exception, e:
+        except Exception as e:
             f = forms.login()
             f.fill(i)
             f.note = str(e)
@@ -261,7 +261,7 @@ class register(delegate.page):
             from infogami.infobase.client import ClientException
             try:
                 web.ctx.site.register(i.username, i.displayname, i.email, i.password)
-            except ClientException, e:
+            except ClientException as e:
                 f.note = str(e)
                 return render.register(f)
             web.setcookie(config.login_cookie_name, web.ctx.conn.get_auth_token())
@@ -292,7 +292,7 @@ class forgot_password(delegate.page):
             try:
                 delegate.admin_login()
                 d = web.ctx.site.get_reset_code(i.email)
-            except ClientException, e:
+            except ClientException as e:
                 f.note = str(e)
                 web.ctx.headers = []
                 return render.forgot_password(f)
@@ -321,7 +321,7 @@ class reset_password(delegate.page):
                 web.ctx.site.reset_password(i.username, i.code, i.password)
                 web.ctx.site.login(i.username, i.password, False)
                 raise web.seeother('/')
-            except Exception, e:
+            except Exception as e:
                 return "Failed to reset password.<br/><br/> Reason: "  + str(e)
 
 _preferences = []
@@ -353,7 +353,7 @@ class change_password(delegate.page):
         else:
             try:
                 user = web.ctx.site.update_user(i.oldpassword, i.password, None)
-            except ClientException, e:
+            except ClientException as e:
                 f.note = str(e)
                 return render.login_preferences(f)
             add_flash_message('info', 'Password updated successfully.')

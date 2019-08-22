@@ -69,7 +69,7 @@ class TestSaveProcessor(DBTest):
         def save_many(query):
             try:
                 site.save_many(query)
-            except common.InfobaseException, e:
+            except common.InfobaseException as e:
                 return e.dict()
 
         q = {

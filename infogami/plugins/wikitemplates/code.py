@@ -123,7 +123,7 @@ def _compile_template(name, text):
 
     try:
         return web.template.Template(text, filter=web.websafe, filename=name)
-    except (web.template.ParseError, SyntaxError), e:
+    except (web.template.ParseError, SyntaxError) as e:
         print >> web.debug, 'Template parsing failed for ', name
         import traceback
         traceback.print_exc()

@@ -40,13 +40,13 @@ class TestAccount:
         try:
             a.register(username="joe", email="joe2@example.com", password="secret", data={})
             assert False
-        except common.BadData, e:
+        except common.BadData as e:
             assert e.d['message'] == "User already exists: joe"
 
         try:
             a.register(username="joe2", email="joe@example.com", password="secret", data={})
             assert False
-        except common.BadData, e:
+        except common.BadData as e:
             assert e.d['message'] == "Email is already used: joe@example.com"
 
     def test_register_failures2(self):

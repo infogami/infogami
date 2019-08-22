@@ -100,7 +100,7 @@ class LocalConnection(Connection):
             stats.end()
             if 'infobase_auth_token' in web.ctx:
                 self.set_auth_token(web.ctx.infobase_auth_token)
-        except common.InfobaseException, e:
+        except common.InfobaseException as e:
             stats.end(error=True)
             self.handle_error(e.status, str(e))
         return out
@@ -228,7 +228,7 @@ class Site:
             data = dict(key=key, revision=revision)
             try:
                 result = self._request('/get', data=data)
-            except ClientException, e:
+            except ClientException as e:
                 if e.status.startswith('404'):
                     raise NotFound, key
                 else:
@@ -291,7 +291,7 @@ class Site:
         try:
             self._request(path="", method="GET")
             return True
-        except ClientException, e:
+        except ClientException as e:
             if e.status.startswith("404"):
                 return False
             else:
@@ -557,7 +557,7 @@ class Store:
     def __getitem__(self, key):
         try:
             return self._request(key)
-        except ClientException, e:
+        except ClientException as e:
             if e.status.startswith("404"):
                 raise KeyError, key
             else:
@@ -699,7 +699,7 @@ def create_thing(site, key, data, revision=None):
             # just to be safe
             if not isinstance(type, basestring):
                 type = None
-    except Exception, e:
+    except Exception as e:
         # just for extra safety
         print >> web.debug, 'ERROR:', str(e)
         type = None

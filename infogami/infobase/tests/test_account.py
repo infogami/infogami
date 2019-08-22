@@ -5,15 +5,21 @@ from infogami.infobase import server, account, bootstrap, common
 
 import pytest
 
+
 def setup_module(mod):
     utils.setup_site(mod)
+
 
 def teardown_module(mod):
     site.cache.clear()
     utils.teardown_site(mod)
 
+
 class TestAccount:
+    global site
+
     def setup_method(self, method):
+        global db
         self.tx = db.transaction()
 
     def teardown_method(self, method):

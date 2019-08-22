@@ -7,6 +7,7 @@ push moves pages from disk to wiki and pull moves pages from wiki to disk.
 TODOs:
 * As of now pages are stored as python dict. Replace it with a human-readable format.
 """
+from __future__ import print_function
 
 import web
 import os
@@ -157,7 +158,7 @@ def pull(root, paths_files):
             paths2.append(path)
 
     for path in paths2:
-        print >> web.debug, "pulling page", path
+        print("pulling page", path, file=web.debug)
         page = db.get_version(context.site, path)
         name = page.name or '__root__'
         data = thing2dict(page)
@@ -174,7 +175,7 @@ def _pushpages(pages):
     tdb.transact()
     try:
         for p in pages.values(): 
-            print 'saving', p.name
+            print('saving', p.name)
             _savepage(p)    
     except:
         tdb.rollback()

@@ -1,3 +1,4 @@
+from __future__ import print_function
 import web
 from web.form import *
 from infogami.utils import i18n
@@ -17,4 +18,4 @@ template_preferences = Form(
 )
 
 if __name__ == "__main__":
-    print template_preferences().render()
+    print(template_preferences().render())

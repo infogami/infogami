@@ -1,5 +1,6 @@
 """Infobase server to expose the API.
 """
+from __future__ import print_function
 __version__ = "0.5dev"
 
 import sys
@@ -197,7 +198,7 @@ class db:
 class echo:
     @jsonify
     def POST(self):
-        print >> web.debug, web.data()
+        print(web.data(), file=web.debug)
         return {'ok': True}
 
 class write:
@@ -562,13 +563,13 @@ class readlog:
                             yield sep + line.strip()
                             sep = ",\n"
                         else:
-                            print >> sys.stderr, "ERROR: found invalid json before %s" % log.tell()
+                            print("ERROR: found invalid json before %s" % log.tell(), file=sys.stderr)
                     else:
                         break
                 yield '], \n'
                 yield '"offset": ' + simplejson.dumps(log.tell()) + "\n}\n"
             except Exception as e:
-                print 'ERROR:', str(e)
+                print('ERROR:', str(e))
 
 def request(path, method, data):
     """Fakes the web request.

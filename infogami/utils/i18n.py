@@ -1,6 +1,7 @@
 """
 Support for Internationalization.
 """
+from __future__ import print_function
 
 import web
 
@@ -107,7 +108,7 @@ class i18n_string:
             a = [x or "" for x in a]
             return str(self) % tuple(web.utf8(x) for x in a)
         except:
-            print >> web.debug, 'failed to substitute (%s/%s) in language %s' % (self._namespace, self._key, web.ctx.lang)
+            print('failed to substitute (%s/%s) in language %s' % (self._namespace, self._key, web.ctx.lang), file=web.debug)
         return str(self)
 
 def i18n_loadhook():
@@ -189,7 +190,7 @@ def load_strings(plugin_path):
         except:
             import traceback
             traceback.print_exc()
-            print >> web.debug, "failed to load strings from", p
+            print("failed to load strings from", p, file=web.debug)
 
 # global state
 strings = i18n()

@@ -3,6 +3,7 @@ Macro extension to markdown.
 
 Macros take argument string as input and returns result as markdown text.
 """
+from __future__ import print_function
 from markdown import markdown
 import web
 import os
@@ -122,4 +123,4 @@ if __name__ == "__main__":
     md = markdown.Markdown(source=text, safe_mode=False)
     MacroExtension().extendMarkdown(md, {})
     html = md.convert()
-    print replace_macros(html, md.macros)
+    print(replace_macros(html, md.macros))

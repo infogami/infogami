@@ -1,4 +1,5 @@
 """Infobase client."""
+from __future__ import print_function
 
 import common
 import httplib, urllib
@@ -172,7 +173,7 @@ class RemoteConnection(Connection):
 
         if web.config.debug:
             b = time.time()
-            print >> web.debug, "%.02f (%s):" % (round(b-a, 2), web.ctx.infobase_req_count), response.status, method, _path, _data
+            print("%.02f (%s):" % (round(b-a, 2), web.ctx.infobase_req_count), response.status, method, _path, _data, file=web.debug)
 
         if response.status == 200:
             return response.read()
@@ -701,7 +702,7 @@ def create_thing(site, key, data, revision=None):
                 type = None
     except Exception as e:
         # just for extra safety
-        print >> web.debug, 'ERROR:', str(e)
+        print('ERROR:', str(e), file=web.debug)
         type = None
 
     klass = _thing_class_registry.get(type) or _thing_class_registry.get(None)

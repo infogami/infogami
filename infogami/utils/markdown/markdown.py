@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+from __future__ import print_function
 version = "1.6b"
 version_info = (1,6,2,"rc-2")
 __revision__ = "$Rev$"
@@ -38,7 +39,7 @@ MESSAGE_THRESHOLD = CRITICAL
 
 def message(level, text) :
     if level >= MESSAGE_THRESHOLD :
-        print text
+        print(text)
 
 
 # --------------- CONSTANTS YOU MIGHT WANT TO MODIFY -----------------
@@ -1765,7 +1766,7 @@ def parse_options() :
                     'encoding' : None }
 
         else :
-            print OPTPARSE_WARNING
+            print(OPTPARSE_WARNING)
             return None
 
     parser = optparse.OptionParser(usage="%prog INPUTFILE [options]")

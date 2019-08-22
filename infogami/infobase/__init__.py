@@ -1,6 +1,7 @@
 """
 Infobase.
 """
+from __future__ import print_function
 import sys
 import web
 
@@ -14,9 +15,9 @@ def command(f):
 @command
 def help():
     """Prints this help."""
-    print "Infobase help\n\nCommands:\n"
+    print("Infobase help\n\nCommands:\n")
     for name, c in commands.items():
-        print "%-20s %s" % (name, c.__doc__)
+        print("%-20s %s" % (name, c.__doc__))
 
 @command
 def createsite(sitename, admin_password):

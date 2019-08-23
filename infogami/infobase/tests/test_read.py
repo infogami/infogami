@@ -7,11 +7,14 @@ import utils
 
 import datetime
 
+
 def setup_module(mod):
     utils.setup_db(mod)
 
+
 def teardown_module(mod):
     utils.teardown_db(mod)
+
 
 class DBTest:
     def setup_method(self, method):
@@ -21,9 +24,10 @@ class DBTest:
     def teardown_method(self, method):
         self.tx.rollback()
 
+
 class TestRecentChanges(DBTest):
     def _save(self, docs, author=None, ip="1.2.3.4", comment="testing", kind="test_save", timestamp=None, data=None):
-        timestamp = timestamp=timestamp or datetime.datetime(2010, 01, 02, 03, 04, 05)
+        timestamp = timestamp=timestamp or datetime.datetime(2010, 1, 2, 3, 4, 5)
         s = SaveImpl(db)
         s.save(docs, 
             timestamp=timestamp,
@@ -54,7 +58,7 @@ class TestRecentChanges(DBTest):
             {"key": "/foo", "type": {"key": "/type/object"}, "title": "foo"},
             {"key": "/bar", "type": {"key": "/type/object"}, "title": "bar"}
         ]
-        timestamp = datetime.datetime(2010, 01, 02, 03, 04, 05)
+        timestamp = datetime.datetime(2010, 1, 2, 3, 4, 5)
         self._save(docs, comment="testing recentchanges", timestamp=timestamp)
 
         engine = RecentChanges(db)
@@ -183,6 +187,7 @@ class TestRecentChanges(DBTest):
         self.save_doc("/b", kind="bar", timestamp=date("2010-01-03"), comment="b")
 
         def changes(**kw):
+            global db
             return [c['comment'] for c in RecentChanges(db).recentchanges(**kw)]
 
         # begin_date is included in the interval, but end_date is not included.

@@ -23,6 +23,8 @@ class DBTest:
         self.tx.rollback()
 
 class TestStore(DBTest):
+    global store
+
     def test_insert(self, wildcard):
         for i in range(10):
             d = {"name": str(i), "value": i}
@@ -146,6 +148,7 @@ class TestStore(DBTest):
         assert f({"name": "foo"}) == [("name", "foo")]
 
     def test_typewise_indexer2(self):
+        global db
         s = Store(db)
         s.indexer = TypewiseIndexer()
         s.indexer.set_indexer("book", BookIndexer())
@@ -168,6 +171,7 @@ class TestStore(DBTest):
         assert store.query(None, None, None) == [{"key": "x"}]
         assert store.query("", None, None) == [{"key": "x"}]
         assert store.query("", "name", "foo") == [{"key": "x"}]
+
 
 class BookIndexer:
     def index(self, doc):

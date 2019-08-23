@@ -4,6 +4,7 @@ from infogami.infobase import client, server
 
 import utils
 
+
 def setup_module(mod):
     utils.setup_conn(mod)
     utils.setup_server(mod)
@@ -12,9 +13,11 @@ def setup_module(mod):
     mod.s = mod.site.store
     mod.seq = mod.site.seq
 
+
 def teardown_module(mod):
     utils.teardown_server(mod)
     utils.teardown_conn(mod)
+
 
 class TestRecentChanges:
     def save_doc(self, key, **kw):
@@ -68,6 +71,9 @@ class TestRecentChanges:
         assert [c['data'] for c in changes] == [{"x": "two"}]
 
 class TestStore:
+    global site
+    global s  # site.store
+
     def setup_method(self, method):
         s.clear()
 
@@ -162,6 +168,7 @@ class TestStore:
 
 class TestSeq:
     def test_seq(self):
+        global seq
         seq.get_value("foo") == 0
         seq.get_value("bar") == 0
 
@@ -177,6 +184,7 @@ class TestSanity:
 class TestAccount:
     """Test account creation, forgot password etc."""
     def test_register(self):
+        global site
         email = "joe@example.com"
         response = site.register(username="joe", displayname="Joe", email=email, password="secret")
 

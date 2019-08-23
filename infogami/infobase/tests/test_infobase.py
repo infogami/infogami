@@ -1,14 +1,9 @@
-from __future__ import print_function
-import os
-import simplejson
-import urllib
-
-import py.test
-
+import unittest
 import web
-from infogami.infobase import config, dbstore, infobase, server
+from infogami.infobase import server
 
 import utils
+
 
 def setup_module(mod):
     utils.setup_site(mod)
@@ -18,11 +13,14 @@ def setup_module(mod):
     mod.app.do_cleanup = mod.app._cleanup
     mod.app._cleanup = lambda: None
 
+
 def reset():
     site.cache.clear()
 
+
 def teardown_module(mod):
     utils.teardown_site(mod)
+
 
 def subdict(d, keys):
     """Returns a subset of a dictionary.
@@ -31,9 +29,10 @@ def subdict(d, keys):
     """
     return dict((k, d[k]) for k in keys)
 
-import unittest
+
 class DBTest(unittest.TestCase):
     def setUp(self):
+        global db
         self.t = db.transaction()
         # important to clear the caches
         site.store.cache.clear()
@@ -42,7 +41,7 @@ class DBTest(unittest.TestCase):
         web.ctx.pop("infobase_auth_token", None)
 
     def tearDown(self):
-        self.t.rollback()        
+        self.t.rollback()
 
     def create_user(self, username, email, password, bot=False, data={}):
         site.account_manager.register(username, email, password, data, _activate=True)
@@ -54,10 +53,11 @@ class DBTest(unittest.TestCase):
         web.ctx.infobase_auth_token = None
         return bool(user)
 
-class TestInfobase(DBTest):
-    def test_save(self):
-        import sys
 
+class TestInfobase(DBTest):
+    global site
+
+    def test_save(self):
         # save an object and make sure revision==1
         d = site.save('/foo', {'key': '/foo', 'type': '/type/object', 'n': 1, 'p': 'q'})
         assert d['revision'] == 1
@@ -86,8 +86,9 @@ class TestInfobase(DBTest):
             {'key': '/foo', 'revision': 1, 'comment': 'test 1'},
         ]
 
-        print(self.create_user('test', 'testt@example.com', 'test123', data={'displayname': 'Test'}))
-        print(site._get_thing('/user/test'))
+        self.create_user('test', 'testt@example.com', 'test123', data={'displayname': 'Test'})
+        assert site._get_thing('/user/test')
+
         site.save('/foo', {'key': '/foo', 'type': '/type/object', 'x': 2}, comment='test 4', ip='1.2.3.4', author=site._get_thing('/user/test'))
 
         assert versions({'author': '/user/test'})[:-3] == [
@@ -100,7 +101,6 @@ class TestInfobase(DBTest):
 
         # should return empty result for bad queries
         assert versions({'bad': 1}) == []
-
         assert versions({'author': '/user/noone'}) == []
 
     def test_versions_by_bot(self):
@@ -134,10 +134,7 @@ class TestInfobase(DBTest):
         site.save_many(q)
 
     def test_things(self):
-        print("save /a", file=web.debug)
         site.save('/a', {'key': '/a', 'type': '/type/object', 'x': 1, 'name': 'a'})
-
-        print("save /b", file=web.debug)
         site.save('/b', {'key': '/b', 'type': '/type/object', 'x': 2, 'name': 'b'})
 
         assert site.things({'type': '/type/object'}) == [{'key': '/a'}, {'key': '/b'}]
@@ -161,7 +158,7 @@ class TestInfobase(DBTest):
 
     def test_nested_things(self):
         site.save('/a', {
-            'key': '/a', 
+            'key': '/a',
             'type': '/type/object',
             'links': [{
                 'name': 'x',
@@ -174,7 +171,7 @@ class TestInfobase(DBTest):
         })
 
         site.save('/b', {
-            'key': '/b', 
+            'key': '/b',
             'type': '/type/object',
             'links': [{
                 'name': 'y',

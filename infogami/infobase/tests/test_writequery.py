@@ -3,6 +3,7 @@ import web
 import utils
 from .. import common, writequery
 
+
 def setup_module(mod):
     utils.setup_site(mod)
 
@@ -54,18 +55,25 @@ def setup_module(mod):
     }
     mod.site.save_many([type_book, type_author, type_link])
 
+
 def teardown_module(mod):
     utils.teardown_site(mod)
 
+
 class DBTest:
     def setup_method(self, method):
+        global db
         self.tx = db.transaction()
 
     def teardown_method(self, method):
         self.tx.rollback()
 
+
 class TestSaveProcessor(DBTest):
+    global site
+
     def test_errors(self):
+
         def save_many(query):
             try:
                 site.save_many(query)
@@ -83,8 +91,8 @@ class TestSaveProcessor(DBTest):
             "name": ["a", "b"]
         }
         assert save_many([q]) == {
-            'error': 'bad_data', 
-            'message': 'expected atom, found list', 
+            'error': 'bad_data',
+            'message': 'expected atom, found list',
             'at': {'key': '/authors/1', 'property': 'name'},
             'value': ['a', 'b']
         }
@@ -95,8 +103,8 @@ class TestSaveProcessor(DBTest):
             "name": 123
         }
         assert save_many([q]) == {
-            'error': 'bad_data', 
-            'message': 'expected /type/string, found /type/int', 
+            'error': 'bad_data',
+            'message': 'expected /type/string, found /type/int',
             'at': {'key': '/authors/1', 'property': 'name'},
             "value": 123
         }
@@ -113,10 +121,11 @@ class TestSaveProcessor(DBTest):
             "type": "/type/book",
             "publish_year": "not-int"
         }
-        assert save_many([q]) == {'error': 'bad_data', 
-            'message': "invalid literal for int() with base 10: 'not-int'", 
+        assert save_many([q]) == {
+            'error': 'bad_data',
+            'message': "invalid literal for int() with base 10: 'not-int'",
             'at': {
-                'key': '/books/1', 
+                'key': '/books/1',
                 'property': 'publish_year'
             },
             "value": "not-int"
@@ -128,10 +137,10 @@ class TestSaveProcessor(DBTest):
             "links": ["foo"]
         }
         assert save_many([q]) == {
-            'error': 'bad_data', 
-            'message': 'expected /type/link, found /type/string', 
+            'error': 'bad_data',
+            'message': 'expected /type/link, found /type/string',
             'at': {
-                'key': '/books/1', 
+                'key': '/books/1',
                 'property': 'links'
             },
             'value': 'foo'
@@ -143,10 +152,10 @@ class TestSaveProcessor(DBTest):
             "links": [{"title": 1}]
         }
         assert save_many([q]) == {
-            'error': 'bad_data', 
+            'error': 'bad_data',
             'message': 'expected /type/string, found /type/int',
             'at': {
-                'key': '/books/1', 
+                'key': '/books/1',
                 'property': 'links.title'
             },
             'value': 1

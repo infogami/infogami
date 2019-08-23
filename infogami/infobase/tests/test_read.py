@@ -27,7 +27,7 @@ class DBTest:
 
 class TestRecentChanges(DBTest):
     def _save(self, docs, author=None, ip="1.2.3.4", comment="testing", kind="test_save", timestamp=None, data=None):
-        timestamp = timestamp=timestamp or datetime.datetime(2010, 01, 02, 03, 04, 05)
+        timestamp = timestamp=timestamp or datetime.datetime(2010, 1, 2, 3, 4, 5)
         s = SaveImpl(db)
         s.save(docs, 
             timestamp=timestamp,
@@ -58,7 +58,7 @@ class TestRecentChanges(DBTest):
             {"key": "/foo", "type": {"key": "/type/object"}, "title": "foo"},
             {"key": "/bar", "type": {"key": "/type/object"}, "title": "bar"}
         ]
-        timestamp = datetime.datetime(2010, 01, 02, 03, 04, 05)
+        timestamp = datetime.datetime(2010, 1, 2, 3, 4, 5)
         self._save(docs, comment="testing recentchanges", timestamp=timestamp)
 
         engine = RecentChanges(db)

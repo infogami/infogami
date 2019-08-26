@@ -68,7 +68,7 @@ class i18n:
         if not key.startswith('__'):
             return self[key]
         else:
-            raise AttributeError, key
+            raise AttributeError(key)
 
     def __getitem__(self, key):
         namespace = web.ctx.get('i18n_namespace', '/')
@@ -84,7 +84,7 @@ class i18n_namespace:
         if not key.startswith('__'):
             return self[key]
         else:
-            raise AttributeError, key
+            raise AttributeError(key)
 
     def __getitem__(self, key):
         return self._i18n.get(self._namespace, key)

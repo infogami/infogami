@@ -61,7 +61,7 @@ class Queue:
     def peek(self):
         """Returns the element at the begining of the queue."""
         if self.head.next is self.head:
-            raise Exception, "Queue is empty"
+            raise Exception("Queue is empty")
         return self.head.next
 
     def remove(self, node=None):
@@ -176,7 +176,7 @@ class LRU:
     @synchronized
     def __delitem__(self, key):
         if key not in self.d:
-            raise KeyError, key
+            raise KeyError(key)
         node = self.getnode(key, touch=False)
         self.remove_node(node)
 

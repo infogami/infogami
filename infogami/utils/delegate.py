@@ -131,7 +131,7 @@ def _make_plugin(name):
             if os.path.isdir(path):
                 break
         else:
-            raise Exception, 'Plugin not found: ' + name
+            raise Exception('Plugin not found: ' + name)
 
     return web.storage(name=name, path=path, module=module)
 

@@ -108,16 +108,16 @@ class Render(storage.DictPile):
         if templates:
             return lambda *a, **kw: saferender(templates, *a, **kw)
         else:
-            raise KeyError, key
+            raise KeyError(key)
 
     def __getattr__(self, key):
         if key.startswith('__'):
-            raise AttributeError, key
+            raise AttributeError(key)
 
         try:
             return self[key]
         except KeyError:
-            raise AttributeError, key
+            raise AttributeError(key)
 
 def usermode(f):
     """Returns a function that calls f after switching to user mode of tdb.

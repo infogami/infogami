@@ -39,7 +39,7 @@ def multiple_insert(tablename, values, seqname=None, _test=False):
     # make sure all rows have same keys.
     for v in values:
         if v.keys() != keys:
-            raise Exception, 'Bad data'
+            raise Exception('Bad data')
 
     q = web.SQLQuery('INSERT INTO %s (%s) VALUES ' % (tablename, ', '.join(keys))) 
 

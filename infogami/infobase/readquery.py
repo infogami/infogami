@@ -250,7 +250,7 @@ def make_versions_query(store, query):
 
     for k, v in query.items():
         if k not in columns:
-            raise ValueError, k
+            raise ValueError(k)
         q.add_condition(k, '=', None, v)
 
     return q

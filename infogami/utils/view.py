@@ -191,7 +191,7 @@ def thinginput(value, property=None, **kw):
                 from infogami.core import db        
                 kw['expected_type'] = db.get_version(kw['expected_type'])
         else:
-            raise ValueError, "missing expected_type"
+            raise ValueError("missing expected_type")
         property = web.storage(kw)
     return unicode(render.input(thingify(property.expected_type, value), property))
 

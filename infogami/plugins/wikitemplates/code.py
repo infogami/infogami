@@ -33,7 +33,7 @@ class WikiSource(DictMixin):
         key = self.process_key(key)
         root = self.getroot()
         if root is None or context.get('rescue_mode'):
-            raise KeyError, key
+            raise KeyError(key)
 
         root = web.rstrips(root or "", "/")
         value = self.templates[root + key]    

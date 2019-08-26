@@ -41,7 +41,7 @@ def new_version(path, type):
 def get_i18n_page(page):
     key = page.key
     if key == '/':
-	key = '/index'
+        key = '/index'
     def get(lang):
        return lang and get_version(key + '.' + lang)
     return get(web.ctx.lang) or get('en') or None

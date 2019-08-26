@@ -231,7 +231,7 @@ class Site:
                 result = self._request('/get', data=data)
             except ClientException as e:
                 if e.status.startswith('404'):
-                    raise NotFound, key
+                    raise NotFound(key)
                 else:
                     raise
             self._cache[key, revision] = web.storage(common.parse_query(result))
@@ -560,7 +560,7 @@ class Store:
             return self._request(key)
         except ClientException as e:
             if e.status.startswith("404"):
-                raise KeyError, key
+                raise KeyError(key)
             else:
                 raise
 
@@ -642,7 +642,7 @@ class Nothing:
     """
     def __getattr__(self, name):
         if name.startswith('__') or name == 'next':
-            raise AttributeError, name
+            raise AttributeError(name)
         else:
             return self
 
@@ -816,7 +816,7 @@ class Thing:
 
     def __getattr__(self, key):
         if key.startswith('__'):
-            raise AttributeError, key
+            raise AttributeError(key)
 
         # Hack: __class__ of this object can change in _getdata method.
         #

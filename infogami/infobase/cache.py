@@ -36,7 +36,7 @@ logger = logging.getLogger("infobase.cache")
 
 class NoneDict:
     def __getitem__(self, key):
-        raise KeyError, key
+        raise KeyError(key)
 
     def __setitem__(self, key, value):
         pass
@@ -55,7 +55,7 @@ class MemcachedDict:
         key = web.safestr(key)
         value = self.memcache_client.get(key)
         if value is None:
-            raise KeyError, key
+            raise KeyError(key)
         return value
 
     def __setitem__(self, key, value):

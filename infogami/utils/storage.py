@@ -33,7 +33,7 @@ class OrderedDict(dict):
         try:
             return self[key]
         except KeyError:
-            raise AttributeError, key
+            raise AttributeError(key)
 
     def __setattr__(self, key, value):
         # special care special methods
@@ -46,7 +46,7 @@ class OrderedDict(dict):
         try:
             del self[key]
         except KeyError:
-            raise AttributeError, key
+            raise AttributeError(key)
 
     def clear(self):
         dict.clear(self)
@@ -179,7 +179,7 @@ class ReadOnlyDict:
         try:
             return self._d[key]
         except KeyError:
-            raise AttributeError, key
+            raise AttributeError(key)
 
 class DictPile(DictMixin):
     """Pile of ditionaries. 
@@ -211,7 +211,7 @@ class DictPile(DictMixin):
             if key in d:
                 return d[key]
         else:
-            raise KeyError, key
+            raise KeyError(key)
 
     def keys(self):
         keys = set()

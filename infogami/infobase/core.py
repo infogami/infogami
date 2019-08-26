@@ -90,7 +90,7 @@ class Thing:
         try:
             return self[key]
         except KeyError:
-            raise AttributeError, key
+            raise AttributeError(key)
 
     def __eq__(self, other):
         return getattr(other, 'key', None) == self.key and getattr(other, '_data', None) == self._data

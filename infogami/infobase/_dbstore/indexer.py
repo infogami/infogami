@@ -1,5 +1,7 @@
 from infogami.infobase import common
 import web
+from six import string_types
+
 
 class Indexer:
     """Indexer computes the values to be indexed.
@@ -20,7 +22,7 @@ class Indexer:
         for k, v in index:
             if k.endswith(".key"):
                 yield 'ref', web.rstrips(k, ".key"), v
-            elif isinstance(v, basestring):
+            elif isinstance(v, string_types):
                 yield 'str', k, v
             elif isinstance(v, int):
                 yield 'int', k, v

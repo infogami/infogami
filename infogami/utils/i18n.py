@@ -43,8 +43,8 @@ class i18n:
         lang = web.utf8(lang)
 
         # making a simplified assumption here.
-        # Keys for a language are all the strings defined for that language and 
-        # all the strings defined for default language. By doing this, once a key is 
+        # Keys for a language are all the strings defined for that language and
+        # all the strings defined for default language. By doing this, once a key is
         # added to default lang, then it will automatically appear in all other languages.
         keys = set(self._data.get((namespace, lang), {}).keys() + self._data.get((namespace, DEFAULT_LANG), {}).keys())
         return sorted(keys)
@@ -96,7 +96,7 @@ class i18n_string:
         self._key = key
 
     def __str__(self):
-        def get(lang): 
+        def get(lang):
             return self._i18n._data.get((self._namespace, lang))
         default_data = get(DEFAULT_LANG) or {}
         data = get(web.ctx.lang) or default_data
@@ -138,7 +138,7 @@ def i18n_loadhook():
             i = web.input(lang=None, _method="GET")
             return i.lang
 
-    try:    
+    try:
         web.ctx.lang = parse_query_string() or parse_lang_cookie() or parse_lang_header() or ''
     except:
         import traceback
@@ -176,9 +176,11 @@ def load_strings(plugin_path):
 
     def read_strings(path):
         env = {}
-        execfile(path, env)
+        with open(path) as in_file:
+            exec(in_file.read(), env)
         # __builtins__ gets added by execfile
-        del env['__builtins__']
+        if '__builtins__' in env:
+            del env['__builtins__']
         return env
 
     root = os.path.join(plugin_path, 'i18n')

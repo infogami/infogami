@@ -4,6 +4,7 @@ import common
 from common import pprint, any, all
 import web
 import simplejson
+from six import string_types
 import account
 
 def get_thing(store, key, revision=None):
@@ -36,7 +37,7 @@ class PermissionEngine:
         if permission is None:
             return True
         else:
-            groups = permission.get('writers') or [] 
+            groups = permission.get('writers') or []
             # admin users can edit anything
             groups = groups + [self.get_thing('/usergroup/admin')]
             for group in groups:
@@ -47,7 +48,7 @@ class PermissionEngine:
                     if group.key == '/usergroup/allusers' or author.key in members:
                         return True
                 else:
-                    return False        
+                    return False
 
     def get_permission(self, key):
         """Returns permission for the specified key."""
@@ -86,14 +87,14 @@ class SaveProcessor:
         self.things = dict((doc['key'], common.Thing.from_dict(self.store, doc['key'], doc)) for doc in docs)
 
         def parse_type(value):
-            if isinstance(value, basestring):
+            if isinstance(value, string_types):
                 return value
             elif isinstance(value, dict) and 'key' in value:
                 return value['key']
             else:
                 return None
 
-        # for verifying expected_type, type of the referenced objects is required. 
+        # for verifying expected_type, type of the referenced objects is required.
         # Finding the the types in one shot instead of querying each one separately.
         for doc in docs:
             self.types[doc['key']] = parse_type(doc.get('type'))
@@ -110,7 +111,7 @@ class SaveProcessor:
 
         if keys:
             d = self.store.get_metadata_list(keys)
-            type_ids = list(set(row.type for row in d.values())) 
+            type_ids = list(set(row.type for row in d.values()))
             typedict = self.store.get_metadata_list_from_ids(type_ids)
 
             for k, row in d.items():
@@ -246,7 +247,7 @@ class SaveProcessor:
             p.unique = True
             return [self.process_value(v, p) for v in value]
 
-        if unique is False:    
+        if unique is False:
             raise common.BadData(message='expected list, found atom', at=at, value=value)
 
         type_found = common.find_type(value)
@@ -297,7 +298,7 @@ class WriteQueryProcessor:
             if not isinstance(q, dict) or q.get('key') is None:
                 continue
 
-            key = q['key']                
+            key = q['key']
             thing = get_thing(self.store, key)
             create = q.pop('create', None)
 
@@ -348,7 +349,7 @@ class WriteQueryProcessor:
                     if 'key' in v:
                         value = v['key'] and common.Reference(v['key'])
                     else:
-                        value = v['value']            
+                        value = v['value']
                     self.connect(data, k, v['connect'], value)
         return data
 
@@ -444,7 +445,7 @@ def serialize(query):
         }]
     """
     def flatten(query, result, path=[], from_list=False):
-        """This does two things. 
+        """This does two things.
 	    1. It flattens the query and appends it to result.
         2. It returns its minimal value to use in parent query.
         """
@@ -475,7 +476,7 @@ def serialize(query):
             return query
 
     result = []
-    flatten(query, result)                         
+    flatten(query, result)
     return result
 
 if __name__ == "__main__":

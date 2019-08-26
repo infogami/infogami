@@ -3,6 +3,7 @@
 from collections import defaultdict
 import simplejson
 import web
+from six import string_types
 from infogami.infobase import config
 
 def get_user_root():
@@ -87,7 +88,7 @@ class RecentChanges:
             if not self._is_valid_ipv4(ip):
                 return []
             else:
-                # Don't include edits by logged in users when queried by ip. 
+                # Don't include edits by logged in users when queried by ip.
                 wheres.append("t.ip = $ip AND t.author_id is NULL")
 
         kind = kwargs.pop('kind', None)
@@ -111,7 +112,7 @@ class RecentChanges:
                 q = '%s.tx_id = t.id AND %s.key=$k AND %s.value=$v' % (t, t, t)
                 # k, v are going to change in the next iter of the loop.
                 # bind the current values by calling reparam.
-                wheres.append(web.reparam(q, locals())) 
+                wheres.append(web.reparam(q, locals()))
 
 
         wheres = list(self._process_wheres(wheres, locals()))
@@ -119,13 +120,13 @@ class RecentChanges:
 
         rows = self.db.select(tables, what=what, where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
 
-        authors = self.get_keys(row.author_id for row in rows)        
+        authors = self.get_keys(row.author_id for row in rows)
 
         return [self._process_transaction(row, authors) for row in rows]
 
     def _process_wheres(self, wheres, vars):
         for w in wheres:
-            if isinstance(w, basestring):
+            if isinstance(w, string_types):
                 yield web.reparam(w, vars)
             else:
                 yield w
@@ -147,7 +148,7 @@ class RecentChanges:
             d['author'] = None
             d['ip'] = tx.ip
 
-        # The new db schema has a data column in transaction table. 
+        # The new db schema has a data column in transaction table.
         # In old installations, machine_comment column is used as data
         if tx.get('data'):
             d['data'] = simplejson.loads(tx.data)

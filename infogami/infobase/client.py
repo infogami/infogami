@@ -9,6 +9,7 @@ import socket
 import datetime
 import time
 import logging
+from six import string_types
 
 from infogami import config
 from infogami.utils import stats
@@ -96,7 +97,7 @@ class LocalConnection(Connection):
         path = "/" + sitename + path
         web.ctx.infobase_auth_token = self.get_auth_token()
         try:
-            stats.begin("infobase", path=path, method=method, data=data)                
+            stats.begin("infobase", path=path, method=method, data=data)
             out = server.request(path, method, data)
             stats.end()
             if 'infobase_auth_token' in web.ctx:
@@ -136,7 +137,7 @@ class RemoteConnection(Connection):
                 path += '?' + data
                 data = None
 
-        stats.begin("infobase", path=path, method=method, data=data)                
+        stats.begin("infobase", path=path, method=method, data=data)
         conn = httplib.HTTPConnection(self.base_url)
         env = web.ctx.get('env') or {}
 
@@ -277,7 +278,7 @@ class Site:
         for p in thing.type._getdata().get('backreferences', []):
             offset = page_size * safeint(i.get(p.name + '_page') or '0')
             q = {
-                p.property_name: thing.key, 
+                p.property_name: thing.key,
                 'offset': offset,
                 'limit': page_size
             }
@@ -312,7 +313,7 @@ class Site:
             try:
                 data = self._load(key, revision)
             except NotFound:
-                return None        
+                return None
         return create_thing(self, key, data, revision=revision)
 
     def get_many(self, keys, raw=False):
@@ -458,10 +459,10 @@ class Site:
         if username is None and email is None:
             return None
         data = dict(username=username, email=email)
-        return self._request("/account/find", "GET", data)    
+        return self._request("/account/find", "GET", data)
 
     def update_user(self, old_password, new_password, email):
-        return self._request('/account/update_user', 'POST', 
+        return self._request('/account/update_user', 'POST',
             dict(old_password=old_password, new_password=new_password, email=email))
 
     def update_user_details(self, username, **kw):
@@ -473,7 +474,7 @@ class Site:
 
     def get_reset_code(self, email):
         """Returns the reset code for user specified by the email.
-        This called to send forgot password email. 
+        This called to send forgot password email.
         This should be called after logging in as admin.
         """
         return self._request('/account/get_reset_code', 'GET', dict(email=email))
@@ -509,7 +510,7 @@ class Site:
 class Store:
     """Store to store any arbitrary data.
 
-    This provides a dictionary like interface for storing documents. 
+    This provides a dictionary like interface for storing documents.
     Each document can have an optional type (default is "") and all the (type, name, value) triples are indexed.
     """
     def __init__(self, conn, sitename):
@@ -534,7 +535,7 @@ class Store:
             del self[k]
 
     def query(self, type=None, name=None, value=None, limit=100, offset=0, include_docs=False):
-        """Returns the  a list of keys matching the given query.        
+        """Returns the  a list of keys matching the given query.
         Sample result:
             [{"key": "a"}, {"key": "b"}, {"key": "c"}]
         """
@@ -602,7 +603,7 @@ class Store:
         return list(self.iteritems(**kw))
 
 class Sequence:
-    """Dynamic sequences. 
+    """Dynamic sequences.
     Quite similar to sequences in postgres, but there is no need of define anything upfront..
 
         seq = web.ctx.site.seq
@@ -615,7 +616,7 @@ class Sequence:
 
     def _request(self, path, method='GET', data=None):
         out = self.conn.request(self.name, "/_seq/" + path, method, data)
-        return simplejson.loads(out)        
+        return simplejson.loads(out)
 
     def get_value(self, name):
         return self._request(name, method="GET")['value']
@@ -653,7 +654,7 @@ class Nothing:
         return self
 
     def __add__(self, a):
-        return a 
+        return a
 
     __radd__ = __add__
     __mul__ = __rmul__ = __add__
@@ -698,7 +699,7 @@ def create_thing(site, key, data, revision=None):
                 type = type['key']
 
             # just to be safe
-            if not isinstance(type, basestring):
+            if not isinstance(type, string_types):
                 type = None
     except Exception as e:
         # just for extra safety
@@ -765,7 +766,7 @@ class Thing:
             except KeyError:
                 if 'type' not in self._data:
                     return default
-                return self._get_backreferences().get(key, default) 
+                return self._get_backreferences().get(key, default)
 
     def __getitem__(self, key):
         return self.get(key, nothing)
@@ -821,10 +822,10 @@ class Thing:
         # Hack: __class__ of this object can change in _getdata method.
         #
         # Lets say __class__ is changed to A in _getdata and A has method foo.
-        # When obj.foo() is called before initializing, foo won't be found becase 
-        # __class__ is not yet set to A. Initialize and call getattr again to get 
+        # When obj.foo() is called before initializing, foo won't be found becase
+        # __class__ is not yet set to A. Initialize and call getattr again to get
         # the expected behaviour.
-        # 
+        #
         # @@ Can this ever lead to infinite-recursion?
         if self._data is None:
             self._getdata() # initialize self._data
@@ -931,7 +932,7 @@ class metahook(type):
 class hook:
     __metaclass__ = metahook
 
-#remove hook from hooks    
+#remove hook from hooks
 hooks.pop()
 
 def _run_hooks(name, thing):

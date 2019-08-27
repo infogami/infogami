@@ -56,7 +56,7 @@ def multiple_insert(table, values, seqname=None):
     """Inserts multiple rows into a table using sql copy."""
     def escape(value):
         if value is None:
-            return "\N"
+            return r'\N'
         elif isinstance(value, basestring): 
             value = value.replace('\\', r'\\') # this must be the first one
             value = value.replace('\t', r'\t')
@@ -86,7 +86,7 @@ def multiple_insert(table, values, seqname=None):
     if seqname is None:
         seqname = table + "_id_seq"
 
-    #print "inserting %d rows into %s" % (len(values), table)
+    #print("inserting %d rows into %s" % (len(values), table))
 
     columns = get_table_columns(table)
     if seqname:

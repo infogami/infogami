@@ -1,5 +1,6 @@
 import web
 import pickle
+from six import string_types
 
 import infogami
 from infogami.utils.view import public
@@ -31,7 +32,7 @@ def get_expected_type(page, property_name):
     return "/type/string"
 
 def new_version(path, type):
-    if isinstance(type, basestring):
+    if isinstance(type, string_types):
         type = get_type(type)
 
     assert type is not None
@@ -98,12 +99,12 @@ def _list_pages(path, limit, offset):
     return [web.ctx.site.get(key, lazy=True) for key in web.ctx.site.things(q)]
 
 def get_things(typename, prefix, limit):
-    """Lists all things whose names start with typename"""	
+    """Lists all things whose names start with typename"""
     q = {
         'key~': prefix + '*',
         'type': typename,
         'sort': 'key',
         'limit': limit
     }
-    return [web.ctx.site.get(key, lazy=True) for key in web.ctx.site.things(q)]    
+    return [web.ctx.site.get(key, lazy=True) for key in web.ctx.site.things(q)]
 

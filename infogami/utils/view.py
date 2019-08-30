@@ -2,8 +2,10 @@ from __future__ import print_function
 
 import web
 import os
-import urllib
 import re
+
+import six
+from six.moves.urllib.parse import urlencode
 
 import infogami
 from infogami.core.diff import simple_diff, better_diff
@@ -52,9 +54,9 @@ web.template.Template.globals.update(dict(
   # common utilities
   int = int,
   str = str,
-  basestring=basestring,
-  unicode=unicode,
-  bool=bool,
+  basestring = six.string_types,
+  unicode = six.text_type,
+  bool = bool,
   list = list,
   set = set,
   dict = dict,
@@ -62,20 +64,20 @@ web.template.Template.globals.update(dict(
   max = max,
   range = range,
   len = len,
-  repr=repr,
-  zip=zip,
-  isinstance=isinstance,
-  enumerate=enumerate,
+  repr = repr,
+  zip = zip,
+  isinstance = isinstance,
+  enumerate = enumerate,
   hasattr = hasattr,
-  utf8=web.utf8,
+  utf8 = web.utf8,
   Dropdown = web.form.Dropdown,
   slice = slice,
-  urlencode = urllib.urlencode,
+  urlencode = urlencode,
   debug = web.debug,
-  get_flash_messages=get_flash_messages,
-  render_template=render_template,
-  get_template=get_template,
-  stats_summary=stats.stats_summary
+  get_flash_messages = get_flash_messages,
+  render_template = render_template,
+  get_template = get_template,
+  stats_summary = stats.stats_summary
 ))
 
 def public(f):
@@ -83,7 +85,7 @@ def public(f):
     web.template.Template.globals[f.__name__] = f
     return f
 
-@public    
+@public
 def safeint(value, default=0):
     """Convers the value to integer. Returns 0, if the conversion fails."""
     try:
@@ -105,7 +107,7 @@ def query_param(name, default=None):
 
 @public
 def http_status(status):
-    """Function to set http status from templates. 
+    """Function to set http status from templates.
     Useful to implement notfound and redirect.
     """
     web.ctx.status = status
@@ -132,7 +134,7 @@ def link(path, text=None):
 
 @public
 def homepath():
-    return web.ctx.homepath        
+    return web.ctx.homepath
 
 @public
 def add_stylesheet(path):
@@ -169,45 +171,45 @@ def thingrepr(value, type=None):
     if isinstance(value, list):
         return ', '.join(thingrepr(t, type).strip() for t in value)
 
-    from infogami.infobase import client        
+    from infogami.infobase import client
     if type is None and value is client.nothing:
         return ""
 
     if isinstance(value, client.Thing):
         type = value.type
 
-    return unicode(render.repr(thingify(type, value)))
+    return six.text_type(render.repr(thingify(type, value)))
 
 #@public
 #def thinginput(type, name, value, **attrs):
 #    """Renders html input field of given type."""
-#    return unicode(render.input(thingify(type, value), name))
+#    return six.text_type(render.input(thingify(type, value), name))
 
 @public
 def thinginput(value, property=None, **kw):
     if property is None:
         if 'expected_type' in kw:
-            if isinstance(kw['expected_type'], basestring):
-                from infogami.core import db        
+            if isinstance(kw['expected_type'], six.string_types):
+                from infogami.core import db
                 kw['expected_type'] = db.get_version(kw['expected_type'])
         else:
             raise ValueError("missing expected_type")
         property = web.storage(kw)
-    return unicode(render.input(thingify(property.expected_type, value), property))
+    return six.text_type(render.input(thingify(property.expected_type, value), property))
 
 def thingify(type, value):
     # if type is given as string then get the type from db
     if type is None:
         type = '/type/string'
 
-    if isinstance(type, basestring):
+    if isinstance(type, six.string_types):
         from infogami.core import db
         type = db.get_version(type)
 
-    PRIMITIVE_TYPES = "/type/key", "/type/string", "/type/text", "/type/int", "/type/float", "/type/boolean", "/type/uri"    
+    PRIMITIVE_TYPES = "/type/key", "/type/string", "/type/text", "/type/int", "/type/float", "/type/boolean", "/type/uri"
     from infogami.infobase import client
 
-    if type.key not in PRIMITIVE_TYPES and isinstance(value, basestring) and not value.strip():
+    if type.key not in PRIMITIVE_TYPES and isinstance(value, six.string_types) and not value.strip():
         value = web.ctx.site.new('', {'type': type})
 
     if type.key not in PRIMITIVE_TYPES and (value is None or isinstance(value, client.Nothing)):
@@ -231,29 +233,26 @@ def thingdiff(type, name, v1, v2):
         return "".join(thingdiff(type, name, a, b) for a, b in zip(v1, v2))
 
     def strip(v):
-        if isinstance(v, basestring):
-            return v.strip()
-        else:
-            return v
+        return v.strip() if isinstance(v, six.string_types) else v
 
     # ignore white-space changes and treat empty dictionaries as nothing
     if v1 == v2 or (not strip(v1) and not strip(v2)):
         return ""
     else:
-        return unicode(render.xdiff(thingify(type, v1), thingify(type, v2), name))
+        return six.text_type(render.xdiff(thingify(type, v1), thingify(type, v2), name))
 
 @public
 def thingview(page):
     return render.view(page)
 
-@public    
+@public
 def thingedit(page):
     return render.edit(page)
 
 @infogami.install_hook
 @infogami.action
 def movefiles():
-    """Move files from every plugin into static directory."""    
+    """Move files from every plugin into static directory."""
     import delegate
     import shutil
     def cp_r(src, dest):
@@ -301,7 +300,7 @@ def movetypes():
     def readfile(filename):
         text = open(filename).read()
         return eval(text, {
-            'property': property, 
+            'property': property,
             'backreference': backreference,
             'true': True,
             'false': False
@@ -333,7 +332,7 @@ def move(dir, extension, recursive=False, readfunc=None):
     import delegate
 
     readfunc = readfunc or eval
-    pages = []    
+    pages = []
     for p in delegate.plugins:
         path = os.path.join(p.path, dir)
         if os.path.exists(path) and os.path.isdir(path):
@@ -341,7 +340,7 @@ def move(dir, extension, recursive=False, readfunc=None):
             for f in files:
                 page = readfunc(open(f).read())
                 if isinstance(page, list):
-                    pages.extend(page) 
+                    pages.extend(page)
                 else:
                     pages.append(page)
 
@@ -355,7 +354,7 @@ def write(filename):
     q = open(filename).read()
     print(web.ctx.site.write(q))
 
-# this is not really the right place to move this, but couldn't find a better place than this.     
+# this is not really the right place to move this, but couldn't find a better place than this.
 def require_login(f):
     def g(*a, **kw):
         if not web.ctx.site.get_user():
@@ -368,7 +367,7 @@ def login_redirect(path=None):
     if path is None:
         path = web.ctx.fullpath
 
-    query = urllib.urlencode({"redirect":path})
+    query = urlencode({"redirect":path})
     raise web.seeother("/account/login?" + query)
 
 def permission_denied(error):

@@ -41,7 +41,7 @@ def _setup():
     if config.site is None:
         raise Exception('infogami.config.site is not specified')
 
-    if config.bugfixer:        
+    if config.bugfixer:
         web.webapi.internalerror = web.emailerrors(config.bugfixer, web.debugerror)
         web.internalerror = web.webapi.internalerror
     web.config.db_parameters = config.db_parameters
@@ -53,7 +53,7 @@ def _setup():
     from infogami.utils import delegate
     delegate._load()
 
-    # setup context etc. 
+    # setup context etc.
     delegate.fakeload()
 
 @action
@@ -128,7 +128,8 @@ def runscript(filename, *args):
     """
     sys.argv = [filename] + list(args)
     g = {"__name__": "__main__"}
-    execfile(filename, g, g)
+    with open(filename) as in_file:
+        exec(in_file.read(), g, g)
 
 def run_action(name, args=[]):
     a = find_action(name)

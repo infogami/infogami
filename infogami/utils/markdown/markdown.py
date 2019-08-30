@@ -1651,10 +1651,10 @@ class Markdown:
         return self.docType + xml
 
 
-    # __str__ = convert   # deprecated - will be changed in 1.7 to report
+    # __str__ = convert   # deprecated - will be changed in 1.7 to report
                         # information about the MD instance
 
-    # toString = __str__  # toString() method is deprecated
+    # toString = __str__  # toString() method is deprecated
 
 
     def __str__(self):

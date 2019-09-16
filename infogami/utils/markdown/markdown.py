@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from __future__ import print_function
+import six
 version = "1.6b"
 version_info = (1,6,2,"rc-2")
 __revision__ = "$Rev$"
@@ -63,11 +64,11 @@ RTL_BIDI_RANGES = ( (u'\u0590', u'\u07FF'),
 # 0780-07BF - Thaana
 # 07C0-07FF - Nko
 
-BOMS = { 'utf-8' : (unicode(codecs.BOM_UTF8, "utf-8"), ),
-         'utf-16' : (unicode(codecs.BOM_UTF16_LE, "utf-16"),
-                     unicode(codecs.BOM_UTF16_BE, "utf-16")),
-         #'utf-32' : (unicode(codecs.BOM_UTF32_LE, "utf-32"),
-         #            unicode(codecs.BOM_UTF32_BE, "utf-32")),
+BOMS = { 'utf-8' : (six.text_type(codecs.BOM_UTF8, "utf-8"), ),
+         'utf-16' : (six.text_type(codecs.BOM_UTF16_LE, "utf-16"),
+                     six.text_type(codecs.BOM_UTF16_BE, "utf-16")),
+         #'utf-32' : (six.text_type(codecs.BOM_UTF32_LE, "utf-32"),
+         #            six.text_type(codecs.BOM_UTF32_BE, "utf-32")),
          }
 
 def removeBOM(text, encoding):
@@ -129,7 +130,7 @@ def getBidiType(text) :
 
     ch = text[0]
 
-    if not isinstance(ch, unicode) or not ch.isalpha():
+    if not isinstance(ch, six.text_type) or not ch.isalpha():
         return None
 
     else :
@@ -346,7 +347,7 @@ class TextNode :
     attrRegExp = re.compile(r'\{@([^\}]*)=([^\}]*)}') # {@id=123}
 
     def __init__ (self, text) :
-        self.value = text        
+        self.value = text
 
     def attributeCallback(self, match) :
 
@@ -1049,6 +1050,7 @@ class CorePatterns :
 RE = CorePatterns()
 
 
+@six.python_2_unicode_compatible
 class Markdown:
     """ Markdown formatter class for creating an html document from
         Markdown text """
@@ -1085,7 +1087,7 @@ class Markdown:
                                  # inserted later
 
         self.textPostprocessors = [] # a footnote postprocessor will get
-                                     # inserted later                                 
+                                     # inserted later
 
         self.prePatterns = []
 
@@ -1140,7 +1142,7 @@ class Markdown:
                     configs_for_ext = configs[ext]
                 else :
                     configs_for_ext = []
-                extension = module.makeExtension(configs_for_ext)    
+                extension = module.makeExtension(configs_for_ext)
                 extension.extendMarkdown(self, globals())
 
 
@@ -1371,7 +1373,7 @@ class Markdown:
 
                 # Check if the next non-blank line is still a part of the list
                 if ( RE.regExp['ul'].match(next) or
-                     RE.regExp['ol'].match(next) or 
+                     RE.regExp['ol'].match(next) or
                      RE.regExp['tabbed'].match(next) ):
                     # get rid of any white space in the line
                     items[item].append(line.strip())
@@ -1498,7 +1500,7 @@ class Markdown:
 
                 x = parts[i]
 
-                if isinstance(x, (str, unicode)) :
+                if isinstance(x, six.string_types) :
                     result = self._applyPattern(x, pattern)
 
                     if result :
@@ -1511,7 +1513,7 @@ class Markdown:
 
         for i in range(len(parts)) :
             x = parts[i]
-            if isinstance(x, (str, unicode)) :
+            if isinstance(x, six.string_types) :
                 parts[i] = self.doc.createTextNode(x)
 
         return parts
@@ -1586,7 +1588,7 @@ class Markdown:
 
                             for item in result:
 
-                                if isinstance(item, (str, unicode)):
+                                if isinstance(item, six.string_types):
                                     if len(item) > 0:
                                         node.insertChild(position,
                                              self.doc.createTextNode(item))
@@ -1649,19 +1651,18 @@ class Markdown:
         return self.docType + xml
 
 
-    __str__ = convert   # deprecated - will be changed in 1.7 to report
+    # __str__ = convert   # deprecated - will be changed in 1.7 to report
                         # information about the MD instance
 
-    toString = __str__  # toString() method is deprecated
+    # toString = __str__  # toString() method is deprecated
 
 
-    def __unicode__(self):
+    def __str__(self):
         """Return the document in XHTML format as a Unicode object.
         """
-        return str(self)#.decode(self.encoding)
+        return str(self)
 
-
-    toUnicode = __unicode__  # deprecated - will be removed in 1.7
+    # toUnicode = __unicode__  # deprecated - will be removed in 1.7
 
 
 
@@ -1709,7 +1710,7 @@ def markdown(text,
     extension_configs = {}
 
     for ext in extensions :
-        pos = ext.find("(") 
+        pos = ext.find("(")
         if pos == -1 :
             extension_names.append(ext)
         else :

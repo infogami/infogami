@@ -4,12 +4,12 @@ import common
 from common import pprint, any, all
 import web
 import simplejson
-from six import string_types
+from six import string_types, text_type
 import account
 
 def get_thing(store, key, revision=None):
     if isinstance(key, common.Reference):
-        key = unicode(key)
+        key = text_type(key)
     json = store.get(key, revision)
     return json and common.Thing.from_json(store, key, json)
 
@@ -277,7 +277,7 @@ class SaveProcessor:
 
             # type is not found only when the thing id not found.
             if type_found is None:
-                raise common.NotFound(key=unicode(value), at=at)
+                raise common.NotFound(key=text_type(value), at=at)
 
         if expected_type != type_found:
             raise common.BadData(message='expected %s, found %s' % (property.expected_type.key, type_found), at=at, value=value)

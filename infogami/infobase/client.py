@@ -9,7 +9,7 @@ import socket
 import datetime
 import time
 import logging
-from six import string_types
+from six import string_types, text_type
 
 from infogami import config
 from infogami.utils import stats
@@ -248,7 +248,7 @@ class Site:
                 d[k] = self._process(v)
             return create_thing(self, None, d)
         elif isinstance(value, common.Reference):
-            return create_thing(self, unicode(value), None)
+            return create_thing(self, text_type(value), None)
         else:
             return value
 

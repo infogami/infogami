@@ -1,9 +1,11 @@
 """Core datastructures for Infogami.
 """
 import web
-import _json as simplejson
 import copy
 from six import text_type
+
+from infogami.infobase import _json as simplejson
+
 
 class InfobaseException(Exception):
     status = "500 Internal Server Error"
@@ -19,21 +21,25 @@ class InfobaseException(Exception):
     def dict(self):
         return dict(self.d)
 
+
 class NotFound(InfobaseException):
     status = "404 Not Found"
     def __init__(self, **kw):
         error = kw.pop('error', 'notfound')
         InfobaseException.__init__(self, error=error, **kw)
 
+
 class UserNotFound(InfobaseException):
     status = "404 Not Found"
     def __init__(self, **kw):
         InfobaseException.__init__(self, error='user_notfound', **kw)
 
+
 class PermissionDenied(InfobaseException):
     status = "403 Forbidden"
     def __init__(self, **kw):
         InfobaseException.__init__(self, error='permission_denied', **kw)
+
 
 class BadData(InfobaseException):
     status = "400 Bad Request"
@@ -41,25 +47,30 @@ class BadData(InfobaseException):
     def __init__(self, **kw):
         InfobaseException.__init__(self, error='bad_data', **kw)
 
+
 class Conflict(InfobaseException):
     status = "409 Conflict"
 
     def __init__(self, **kw):
         InfobaseException.__init__(self, error="conflict", **kw)
 
+
 class TypeMismatch(BadData):
     def __init__(self, type_expected, type_found, **kw):
         BadData.__init__(self, message="expected %s, found %s" % (type_expected, type_found), **kw)
+
 
 class Text(text_type):
     """Python type for /type/text."""
     def __repr__(self):
         return "<text: %s>" % text_type.__repr__(self)
 
+
 class Reference(text_type):
     """Python type for reference type."""
     def __repr__(self):
         return "<ref: %s>" % text_type.__repr__(self)
+
 
 class Thing:
     def __init__(self, store, key, data):
@@ -130,6 +141,7 @@ class Thing:
         data = common.parse_query(data)
         return Thing(store, key, data)
 
+
 class Store:
     """Storage for Infobase.
 
@@ -146,6 +158,7 @@ class Store:
     def delete(self, sitename):
         """Deletes the store for the specified sitename."""
         raise NotImplementedError
+
 
 class SiteStore:
     """Interface for Infobase data storage"""
@@ -203,6 +216,7 @@ class SiteStore:
 
     def set_cache(self, cache):
         pass
+
 
 class Event:
     """Infobase Event.

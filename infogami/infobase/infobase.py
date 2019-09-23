@@ -9,13 +9,11 @@ import web
 import datetime
 import simplejson
 
-import common
-import config
-import readquery
-import writequery
+from infogami.infobase import common, config, readquery, writequery
 
 # important: this is required here to setup _loadhooks and unloadhooks
-import cache
+from infogami.infobase import cache
+
 
 class Infobase:
     """Infobase contains multiple sites."""
@@ -69,6 +67,7 @@ class Infobase:
             except:
                 common.record_exception()
                 pass
+
 
 class Site:
     """A site of infobase."""

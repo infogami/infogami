@@ -1,8 +1,8 @@
-import config
 import web
 
-from core import *
-from utils import *
+from infogami.infobase import config
+from infogami.infobase.core import *
+from infogami.infobase.utils import *
 
 # Primitive types and corresponding python types
 primitive_types = {

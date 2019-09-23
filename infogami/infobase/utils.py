@@ -5,19 +5,6 @@ import datetime
 import re
 import web
 
-try:
-    from __builtin__ import any, all
-except ImportError:
-    def any(seq):
-        for x in seq:
-            if x:
-                return True
-
-    def all(seq):
-        for x in seq:
-            if not x:
-                return False
-        return True
 
 def parse_datetime(value):
     """Creates datetime object from isoformat.
@@ -29,7 +16,7 @@ def parse_datetime(value):
     if isinstance(value, datetime.datetime):
         return value
     else:
-        tokens = re.split('-|T|:|\.| ', value)
+        tokens = re.split(r'-|T|:|\.| ', value)
         return datetime.datetime(*map(int, tokens))
 
 def parse_boolean(value):

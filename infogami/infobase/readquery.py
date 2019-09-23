@@ -1,8 +1,8 @@
-import common
-from common import all, any
 import web
 import re
 import _json as simplejson
+
+from infogami.infobase import common
 
 def get_thing(store, key, revision=None):
     json = key and store.get(key, revision)
@@ -119,7 +119,7 @@ def make_query(store, query, prefix=""):
         <query: ['type = ref:/type/page']>
         >>> make_query(store, {'type': '/type/page', 'title~': 'foo', 'life': 42})
         <query: ['life = int:42', 'type = ref:/type/page', 'title ~ str:foo']>
-        >>> make_query(store, {'type': '/type/page', 'title~': 'foo', 'a:life<': 42, "b:life>": 420})        
+        >>> make_query(store, {'type': '/type/page', 'title~': 'foo', 'a:life<': 42, "b:life>": 420})
         <query: ['life < int:42', 'type = ref:/type/page', 'title ~ str:foo', 'life > int:420']>
     """
     query = common.parse_query(query)
@@ -143,8 +143,8 @@ def make_query(store, query, prefix=""):
             v = dict((k + '.' + key, value) for key, value in v.items())
             q2 = make_query(store, v, prefix=prefix + k + ".")
             #@@ Anand: Quick-fix
-            # dbstore.things looks for key to find whether type is required or not. 
-            q2.key = k 
+            # dbstore.things looks for key to find whether type is required or not.
+            q2.key = k
             if q2.conditions:
                 q.conditions.append(q2)
             else:
@@ -181,11 +181,11 @@ def find_datatype(type, key, value):
     """
     # special properties
     d = dict(
-        key="key", 
-        type="ref", 
+        key="key",
+        type="ref",
         permission="ref",
         child_permission="ref",
-        created="datetime", 
+        created="datetime",
         last_modified="datetime")
 
     if key in d:

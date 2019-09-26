@@ -929,6 +929,7 @@ register_thing_class('/type/type', Type)
 hooks = []
 class metahook(type):
     def __init__(self, name, bases, attrs):
+        global hooks
         hooks.append(self())
         type.__init__(self, name, bases, attrs)
 

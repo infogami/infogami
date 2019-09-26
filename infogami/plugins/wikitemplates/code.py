@@ -4,7 +4,12 @@ wikitemplates: allow keeping templates and macros in wiki
 from __future__ import print_function
 
 import os
-from UserDict import DictMixin
+try:
+    from UserDict import DictMixin
+except ImportError:
+    from collections import MutableMapping as DictMixin
+
+import web
 
 import web
 

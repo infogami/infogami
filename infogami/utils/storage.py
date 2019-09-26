@@ -4,12 +4,15 @@ Useful datastructures.
 
 import copy
 from collections import defaultdict, OrderedDict
-from UserDict import DictMixin
+try:
+    from UserDict import DictMixin
+except ImportError:
+    from collections import MutableMapping as DictMixin
 
 import web
 
-
 storage = defaultdict(OrderedDict)
+
 
 class SiteLocalDict:
     """

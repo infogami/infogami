@@ -3,11 +3,12 @@
 import collections
 import os
 import re
+
 import simplejson
 
 import web
 
-import flash
+from infogami.utils import flash
 
 urls = ("/.*", "item")
 app = web.application(urls, globals(), autoreload=False)
@@ -27,7 +28,7 @@ class metapage(type):
     def __init__(self, *a, **kw):
         type.__init__(self, *a, **kw)
 
-        enc = getattr(self, 'encoding', None)        
+        enc = getattr(self, 'encoding', None)
         path = getattr(self, 'path', '/' + self.__name__)
 
         encodings.add(enc)
@@ -38,7 +39,7 @@ class metamode(type):
     def __init__(self, *a, **kw):
         type.__init__(self, *a, **kw)
 
-        enc = getattr(self, 'encoding', None)        
+        enc = getattr(self, 'encoding', None)
         name = getattr(self, 'name', self.__name__)
 
         encodings.add(enc)
@@ -66,7 +67,7 @@ class mode:
         return self.GET(*a)
 
     def GET(self, *a):
-        return web.nomethod(web.ctx.method)        
+        return web.nomethod(web.ctx.method)
 
 class page:
     __metaclass__ = metapage
@@ -127,10 +128,10 @@ def find_page():
             cls = pages[p].get(encoding) or pages[p].get(None)
             args = m.groups()
 
-            # FeatureFlags support. 
+            # FeatureFlags support.
             # A handler can be enabled only if a feature is active.
             if hasattr(cls, "is_enabled") and bool(cls().is_enabled()) is False:
-               continue 
+               continue
 
             return cls, args
     return None, None
@@ -232,7 +233,7 @@ def normpath(path):
 
     # correct trailing / and ..s in the path
     path = os.path.normpath(path)
-    # os.path.normpath doesn't remove double/triple /'s at the begining    
+    # os.path.normpath doesn't remove double/triple /'s at the begining
     path = path.replace("///", "/").replace("//", "/")
     path = path.replace(' ', '_') # replace space with underscore
     path = path.replace('\n', '_').replace('\r', '_')
@@ -243,8 +244,8 @@ def path_processor(handler):
     npath = normpath(web.ctx.path)
     if npath != web.ctx.path:
         if web.ctx.method in ['GET' or 'HEAD']:
-            # give absolute url for redirect. There is a bug in web.py 
-            # that causes infinite redicts when web.ctx.path startswith "//" 
+            # give absolute url for redirect. There is a bug in web.py
+            # that causes infinite redicts when web.ctx.path startswith "//"
             raise web.seeother(web.ctx.home + npath + web.ctx.query)
         else:
             raise app.notfound()

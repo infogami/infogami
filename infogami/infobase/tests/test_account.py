@@ -1,9 +1,9 @@
-import utils
+import pytest
+
 import web
 
-from infogami.infobase import server, account, bootstrap, common
-
-import pytest
+from infogami.infobase import account, bootstrap, common, server
+from infogami.infobase.tests import utils
 
 
 def setup_module(mod):
@@ -30,7 +30,7 @@ class TestAccount:
         a = site.account_manager
         a.register(username="joe", email="joe@example.com", password="secret", data={})
 
-        # login should fail before activation 
+        # login should fail before activation
         assert a.login('joe', 'secret') == "account_not_verified"
         assert a.login('joe', 'wrong-password') == "account_bad_password"
 

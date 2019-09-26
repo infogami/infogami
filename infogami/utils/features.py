@@ -2,7 +2,7 @@
 """
 import web
 
-from context import context
+from infogami.utils.context import context
 
 feature_flags = {}
 

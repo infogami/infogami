@@ -28,9 +28,11 @@ Any elements added to the infobase cache during a request are cached locally unt
 of that request and then they are added to the global cache.
 """
 
-import web
-import lru
 import logging
+
+import web
+
+from infogami.infobase import lru
 
 logger = logging.getLogger("infobase.cache")
 
@@ -106,7 +108,7 @@ class Cache:
             or special_cache.get(key)  \
             or ctx.local_cache.get(key) \
 
-        if not obj:    
+        if not obj:
             obj = global_cache[key]
             ctx.local_cache[key] = obj
 
@@ -144,7 +146,7 @@ class Cache:
         web.ctx.locally_added[key] = value
 
     def clear(self, local=False):
-        """Clears the cache. 
+        """Clears the cache.
         When local=True, only the local cache is cleared.
         """
         web.ctx.locally_added.clear()

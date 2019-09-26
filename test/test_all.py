@@ -1,4 +1,4 @@
-import webtest
+from test import webtest
 
 def suite():
     modules = ["test_doctests", "test_dbstore", "test_infobase"]

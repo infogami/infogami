@@ -1,11 +1,11 @@
-from infogami.infobase._dbstore.save import SaveImpl, IndexUtil, PropertyManager
-
-import utils
+import datetime
 
 import pytest
-import web
 import simplejson
-import datetime
+import web
+
+from infogami.infobase._dbstore.save import SaveImpl, IndexUtil, PropertyManager
+from infogami.infobase.tests import utils
 
 
 def setup_module(mod):

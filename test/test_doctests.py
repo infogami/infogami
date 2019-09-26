@@ -1,6 +1,6 @@
 """Run all doctests in infogami.
 """
-import webtest
+from test import webtest
 
 def suite():
     modules = [
@@ -10,6 +10,6 @@ def suite():
         "infogami.infobase.dbstore",
     ]
     return webtest.doctest_suite(modules)
-    
+
 if __name__ == "__main__":
     webtest.main()

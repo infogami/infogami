@@ -1,17 +1,12 @@
 import os.path
 import re
 import web
+
 from infogami import config
-
-import template
-import macro
-from context import context
-import features
-
-from app import *
-
-from view import render_site, public
-import i18n
+from infogami.utils import features, i18n, macro, template
+from infogami.utils.app import *
+from infogami.utils.context import context
+from infogami.utils.view import render_site, public
 
 def create_site():
     from infogami.infobase import client
@@ -115,7 +110,7 @@ def get_plugins():
     return [p.name for p in plugins]
 
 def _make_plugin(name):
-    # plugin can be present in infogami/plugins directory or <pwd>/plugins directory.    
+    # plugin can be present in infogami/plugins directory or <pwd>/plugins directory.
     if name == 'core':
         path = infogami_root() + '/core'
         module = 'infogami.core'
@@ -162,7 +157,7 @@ def _load():
 
     if config.plugins is not None:
         plugins += [_make_plugin(p) for p in config.plugins]
-    else:        
+    else:
         for p in config.plugin_path:
             m = __import__(p)
             root = os.path.dirname(m)

@@ -6,11 +6,14 @@ Here is an example usage:
     memcache_client.get("foo")
     stats.end()
 
-Currently this doesn't support nesting.    
+Currently this doesn't support nesting.
 """
-import web
 import time
-from context import context
+
+import web
+
+from infogami.utils.context import context
+
 
 def _get_stats():
     if "stats" not in web.ctx:

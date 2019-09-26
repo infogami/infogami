@@ -1,18 +1,21 @@
 """Infobase client."""
 from __future__ import print_function
 
-import common
-import httplib, urllib
-import _json as simplejson
-import web
-import socket
 import datetime
-import time
 import logging
+import socket
+import time
+
 from six import string_types, text_type
+from six.moves.http_client import HTTPConnection
+from six.moves.urllib_parse import urlencode, quote, unquote
+
+import web
 
 from infogami import config
+from infogami.infobase import common, _json as simplejson
 from infogami.utils import stats
+
 
 logger = logging.getLogger("infobase.client")
 
@@ -131,20 +134,20 @@ class RemoteConnection(Connection):
         if data:
             if isinstance(data, dict):
                 data = dict((web.safestr(k), web.safestr(v)) for k, v in data.items())
-                data = urllib.urlencode(data)
+                data = urlencode(data)
                 headers['Content-Type'] = 'application/x-www-form-urlencoded'
             if method == 'GET':
                 path += '?' + data
                 data = None
 
         stats.begin("infobase", path=path, method=method, data=data)
-        conn = httplib.HTTPConnection(self.base_url)
+        conn = HTTPConnection(self.base_url)
         env = web.ctx.get('env') or {}
 
         if self.auth_token:
             import Cookie
             c = Cookie.SimpleCookie()
-            c['infobase_auth_token'] = urllib.quote(self.auth_token)
+            c['infobase_auth_token'] = quote(self.auth_token)
             cookie = c.output(header='').strip()
             headers['Cookie'] = cookie
 
@@ -169,7 +172,7 @@ class RemoteConnection(Connection):
                 auth_token = c['infobase_auth_token'].value
                 # The auth token will be in urlquoted form, unquote it before use.
                 # Otherwise, it will be quoted twice this value is set as cookie.
-                auth_token = auth_token and urllib.unquote(auth_token)
+                auth_token = auth_token and unquote(auth_token)
                 self.set_auth_token(auth_token)
 
         if web.config.debug:
@@ -629,7 +632,7 @@ def parse_datetime(datestring):
     Is there any way to do this in stdlib?
     """
     import re, datetime
-    tokens = re.split('-|T|:|\.| ', datestring)
+    tokens = re.split(r'-|T|:|\.| ', datestring)
     return datetime.datetime(*map(int, tokens))
 
 class Nothing:

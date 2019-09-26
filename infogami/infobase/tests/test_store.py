@@ -1,10 +1,9 @@
-from infogami.infobase._dbstore.store import Store, TypewiseIndexer
-from infogami.infobase import common
-
-import utils
-
-import simplejson
 import py.test
+import simplejson
+
+from infogami.infobase import common
+from infogami.infobase.tests import utils
+from infogami.infobase._dbstore.store import Store, TypewiseIndexer
 
 def setup_module(mod):
     utils.setup_db(mod)
@@ -45,7 +44,7 @@ class TestStore(DBTest):
         foo = store.put("foo", {"name": "foo"})
 
         # calling without _rev should fail
-        assert py.test.raises(common.Conflict, store.put, "foo", {"name": "bar"}) 
+        assert py.test.raises(common.Conflict, store.put, "foo", {"name": "bar"})
 
         # Calling with _rev should update foo
         foo2 = store.put("foo", {"name": "foo2", "_rev": foo['_rev']})
@@ -56,7 +55,7 @@ class TestStore(DBTest):
         foo3 = store.put("foo", {"name": "foo3", "_rev": None})
 
         # calling with bad/stale _rev should fail
-        assert py.test.raises(common.Conflict, store.put, "foo", {"name": "foo4", "_rev": foo['_rev']})        
+        assert py.test.raises(common.Conflict, store.put, "foo", {"name": "foo4", "_rev": foo['_rev']})
 
     def test_notfound(self):
         assert store.get("xxx") is None
@@ -65,13 +64,13 @@ class TestStore(DBTest):
 
     def test_delete(self, wildcard):
         d = {"name": "foo"}
-        store.put("foo", d)        
+        store.put("foo", d)
         assert store.get("foo") == dict(d, _key="foo", _rev=wildcard)
 
         store.delete("foo")
         assert store.get("foo") is None
 
-        store.put("foo", {"name": "bar"})    
+        store.put("foo", {"name": "bar"})
         assert store.get("foo") == {"name": "bar", "_key": "foo", "_rev": wildcard}
 
     def test_query(self):
@@ -137,7 +136,7 @@ class TestStore(DBTest):
         assert store.query("", "lang", "en") == []
         assert store.query("", "title,lang", "The lord of the rings--en") == [{'key': 'book'}]
 
-    def test_typewise_indexer(self):                
+    def test_typewise_indexer(self):
         t = TypewiseIndexer()
         t.set_indexer("book", BookIndexer())
 

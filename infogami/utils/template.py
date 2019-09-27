@@ -17,13 +17,14 @@ from infogami.utils import storage
 
 # There are some backward-incompatible changes in web.py 0.34 which makes Infogami fail.
 # Monkey-patching web.py to fix that issue.
-if web.__version__ == "0.34":
-    try:
-        from UserDict import DictMixin
-    except ImportError:
-        from collections import MutableMapping as DictMixin
-    web.template.TemplateResult.__bases__ = (DictMixin, web.storage)
-    web.template.StatementNode.emit = lambda self, indent, text_indent="": indent + self.stmt
+assert web.__version__ != "0.34",  "Please pip install --upgrade web.py"
+#if web.__version__ == "0.34":
+#    try:
+#        from UserDict import DictMixin
+#    except ImportError:
+#        from collections import MutableMapping as DictMixin
+#    web.template.TemplateResult.__bases__ = (DictMixin, web.storage)
+#    web.template.StatementNode.emit = lambda self, indent, text_indent="": indent + self.stmt
 
 web_render = web.template.render
 

@@ -5,9 +5,9 @@ Useful datastructures.
 import copy
 from collections import defaultdict, OrderedDict
 try:
-    from UserDict import DictMixin
+    from collections.abc import Mapping
 except ImportError:
-    from collections import MutableMapping as DictMixin
+    from collections import Mapping
 
 import web
 
@@ -57,7 +57,7 @@ class ReadOnlyDict:
         except KeyError:
             raise AttributeError(key)
 
-class DictPile(DictMixin):
+class DictPile(Mapping):
     """Pile of ditionaries.
     A key in top dictionary covers the key with the same name in the bottom dictionary.
 

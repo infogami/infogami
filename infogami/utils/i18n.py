@@ -39,8 +39,8 @@ class i18n:
         return i18n_namespace(self, namespace)
 
     def getkeys(self, namespace, lang=None):
-        namespace = web.utf8(namespace)
-        lang = web.utf8(lang)
+        namespace = web.safestr(namespace)
+        lang = web.safestr(lang)
 
         # making a simplified assumption here.
         # Keys for a language are all the strings defined for that language and
@@ -50,18 +50,18 @@ class i18n:
         return sorted(keys)
 
     def _set_strings(self, namespace, lang, data):
-        namespace = web.utf8(namespace)
-        lang = web.utf8(lang)
+        namespace = web.safestr(namespace)
+        lang = web.safestr(lang)
         self._data[namespace, lang] = dict(data)
 
     def _update_strings(self, namespace, lang, data):
-        namespace = web.utf8(namespace)
-        lang = web.utf8(lang)
+        namespace = web.safestr(namespace)
+        lang = web.safestr(lang)
         self._data.setdefault((namespace, lang), {}).update(data)
 
     def get(self, namespace, key):
-        namespace = web.utf8(namespace)
-        key = web.utf8(key)
+        namespace = web.safestr(namespace)
+        key = web.safestr(key)
         return i18n_string(self, namespace, key)
 
     def __getattr__(self, key):
@@ -72,7 +72,7 @@ class i18n:
 
     def __getitem__(self, key):
         namespace = web.ctx.get('i18n_namespace', '/')
-        key = web.utf8(key)
+        key = web.safestr(key)
         return i18n_string(self, namespace, key)
 
 class i18n_namespace:
@@ -101,12 +101,12 @@ class i18n_string:
         default_data = get(DEFAULT_LANG) or {}
         data = get(web.ctx.lang) or default_data
         text = data.get(self._key) or default_data.get(self._key) or self._key
-        return web.utf8(text)
+        return web.safestr(text)
 
     def __call__(self, *a):
         try:
             a = [x or "" for x in a]
-            return str(self) % tuple(web.utf8(x) for x in a)
+            return str(self) % tuple(web.safestr(x) for x in a)
         except:
             print('failed to substitute (%s/%s) in language %s' % (self._namespace, self._key, web.ctx.lang), file=web.debug)
         return str(self)

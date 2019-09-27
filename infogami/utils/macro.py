@@ -44,7 +44,7 @@ def safeeval_args(args):
     def f(*args, **kwargs):
         result[0] = args, kwargs
     code = "$def with (f)\n$f(%s)" % args
-    web.template.Template(web.utf8(code))(f)
+    web.template.Template(web.safestr(code))(f)
     return result[0]
 
 def call_macro(name, args):
@@ -91,7 +91,7 @@ def replace_macros(html, macros):
     """Replaces the macro place holders with real macro output."""
     for placeholder, macro_info in macros.items():
         name, args = macro_info
-        html = html.replace("<p>%s\n</p>" % placeholder, web.utf8(call_macro(name, args)))
+        html = html.replace("<p>%s\n</p>" % placeholder, web.safestr(call_macro(name, args)))
 
     return html
 

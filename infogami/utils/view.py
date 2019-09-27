@@ -69,7 +69,7 @@ web.template.Template.globals.update(dict(
   isinstance = isinstance,
   enumerate = enumerate,
   hasattr = hasattr,
-  utf8 = web.utf8,
+  utf8 = web.safestr,
   Dropdown = web.form.Dropdown,
   slice = slice,
   urlencode = urlencode,
@@ -97,7 +97,7 @@ def safeint(value, default=0):
 def safeadd(*items):
     s = ''
     for i in items:
-        s += (i and web.utf8(i)) or ''
+        s += (i and web.safestr(i)) or ''
     return s
 
 @public
@@ -114,8 +114,8 @@ def http_status(status):
 
 @public
 def join(sep, items):
-    items = [web.utf8(item or "") for item in items]
-    return web.utf8(sep).join(items)
+    items = [web.safestr(item or "") for item in items]
+    return web.safestr(sep).join(items)
 
 @public
 def format(text, safe_mode=False):

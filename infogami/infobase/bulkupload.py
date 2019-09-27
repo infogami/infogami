@@ -78,7 +78,7 @@ def multiple_insert(table, values, seqname=None):
 
     def write(path, data):
         f = open(path, 'w')
-        f.write(web.utf8(data))
+        f.write(web.safestr(data))
         f.close()
 
     if not values:

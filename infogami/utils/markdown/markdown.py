@@ -314,7 +314,7 @@ class Element :
         if self.nodeName in ['p', 'li', 'ul', 'ol',
                              'h1', 'h2', 'h3', 'h4', 'h5', 'h6'] :
 
-            if not self.attribute_values.has_key("dir"):
+            if "dir" not in self.attribute_values:
                 if self.bidi :
                     bidi = self.bidi
                 else :
@@ -798,7 +798,7 @@ class ReferencePattern (Pattern):
             # we'll use "google" as the id
             id = m.group(2).lower()
 
-        if not self.references.has_key(id) : # ignore undefined refs
+        if id not in self.references : # ignore undefined refs
             return None
         href, title = self.references[id]
         text = m.group(2)
@@ -1138,7 +1138,7 @@ class Markdown:
                         % (ext, extension_module_name) )
             else :
 
-                if configs.has_key(ext) :
+                if ext in configs :
                     configs_for_ext = configs[ext]
                 else :
                     configs_for_ext = []
@@ -1733,7 +1733,7 @@ class Extension :
         self.config = configs
 
     def getConfig(self, key) :
-        if self.config.has_key(key) :
+        if key in self.config :
             return self.config[key][0]
         else :
             return ""

@@ -207,7 +207,7 @@ class AccountManager:
 
     def _generate_salted_hash(self, key, text, salt=None):
         salt = salt or hmac.HMAC(key, str(random.random())).hexdigest()[:5]
-        hash = hmac.HMAC(key, web.utf8(salt) + web.utf8(text)).hexdigest()
+        hash = hmac.HMAC(key, web.safestr(salt) + web.safestr(text)).hexdigest()
         return '%s$%s' % (salt, hash)
 
     def _check_salted_hash(self, key, text, salted_hash):

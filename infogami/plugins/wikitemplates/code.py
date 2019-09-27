@@ -3,21 +3,20 @@ wikitemplates: allow keeping templates and macros in wiki
 """
 from __future__ import print_function
 
-import web
 import os
 from UserDict import DictMixin
+
+import web
 
 import infogami
 from infogami import core, config
 from infogami.core.db import ValidationException
+from infogami.infobase import client
+from infogami.plugins.wikitemplates import db
 from infogami.utils import delegate, macro, template, storage, view
 from infogami.utils.context import context
 from infogami.utils.template import render
 from infogami.utils.view import require_login
-
-from infogami.infobase import client
-
-import db
 
 LazyTemplate = template.LazyTemplate
 
@@ -36,7 +35,7 @@ class WikiSource(DictMixin):
             raise KeyError(key)
 
         root = web.rstrips(root or "", "/")
-        value = self.templates[root + key]    
+        value = self.templates[root + key]
         if isinstance(value, LazyTemplate):
             value = value.func()
 
@@ -96,7 +95,7 @@ class hooks(client.hook):
     def on_new_version(self, page):
         """Updates the template/macro cache, when a new version is saved or deleted."""
         if page.type.key == '/type/template':
-            _load_template(page)            
+            _load_template(page)
         elif page.type.key == '/type/macro':
             _load_macro(page)
         elif page.type.key == '/type/delete':
@@ -148,7 +147,7 @@ def _load_macro(page, lazy=False):
         wikimacros[page.key] = t
 
 def load_all():
-    def load_macros(site): 
+    def load_macros(site):
         for m in db.get_all_macros(site):
             _load_macro(m, lazy=True)
 

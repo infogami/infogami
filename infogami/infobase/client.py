@@ -641,7 +641,7 @@ class Nothing:
     >>> n = Nothing()
     >>> str(n)
     ''
-    >>> web.utf8(n)
+    >>> web.safestr(n)
     ''
     """
     def __getattr__(self, name):
@@ -843,7 +843,7 @@ class Thing:
         return not self.__eq__(other)
 
     def __str__(self):
-        return web.utf8(self.key)
+        return web.safestr(self.key)
 
     def __repr__(self):
         if self.key:

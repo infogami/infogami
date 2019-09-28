@@ -64,6 +64,10 @@ class DictPile(Mapping):
         >>> a = {'x': 1, 'y': 2}
         >>> b = {'y': 5, 'z': 6}
         >>> d = DictPile([a, b])
+        >>> len(d)
+        3
+        >>> list(iter(d)) == d.keys()
+        True
         >>> d['x'], d['y'], d['z']
         (1, 5, 6)
         >>> b['x'] = 4
@@ -73,6 +77,15 @@ class DictPile(Mapping):
         >>> d.add_dict(c)
         >>> d['x'], d['y'], d['z']
         (0, 1, 6)
+        >>> d.add_dict({'new': 99})
+        >>> len(d)
+        4
+        >>> list(iter(d)) == d.keys()
+        True
+        >>> 'new' in d
+        True
+        >>> 'nope' in d
+        False
     """
     def __init__(self, dicts=[]):
         self.dicts = dicts[:]
@@ -89,11 +102,18 @@ class DictPile(Mapping):
         else:
             raise KeyError(key)
 
+    def __iter__(self):
+        return (key for key in self.keys())
+
+    def __len__(self):
+        return len(self.keys())
+
     def keys(self):
         keys = set()
         for d in self.dicts:
             keys.update(d.keys())
         return list(keys)
+
 
 if __name__ == "__main__":
     import doctest

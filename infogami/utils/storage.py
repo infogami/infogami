@@ -103,7 +103,8 @@ class DictPile(Mapping):
             raise KeyError(key)
 
     def __iter__(self):
-        return (key for key in self.keys())
+        for key in self.keys():
+            yield key
 
     def __len__(self):
         return len(self.keys())

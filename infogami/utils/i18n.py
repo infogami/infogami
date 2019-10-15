@@ -163,6 +163,17 @@ def dirstrip(f, dir):
     f = web.lstrips(f, dir)
     return web.lstrips(f, '/')
 
+def read_strings(path):
+    """Return a version of file's contents without __builtins__
+    (which gets added by execfile
+    """
+    env = {}
+    with open(path) as in_file:
+        exec(in_file.read(), env)
+    if '__builtins__' in env:
+        del env['__builtins__']
+    return env
+    
 def load_strings(plugin_path):
     """Load string.xx files from plugin/i18n/string.* files."""
     import os.path
@@ -173,15 +184,6 @@ def load_strings(plugin_path):
         namespace = os.path.dirname(path)
         _, extn = os.path.splitext(p)
         return '/' + namespace, extn[1:] # strip dot
-
-    def read_strings(path):
-        env = {}
-        with open(path) as in_file:
-            exec(in_file.read(), env)
-        # __builtins__ gets added by execfile
-        if '__builtins__' in env:
-            del env['__builtins__']
-        return env
 
     root = os.path.join(plugin_path, 'i18n')
     for p in find(root, r'strings\..*'):

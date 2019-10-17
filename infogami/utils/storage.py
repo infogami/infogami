@@ -4,12 +4,15 @@ Useful datastructures.
 
 import copy
 from collections import defaultdict, OrderedDict
-from UserDict import DictMixin
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 import web
 
-
 storage = defaultdict(OrderedDict)
+
 
 class SiteLocalDict:
     """
@@ -54,13 +57,17 @@ class ReadOnlyDict:
         except KeyError:
             raise AttributeError(key)
 
-class DictPile(DictMixin):
+class DictPile(Mapping):
     """Pile of ditionaries.
     A key in top dictionary covers the key with the same name in the bottom dictionary.
 
         >>> a = {'x': 1, 'y': 2}
         >>> b = {'y': 5, 'z': 6}
         >>> d = DictPile([a, b])
+        >>> len(d)
+        3
+        >>> list(iter(d)) == d.keys()
+        True
         >>> d['x'], d['y'], d['z']
         (1, 5, 6)
         >>> b['x'] = 4
@@ -70,6 +77,15 @@ class DictPile(DictMixin):
         >>> d.add_dict(c)
         >>> d['x'], d['y'], d['z']
         (0, 1, 6)
+        >>> d.add_dict({'new': 99})
+        >>> len(d)
+        4
+        >>> list(iter(d)) == d.keys()
+        True
+        >>> 'new' in d
+        True
+        >>> 'nope' in d
+        False
     """
     def __init__(self, dicts=[]):
         self.dicts = dicts[:]
@@ -86,11 +102,19 @@ class DictPile(DictMixin):
         else:
             raise KeyError(key)
 
+    def __iter__(self):
+        for key in self.keys():
+            yield key
+
+    def __len__(self):
+        return len(self.keys())
+
     def keys(self):
         keys = set()
         for d in self.dicts:
             keys.update(d.keys())
         return list(keys)
+
 
 if __name__ == "__main__":
     import doctest

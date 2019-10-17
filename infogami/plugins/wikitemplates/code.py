@@ -4,7 +4,10 @@ wikitemplates: allow keeping templates and macros in wiki
 from __future__ import print_function
 
 import os
-from UserDict import DictMixin
+try:
+    from collections.abc import Mapping
+except ImportError:
+    from collections import Mapping
 
 import web
 
@@ -20,7 +23,7 @@ from infogami.utils.view import require_login
 
 LazyTemplate = template.LazyTemplate
 
-class WikiSource(DictMixin):
+class WikiSource(Mapping):
     """Template source for templates in the wiki"""
     def __init__(self, templates):
         self.templates = templates

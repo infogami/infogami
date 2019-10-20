@@ -1,8 +1,7 @@
 import simplejson
 
 from infogami.infobase import client, server
-
-import utils
+from infogami.infobase.tests import utils
 
 
 def setup_module(mod):

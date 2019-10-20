@@ -1,6 +1,8 @@
 """Infobase server to expose the API.
 """
+
 from __future__ import print_function
+
 __version__ = "0.5dev"
 
 import logging
@@ -8,10 +10,10 @@ import os
 import sys
 import time
 
+import simplejson
 import web
 
-from infogami.infobase import cache, common, config, infobase, logreader
-from infogami.infobase import _json as simplejson
+from infogami.infobase import cache, common, config, dbstore, infobase, logreader
 from infogami.infobase.account import get_user_root
 
 logger = logging.getLogger("infobase")
@@ -149,10 +151,8 @@ def from_json(s):
 
 _infobase = None
 def get_site(sitename):
-    import config
     global _infobase
     if not _infobase:
-        import dbstore
         schema = dbstore.default_schema or dbstore.Schema()
         store = dbstore.DBStore(schema)
         _infobase = infobase.Infobase(store, config.secret_key)

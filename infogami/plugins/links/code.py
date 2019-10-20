@@ -9,10 +9,10 @@ Creates a new `m=backlinks` to display the results.
 import web
 
 from infogami.core import db
+from infogami.plugins.links import view
 from infogami.utils import delegate
 from infogami.utils.template import render
 
-import view
 
 class backlinks (delegate.mode):
     def GET(self, site, path):

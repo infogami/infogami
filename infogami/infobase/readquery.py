@@ -1,6 +1,7 @@
-import web
 import re
-import _json as simplejson
+
+import simplejson
+import web
 
 from infogami.infobase import common
 

@@ -13,11 +13,11 @@ This provides a simple and limited interface for storing, retriving, querying do
     - query(type, name, value, limit=100, offset=0) -> keys
 
 Each doument can have an optional type property that can be used while querying.
-The query interface is limited to only one name, value. No joins are possible and 
+The query interface is limited to only one name, value. No joins are possible and
 the result is always ordered by the internal id.
 
-To overcome the limitation of joins, the store provides a pluggable indexer interface. 
-The indexer decides the list of (name, value) pairs to index. 
+To overcome the limitation of joins, the store provides a pluggable indexer interface.
+The indexer decides the list of (name, value) pairs to index.
 
 The following indexer allows querying for books using lowercase titles and books written by the given author in the given language.
 
@@ -29,8 +29,6 @@ The following indexer allows querying for books using lowercase titles and books
                 yield "author,lang", simplejson.dumps([a, doc.lang])
 
 """
-
-from __future__ import with_statement
 
 import simplejson
 import web

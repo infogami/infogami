@@ -10,10 +10,13 @@ Infogami log file is a stream of events where each event is a dictionary represe
 Log files are circulated on daily basis. Default log file format is $logroot/yyyy/mm/dd.log.
 """
 
-import datetime, time
-import _json as simplejson
+import datetime
 import os
 import threading
+import time
+
+import simplejson
+
 
 def synchronize(f):
     """decorator to synchronize a method."""
@@ -35,7 +38,7 @@ def to_timestamp(iso_date_string):
         >>> to_timestamp(t).isoformat()
         '2008-01-01T01:01:01.010101'
     """
-    #@@ python datetime module is ugly. 
+    #@@ python datetime module is ugly.
     #@@ It takes so much of work to create datetime from isoformat.
     date, time = iso_date_string.split('T', 1)
     y, m, d = date.split('-')

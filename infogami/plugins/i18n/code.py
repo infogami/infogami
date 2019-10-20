@@ -6,12 +6,12 @@ import web
 
 import infogami
 from infogami import config
+from infogami.infobase import client
+from infogami.plugins.i18n import db
 from infogami.utils import delegate, i18n
 from infogami.utils.context import context
 from infogami.utils.view import public
 from infogami.utils.template import render
-from infogami.infobase import client
-import db
 
 re_i18n = web.re_compile(r'^/i18n(/.*)?/strings\.([^/]*)$')
 
@@ -19,7 +19,7 @@ class hook(client.hook):
     def on_new_version(self, page):
         """Update i18n strings when a i18n wiki page is changed."""
         if page.type.key == '/type/i18n':
-            data = page._getdata()            
+            data = page._getdata()
             load(page.key, data)
 
 def load_strings(site):
@@ -36,7 +36,7 @@ def load(key, data):
         i18n.strings._set_strings(namespace, lang, unstringify(data))
 
 def setup():
-    delegate.fakeload()    
+    delegate.fakeload()
     from infogami.utils import types
     types.register_type('/i18n(/.*)?/strings.[^/]*', '/type/i18n')
 
@@ -55,7 +55,7 @@ def unstringify(d):
     """Removes string_ prefix from every key in a dictionary.
 
         >>> unstringify({'string_a': 1, 'string_b': 2})
-        {'a': 1, 'b': 2}    
+        {'a': 1, 'b': 2}
     """
     return dict([(web.lstrips(k, 'string_'), v) for k, v in d.items() if k.startswith('string_')])
 

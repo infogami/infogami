@@ -1,10 +1,13 @@
-from infogami.infobase import server
-import web
+import unittest
 
 import pytest
-import unittest
-import urllib, urllib2
 import simplejson
+from six.moves.urllib_parse import urlencode, urljoin
+from six.moves.urllib_request import Request
+import web
+
+from infogami.infobase import server
+
 
 def browser():
     if web.config.get('test_url'):
@@ -18,12 +21,12 @@ b = browser()
 
 def request(path, method="GET", data=None, headers={}):
     if method == 'GET' and data is not None:
-        path = path + '?' + urllib.urlencode(data)
+        path = path + '?' + urlencode(data)
         data = None
     if isinstance(data, dict):
         data = simplejson.dumps(data)
-    url = urllib.basejoin(b.url, path)
-    req = urllib2.Request(url, data, headers)
+    url = urljoin(b.url, path)
+    req = Request(url, data, headers)
     req.get_method = lambda: method
     b.do_request(req)
     if b.status == 200:
@@ -42,11 +45,11 @@ def save(query):
     return request('/test/save' + query['key'], method='POST', data=query)
 
 def save_many(query, comment=''):
-    return request('/test/save_many', method='POST', data=urllib.urlencode({'query': simplejson.dumps(query), 'comment': comment}))
-        
+    return request('/test/save_many', method='POST', data=urlencode({'query': simplejson.dumps(query), 'comment': comment}))
+
 class DatabaseTest(unittest.TestCase):
     pass
-    
+
 class InfobaseTestCase(unittest.TestCase):
     def clear_threadlocal(self):
         import threading
@@ -101,16 +104,16 @@ class DocumentTest(InfobaseTestCase):
         self.assertEquals2(request('/'), {'infobase': 'welcome', 'version': '*'})
         self.assertEquals2(request('/test'), {'name': 'test'})
         self.assertEquals2(request('/test/get?key=/type/type'), {'key': '/type/type', 'type': {'key': '/type/type'}, '*': True})
-        
+
         request('/test/get?key=/not-there')
         self.assertEquals(b.status, 404)
-        
+
     def test_save(self):
         x = {'key': '/new_page', 'type': {'key': '/type/object'}, 'x': 1, 's': 'hello'}
         d = request('/test/save/new_page', method="POST", data=x)
         self.assertEquals(b.status, 200)
         self.assertEquals(d, {'key': '/new_page', 'revision': 1})
-        
+
         # verify data
         d = request('/test/get?key=/new_page')
         expected = dict({'latest_revision': 1, 'revision': 1, '*': True}, **d)
@@ -127,28 +130,28 @@ class DocumentTest(InfobaseTestCase):
 
         # verify revisions
         q = {'key': '/new_page'}
-        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'key': '/new_page'})}) 
+        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'key': '/new_page'})})
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 1, '*': True}])
 
-        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'limit': 1})}) 
+        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'limit': 1})})
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 1, '*': True}])
-        
+
         # try a failed save and make sure new revisions are not created
         request('/test/save/new_page', method='POST', data={'key': '/new_page', 'type': '/type/no-such-type'})
         self.assertNotEquals(b.status, 200)
 
         q = {'key': '/new_page'}
-        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'key': '/new_page'})}) 
+        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'key': '/new_page'})})
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 1, '*': True}])
 
-        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'limit': 1})}) 
+        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'limit': 1})})
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 1, '*': True}])
 
         # save the page and make sure new revision is created.
         d = request('/test/save/new_page', method='POST', data=dict(x, title='foo'))
         self.assertEquals(d, {'key': '/new_page', 'revision': 2})
 
-        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'key': '/new_page'})}) 
+        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'key': '/new_page'})})
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 2, '*': True}, {'key': '/new_page', 'revision': 1, '*': True}])
 
     def test_save_many(self):
@@ -156,14 +159,14 @@ class DocumentTest(InfobaseTestCase):
             {'key': '/one', 'type': {'key': '/type/object'}, 'n': 1},
             {'key': '/two', 'type': {'key': '/type/object'}, 'n': 2}
         ]
-        d = request('/test/save_many', method='POST', data=urllib.urlencode({'query': simplejson.dumps(q)}))
+        d = request('/test/save_many', method='POST', data=urlencode({'query': simplejson.dumps(q)}))
         self.assertEquals(d, [{'key': '/one', 'revision': 1}, {'key': '/two', 'revision': 1}])
 
         self.assertEquals2(get('/one'), {'key': '/one', 'type': {'key': '/type/object'}, 'n': 1, 'revision': 1,'*': True})
         self.assertEquals2(get('/two'), {'key': '/two', 'type': {'key': '/type/object'}, 'n': 2, 'revision': 1, '*': True})
 
         # saving with same data should not create new revisions
-        d = request('/test/save_many', method='POST', data=urllib.urlencode({'query': simplejson.dumps(q)}))
+        d = request('/test/save_many', method='POST', data=urlencode({'query': simplejson.dumps(q)}))
         self.assertEquals(d, [])
 
         # try bad query
@@ -172,7 +175,7 @@ class DocumentTest(InfobaseTestCase):
             {'key': '/one', 'type': {'key': '/type/object'}, 'n': 11},
             {'key': '/two', 'type': {'key': '/type/no-such-type'}, 'n': 2}
         ]
-        d = request('/test/save_many', method='POST', data=urllib.urlencode({'query': simplejson.dumps(q)}))
+        d = request('/test/save_many', method='POST', data=urlencode({'query': simplejson.dumps(q)}))
         self.assertNotEquals(b.status, 200)
 
         d = get('/zero')
@@ -238,7 +241,7 @@ class MoreDocumentTest(DocumentTest):
         d = save({'key': '/author/x', 'type': '/type/author', 'name': 'x'})
         self.assertEquals(b.status, 200)
         self.assertEquals(d, {"key": "/author/x", "revision": 1})
-        
+
         # error: name is int instead of string
         d = save({'key': '/author/x', 'type': '/type/author', 'name': 42})
         self.assertEquals(b.status, 400)

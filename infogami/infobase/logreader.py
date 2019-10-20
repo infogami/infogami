@@ -2,24 +2,22 @@
 Log file reader.
 """
 from __future__ import print_function
-import os
-import itertools
-import datetime
-import time
-import web
-import glob
 
-try:
-    import _json as simplejson
-except ImportError:
-    # make sure this module can be used indepent of infobase.
-    import simplejson
+import datetime
+import glob
+import itertools
+import os
+import time
+
+import simplejson
+import web
+
 
 def nextday(date):
     return date + datetime.timedelta(1)
 
 def daterange(begin, end=None):
-    """Return an iterator over dates from begin to end (inclusive). 
+    """Return an iterator over dates from begin to end (inclusive).
     If end is not specified, end is taken as utcnow."""
     end = end or datetime.datetime.utcnow().date()
 
@@ -46,7 +44,7 @@ def to_timestamp(iso_date_string):
         >>> to_timestamp(t).isoformat()
         '2008-01-01T01:01:01.010101'
     """
-    #@@ python datetime module is ugly. 
+    #@@ python datetime module is ugly.
     #@@ It takes so much of work to create datetime from isoformat.
     date, time = iso_date_string.split('T', 1)
     y, m, d = date.split('-')
@@ -323,8 +321,8 @@ class LogPlayback:
         d = web.storage(data)
         user = site.withKey(d.username)
         a = site.get_account_manager()
-        return a.update_user1(user, 
-            enc_password=d.get('password'), 
+        return a.update_user1(user,
+            enc_password=d.get('password'),
             email=d.get('email'),
             ip = d.ip,
             timestamp=timestamp)

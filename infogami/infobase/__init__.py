@@ -5,7 +5,7 @@ from __future__ import print_function
 import sys
 import web
 
-from infogami.infobase import config, infobase, logger, logreader
+from infogami.infobase import config, infobase, logger, logreader, server
 
 commands = {}
 def command(f):
@@ -23,22 +23,16 @@ def help():
 def createsite(sitename, admin_password):
     """Creates a new site. Takes 2 arguments sitename and admin_password."""
     web.load()
-    import infobase
     infobase.Infobase().create_site(sitename, admin_password)
 
 @command
 def startserver(*args):
     """Starts the infobase server at port 8080. An optional port argument can be specified to run the server at a different port."""
     sys.argv = [sys.argv[0]] + list(args)
-    import server
     server.run()
 
 def run():
-    if len(sys.argv) > 1:
-        action = sys.argv[1]
-    else:
-        action = 'startserver'
-
+    action = sys.argv[1] if len(sys.argv) > 1 else 'startserver'
     return commands[action](*sys.argv[2:])
 
 if __name__ == "__main__":

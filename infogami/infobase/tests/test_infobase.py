@@ -1,8 +1,9 @@
 import unittest
-import web
-from infogami.infobase import server
 
-import utils
+import web
+
+from infogami.infobase import server
+from infogami.infobase.tests import utils
 
 
 def setup_module(mod):

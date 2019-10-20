@@ -11,6 +11,9 @@ except ImportError:
 
 import web
 
+from infogami.utils.context import context
+
+
 storage = defaultdict(OrderedDict)
 
 
@@ -36,7 +39,6 @@ class SiteLocalDict:
         delattr(self._getd(), name)
 
     def _getd(self):
-        from context import context
         site = web.ctx.get('site')
         key = site and site.name
         if key not in self.__d:

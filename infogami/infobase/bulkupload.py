@@ -2,12 +2,15 @@
 bulkupload script to upload multiple objects at once.
 All the inserts are merged to give better performance.
 """
-import web
-from infobase import TYPES, DATATYPE_REFERENCE
 import datetime
 import re
 import tempfile
+
 from six import string_types
+import web
+
+from infogami.infobase.infobase import Infobase, TYPES, DATATYPE_REFERENCE
+
 
 def sqlin(name, values):
     """
@@ -263,6 +266,5 @@ if __name__ == "__main__":
     web.config.db_parameters = dict(dbn='postgres', host='pharosdb', db='infobase_data2', user='anand', pw='')
     web.config.db_printing = True
     web.load()
-    from infobase import Infobase
     site = Infobase().get_site('infogami.org')
     BulkUpload(site)

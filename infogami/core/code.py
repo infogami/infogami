@@ -1,18 +1,16 @@
-import web
 import os
+
+import web
 
 import infogami
 from infogami import utils, config
+from infogami.core import db, forms, helpers
+from infogami.infobase.client import ClientException
 from infogami.utils import delegate, types
 from infogami.utils.context import context
 from infogami.utils.template import render
 from infogami.utils.view import login_redirect, require_login, safeint, add_flash_message
 
-import db
-import forms
-import helpers
-
-from infogami.infobase.client import ClientException
 
 def notfound(path):
     web.ctx.status = '404 Not Found'
@@ -55,13 +53,13 @@ class edit (delegate.mode):
             if type is None:
                 add_flash_message('error', 'Unknown type: ' + i.t)
             else:
-                p.type = type 
+                p.type = type
 
         return render.editpage(p)
 
 
     def trim(self, d):
-        """Trims empty value from d. 
+        """Trims empty value from d.
 
         >>> trim = edit().trim
 
@@ -118,18 +116,18 @@ class edit (delegate.mode):
                 p._save(comment)
                 path = web.input(_method='GET', redirect=None).redirect or web.changequery(query={})
                 raise web.seeother(path)
-            except (ClientException, db.ValidationException) as e:            
+            except (ClientException, db.ValidationException) as e:
                 add_flash_message('error', str(e))
-                p['comment_'] = comment                
+                p['comment_'] = comment
                 return render.editpage(p)
         elif action == 'delete':
             q = dict(key=i['key'], type=dict(key='/type/delete'))
 
             try:
                 web.ctx.site.save(q, comment)
-            except (ClientException, db.ValidationException) as e:            
+            except (ClientException, db.ValidationException) as e:
                 add_flash_message('error', str(e))
-                p['comment_'] = comment                
+                p['comment_'] = comment
                 return render.editpage(p)
 
             raise web.seeother(web.changequery(query={}))
@@ -192,7 +190,7 @@ class recentchanges(delegate.page):
         return render.recentchanges()
 
 class diff (delegate.mode):
-    def GET(self, path):  
+    def GET(self, path):
         i = web.input(b=None, a=None)
         # default value of b is latest revision and default value of a is b-1
 
@@ -226,7 +224,7 @@ class login(delegate.page):
         referer = web.ctx.env.get('HTTP_REFERER', '/')
         i = web.input(redirect=referer)
         f = forms.login()
-        f['redirect'].value = i.redirect 
+        f['redirect'].value = i.redirect
         return render.login(f)
 
     def POST(self):
@@ -301,7 +299,7 @@ class forgot_password(delegate.page):
                 # Otherwise user will be able to work as admin user.
                 web.ctx.headers = []
 
-            msg = render.password_mailer(web.ctx.home, d.username, d.code)            
+            msg = render.password_mailer(web.ctx.home, d.username, d.code)
             web.sendmail(config.from_address, i.email, msg.subject.strip(), str(msg))
             return render.passwordsent(i.email)
 
@@ -412,7 +410,7 @@ class feed(delegate.page):
             if rev_a == 0:
                 a = web.ctx.site.new(key, {})
                 a.revision = 0
-            else: 
+            else:
                 a = db.get_version(key, revision=rev_a)
 
             diff = render.diff(a, b)

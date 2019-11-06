@@ -1,10 +1,11 @@
 """Core datastructures for Infogami.
 """
-import web
 import copy
-from six import text_type
 
-from infogami.infobase import _json as simplejson
+import simplejson
+import web
+
+from six import text_type
 
 
 class InfobaseException(Exception):
@@ -123,7 +124,7 @@ class Thing:
         return copy.deepcopy(self._data)
 
     def format_data(self):
-        import common
+        from infogami.infobase import common
         return common.format_data(self._get_data())
 
     def get_property(self, name):
@@ -137,7 +138,7 @@ class Thing:
 
     @staticmethod
     def from_dict(store, key, data):
-        import common
+        from infogami.infobase import common
         data = common.parse_query(data)
         return Thing(store, key, data)
 

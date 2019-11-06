@@ -152,9 +152,9 @@ def run(args=None):
 
 def load_config(config_file):
     import yaml
-    from infobase import config as infobase_config
-    from infobase import server as infobase_server
-    from infobase import lru
+    from infogami.infobase import config as infobase_config
+    from infogami.infobase import server as infobase_server
+    from infogami.infobase import lru
 
     def storify(d):
         if isinstance(d, dict):

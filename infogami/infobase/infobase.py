@@ -2,17 +2,18 @@
 Infobase: structured database.
 
 Infobase is a structured database which contains multiple sites.
-Each site is an independent collection of objects. 
+Each site is an independent collection of objects.
 """
+
 from __future__ import print_function
-import web
+
 import datetime
+
 import simplejson
+import web
 
-from infogami.infobase import common, config, readquery, writequery
-
-# important: this is required here to setup _loadhooks and unloadhooks
-from infogami.infobase import cache
+from infogami.infobase import (account, bootstrap, cache, common, config, readquery,
+                               writequery)
 
 
 class Infobase:
@@ -77,7 +78,6 @@ class Site:
         self.store = store
         self.cache = cache.Cache()
         self.store.set_cache(self.cache)
-        import account
         self.account_manager = account.AccountManager(self, secret_key)
 
         self._triggers = {}
@@ -160,7 +160,7 @@ class Site:
         else:
             changeset = self.store.save(key, doc, timestamp, comment, data, ip, author and author.key, action=action)
             saved_docs = changeset.get("docs")
-            saved_doc = saved_docs[0] 
+            saved_doc = saved_docs[0]
             result={"key": saved_doc['key'], "revision": saved_doc['revision']}
 
             event_data = dict(comment=comment, key=key, query=doc, result=result, changeset=changeset)
@@ -200,7 +200,7 @@ class Site:
         try:
             q = readquery.make_versions_query(self.store, query)
         except ValueError:
-            # ValueError is raised if unknown keys are used in the query. 
+            # ValueError is raised if unknown keys are used in the query.
             # Invalid keys shouldn't make the query fail, instead the it should result in no match.
             return []
 
@@ -219,16 +219,12 @@ class Site:
         return web.storage(write=perm, admin=perm)
 
     def bootstrap(self, admin_password='admin123'):
-        import bootstrap
         web.ctx.ip = '127.0.0.1'
-
-        import cache
         cache.loadhook()
-
         bootstrap.bootstrap(self, admin_password)
 
     def add_trigger(self, type, func):
-        """Registers a trigger to call func when object of specified type is modified. 
+        """Registers a trigger to call func when object of specified type is modified.
         If type=None is specified then the trigger is called for every modification.
         func is called with old object and new object as arguments. old object will be None if the object is newly created.
         """
@@ -261,7 +257,7 @@ class Site:
         for key in updated:
             thing = things[key]
 
-            # old_data (the second argument) is not used anymore. 
+            # old_data (the second argument) is not used anymore.
             # TODO: Remove the old_data argument.
             fire_trigger(thing['type'], None, thing)
 

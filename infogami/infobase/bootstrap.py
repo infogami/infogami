@@ -2,7 +2,7 @@
 """
 
 # The bootstrap query will contain the following subqueries.
-# 
+#
 # * create type/type without any properties
 # * create all primitive types
 # * create type/property and type/backreference
@@ -87,7 +87,7 @@ def system_types():
         _type('/type/redirect', 'Redirect', 'Type to specify redirects.',
             properties = [
                 _property('location', '/type/string'),
-            ],        
+            ],
         ),
     ]
 
@@ -95,7 +95,7 @@ def usergroup(key, description, members=[]):
     return {
         'key': key,
         'type': {'key': '/type/usergroup'},
-        'description': description, 
+        'description': description,
         'members': members
     }
 
@@ -108,7 +108,7 @@ def permission(key, readers, writers, admins):
         'admins': admins
     }
 
-def system_objects():        
+def system_objects():
     def t(key):
         return {'key': key}
 
@@ -127,7 +127,7 @@ def make_query():
 def bootstrap(site, admin_password):
     """Creates system types and objects for a newly created site.
     """
-    import cache
+    from infogami.infobase import cache
     cache.loadhook()
 
     import web
@@ -158,7 +158,7 @@ def bootstrap(site, admin_password):
         a.update_user_details(username, verified=True)
 
     # add admin user to admin usergroup
-    import account
+    from infogami.infobase import account
     q = [usergroup('/usergroup/admin', 'Group of admin users.', [{"key": account.get_user_root() + "admin"}])]
     site.save_many(q)
 

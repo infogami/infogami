@@ -5,13 +5,14 @@ Creates a new set of database tables to keep track of user reviews.
 Creates '/changes' page for displaying modifications since last review.
 """
 
+import web
+
+from infogami import core
+from infogami.plugins.review import db
 from infogami.utils import delegate, view
 from infogami.utils.template import render
-from infogami import core
-from infogami.core.auth import require_login
+from infogami.utils.view import require_login
 
-import db
-import web
 
 class changes (delegate.page):
     @require_login

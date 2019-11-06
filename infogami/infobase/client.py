@@ -6,6 +6,7 @@ import logging
 import socket
 import time
 
+import simplejson
 from six import string_types, text_type
 from six.moves.http_client import HTTPConnection
 from six.moves.urllib_parse import urlencode, quote, unquote
@@ -13,7 +14,7 @@ from six.moves.urllib_parse import urlencode, quote, unquote
 import web
 
 from infogami import config
-from infogami.infobase import common, _json as simplejson
+from infogami.infobase import common, server
 from infogami.utils import stats
 
 
@@ -96,7 +97,6 @@ class LocalConnection(Connection):
         pass
 
     def request(self, sitename, path, method='GET', data=None):
-        import server
         path = "/" + sitename + path
         web.ctx.infobase_auth_token = self.get_auth_token()
         try:

@@ -1,3 +1,5 @@
+import simplejson
+
 import web
 
 from infogami.infobase import config
@@ -130,7 +132,6 @@ def create_test_store():
     >>> t.properties[0].expected_type.key
     u'/type/string'
     """
-    import _json as simplejson
     class Store(web.storage):
         def get(self, key, revision=None):
             return simplejson.dumps(self[key].format_data())
@@ -185,7 +186,7 @@ def create_test_store():
             'name': 'unique',
             'expected_type': {'key': '/type/boolean'},
             'unique': True
-        }]    
+        }]
     })
 
     add_primitive_type('/type/string')

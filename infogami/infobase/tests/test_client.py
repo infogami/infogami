@@ -2,7 +2,7 @@ import simplejson
 
 from infogami.infobase import client, server
 from infogami.infobase.tests import utils
-
+from infogami.infobase.tests.pytest_wildcard import wildcard
 
 def setup_module(mod):
     utils.setup_conn(mod)

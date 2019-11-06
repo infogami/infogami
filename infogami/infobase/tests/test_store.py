@@ -1,17 +1,21 @@
-import py.test
+import pytest
 import simplejson
 
 from infogami.infobase import common
-from infogami.infobase.tests import utils
 from infogami.infobase._dbstore.store import Store, TypewiseIndexer
+from infogami.infobase.tests import utils
+from infogami.infobase.tests.pytest_wildcard import wildcard
+
 
 def setup_module(mod):
     utils.setup_db(mod)
     mod.store = Store(db)
 
+
 def teardown_module(mod):
     utils.teardown_db(mod)
     mod.store = None
+
 
 class DBTest:
     def setup_method(self, method):
@@ -20,6 +24,7 @@ class DBTest:
 
     def teardown_method(self, method):
         self.tx.rollback()
+
 
 class TestStore(DBTest):
     global store
@@ -44,7 +49,7 @@ class TestStore(DBTest):
         foo = store.put("foo", {"name": "foo"})
 
         # calling without _rev should fail
-        assert py.test.raises(common.Conflict, store.put, "foo", {"name": "bar"})
+        assert pytest.raises(common.Conflict, store.put, "foo", {"name": "bar"})
 
         # Calling with _rev should update foo
         foo2 = store.put("foo", {"name": "foo2", "_rev": foo['_rev']})
@@ -55,7 +60,7 @@ class TestStore(DBTest):
         foo3 = store.put("foo", {"name": "foo3", "_rev": None})
 
         # calling with bad/stale _rev should fail
-        assert py.test.raises(common.Conflict, store.put, "foo", {"name": "foo4", "_rev": foo['_rev']})
+        assert pytest.raises(common.Conflict, store.put, "foo", {"name": "foo4", "_rev": foo['_rev']})
 
     def test_notfound(self):
         assert store.get("xxx") is None

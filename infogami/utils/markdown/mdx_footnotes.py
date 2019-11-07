@@ -21,7 +21,11 @@ method.
 FN_BACKLINK_TEXT = "zz1337820767766393qq"
 
 
-import re, markdown, random
+import random
+import re
+
+from infogami.utils.markdown import markdown
+
 
 class FootnoteExtension (markdown.Extension):
 
@@ -228,6 +232,7 @@ class FootnotePattern (markdown.Pattern) :
         a.appendChild(doc.createTextNode(str(num)))
         return sup
 
+
 class FootnotePostprocessor (markdown.Postprocessor):
 
     def __init__ (self, footnotes) :
@@ -242,6 +247,7 @@ class FootnotePostprocessor (markdown.Postprocessor):
             else :
                 doc.documentElement.appendChild(footnotesDiv)
 
+
 class FootnoteTextPostprocessor (markdown.Postprocessor):
 
     def __init__ (self, footnotes) :
@@ -250,6 +256,6 @@ class FootnoteTextPostprocessor (markdown.Postprocessor):
     def run(self, text) :
         return text.replace(FN_BACKLINK_TEXT, "&#8617;")
 
+
 def makeExtension(configs=None) :
     return FootnoteExtension(configs=configs)
-

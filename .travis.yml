@@ -1,14 +1,19 @@
 group: travis_latest
 language: python
+env:
+  - UPGRADE_WEBPY=false
+  - UPGRADE_WEBPY=true
 python:
   - 2.7
   - 3.8
 matrix:
   allow_failures:
     - python: 3.8
+    - env: UPGRADE_WEBPY=true
 install:
   - pip install flake8 pytest psycopg2
   - pip install -r requirements.txt
+  - if [[ "$UPGRADE_WEBPY" == true ]]; then pip install --upgrade web.py; fi
 services:
   - postgresql
 before_script:

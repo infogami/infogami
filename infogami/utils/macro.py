@@ -7,11 +7,10 @@ from __future__ import print_function
 
 import os
 
-from markdown import markdown
-
 import web
 
 from infogami.utils import storage, template
+from infogami.utils.markdown import markdown
 
 
 # macros loaded from disk

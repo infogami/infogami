@@ -15,7 +15,7 @@ import infogami
 from infogami import core, config
 from infogami.core.db import ValidationException
 from infogami.infobase import client
-from infogami.plugins.wikitemplates import db
+from infogami.plugins.wikitemplates import db, forms
 from infogami.utils import delegate, macro, template, storage, view
 from infogami.utils.context import context
 from infogami.utils.template import render
@@ -253,7 +253,6 @@ class template_preferences(delegate.page):
 
     @require_login
     def GET(self):
-        import forms
         prefs = web.ctx.site.get(context.user.key + "/preferences")
         path = (prefs and prefs.get('template_root')) or "/"
         f = forms.template_preferences()
@@ -282,7 +281,7 @@ def monkey_patch_debugerror():
             page = web.ctx.site.get(filename)
             if page is None:
                 raise IOError("not found: " + filename)
-            from StringIO import StringIO
+            from six import StringIO
             return StringIO(page.body + "\n" * 100)
         else:
             return open(filename)

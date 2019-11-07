@@ -1,9 +1,11 @@
 import os.path
 import re
+
+from six import string_types
 import web
 
 from infogami import config
-from infogami.utils import features, i18n, macro, template
+from infogami.utils import features, i18n
 from infogami.utils.app import *
 from infogami.utils.context import context
 from infogami.utils.view import render_site, public
@@ -65,7 +67,7 @@ def layout_processor(handler):
     if out is None:
         out = RawText("")
 
-    if isinstance(out, basestring):
+    if isinstance(out, string_types):
         out = web.template.TemplateResult(__body__=out)
 
     if 'title' not in out:
@@ -90,6 +92,7 @@ def layout_processor(handler):
     return html
 
 def notfound(path = None, create = True):
+    from infogami.utils import template
     path = path or web.ctx.path
     html = template.render_template("notfound", path, create = create)
     return web.notfound(render_site(config.site, html))
@@ -151,6 +154,7 @@ def infogami_root():
 
 def _load():
     """Imports the files from the plugins directories and loads templates."""
+    from infogami.utils import macro, template
     global plugins
 
     plugins = [_make_plugin('core')]

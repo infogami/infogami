@@ -1,6 +1,5 @@
 """Implementation of all read queries."""
 
-from collections import defaultdict
 import simplejson
 import web
 from six import string_types

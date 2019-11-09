@@ -6,10 +6,7 @@ Creates a new set of database tables to keep track of them.
 Creates a new `m=backlinks` to display the results.
 """
 
-import web
-
 from infogami.core import db
-from infogami.plugins.links import view
 from infogami.utils import delegate
 from infogami.utils.template import render
 
@@ -18,6 +15,6 @@ class backlinks (delegate.mode):
     def GET(self, site, path):
         #@@ fix later
         return []
-        # unreachable code...
+        # TODO: (cclauss) unreachable code...
         links = db.Things(type=db.get_type(site, 'type/page'), parent=site, links=path)
         return render.backlinks(links)

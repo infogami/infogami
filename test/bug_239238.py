@@ -8,7 +8,7 @@ That book is not listed in a2.books.
 
 import webtest
 from test_infobase import InfobaseTestCase
-from infogami.infobase import infobase, client
+from infogami.infobase import client
 
 class Test(InfobaseTestCase):
     def create_site(self, name='test'):
@@ -43,7 +43,7 @@ class Test(InfobaseTestCase):
         site = self.create_site()
         a1 = site.get('/a/a1')
         a2 = site.get('/a/a2')
-            
+
         assert keys(a1.books) == []
         assert keys(a2.books) == ['/b/b1']
 

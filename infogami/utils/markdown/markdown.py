@@ -1,11 +1,5 @@
 #!/usr/bin/env python
 
-from __future__ import print_function
-import six
-version = "1.6b"
-version_info = (1,6,2,"rc-2")
-__revision__ = "$Rev$"
-
 """
 Python-Markdown
 ===============
@@ -30,8 +24,16 @@ License: GPL 2 (http://www.gnu.org/copyleft/gpl.html) or BSD
 
 """
 
+from __future__ import print_function
+import codecs
+import re
+import sys
 
-import re, sys, os, random, codecs
+import six
+
+version = "1.6b"
+version_info = (1,6,2,"rc-2")
+__revision__ = "$Rev$"
 
 # Set debug level: 3 none, 2 critical, 1 informative, 0 all
 (VERBOSE, INFO, CRITICAL, NONE) = range(4)

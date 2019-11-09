@@ -2,8 +2,6 @@
 """
 import re
 
-import web
-
 from infogami.utils import storage
 
 default_type = '/type/page'

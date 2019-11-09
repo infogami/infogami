@@ -1,15 +1,12 @@
-import os
-
 import web
 
-import infogami
-from infogami import utils, config
+from infogami import config
 from infogami.core import db, forms, helpers
 from infogami.infobase.client import ClientException
 from infogami.utils import delegate, types
-from infogami.utils.context import context
+from infogami.utils.flash import add_flash_message
 from infogami.utils.template import render
-from infogami.utils.view import login_redirect, require_login, safeint, add_flash_message
+from infogami.utils.view import require_login, safeint
 
 
 def notfound(path):

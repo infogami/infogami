@@ -173,11 +173,10 @@ def read_strings(path):
     if '__builtins__' in env:
         del env['__builtins__']
     return env
-    
+
 def load_strings(plugin_path):
     """Load string.xx files from plugin/i18n/string.* files."""
     import os.path
-    import glob
 
     def parse_path(path):
         """Find namespace and lang from path."""

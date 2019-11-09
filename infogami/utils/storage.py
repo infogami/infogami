@@ -2,7 +2,6 @@
 Useful datastructures.
 """
 
-import copy
 from collections import defaultdict, OrderedDict
 try:
     from collections.abc import Mapping
@@ -10,8 +9,6 @@ except ImportError:
     from collections import Mapping
 
 import web
-
-from infogami.utils.context import context
 
 
 storage = defaultdict(OrderedDict)

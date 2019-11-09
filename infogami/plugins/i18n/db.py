@@ -1,5 +1,4 @@
 import web
-from infogami.infobase import client
 
 def get_all_strings(site):
     t = site.get('/type/i18n')

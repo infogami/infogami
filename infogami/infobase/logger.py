@@ -13,7 +13,6 @@ Log files are circulated on daily basis. Default log file format is $logroot/yyy
 import datetime
 import os
 import threading
-import time
 
 import simplejson
 
@@ -79,7 +78,6 @@ class Logger:
         return os.path.join(self.root, "%02d" % date.year, "%02d" % date.month, "%02d" % date.day) + self.extn
 
     def __call__(self, event):
-        import web
         data = event.data.copy()
         event.timestamp = event.timestamp or datetime.datetime.utcnow()
         if event.name in ['write', 'save', 'save_many']:

@@ -2,7 +2,6 @@ import simplejson
 
 import web
 
-from infogami.infobase import config
 from infogami.infobase.core import *
 from infogami.infobase.utils import *
 

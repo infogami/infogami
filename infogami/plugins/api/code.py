@@ -8,7 +8,7 @@ from infogami.utils.view import safeint
 from infogami.infobase import client
 import simplejson
 
-hooks = {}        
+hooks = {}
 def add_hook(name, cls):
     hooks[name] = cls
 
@@ -41,7 +41,6 @@ def get_custom_headers():
     if opt is None:
         return {}
 
-    import re
     rx = web.re_compile(r'"(.*)"; ns=(\d\d)')
     m = rx.match(opt.strip())
 
@@ -167,7 +166,7 @@ class view(delegate.mode):
     @jsonapi
     def GET(self, path):
         i = web.input(v=None)
-        v = safeint(i.v, None)        
+        v = safeint(i.v, None)
         data = dict(key=path, revision=v)
         return request('/get', data=data)
 

@@ -4,7 +4,6 @@
 import datetime
 import logging
 import time
-from collections import defaultdict
 
 from six import text_type
 
@@ -12,7 +11,6 @@ import web
 
 from infogami.infobase import common, config, _json as simplejson
 from infogami.infobase._dbstore import store, sequence
-from infogami.infobase._dbstore.schema import Schema, INDEXED_DATATYPES
 from infogami.infobase._dbstore.indexer import Indexer
 from infogami.infobase._dbstore.save import SaveImpl, PropertyManager
 from infogami.infobase._dbstore.read import RecentChanges, get_bot_users

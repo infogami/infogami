@@ -5,7 +5,7 @@ from __future__ import print_function
 import sys
 import web
 
-from infogami.infobase import config, infobase, logger, logreader, server
+from infogami.infobase import infobase, server
 
 commands = {}
 def command(f):

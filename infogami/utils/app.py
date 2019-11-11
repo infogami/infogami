@@ -9,6 +9,7 @@ import simplejson
 import web
 
 from infogami.utils import flash
+import six
 
 urls = ("/.*", "item")
 app = web.application(urls, globals(), autoreload=False)
@@ -60,26 +61,21 @@ class metaview(type):
                     views[suffix][t] = self
 
 
-class mode:
-    __metaclass__ = metamode
-
+class mode(six.with_metaclass(metamode)):
     def HEAD(self, *a):
         return self.GET(*a)
 
     def GET(self, *a):
         return web.nomethod(web.ctx.method)
 
-class page:
-    __metaclass__ = metapage
-
+class page(six.with_metaclass(metapage)):
     def HEAD(self, *a):
         return self.GET(*a)
 
     def GET(self, *a):
         return web.nomethod(web.ctx.method)
 
-class view:
-    __metaclass__ = metaview
+class view(six.with_metaclass(metaview)):
     suffix = None
     types = None
 

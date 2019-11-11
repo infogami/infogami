@@ -7,7 +7,7 @@ import socket
 import time
 
 import simplejson
-from six import string_types, text_type
+from six import string_types, text_type, with_metaclass
 from six.moves.http_client import HTTPConnection
 from six.moves.urllib_parse import urlencode, quote, unquote
 
@@ -932,7 +932,7 @@ class metahook(type):
         hooks.append(self())
         type.__init__(self, name, bases, attrs)
 
-class hook(metaclass=metahook):
+class hook(with_metaclass(metahook)):
     pass
 
 #remove hook from hooks

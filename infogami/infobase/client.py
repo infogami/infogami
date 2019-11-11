@@ -932,12 +932,11 @@ class metahook(type):
         hooks.append(self())
         type.__init__(self, name, bases, attrs)
 
-class hook:
-    __metaclass__ = metahook
+class hook(metaclass=metahook):
+    pass
 
 #remove hook from hooks
-if hooks:
-    hooks.pop()
+hooks.pop()
 
 def _run_hooks(name, thing):
     for h in hooks:

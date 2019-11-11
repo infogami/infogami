@@ -936,7 +936,8 @@ class hook:
     __metaclass__ = metahook
 
 #remove hook from hooks
-hooks.pop()
+if hooks:
+    hooks.pop()
 
 def _run_hooks(name, thing):
     for h in hooks:

@@ -2,6 +2,7 @@ import datetime
 
 import pytest
 import simplejson
+from six import iteritems
 import web
 
 from infogami.infobase._dbstore.save import SaveImpl, IndexUtil, PropertyManager
@@ -313,7 +314,7 @@ class TestIndex:
 
     def process_index(self, index):
         """Process index to remove order in the values, so that it is easier to compare."""
-        return dict((k, set(v)) for k, v in index.iteritems())
+        return {k: set(v) for k, v in iteritems(index)}
 
     def test_compute_index(self, testdata):
         index = self.indexer.compute_index(testdata['doc1'])

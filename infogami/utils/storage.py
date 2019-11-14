@@ -68,7 +68,9 @@ class DictPile(Mapping):
         >>> d = DictPile([a, b])
         >>> len(d)
         3
-        >>> list(iter(d)) == d.keys()
+        >>> list(iter(d)) == list(d.keys())
+        True
+        >>> list(iter(d)) == list(d)
         True
         >>> d['x'], d['y'], d['z']
         (1, 5, 6)
@@ -82,7 +84,9 @@ class DictPile(Mapping):
         >>> d.add_dict({'new': 99})
         >>> len(d)
         4
-        >>> list(iter(d)) == d.keys()
+        >>> list(iter(d)) == list(d.keys())
+        True
+        >>> list(iter(d)) == list(d)
         True
         >>> 'new' in d
         True

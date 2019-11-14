@@ -2,6 +2,7 @@
 i18n: allow keeping i18n strings in wiki
 """
 
+from six import iteritems
 import web
 
 import infogami
@@ -80,7 +81,7 @@ def pathjoin(a, *p):
 def movestrings():
     """Moves i18n strings to wiki."""
     query = []
-    for (namespace, lang), d in i18n.strings._data.iteritems():
+    for (namespace, lang), d in iteritems(i18n.strings._data):
         q = stringify(d)
         q['create'] = 'unless_exists'
         q['key'] = pathjoin('/i18n', namespace, '/strings.' + lang)

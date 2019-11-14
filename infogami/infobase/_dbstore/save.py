@@ -2,7 +2,7 @@
 """
 from collections import defaultdict
 
-from six import string_types
+from six import iteritems, string_types
 import simplejson
 import web
 
@@ -97,7 +97,7 @@ class SaveImpl:
                 for v in value:
                     index(key, v)
 
-        for k, v in data.iteritems():
+        for k, v in iteritems(data):
             index(k, v)
 
         if d:
@@ -332,7 +332,7 @@ class IndexUtil:
         """Returns set equivalant of d1.difference(d2) for dictionaries.
         """
         eq = eq or (lambda a, b: a == b)
-        return dict((k, v) for k, v in d1.iteritems() if not eq(v, d2.get(k)))
+        return {k: v for k, v in iteritems(d1) if not eq(v, d2.get(k))}
 
     def diff_records(self, records):
         """Takes a list of records and returns the index to be deleted and index to be inserted.
@@ -366,7 +366,7 @@ class IndexUtil:
         """Compiles doc-index into db-index.
         """
         keys = set(key for type, key, datatype, name in index)
-        for (type, key, datatype, name), values in index.iteritems():
+        for (type, key, datatype, name), values in iteritems(index):
             if datatype == 'ref':
                 keys.update(values)
 
@@ -386,7 +386,7 @@ class IndexUtil:
 
         dbindex = {}
 
-        for (type, key, datatype, name), values in index.iteritems():
+        for (type, key, datatype, name), values in iteritems(index):
             table = self.find_table(type, datatype, name)
             thing_id = thing_ids[key]
             pid = get_pid(type, name)
@@ -399,7 +399,7 @@ class IndexUtil:
         """Groups the index based on table.
         """
         groups = defaultdict(dict)
-        for (table, thing_id, property_id), values in index.iteritems():
+        for (table, thing_id, property_id), values in iteritems(index):
             groups[table][thing_id, property_id] = values
         return groups
 
@@ -407,7 +407,7 @@ class IndexUtil:
         """The DB schema has a limit of 2048 chars on string values. This function ignores values which are longer than that.
         """
         is_too_long = self._is_too_long
-        return dict((k, [v for v in values if not is_too_long(v)]) for k, values in index.iteritems())
+        return {k: [v for v in values if not is_too_long(v)] for k, values in iteritems(index)}
 
     def _is_too_long(self, v, limit=2048):
         return (
@@ -420,17 +420,17 @@ class IndexUtil:
 
     def insert_index(self, index):
         """Inserts the given index into database."""
-        for table, group in self.group_index(index).iteritems():
+        for table, group in iteritems(self.group_index(index)):
             # ignore values longer than 2048, the limit specified by the db schema.
             group = self.ignore_long_values(group)
             data = [dict(thing_id=thing_id, key_id=property_id, value=v)
-                for (thing_id, property_id), values in group.iteritems()
+                for (thing_id, property_id), values in iteritems(group)
                 for v in values]
             self.db.multiple_insert(table, data, seqname=False)
 
     def delete_index(self, index):
         """Deletes the given index from database."""
-        for table, group in self.group_index(index).iteritems():
+        for table, group in iteritems(self.group_index(index)):
 
             thing_ids = [] # thing_ids to delete all
 
@@ -445,7 +445,7 @@ class IndexUtil:
             if thing_ids:
                 self.db.delete(table, where='thing_id IN $thing_ids', vars=locals())
 
-            for thing_id, pids in d.iteritems():
+            for thing_id, pids in iteritems(d):
                 self.db.delete(table, where="thing_id=$thing_id AND key_id IN $pids", vars=locals())
 
     def get_thing_ids(self, keys):

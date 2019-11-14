@@ -2,7 +2,7 @@
 """
 import web
 import simplejson
-from six import string_types, text_type
+from six import iteritems, string_types, text_type
 
 from infogami.infobase import account, common
 
@@ -126,7 +126,7 @@ class SaveProcessor:
             if len(d) == 1 and d.keys() == ["key"]:
                 result.add(d['key'])
             else:
-                for k, v in d.iteritems():
+                for k, v in iteritems(d):
                     if k != "type":
                         self.find_references(v, result)
         elif isinstance(d, list):

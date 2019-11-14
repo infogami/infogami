@@ -1,5 +1,5 @@
 import simplejson
-from six import iteritems
+from six import iteritems, text_type
 
 import web
 
@@ -104,9 +104,9 @@ def format_data(d):
     elif isinstance(d, list):
         return [format_data(v) for v in d]
     elif isinstance(d, Text):
-        return {'type': '/type/text', 'value': unicode(d)}
+        return {'type': '/type/text', 'value': text_type(d)}
     elif isinstance(d, Reference):
-        return {'key': unicode(d)}
+        return {'key': text_type(d)}
     elif isinstance(d, datetime.datetime):
         return {'type': '/type/datetime', 'value': d.isoformat()}
     else:

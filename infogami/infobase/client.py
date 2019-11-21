@@ -9,6 +9,7 @@ import time
 import simplejson
 from six import iteritems, string_types, text_type, with_metaclass
 from six.moves.http_client import HTTPConnection
+from six.moves.http_cookies import SimpleCookie
 from six.moves.urllib_parse import urlencode, quote, unquote
 
 import web
@@ -145,8 +146,7 @@ class RemoteConnection(Connection):
         env = web.ctx.get('env') or {}
 
         if self.auth_token:
-            import Cookie
-            c = Cookie.SimpleCookie()
+            c = SimpleCookie()
             c['infobase_auth_token'] = quote(self.auth_token)
             cookie = c.output(header='').strip()
             headers['Cookie'] = cookie
@@ -165,8 +165,7 @@ class RemoteConnection(Connection):
 
         cookie = response.getheader('Set-Cookie')
         if cookie:
-            import Cookie
-            c = Cookie.SimpleCookie()
+            c = SimpleCookie()
             c.load(cookie)
             if 'infobase_auth_token' in c:
                 auth_token = c['infobase_auth_token'].value

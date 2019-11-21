@@ -1,5 +1,6 @@
 """Feature flags support for Infogami.
 """
+from six import iteritems
 import web
 
 from infogami.utils.context import context
@@ -34,7 +35,7 @@ def call_filter(spec):
         return False
 
 def find_enabled_features():
-    return set(f for f, spec in feature_flags.iteritems() if call_filter(spec))
+    return {f for f, spec in iteritems(feature_flags) if call_filter(spec)}
 
 def loadhook():
     features = find_enabled_features()

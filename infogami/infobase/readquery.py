@@ -118,9 +118,9 @@ def make_query(store, query, prefix=""):
         >>> store = common.create_test_store()
         >>> make_query(store, {'type': '/type/page'})
         <query: ['type = ref:/type/page']>
-        >>> make_query(store, {'type': '/type/page', 'title~': 'foo', 'life': 42})
+        >>> make_query(store, {'life': 42, 'type': '/type/page', 'title~': 'foo'})
         <query: ['life = int:42', 'type = ref:/type/page', 'title ~ str:foo']>
-        >>> make_query(store, {'type': '/type/page', 'title~': 'foo', 'a:life<': 42, "b:life>": 420})
+        >>> make_query(store, {'a:life<': 42, 'type': '/type/page', 'title~': 'foo', "b:life>": 420})
         <query: ['life < int:42', 'type = ref:/type/page', 'title ~ str:foo', 'life > int:420']>
     """
     query = common.parse_query(query)

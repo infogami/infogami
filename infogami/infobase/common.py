@@ -1,4 +1,5 @@
 import simplejson
+from six import iteritems, text_type
 
 import web
 
@@ -78,7 +79,7 @@ def parse_data(d, level=0):
         elif level != 0 and 'key' in d and len(d) == 1:
             return Reference(d['key'])
         else:
-            return web.storage((k, parse_data(v, level+1)) for k, v in d.iteritems())
+            return web.storage((k, parse_data(v, level+1)) for k, v in iteritems(d))
     elif isinstance(d, list):
         return [parse_data(v, level+1) for v in d]
     else:
@@ -99,13 +100,13 @@ def format_data(d):
         {'key': u'/type/type'}
     """
     if isinstance(d, dict):
-        return dict((k, format_data(v)) for k, v in d.iteritems())
+        return {k: format_data(v) for k, v in iteritems(d)}
     elif isinstance(d, list):
         return [format_data(v) for v in d]
     elif isinstance(d, Text):
-        return {'type': '/type/text', 'value': unicode(d)}
+        return {'type': '/type/text', 'value': text_type(d)}
     elif isinstance(d, Reference):
-        return {'key': unicode(d)}
+        return {'key': text_type(d)}
     elif isinstance(d, datetime.datetime):
         return {'type': '/type/datetime', 'value': d.isoformat()}
     else:

@@ -1,6 +1,10 @@
 """
 Generic Utilities.
 """
+
+from six import iteritems
+
+
 class xdict:
     """Dictionary wrapper to give sorted repr.
     Used for doctest.
@@ -22,7 +26,7 @@ def flatten(d):
     {'a': 1, 'b#0': 2, 'b#1': 3, 'c.x': 4, 'c.y': 5}
     """
     def traverse(d, prefix, delim, visit):
-        for k, v in d.iteritems():
+        for k, v in iteritems(d):
             k = str(k)
             if isinstance(v, dict):
                 traverse(v, prefix + delim + k, '.', visit)
@@ -57,11 +61,11 @@ def unflatten(d):
         elif '#' in k:
             a, b = k.split('#', 1)
             return setdefault(setdefault(d, a, betterlist()), b, v)
-        else: 
+        else:
             return d.setdefault(k, v)
 
     d2 = {}
-    for k, v in d.iteritems():
+    for k, v in iteritems(d):
         setdefault(d2, k, v)
     return d2
 
@@ -108,7 +112,7 @@ def trim(x):
 
     def trimdict(x):
         y = {}
-        for k, v in x.iteritems():
+        for k, v in iteritems(x):
             if isinstance(v, list): v = trimlist(v)
             elif isinstance(v, dict): v = trimdict(v)
             if v: y[k] = v

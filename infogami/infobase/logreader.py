@@ -33,7 +33,7 @@ def daterange(begin, end=None):
 def ijoin(iters):
     """Joins given list of iterators as a single iterator.
 
-        >>> list(ijoin([xrange(0, 5), xrange(10, 15)]))
+        >>> list(ijoin([range(0, 5), range(10, 15)]))
         [0, 1, 2, 3, 4, 10, 11, 12, 13, 14]
     """
     return (x for it in iters for x in it)

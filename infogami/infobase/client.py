@@ -7,8 +7,9 @@ import socket
 import time
 
 import simplejson
-from six import string_types, text_type, with_metaclass
+from six import iteritems, string_types, text_type, with_metaclass
 from six.moves.http_client import HTTPConnection
+from six.moves.http_cookies import SimpleCookie
 from six.moves.urllib_parse import urlencode, quote, unquote
 
 import web
@@ -34,7 +35,7 @@ def storify(d):
 
 def unstorify(d):
     if isinstance(d, dict):
-        return dict((k, unstorify(v)) for k, v in d.iteritems())
+        return {k: unstorify(v) for k, v in iteritems(d)}
     elif isinstance(d, list):
         return [unstorify(x) for x in d]
     else:
@@ -145,8 +146,7 @@ class RemoteConnection(Connection):
         env = web.ctx.get('env') or {}
 
         if self.auth_token:
-            import Cookie
-            c = Cookie.SimpleCookie()
+            c = SimpleCookie()
             c['infobase_auth_token'] = quote(self.auth_token)
             cookie = c.output(header='').strip()
             headers['Cookie'] = cookie
@@ -165,8 +165,7 @@ class RemoteConnection(Connection):
 
         cookie = response.getheader('Set-Cookie')
         if cookie:
-            import Cookie
-            c = Cookie.SimpleCookie()
+            c = SimpleCookie()
             c.load(cookie)
             if 'infobase_auth_token' in c:
                 auth_token = c['infobase_auth_token'].value
@@ -792,7 +791,7 @@ class Thing:
 
     def _format(self, d):
         if isinstance(d, dict):
-            return dict((k, self._format(v)) for k, v in d.iteritems())
+            return {k: self._format(v) for k, v in iteritems(d)}
         elif isinstance(d, list):
             return [self._format(v) for v in d]
         elif isinstance(d, common.Text):

@@ -109,7 +109,7 @@ def flatten(nested_list, result=None):
 def flatten_dict(d):
     """Flattens a dictionary.::
 
-        >>> flatten_dict({"key": "/books/foo", "type": {"key": "/type/book"}, "authors": [{"key": "/authors/a1"}, {"key": "/authors/a2"}]})
+        >>> flatten_dict({"type": {"key": "/type/book"}, "key": "/books/foo", "authors": [{"key": "/authors/a1"}, {"key": "/authors/a2"}]})
         [('type.key', '/type/book'), ('key', '/books/foo'), ('authors.key', '/authors/a1'), ('authors.key', '/authors/a2')]
     """
     def f(key, value):

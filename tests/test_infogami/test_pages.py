@@ -1,7 +1,8 @@
 import pytest
 import simplejson
-import urllib
 import web
+
+from six.moves.urllib.parse import urlencode
 
 from infogami.utils.delegate import app
 
@@ -66,7 +67,7 @@ def save(key, **data):
     b.submit()
 
 def query(**kw):
-    url = '/query.json?' + urllib.urlencode(kw)
+    url = '/query.json?' + urlencode(kw)
     return [d['key'] for d in simplejson.loads(b.open(url).read())]
 
 @pytest.mark.skip(reason="Site is None")

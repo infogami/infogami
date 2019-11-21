@@ -9,8 +9,10 @@ TODOs:
 """
 from __future__ import print_function
 
-import web
 import os
+
+from six import iteritems
+import web
 
 import infogami
 from infogami import tdb
@@ -52,7 +54,7 @@ def storify(d):
 def _readpages(root):
     """Reads and parses all root/*.page files and returns results as a dict."""
     def read(root, path):
-        path = path or "__root__"    
+        path = path or "__root__"
         text = open(os.path.join(root, path + ".page")).read()
         d = eval(text)
         return storify(d)
@@ -113,7 +115,7 @@ def _savepage(page, create_dependents=True, comment=None):
     return _page
 
 def thing2dict(page):
-    """Converts thing to dict.    
+    """Converts thing to dict.
     """
     def simplify(x, page):
         if isinstance(x, tdb.Thing):
@@ -131,7 +133,7 @@ def thing2dict(page):
 
     data = dict(name=page.name, type={'name': page.type.name})
     d = data['d'] = {}
-    for k, v in page.d.iteritems():
+    for k, v in iteritems(page.d):
         d[k] = simplify(v, page)
     return data
 
@@ -162,10 +164,10 @@ def pull(root, paths_files):
         page = db.get_version(context.site, path)
         name = page.name or '__root__'
         data = thing2dict(page)
-        filepath = os.path.join(root, name + ".page") 
+        filepath = os.path.join(root, name + ".page")
         write(filepath, data)
 
-@infogami.action        
+@infogami.action
 def push(root):
     """Move pages from disk to wiki."""
     pages = _readpages(root)
@@ -174,9 +176,9 @@ def push(root):
 def _pushpages(pages):
     tdb.transact()
     try:
-        for p in pages.values(): 
+        for p in pages.values():
             print('saving', p.name)
-            _savepage(p)    
+            _savepage(p)
     except:
         tdb.rollback()
         raise
@@ -204,23 +206,23 @@ def tdbdump(filename, created_after=None, created_before=None):
     N = 10000
     offset = 0
     while True:
-        versions = tdb.Versions(offset=offset, limit=N, orderby='version.id', 
+        versions = tdb.Versions(offset=offset, limit=N, orderby='version.id',
                         created_after=created_after, created_before=created_before).list()
         offset += N
         if not versions:
             break
 
-        # fill the cache with things corresponding to the versions. 
+        # fill the cache with things corresponding to the versions.
         # otherwise, every thing must be queried separately.
-        tdb.withIDs([v.thing_id for v in versions])            
+        tdb.withIDs([v.thing_id for v in versions])
         for v in versions:
             t = v.thing
             logger.transact()
             if v.revision == 1:
                 logger.log('thing', t.id, name=t.name, parent_id=t.parent.id)
 
-            logger.log('version', v.id, thing_id=t.id, author_id=v.author_id, ip=v.ip, 
-                    comment=v.comment, revision=v.revision, created=v.created.isoformat())           
+            logger.log('version', v.id, thing_id=t.id, author_id=v.author_id, ip=v.ip,
+                    comment=v.comment, revision=v.revision, created=v.created.isoformat())
             logger.log('data', v.id, __type__=t.type, **t.d)
             logger.commit()
     f.close()

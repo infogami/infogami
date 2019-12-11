@@ -1,8 +1,6 @@
 import pytest
 
-import web
-
-from infogami.infobase import account, bootstrap, common, server
+from infogami.infobase import common
 from infogami.infobase.tests import utils
 
 

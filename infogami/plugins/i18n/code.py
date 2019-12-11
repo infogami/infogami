@@ -6,13 +6,9 @@ from six import iteritems
 import web
 
 import infogami
-from infogami import config
 from infogami.infobase import client
 from infogami.plugins.i18n import db
 from infogami.utils import delegate, i18n
-from infogami.utils.context import context
-from infogami.utils.view import public
-from infogami.utils.template import render
 
 re_i18n = web.re_compile(r'^/i18n(/.*)?/strings\.([^/]*)$')
 

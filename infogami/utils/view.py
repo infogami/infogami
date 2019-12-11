@@ -14,7 +14,7 @@ from infogami.core.diff import simple_diff, better_diff
 from infogami.infobase import client
 from infogami.utils import i18n, macro, stats, storage
 from infogami.utils.context import context
-from infogami.utils.flash import get_flash_messages, add_flash_message
+from infogami.utils.flash import get_flash_messages
 from infogami.utils.markdown import markdown, mdx_footnotes
 from infogami.utils.template import get_template, render, render_template
 

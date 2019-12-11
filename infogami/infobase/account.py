@@ -4,7 +4,6 @@ import datetime
 import time
 import web
 import logging
-import simplejson
 
 from infogami.infobase import common, config
 

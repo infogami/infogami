@@ -5,9 +5,7 @@ from __future__ import print_function
 
 import datetime
 import glob
-import itertools
 import os
-import time
 
 import simplejson
 import web

@@ -261,8 +261,6 @@ class BulkUpload:
             raise Exception('%s: invalid value: %s' (path, repr(query)))
 
 if __name__ == "__main__":
-    import sys
-
     web.config.db_parameters = dict(dbn='postgres', host='pharosdb', db='infobase_data2', user='anand', pw='')
     web.config.db_printing = True
     web.load()

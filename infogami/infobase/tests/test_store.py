@@ -1,10 +1,9 @@
 import pytest
-import simplejson
 
 from infogami.infobase import common
 from infogami.infobase._dbstore.store import Store, TypewiseIndexer
 from infogami.infobase.tests import utils
-from infogami.infobase.tests.pytest_wildcard import wildcard
+from infogami.infobase.tests.pytest_wildcard import wildcard  # noqa: F401
 
 
 def setup_module(mod):

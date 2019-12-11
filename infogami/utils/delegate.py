@@ -1,5 +1,4 @@
 import os.path
-import re
 
 from six import string_types
 import web
@@ -28,7 +27,6 @@ def create_site():
     return client.Site(web.ctx.conn, site)
 
 def fakeload():
-    from infogami.core import db
     #web.load()
     app.load(dict(REQUEST_METHOD="GET", PATH_INFO="/install"))
     web.ctx.ip = None

@@ -115,10 +115,10 @@ def shell(*args):
         # remove an argument that confuses ipython
         sys.argv.pop(sys.argv.index("--ipython"))
         from IPython.Shell import IPShellEmbed
-        import infogami
+        import infogami  # noqa: F401
         from infogami.utils import delegate
-        from infogami.core import db
-        from infogami.utils.context import context as ctx
+        from infogami.core import db  # noqa: F401
+        from infogami.utils.context import context as ctx  # noqa: F401
         delegate.fakeload()
         ipshell = IPShellEmbed()
         ipshell()

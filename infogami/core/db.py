@@ -1,8 +1,6 @@
 import web
-import pickle
 from six import string_types
 
-import infogami
 from infogami.utils.view import public
 
 def get_version(path, revision=None):

@@ -3,7 +3,6 @@ from six import iteritems, text_type
 
 import web
 
-from infogami.infobase import config
 from infogami.infobase.core import *
 from infogami.infobase.utils import *
 

@@ -2,7 +2,6 @@
 Infogami configuration.
 """
 
-import web
 
 def get(name, default=None):
     return globals().get(name, default)
@@ -23,7 +22,7 @@ plugin_modules = []
 plugin_path = ['infogami.plugins']
 
 # key for encrypting password
-encryption_key = "ofu889e4i5kfem" 
+encryption_key = "ofu889e4i5kfem"
 
 # salt added to password before encrypting
 password_salt = "zxps#2s4g@z"

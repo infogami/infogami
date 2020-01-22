@@ -168,7 +168,7 @@ class SiteStore:
 
     def new_key(self, type, kw):
         """Generates a new key to create a object of specified type.
-        The store guarentees that it never returns the same key again.
+        The store guarantees that it never returns the same key again.
         Optional keyword arguments can be specified to give more hints
         to the store in generating the new key.
         """
@@ -209,8 +209,8 @@ class SiteStore:
         """Executes function f in a transaction."""
         raise NotImplementedError
 
-    def initialze(self):
-        """Initialzes the store for the first time.
+    def initialize(self):
+        """Initializes the store for the first time.
         This is called before doing the bootstrap.
         """
         pass

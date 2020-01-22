@@ -54,7 +54,7 @@ class TestAccount:
             assert e.d['message'] == "Email is already used: joe@example.com"
 
     def test_register_failures2(self):
-        # test registeration without activation + registration with same username/email
+        # test registration without activation + registration with same username/email
         self.test_register_failures(_activate=False)
 
     def encrypt(self, password):

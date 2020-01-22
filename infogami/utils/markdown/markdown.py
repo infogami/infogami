@@ -412,7 +412,7 @@ class HeaderPreprocessor (Preprocessor):
 
     """
        Replaces underlined headers with hashed headers to avoid
-       the nead for lookahead later.
+       the need for lookahead later.
     """
 
     def run (self, lines) :

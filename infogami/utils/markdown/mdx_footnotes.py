@@ -158,7 +158,7 @@ class FootnotePreprocessor :
         # Make a hash of all footnote marks in the text so that we
         # know in what order they are supposed to appear.  (This
         # function call doesn't really substitute anything - it's just
-        # a way to get a callback for each occurence.
+        # a way to get a callback for each occurrence.
 
         text = "\n".join(lines)
         self.footnotes.SHORT_USE_RE.sub(self.recordFootnoteUse, text)

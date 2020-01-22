@@ -36,7 +36,7 @@ def sqlin(name, values):
 @web.memoize
 def get_table_columns(table):
     # Postgres query to get all column names.
-    # Got by runing sqlalchemy with echo=True.
+    # Got by running sqlalchemy with echo=True.
     q = """
     SELECT a.attname,
       pg_catalog.format_type(a.atttypid, a.atttypmod),
@@ -142,7 +142,7 @@ class BulkUpload:
         self.created = []
         self.now = datetime.datetime.utcnow().isoformat()
 
-        # initialize key2id, if it is not initialzed already.
+        # initialize key2id, if it is not initialized already.
         global key2id
         key2id = key2id or get_key2id()
 
@@ -215,7 +215,7 @@ class BulkUpload:
         multiple_insert('datum', values, seqname=False)
 
     def prepare_datum(self, query, result, path=""):
-        """This is a funtion with side effect.
+        """This is a function with side effect.
         It append values to be inserted to datum table into result and return (value, datatype) for that query.
         """
         max_rev = 2 ** 31 - 1

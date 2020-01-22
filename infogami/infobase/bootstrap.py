@@ -114,7 +114,7 @@ def system_objects():
 
     return [
         usergroup('/usergroup/everyone', 'Group of all users including anonymous users.'),
-        usergroup('/usergroup/allusers', 'Group of all registred users.'),
+        usergroup('/usergroup/allusers', 'Group of all registered users.'),
         usergroup('/usergroup/admin', 'Group of admin users.'),
         permission('/permission/open', [t('/usergroup/everyone')], [t('/usergroup/everyone')], [t('/usergroup/admin')]),
         permission('/permission/restricted', [t('/usergroup/everyone')], [t('/usergroup/admin')], [t('/usergroup/admin')]),

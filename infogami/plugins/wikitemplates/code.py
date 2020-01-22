@@ -57,7 +57,7 @@ class WikiSource(Mapping):
 
 class MacroSource(WikiSource):
     def process_key(self, key):
-        # macro foo is availble at path macros/foo
+        # macro foo is available at path macros/foo
         return '/macros/' + key
 
     def unprocess_key(self, key):

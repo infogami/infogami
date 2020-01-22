@@ -80,7 +80,7 @@ web.template.Template.globals.update(dict(
 ))
 
 def public(f):
-    """Exposes a funtion in templates."""
+    """Exposes a function in templates."""
     web.template.Template.globals[f.__name__] = f
     return f
 
@@ -150,7 +150,7 @@ def add_javascript(path):
 @public
 def spacesafe(text):
     text = web.websafe(text)
-    #@@ TODO: should take care of space at the begining of line also
+    #@@ TODO: should take care of space at the beginning of line also
     text = text.replace('  ', ' &nbsp;');
     return text
 

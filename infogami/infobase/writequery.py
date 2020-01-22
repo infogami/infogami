@@ -323,7 +323,7 @@ class WriteQueryProcessor:
         return query
 
     def connect_all(self, data, query):
-        """Applys all connects specified in the query to data.
+        """Applies all connects specified in the query to data.
 
             >>> p = WriteQueryProcessor(None, None)
             >>> data = {'a': 'foo', 'b': ['foo', 'bar']}

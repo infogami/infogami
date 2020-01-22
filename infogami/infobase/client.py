@@ -824,7 +824,7 @@ class Thing:
         # Hack: __class__ of this object can change in _getdata method.
         #
         # Lets say __class__ is changed to A in _getdata and A has method foo.
-        # When obj.foo() is called before initializing, foo won't be found becase
+        # When obj.foo() is called before initializing, foo won't be found because
         # __class__ is not yet set to A. Initialize and call getattr again to get
         # the expected behaviour.
         #

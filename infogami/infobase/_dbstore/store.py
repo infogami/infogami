@@ -1,6 +1,6 @@
 """JSON store for storing any unstructured data different from documents stored in the versioned database.
 
-This provides a simple and limited interface for storing, retriving, querying documents.
+This provides a simple and limited interface for storing, retrieving, querying documents.
 
     - get(key) -> data
     - put(key, data)
@@ -202,7 +202,7 @@ class StoreIndexer:
         return common.flatten_dict(doc)
 
 class TypewiseIndexer:
-    """An indexer that delegates the indexing to sub-indexers based on the docuemnt type.
+    """An indexer that delegates the indexing to sub-indexers based on the document type.
     """
     def __init__(self):
         self.indexers = {}

@@ -115,7 +115,7 @@ class LogFile:
 
         log = LogFile("log")
         while True:
-            # read upto a maximum of 1000 lines
+            # read up to a maximum of 1000 lines
             lines = log.readlines(1000)
             if lines:
                 do_something(lines)
@@ -126,7 +126,7 @@ class LogFile:
 
         log = LogFile("log")
         while True:
-            # read upto a maximum of 1000 lines
+            # read up to a maximum of 1000 lines
             lines = log.readlines(1000)
             if lines:
                 do_something(lines)

@@ -229,7 +229,7 @@ def normpath(path):
 
     # correct trailing / and ..s in the path
     path = os.path.normpath(path)
-    # os.path.normpath doesn't remove double/triple /'s at the begining
+    # os.path.normpath doesn't remove double/triple /'s at the beginning
     path = path.replace("///", "/").replace("//", "/")
     path = path.replace(' ', '_') # replace space with underscore
     path = path.replace('\n', '_').replace('\r', '_')

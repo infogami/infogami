@@ -78,7 +78,7 @@ class TestSaveTest():
         test(site, '/aaa', '/type/object')
         test(site, '/bbb', '/type/book')
 
-    @pytest.mark.skip(reason="site.things(query) always returns [], suspect these tests are old and superceeded by those in infogami/infobase/tests")
+    @pytest.mark.skip(reason="site.things(query) always returns [], suspect these tests are old and superseded by those in infogami/infobase/tests")
     def test_things_with_embeddable_types(self, site):
         def link(title, url):
             return dict(title=title, url='http://example.com/' + url)

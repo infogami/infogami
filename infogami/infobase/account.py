@@ -411,4 +411,4 @@ class AccountManager:
         text = details.password + '$' + timestamp
 
         if not self._check_salted_hash(self.secret_key, text, code):
-            raise common.BadData(message="Invaid password reset code")
+            raise common.BadData(message="Invalid password reset code")

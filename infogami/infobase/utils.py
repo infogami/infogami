@@ -75,7 +75,7 @@ def pprint(obj):
     print(prepr(obj))
 
 def prepr(obj, indent=""):
-    """Pretty representaion."""
+    """Pretty representation."""
     if isinstance(obj, list):
         return "[" + ", ".join(prepr(x, indent) for x in obj) + "]"
     elif isinstance(obj, tuple):

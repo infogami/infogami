@@ -59,7 +59,7 @@ class Queue:
         node.prev.next = node
 
     def peek(self):
-        """Returns the element at the begining of the queue."""
+        """Returns the element at the beginning of the queue."""
         if self.head.next is self.head:
             raise Exception("Queue is empty")
         return self.head.next

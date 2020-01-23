@@ -189,7 +189,7 @@ class TestAccount:
 
         assert site.activate_account(username="joe") == {'ok': 'true'}
 
-        # login should succed
+        # login should succeed
         site.login("joe", "secret")
 
         try:

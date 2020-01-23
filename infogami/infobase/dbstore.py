@@ -238,7 +238,7 @@ class DBSiteStore(common.SiteStore):
             if c.datatype == 'ref':
                 metadata = self.get_metadata(c.value)
                 if metadata is None:
-                    # required object is not found so the query result wil be empty.
+                    # required object is not found so the query result will be empty.
                     # Raise StopIteration to indicate empty result.
                     raise StopIteration
                 c.value = metadata.id
@@ -286,7 +286,7 @@ class DBSiteStore(common.SiteStore):
             def f(table):
                 d.table = d.table or table
                 if d.table == table:
-                    # avoid a comparsion when both tables are same. it fails when ordering is None
+                    # avoid a comparison when both tables are same. it fails when ordering is None
                     return "1 = 1"
                 else:
                     return '%s.ordering = %s.ordering' % (table, d.table)
@@ -402,7 +402,7 @@ class DBSiteStore(common.SiteStore):
         return engine.recentchanges(limit=limit, offset=offset, **kwargs)
 
     def get_change(self, id):
-        """Return the info about the requrested change.
+        """Return the info about the requested change.
         """
         engine = RecentChanges(self.db)
         return engine.get_change(id)

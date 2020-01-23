@@ -62,14 +62,14 @@
  * @option Boolean matchSubset Whether or not the autocompleter can use a cache for more specific queries. This means that all matches of "foot" are a subset of all matches for "foo". Usually this is true, and using this options decreases server load and increases performance. Only useful with cacheLength settings bigger than one, like 10. Default: true
  * @option Boolean matchCase Whether or not the comparison is case sensitive. Important only if you use caching. Default: false
  * @option Boolean matchContains Whether or not the comparison looks inside (i.e. does "ba" match "foo bar") the search results. Important only if you use caching. Don't mix with autofill. Default: false
- * @option Booolean mustMatch If set to true, the autocompleter will only allow results that are presented by the backend. Note that illegal values result in an empty input box. Default: false
+ * @option Boolean mustMatch If set to true, the autocompleter will only allow results that are presented by the backend. Note that illegal values result in an empty input box. Default: false
  * @option Object extraParams Extra parameters for the backend. If you were to specify { bar:4 }, the autocompleter would call my_autocomplete_backend.php?q=foo&bar=4 (assuming the input box contains "foo"). The param can be a function that is called to calculate the param before each request. Default: none
  * @option Boolean selectFirst If this is set to true, the first autocomplete value will be automatically selected on tab/return, even if it has not been handpicked by keyboard or mouse action. If there is a handpicked (highlighted) result, that result will take precedence. Default: true
  * @option Function formatItem Provides advanced markup for an item. For each row of results, this function will be called. The returned value will be displayed inside an LI element in the results list. Autocompleter will provide 4 parameters: the results row, the position of the row in the list of results (starting at 1), the number of items in the list of results and the search term. Default: none, assumes that a single row contains a single value.
- * @option Function formatMatch This defaults to the formatItem (for backwards compatibility) and is supplied with the same arguments. Use this option if you want to limit the data that autocomplete actuall searches for matches. For example, there may be items you want displayed to the user, but don't want included in the data that's searched.
+ * @option Function formatMatch This defaults to the formatItem (for backwards compatibility) and is supplied with the same arguments. Use this option if you want to limit the data that autocomplete actually searches for matches. For example, there may be items you want displayed to the user, but don't want included in the data that's searched.
  * @option Function formatResult Similar to formatItem, but provides the formatting for the value to be put into the input field. Again three arguments: Data, position (starting with one) and total number of data. Default: none, assumes either plain data to use as result or uses the same value as provided by formatItem.
  * @option Boolean multiple Whether to allow more than one autocomplted-value to enter. Default: false
- * @option String multipleSeparator Seperator to put between values when using multiple option. Default: ", "
+ * @option String multipleSeparator Separator to put between values when using multiple option. Default: ", "
  * @option Number width Specify a custom width for the select box. Default: width of the input element
  * @option Boolean autoFill Fill the textinput while still selecting a value, replacing the value if more is typed or something else is selected. Default: false
  * @option Number max Limit the number of items in the select box. Is also sent as a "limit" parameter with a remote request. Default: 10
@@ -430,7 +430,7 @@ $.Autocompleter = function(input, options) {
 		if (!options.matchCase)
 			term = term.toLowerCase();
 		var data = cache.load(term);
-		// recieve the cached data
+		// receive the cached data
 		if (data && data.length) {
 			success(term, data);
 		// if an AJAX url has been supplied, try loading the data now

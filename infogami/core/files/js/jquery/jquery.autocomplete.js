@@ -22,7 +22,7 @@
  * @desc Autocomplete a text-input with remote data. For small to giant datasets.
  *
  * When the user starts typing, a request is send to the specified backend ("my_autocomplete_backend.php"),
- * with a GET parameter named q that contains the current value of the input box and a paremeter "limit" with
+ * with a GET parameter named q that contains the current value of the input box and a parameter "limit" with
  * the value specified for the max option.
  *
  * A value of "foo" would result in this request url: my_autocomplete_backend.php?q=foo&limit=10

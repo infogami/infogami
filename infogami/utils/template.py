@@ -157,7 +157,7 @@ def saferender(templates, *a, **kw):
             from . import traceback
             traceback.print_exc()
 
-            ifrom . mport view
+            from . import view
             message = str(t.filename) + ': error in processing template: ' + e.__class__.__name__ + ': ' + str(e) + ' (falling back to default template)'
             view.add_flash_message('error', message)
 

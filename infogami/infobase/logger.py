@@ -43,7 +43,7 @@ def to_timestamp(iso_date_string):
     y, m, d = date.split('-')
     H, M, S = time.split(':')
     S, ms = S.split('.')
-    return datetime.datetime(*map(int, [y, m, d, H, M, S, ms]))
+    return datetime.datetime(*list(map(int, [y, m, d, H, M, S, ms])))
 
 class DummyLogger:
     def __init__(self, *a, **kw):

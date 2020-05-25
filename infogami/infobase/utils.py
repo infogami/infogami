@@ -17,7 +17,7 @@ def parse_datetime(value):
         return value
     else:
         tokens = re.split(r'-|T|:|\.| ', value)
-        return datetime.datetime(*map(int, tokens))
+        return datetime.datetime(*list(map(int, tokens)))
 
 def parse_boolean(value):
     return web.safeunicode(value).lower() in ["1", "true"]

@@ -184,8 +184,7 @@ class LogFile:
 
     def find_filelist(self, from_date=None):
         if from_date is None:
-            filelist = glob.glob('%s/[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9].log' % self.root)
-            filelist.sort()
+            filelist = sorted(glob.glob('%s/[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9].log' % self.root))
         else:
             filelist = [self.date2file(date) for date in daterange(from_date)]
             filelist = [f for f in filelist if os.path.exists(f)]

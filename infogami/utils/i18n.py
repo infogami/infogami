@@ -1,7 +1,7 @@
 """
 Support for Internationalization.
 """
-from __future__ import print_function
+
 
 import web
 

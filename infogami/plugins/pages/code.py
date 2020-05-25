@@ -7,7 +7,7 @@ push moves pages from disk to wiki and pull moves pages from wiki to disk.
 TODOs:
 * As of now pages are stored as python dict. Replace it with a human-readable format.
 """
-from __future__ import print_function
+
 
 import os
 

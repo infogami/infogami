@@ -1,6 +1,6 @@
 """Script to migrate data from 0.4 to 0.5
 """
-from __future__ import print_function
+
 from optparse import OptionParser
 import os, sys
 import web

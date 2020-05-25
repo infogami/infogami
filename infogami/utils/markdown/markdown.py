@@ -24,7 +24,7 @@ License: GPL 2 (http://www.gnu.org/copyleft/gpl.html) or BSD
 
 """
 
-from __future__ import print_function
+
 import codecs
 import re
 import sys

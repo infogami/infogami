@@ -1,6 +1,6 @@
 """Generic utilities.
 """
-from __future__ import print_function
+
 import datetime
 import re
 import web

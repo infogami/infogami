@@ -1,7 +1,7 @@
 """
 Sample run.py
 """
-from __future__ import print_function
+
 import infogami
 
 ## your db parameters

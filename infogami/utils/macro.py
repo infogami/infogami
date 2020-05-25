@@ -3,7 +3,7 @@ Macro extension to markdown.
 
 Macros take argument string as input and returns result as markdown text.
 """
-from __future__ import print_function
+
 
 import os
 

@@ -1,7 +1,7 @@
 """
 wikitemplates: allow keeping templates and macros in wiki
 """
-from __future__ import print_function
+
 
 import os
 try:

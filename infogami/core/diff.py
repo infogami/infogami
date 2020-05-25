@@ -9,9 +9,9 @@ def better_diff(a, b):
         n = (j2-j1) - (i2-i1)
 
         x = a[i1:i2]
-        xn = range(i1, i2)
+        xn = list(range(i1, i2))
         y = b[j1:j2]
-        yn = range(j1, j2)
+        yn = list(range(j1, j2))
 
         if tag == 'insert':
             x += [''] * n

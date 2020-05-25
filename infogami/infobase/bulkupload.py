@@ -96,7 +96,7 @@ def multiple_insert(table, values, seqname=None):
     if seqname:
         n = len(values)
         start = increment_sequence(seqname, n)
-        ids = range(start, start+n)
+        ids = list(range(start, start+n))
         for v, id in zip(values, ids):
             v['id'] = id
     else:

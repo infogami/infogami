@@ -36,7 +36,7 @@ version_info = (1, 6, 2, "rc-2")
 __revision__ = "$Rev$"
 
 # Set debug level: 3 none, 2 critical, 1 informative, 0 all
-(VERBOSE, INFO, CRITICAL, NONE) = range(4)
+(VERBOSE, INFO, CRITICAL, NONE) = list(range(4))
 
 MESSAGE_THRESHOLD = CRITICAL
 

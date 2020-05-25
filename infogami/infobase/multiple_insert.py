@@ -64,7 +64,7 @@ def multiple_insert(tablename, values, seqname=None, _test=False):
 
     try:
         out = db_cursor.fetchone()[0]
-        out = range(out-len(values)+1, out+1)
+        out = list(range(out-len(values)+1, out+1))
     except Exception:
         out = None
 

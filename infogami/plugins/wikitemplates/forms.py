@@ -17,4 +17,4 @@ template_preferences = Form(
 )
 
 if __name__ == "__main__":
-    print(template_preferences().render())
+    print((template_preferences().render()))

@@ -72,7 +72,7 @@ def pprint(obj):
     {
     }
     """
-    print(prepr(obj))
+    print((prepr(obj)))
 
 def prepr(obj, indent=""):
     """Pretty representation."""

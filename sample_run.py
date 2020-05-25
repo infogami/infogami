@@ -33,7 +33,7 @@ if __name__ == "__main__":
 
     if '--schema' in sys.argv:
         from infogami.infobase.dbstore import Schema
-        print(Schema().sql())
+        print((Schema().sql()))
     elif '--createsite' in sys.argv:
         createsite()
     else:

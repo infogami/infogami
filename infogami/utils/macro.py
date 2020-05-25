@@ -125,4 +125,4 @@ if __name__ == "__main__":
     md = markdown.Markdown(source=text, safe_mode=False)
     MacroExtension().extendMarkdown(md, {})
     html = md.convert()
-    print(replace_macros(html, md.macros))
+    print((replace_macros(html, md.macros)))

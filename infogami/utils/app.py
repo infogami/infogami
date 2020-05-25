@@ -88,7 +88,7 @@ class view(six.with_metaclass(metaview)):
         method = web.ctx.method.upper()
         f = getattr(self, method, None)
         encoding = find_encoding()
-        if encoding and hasattr(self, "%s_%s" % (method,encoding.lower())):
+        if encoding and hasattr(self, "%s_%s" % (method, encoding.lower())):
             f = getattr(self, "%s_%s" % (method, encoding.lower()))
         if f:
             ret = f(page)

@@ -32,7 +32,7 @@ import sys
 import six
 
 version = "1.6b"
-version_info = (1,6,2,"rc-2")
+version_info = (1, 6, 2, "rc-2")
 __revision__ = "$Rev$"
 
 # Set debug level: 3 none, 2 critical, 1 informative, 0 all
@@ -66,8 +66,8 @@ RTL_BIDI_RANGES = ( ('\u0590', '\u07FF'),
 # 0780-07BF - Thaana
 # 07C0-07FF - Nko
 
-BOMS = { 'utf-8' : (six.text_type(codecs.BOM_UTF8, "utf-8"), ),
-         'utf-16' : (six.text_type(codecs.BOM_UTF16_LE, "utf-16"),
+BOMS = { 'utf-8': (six.text_type(codecs.BOM_UTF8, "utf-8"), ),
+         'utf-16': (six.text_type(codecs.BOM_UTF16_LE, "utf-16"),
                      six.text_type(codecs.BOM_UTF16_BE, "utf-16")),
          #'utf-32' : (six.text_type(codecs.BOM_UTF32_LE, "utf-32"),
          #            six.text_type(codecs.BOM_UTF32_BE, "utf-32")),
@@ -1028,7 +1028,7 @@ class CorePatterns :
 
     patterns = {
         'header':          r'(#*)([^#]*)(#*)', # # A title
-        'reference-def' :  r'(\ ?\ ?\ ?)\[([^\]]*)\]:\s*([^ ]*)(.*)',
+        'reference-def':  r'(\ ?\ ?\ ?)\[([^\]]*)\]:\s*([^ ]*)(.*)',
                            # [Google]: http://www.google.com/
         'containsline':    r'([-]*)$|^([=]*)', # -----, =====, etc.
         'ol':              r'[ ]{0,3}[\d]*\.\s+(.*)', # 1. text
@@ -1037,7 +1037,7 @@ class CorePatterns :
         'isline2':         r'(\-*)', # ---
         'isline3':         r'(\_*)', # ___
         'tabbed':          r'((\t)|(    ))(.*)', # an indented line
-        'quoted' :         r'> ?(.*)', # a quoted block ("> ...")
+        'quoted':         r'> ?(.*)', # a quoted block ("> ...")
     }
 
     def __init__ (self) :
@@ -1509,7 +1509,7 @@ class Markdown:
                         i -= 1
                         parts.remove(x)
                         for y in result :
-                            parts.insert(i+1,y)
+                            parts.insert(i+1, y)
 
                 i += 1
 

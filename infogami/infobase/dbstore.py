@@ -464,7 +464,7 @@ class DBSiteStore(common.SiteStore):
         if config.query_timeout:
             self.db.query("SELECT set_config('statement_timeout', $query_timeout, false)", dict(query_timeout=config.query_timeout))
 
-        result = self.db.select(['thing','version', 'transaction'], what=what, where=where, offset=query.offset, limit=query.limit, order=sort)
+        result = self.db.select(['thing', 'version', 'transaction'], what=what, where=where, offset=query.offset, limit=query.limit, order=sort)
         result = result.list()
         author_ids = list(set(r.author_id for r in result if r.author_id))
         authors = self.get_metadata_list_from_ids(author_ids)

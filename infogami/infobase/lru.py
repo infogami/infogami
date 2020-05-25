@@ -60,16 +60,16 @@ class Queue:
 
     def peek(self):
         """Returns the element at the beginning of the queue."""
-        if self.head.next is self.head:
+        if self.head.__next__ is self.head:
             raise Exception("Queue is empty")
-        return self.head.next
+        return self.head.__next__
 
     def remove(self, node=None):
         """Removes a node from the linked list. If node is None, head of the queue is removed."""
         if node is None:
             node = self.peek()
 
-        node.prev.next = node.next
+        node.prev.next = node.__next__
         node.next.prev = node.prev
         return node
 
@@ -79,10 +79,10 @@ class Queue:
     __repr__ = __str__
 
     def _list(self):
-        node = self.head.next
+        node = self.head.__next__
         while node != self.head:
             yield node
-            node = node.next
+            node = node.__next__
 
 def synchronized(f):
     """Decorator to synchronize a method.
@@ -142,7 +142,7 @@ class LRU:
     @synchronized
     def touch(self, node):
         # don't call remove for newly created nodes 
-        node.next and self.queue.remove(node)
+        node.__next__ and self.queue.remove(node)
         self.queue.insert(node)
 
     @synchronized

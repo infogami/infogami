@@ -109,7 +109,7 @@ class LogFile:
         log.skip_till(datetime.datetime(2008, 01, 01))
 
         for line in log:
-            print log
+            print(log)
 
     Read log entries in chunks::
 
@@ -257,7 +257,7 @@ class RsyncLogFile(LogFile):
         log = RsyncLogFile("machine::module_name/path", "log")
 
         for line in log:
-            print line
+            print(line)
     """
     def __init__(self, rsync_root, root):
         LogFile.__init__(self, root)

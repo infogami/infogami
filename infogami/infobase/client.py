@@ -610,7 +610,7 @@ class Sequence:
 
         seq = web.ctx.site.seq
         for i in range(10):
-            print seq.next_value("foo")
+            print(seq.next_value("foo"))
     """
     def __init__(self, conn, sitename):
         self.conn = conn

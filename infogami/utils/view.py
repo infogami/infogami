@@ -52,7 +52,7 @@ web.template.Template.globals.update(dict(
   # common utilities
   int = int,
   str = str,
-  basestring = six.string_types,
+  str = six.string_types,
   unicode = six.text_type,
   bool = bool,
   list = list,

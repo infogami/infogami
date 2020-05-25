@@ -34,7 +34,7 @@ def better_diff(a, b):
                 y += [''] * (isize-jsize)
                 yn += [''] * (isize-jsize)
 
-        map += zip([labels[tag]] * len(x), xn, x, yn, y)
+        map += list(zip([labels[tag]] * len(x), xn, x, yn, y))
 
     return map
 

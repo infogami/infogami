@@ -286,7 +286,7 @@ def monkey_patch_debugerror():
         else:
             return open(filename)
 
-    web.debugerror.func_globals['open'] = xopen
+    web.debugerror.__globals__['open'] = xopen
 
 from infogami.core.code import register_preferences
 register_preferences(template_preferences)

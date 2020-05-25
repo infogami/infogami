@@ -88,15 +88,15 @@ class InfobaseTestCase(unittest.TestCase):
             # key '*' means skip additional keys.
             skip_additional = b.pop('*', False)
             if not skip_additional:
-                self.assertEquals(a.keys(), b.keys())
+                self.assertEqual(a.keys(), b.keys())
             for k in b.keys():
                 self.assertEquals2(a[k], b[k])
         elif isinstance(a, list):
-            self.assertEquals(len(a), len(b))
+            self.assertEqual(len(a), len(b))
             for x, y in zip(a, b):
                 self.assertEquals2(x, y)
         else:
-            self.assertEquals(a, b)
+            self.assertEqual(a, b)
 
 @pytest.mark.skip(reason="Unsure how these browser tests were run. Try ./scripts/test infobase -d infobase_test")
 class DocumentTest(InfobaseTestCase):
@@ -106,13 +106,13 @@ class DocumentTest(InfobaseTestCase):
         self.assertEquals2(request('/test/get?key=/type/type'), {'key': '/type/type', 'type': {'key': '/type/type'}, '*': True})
 
         request('/test/get?key=/not-there')
-        self.assertEquals(b.status, 404)
+        self.assertEqual(b.status, 404)
 
     def test_save(self):
         x = {'key': '/new_page', 'type': {'key': '/type/object'}, 'x': 1, 's': 'hello'}
         d = request('/test/save/new_page', method="POST", data=x)
-        self.assertEquals(b.status, 200)
-        self.assertEquals(d, {'key': '/new_page', 'revision': 1})
+        self.assertEqual(b.status, 200)
+        self.assertEqual(d, {'key': '/new_page', 'revision': 1})
 
         # verify data
         d = request('/test/get?key=/new_page')
@@ -121,8 +121,8 @@ class DocumentTest(InfobaseTestCase):
 
         # nothing should be modified when saved with the same data.
         d = request('/test/save/new_page', method="POST", data=x)
-        self.assertEquals(b.status, 200)
-        self.assertEquals(d, {})
+        self.assertEqual(b.status, 200)
+        self.assertEqual(d, {})
 
     def test_versions(self):
         x = {'key': '/new_page', 'type': {'key': '/type/object'}, 'x': 1, 's': 'hello'}
@@ -138,7 +138,7 @@ class DocumentTest(InfobaseTestCase):
 
         # try a failed save and make sure new revisions are not created
         request('/test/save/new_page', method='POST', data={'key': '/new_page', 'type': '/type/no-such-type'})
-        self.assertNotEquals(b.status, 200)
+        self.assertNotEqual(b.status, 200)
 
         q = {'key': '/new_page'}
         d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'key': '/new_page'})})
@@ -149,7 +149,7 @@ class DocumentTest(InfobaseTestCase):
 
         # save the page and make sure new revision is created.
         d = request('/test/save/new_page', method='POST', data=dict(x, title='foo'))
-        self.assertEquals(d, {'key': '/new_page', 'revision': 2})
+        self.assertEqual(d, {'key': '/new_page', 'revision': 2})
 
         d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'key': '/new_page'})})
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 2, '*': True}, {'key': '/new_page', 'revision': 1, '*': True}])
@@ -160,14 +160,14 @@ class DocumentTest(InfobaseTestCase):
             {'key': '/two', 'type': {'key': '/type/object'}, 'n': 2}
         ]
         d = request('/test/save_many', method='POST', data=urlencode({'query': simplejson.dumps(q)}))
-        self.assertEquals(d, [{'key': '/one', 'revision': 1}, {'key': '/two', 'revision': 1}])
+        self.assertEqual(d, [{'key': '/one', 'revision': 1}, {'key': '/two', 'revision': 1}])
 
         self.assertEquals2(get('/one'), {'key': '/one', 'type': {'key': '/type/object'}, 'n': 1, 'revision': 1,'*': True})
         self.assertEquals2(get('/two'), {'key': '/two', 'type': {'key': '/type/object'}, 'n': 2, 'revision': 1, '*': True})
 
         # saving with same data should not create new revisions
         d = request('/test/save_many', method='POST', data=urlencode({'query': simplejson.dumps(q)}))
-        self.assertEquals(d, [])
+        self.assertEqual(d, [])
 
         # try bad query
         q = [
@@ -176,10 +176,10 @@ class DocumentTest(InfobaseTestCase):
             {'key': '/two', 'type': {'key': '/type/no-such-type'}, 'n': 2}
         ]
         d = request('/test/save_many', method='POST', data=urlencode({'query': simplejson.dumps(q)}))
-        self.assertNotEquals(b.status, 200)
+        self.assertNotEqual(b.status, 200)
 
         d = get('/zero')
-        self.assertEquals(b.status, 404)
+        self.assertEqual(b.status, 404)
 
 # create author, book and collection types to test validations
 types = [{
@@ -239,16 +239,16 @@ class MoreDocumentTest(DocumentTest):
     def test_save_validation(self):
         # ok: name is string
         d = save({'key': '/author/x', 'type': '/type/author', 'name': 'x'})
-        self.assertEquals(b.status, 200)
-        self.assertEquals(d, {"key": "/author/x", "revision": 1})
+        self.assertEqual(b.status, 200)
+        self.assertEqual(d, {"key": "/author/x", "revision": 1})
 
         # error: name is int instead of string
         d = save({'key': '/author/x', 'type': '/type/author', 'name': 42})
-        self.assertEquals(b.status, 400)
+        self.assertEqual(b.status, 400)
 
         # error: name is list instead of single value
         d = save({'key': '/author/x', 'type': '/type/author', 'name': ['x', 'y']})
-        self.assertEquals(b.status, 400)
+        self.assertEqual(b.status, 400)
 
     def test_validation_when_type_changes(self):
         # create an author and a book
@@ -276,7 +276,7 @@ class MoreDocumentTest(DocumentTest):
         d = get('/book/x')
         d['title'] = 'xx'
         save(d)
-        self.assertEquals(b.status, 200)
+        self.assertEqual(b.status, 200)
 
 if __name__ == "__main__":
     unittest.main()

@@ -67,8 +67,8 @@ class TestSaveTest():
         def test(site, key, type):
             self.new(site, key=key, type=type, link=dict(title='foo', link='http://infogami.org'))
             d = site.get(key)._get_data()
-            self.assertEquals(d['link']['title'], 'foo')
-            self.assertEquals(d['link']['link'], 'http://infogami.org')
+            self.assertEqual(d['link']['title'], 'foo')
+            self.assertEqual(d['link']['link'], 'http://infogami.org')
 
         def p(name, expected_type, unique=True, **d):
             return locals()

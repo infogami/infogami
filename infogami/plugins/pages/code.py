@@ -32,7 +32,7 @@ def listfiles(root, filter=None):
         for f in filenames:
             path = os.path.join(dirname, f)
             path = path[len(root):]
-            if filter is None or filter(path):
+            if filter is None or list(filter(path)):
                 yield path
 
 def storify(d):

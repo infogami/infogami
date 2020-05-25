@@ -16,10 +16,10 @@ def run_things_query(store, query):
         _things = simplejson.loads(store.get_many(keys))
         xthings.update(_things)
 
-        for k, v in query.requested.items():
+        for k, v in list(query.requested.items()):
             k = web.lstrips(k, query.prefix)
             if isinstance(v, Query):
-                keys2 = common.flatten([d.get(k) for d in _things.values() if d.get(k)])
+                keys2 = common.flatten([d.get(k) for d in list(_things.values()) if d.get(k)])
                 keys2 = [k['key'] for k in keys2]
                 load_things(set(keys2), v)
 
@@ -33,17 +33,17 @@ def run_things_query(store, query):
             return value
 
     def get_data(thingdata, query):
-        fields = dict((web.lstrips(k, query.prefix), v) for k, v in query.requested.items())
+        fields = dict((web.lstrips(k, query.prefix), v) for k, v in list(query.requested.items()))
 
         # special care for '*'
         if '*' in fields:
-            f = dict((k, None) for k in thingdata.keys())
+            f = dict((k, None) for k in list(thingdata.keys()))
             fields.pop('*')
             f.update(fields)
             fields = f
 
         d = {}
-        for k, v in fields.items():
+        for k, v in list(fields.items()):
             value = thingdata.get(k)
             if isinstance(v, Query):
                 d[k] = get_nested_data(value, v)
@@ -52,7 +52,7 @@ def run_things_query(store, query):
         return d
 
     data = [{'key': key} for key in keys]
-    if query.requested.keys() == ['key']:
+    if list(query.requested.keys()) == ['key']:
         return data
     else:
         load_things(keys, query)
@@ -132,14 +132,14 @@ def make_query(store, query, prefix=""):
 
     nested = (prefix != "")
 
-    for k, v in query.items():
+    for k, v in list(query.items()):
         # key foo can also be written as label:foo
         k = k.split(':')[-1]
         if v is None:
             q.requested[k] = v
         elif isinstance(v, dict):
             # make sure op is ==
-            v = dict((k + '.' + key, value) for key, value in v.items())
+            v = dict((k + '.' + key, value) for key, value in list(v.items()))
             q2 = make_query(store, v, prefix=prefix + k + ".")
             #@@ Anand: Quick-fix
             # dbstore.things looks for key to find whether type is required or not.
@@ -247,7 +247,7 @@ def make_versions_query(store, query):
 
     columns = ['key', 'type', 'revision', 'author', 'comment', 'machine_comment', 'ip', 'created', 'bot']
 
-    for k, v in query.items():
+    for k, v in list(query.items()):
         if k not in columns:
             raise ValueError(k)
         q.add_condition(k, '=', None, v)

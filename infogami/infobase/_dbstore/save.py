@@ -104,7 +104,7 @@ class SaveImpl:
             self.db.multiple_insert("transaction_index", d, seqname=False)
 
     def reindex(self, keys):
-        records = self._load_records(keys).values()
+        records = list(self._load_records(keys).values())
 
         for r in records:
             # Force reindex
@@ -178,7 +178,7 @@ class SaveImpl:
             raise common.Conflict(keys=keys, reason="Edit conflict detected.")
 
         records = dict((r.key, r) for r in rows)
-        for r in records.values():
+        for r in list(records.values()):
             r.revision = r.latest_revision
             json = r.data and self.process_json(r.key, r.data)
             r.data = simplejson.loads(json)

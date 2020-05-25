@@ -642,7 +642,7 @@ def load_config(config_file):
 
 def update_config(runtime_config):
     # update config
-    for k, v in runtime_config.items():
+    for k, v in list(runtime_config.items()):
         setattr(config, k, v)
 
     # import plugins

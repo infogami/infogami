@@ -46,7 +46,7 @@ class i18n:
         # Keys for a language are all the strings defined for that language and
         # all the strings defined for default language. By doing this, once a key is
         # added to default lang, then it will automatically appear in all other languages.
-        keys = set(self._data.get((namespace, lang), {}).keys() + self._data.get((namespace, DEFAULT_LANG), {}).keys())
+        keys = set(list(self._data.get((namespace, lang), {}).keys()) + list(self._data.get((namespace, DEFAULT_LANG), {}).keys()))
         return sorted(keys)
 
     def _set_strings(self, namespace, lang, data):

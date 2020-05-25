@@ -88,8 +88,8 @@ class InfobaseTestCase(unittest.TestCase):
             # key '*' means skip additional keys.
             skip_additional = b.pop('*', False)
             if not skip_additional:
-                self.assertEqual(a.keys(), b.keys())
-            for k in b.keys():
+                self.assertEqual(list(a.keys()), list(b.keys()))
+            for k in list(b.keys()):
                 self.assertEquals2(a[k], b[k])
         elif isinstance(a, list):
             self.assertEqual(len(a), len(b))

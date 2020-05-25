@@ -45,7 +45,7 @@ class WikiSource(Mapping):
         return value
 
     def keys(self):
-        return [self.unprocess_key(k) for k in self.templates.keys()]
+        return [self.unprocess_key(k) for k in list(self.templates.keys())]
 
     def process_key(self, key):
         return '/templates/%s.tmpl' % key
@@ -191,7 +191,7 @@ def movetemplates(prefix_pattern=None):
 
     templates = []
 
-    for name, t in template.disktemplates.items():
+    for name, t in list(template.disktemplates.items()):
         if isinstance(t, LazyTemplate):
             try:
                 t.func()
@@ -199,7 +199,7 @@ def movetemplates(prefix_pattern=None):
                 print('unable to load template', t.name, file=web.debug)
                 raise
 
-    for name, t in template.disktemplates.items():
+    for name, t in list(template.disktemplates.items()):
         prefix = '/templates/'
         wikipath = _wikiname(name, prefix, '.tmpl')
         if prefix_pattern is None or wikipath.startswith(prefix_pattern):
@@ -221,11 +221,11 @@ def movemacros():
     """Move macros to wiki."""
     macros = []
 
-    for name, t in macro.diskmacros.items():
+    for name, t in list(macro.diskmacros.items()):
         if isinstance(t, LazyTemplate):
             t.func()
 
-    for name, m in macro.diskmacros.items():
+    for name, m in list(macro.diskmacros.items()):
         key = _wikiname(name, '/macros/', '')
         body = open(m.filepath).read()
         d = web.storage(create='unless_exists', key=key, type={'key': '/type/macro'}, description='', macro=body)

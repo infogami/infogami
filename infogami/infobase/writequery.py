@@ -111,10 +111,10 @@ class SaveProcessor:
 
         if keys:
             d = self.store.get_metadata_list(keys)
-            type_ids = list(set(row.type for row in d.values()))
+            type_ids = list(set(row.type for row in list(d.values())))
             typedict = self.store.get_metadata_list_from_ids(type_ids)
 
-            for k, row in d.items():
+            for k, row in list(d.items()):
                 types[k] = typedict[row.type].key
         return types
 
@@ -123,7 +123,7 @@ class SaveProcessor:
             result = set()
 
         if isinstance(d, dict):
-            if len(d) == 1 and d.keys() == ["key"]:
+            if len(d) == 1 and list(d.keys()) == ["key"]:
                 result.add(d['key'])
             else:
                 for k, v in iteritems(d):
@@ -151,7 +151,7 @@ class SaveProcessor:
 
     def get_many(self, keys):
         d = self.store.get_many_as_dict(keys)
-        return dict((k, simplejson.loads(json)) for k, json in d.items())
+        return dict((k, simplejson.loads(json)) for k, json in list(d.items()))
 
     def process(self, key, data):
         prev_data = self.get_many([key])
@@ -217,7 +217,7 @@ class SaveProcessor:
                 raise common.BadData(message="Bad Property: %s" % repr(key), at=dict(key=self.key))
 
     def process_data(self, d, type, old_data=None, prefix=""):
-        for k, v in d.items():
+        for k, v in list(d.items()):
             if v is None or v == [] or web.safeunicode(v).strip() == '':
                 del d[k]
             else:
@@ -313,7 +313,7 @@ class WriteQueryProcessor:
             yield p.process(key, q)
 
     def remove_connects(self, query):
-        for k, v in query.items():
+        for k, v in list(query.items()):
             if isinstance(v, dict) and 'connect' in v:
                 if 'key' in v:
                     value = v['key'] and common.Reference(v['key'])
@@ -343,7 +343,7 @@ class WriteQueryProcessor:
         import copy
         data = copy.deepcopy(data)
 
-        for k, v in query.items():
+        for k, v in list(query.items()):
             if isinstance(v, dict):
                 if 'connect' in v:
                     if 'key' in v:
@@ -455,7 +455,7 @@ def serialize(query):
         elif isinstance(query, dict):
             #@@ FIX ME
             q = query.copy()
-            for k, v in q.items():
+            for k, v in list(q.items()):
                 q[k] = flatten(v, result, path + [k])
 
             if 'key' in q:
@@ -467,10 +467,10 @@ def serialize(query):
                     data = {'key': q['key']}
                 else:
                     # take keys (connect, key, type, value) from q
-                    data = dict((k, v) for k, v in q.items() if k in ("connect", "key", "type", "value"))
+                    data = dict((k, v) for k, v in list(q.items()) if k in ("connect", "key", "type", "value"))
             else:
                 # take keys (connect, key, type, value) from q
-                data = dict((k, v) for k, v in q.items() if k in ("connect", "key", "type", "value"))
+                data = dict((k, v) for k, v in list(q.items()) if k in ("connect", "key", "type", "value"))
             return data
         else:
             return query

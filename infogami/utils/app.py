@@ -254,12 +254,12 @@ web.unloadhooks = {}
 web.load = lambda: None
 
 def hook_processor(handler):
-    for h in web._loadhooks.values():
+    for h in list(web._loadhooks.values()):
         h()
     try:
         return handler()
     finally:
-        for h in web.unloadhooks.values():
+        for h in list(web.unloadhooks.values()):
             h()
 
 def parse_accept(header):

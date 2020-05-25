@@ -86,7 +86,7 @@ class betterlist(list):
         return enumerate(self)
 
     def items(self):
-        return list(self.iteritems())
+        return list(self.items())
 
 def trim(x):
     """Remove empty elements from a list or dictionary.

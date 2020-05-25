@@ -11,7 +11,7 @@ def register_type(pattern, typename):
     type_patterns[pattern] = typename
 
 def guess_type(path):
-    for pattern, typename in type_patterns.items():
+    for pattern, typename in list(type_patterns.items()):
         if re.search(pattern, path):
             return typename
 

@@ -62,7 +62,7 @@ def save(key, **data):
     if "type" in data:
         data['type.key'] = [data.pop('type')]
 
-    for k, v in data.items():
+    for k, v in list(data.items()):
         b[k] = v
     b.submit()
 

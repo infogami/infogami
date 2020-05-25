@@ -318,7 +318,7 @@ def movetypes():
                     pages.append(d)
 
     pagedict = dict((p['key'], p) for p in pages)
-    web.ctx.site.save_many(pagedict.values(), 'install')
+    web.ctx.site.save_many(list(pagedict.values()), 'install')
 
 @infogami.install_hook
 def movepages():

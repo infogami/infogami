@@ -186,7 +186,7 @@ class BulkUpload:
         elif isinstance(query, dict) and 'key' in query:
             assert re.match('^/[^ \t\n]*$', query['key']), 'Bad key: ' + repr(query['key'])
             result.append(query['key'])
-            for k, v in query.items():
+            for k, v in list(query.items()):
                 self.find_keys(v, result)
         return result
 
@@ -202,7 +202,7 @@ class BulkUpload:
         elif isinstance(query, dict):
             if 'create' in query:
                 result.append(query['key'])
-                self.find_creates(query.values(), result)
+                self.find_creates(list(query.values()), result)
                 #@@ side-effect
                 self.comment[query['key']] = query.pop('comment', None)
                 self.machine_comment[query['key']] = query.pop('machine_comment', None)
@@ -236,7 +236,7 @@ class BulkUpload:
                 thing_id = key2id[query['key']]
                 if query['key'] in self.created:
                     self.created.remove(query['key'])
-                    for key, value in query.items():
+                    for key, value in list(query.items()):
                         if key == 'create':
                             continue
                         if isinstance(value, list):

@@ -49,7 +49,7 @@ def get_custom_headers():
         expected_decl_uri = infogami.config.get('http_ext_header_uri', 'http://infogami.org/api')
         if expected_decl_uri == decl_uri:
             prefix = 'HTTP_%s_' % ns
-            return dict((web.lstrips(k, prefix).lower(), v) for k, v in web.ctx.env.items() if k.startswith(prefix))
+            return dict((web.lstrips(k, prefix).lower(), v) for k, v in list(web.ctx.env.items()) if k.startswith(prefix))
     else:
         return {}
 
@@ -198,7 +198,7 @@ def make_query(i, required_keys=None):
     {'a': 1}
     """
     query = {}
-    for k, v in i.items():
+    for k, v in list(i.items()):
         if k.startswith('_'):
             continue
         if required_keys and k not in required_keys:

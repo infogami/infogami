@@ -45,7 +45,7 @@ def storify(d):
         2
     """
     if isinstance(d, dict):
-        return web.storage([(k, storify(v)) for k, v in d.items()])
+        return web.storage([(k, storify(v)) for k, v in list(d.items())])
     elif isinstance(d, list):
         return [storify(x) for x in d]
     else:
@@ -92,7 +92,7 @@ def _savepage(page, create_dependents=True, comment=None):
         elif isinstance(data, dict):
             name = data.name
             if data.get('child'):
-                d = dict([(k, thingify(v, getparent)) for k, v in data.d.items()])
+                d = dict([(k, thingify(v, getparent)) for k, v in list(data.d.items())])
                 type = thingify(data.type, getparent)
                 thing = db.new_version(getparent(), name, type, d)
                 thing.save()
@@ -107,7 +107,7 @@ def _savepage(page, create_dependents=True, comment=None):
     d = {}
 
     getself = lambda: getthing(name, create=True)
-    for k, v in page.d.items():
+    for k, v in list(page.d.items()):
         d[k] = thingify(v, getself)
 
     _page = db.new_version(context.site, name, type, d)
@@ -176,7 +176,7 @@ def push(root):
 def _pushpages(pages):
     tdb.transact()
     try:
-        for p in pages.values():
+        for p in list(pages.values()):
             print('saving', p.name)
             _savepage(p)
     except:

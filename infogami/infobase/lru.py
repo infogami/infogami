@@ -195,16 +195,16 @@ class LRU:
 
     @synchronized
     def update(self, d):
-        for k, v in d.items():
+        for k, v in list(d.items()):
             self[k] = v
 
     @synchronized
     def keys(self):
-        return self.d.keys()
+        return list(self.d.keys())
 
     @synchronized
     def items(self):
-        return [(k, node.value) for k, node in self.d.items()]
+        return [(k, node.value) for k, node in list(self.d.items())]
 
     @synchronized    
     def clear(self):

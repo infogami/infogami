@@ -80,7 +80,7 @@ def upgrade_types():
         print(t, t.d, file=web.debug)
         if t.name == 'type/site':
             continue
-        for name, value in t.d.items():
+        for name, value in list(t.d.items()):
             p = web.storage(name=name)
             typename = web.lstrips(value, "thing ")
 

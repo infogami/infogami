@@ -100,16 +100,16 @@ class TestStore:
         assert "x" not in s
 
     def test_keys(self):
-        assert s.keys() == []
+        assert list(s.keys()) == []
 
         s["x"] = {"name": "x"}
-        assert s.keys() == ["x"]
+        assert list(s.keys()) == ["x"]
 
         s["y"] = {"name": "y"}
-        assert s.keys() == ["y", "x"]
+        assert list(s.keys()) == ["y", "x"]
 
         del s["x"]
-        assert s.keys() == ["y"]
+        assert list(s.keys()) == ["y"]
 
     def test_keys_unlimited(self):
         for i in range(200):
@@ -118,7 +118,7 @@ class TestStore:
         def srange(*args):
             return [str(i) for i in range(*args)]
 
-        assert s.keys() == srange(100, 200)[::-1]
+        assert list(s.keys()) == srange(100, 200)[::-1]
         assert list(s.keys(limit=-1)) == srange(200)[::-1]
 
     def test_key_value_items(self, wildcard):
@@ -126,11 +126,11 @@ class TestStore:
         s["y"] = {"type": "bar", "name": "y"}
         s["z"] = {"type": "bar", "name": "z"}
 
-        assert s.keys() == ["z", "y", "x"]
+        assert list(s.keys()) == ["z", "y", "x"]
         assert s.keys(type='bar') == ["z", "y"]
         assert s.keys(type='bar', name="name", value="y") == ["y"]
 
-        assert s.values() == [
+        assert list(s.values()) == [
             {"type": "bar", "name": "z", "_key": "z", "_rev": wildcard},
             {"type": "bar", "name": "y", "_key": "y", "_rev": wildcard},
             {"type": "foo", "name": "x", "_key": "x", "_rev": wildcard}
@@ -143,7 +143,7 @@ class TestStore:
             {"type": "bar", "name": "y", "_key": "y", "_rev": wildcard}
         ]
 
-        assert s.items() == [
+        assert list(s.items()) == [
             ("z", {"type": "bar", "name": "z", "_key": "z", "_rev": wildcard}),
             ("y", {"type": "bar", "name": "y", "_key": "y", "_rev": wildcard}),
             ("x", {"type": "foo", "name": "x", "_key": "x", "_rev": wildcard})

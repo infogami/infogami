@@ -336,7 +336,7 @@ class DBSiteStore(common.SiteStore):
             return []
 
         def add_joins():
-            labels = [t.label for t in tables.values()]
+            labels = [t.label for t in list(tables.values())]
             def get_column(table):
                 if table == 'thing': return 'thing.id'
                 else: return table + '.thing_id'
@@ -348,7 +348,7 @@ class DBSiteStore(common.SiteStore):
 
         add_joins()
         wheres = wheres or ['1 = 1']
-        table_names = [t.sql() for t in tables.values()]
+        table_names = [t.sql() for t in list(tables.values())]
 
         t = self.db.transaction()
         if config.query_timeout:
@@ -490,7 +490,7 @@ class DBSiteStore(common.SiteStore):
         if metadata is None:
             return None
 
-        for k, v in params.items():
+        for k, v in list(params.items()):
             assert k in ['bot', 'active', 'verified', 'email', 'password']
             if v is None:
                 del params[k]

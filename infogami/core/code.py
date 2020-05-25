@@ -77,13 +77,13 @@ class edit (delegate.mode):
             d = [x for x in d if x]
             return d
         elif isinstance(d, dict):
-            for k, v in d.items():
+            for k, v in list(d.items()):
                 d[k] = self.trim(v)
                 if d[k] is None or d[k] == '' or d[k] == []:
                     del d[k]
 
             # hack to stop saving empty properties
-            if d.keys() == [] or d.keys() == ['unique']:
+            if list(d.keys()) == [] or list(d.keys()) == ['unique']:
                 return None
             else:
                 return d
@@ -95,11 +95,11 @@ class edit (delegate.mode):
         i = web.storage(helpers.unflatten(i))
         i.key = path
 
-        _ = web.storage((k, i.pop(k)) for k in i.keys() if k.startswith('_'))
+        _ = web.storage((k, i.pop(k)) for k in list(i.keys()) if k.startswith('_'))
         action = self.get_action(_)
         comment = _.get('_comment', None)
 
-        for k, v in i.items():
+        for k, v in list(i.items()):
             i[k] = self.trim(v)
 
         p = web.ctx.site.get(path) or web.ctx.site.new(path, {})

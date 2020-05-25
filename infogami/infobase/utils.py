@@ -114,7 +114,7 @@ def flatten_dict(d):
     """
     def f(key, value):
         if isinstance(value, dict):
-            for k, v in value.items():
+            for k, v in list(value.items()):
                 f(key + "." + k, v)
         elif isinstance(value, list):
             for v in value:

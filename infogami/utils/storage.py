@@ -106,16 +106,16 @@ class DictPile(Mapping):
             raise KeyError(key)
 
     def __iter__(self):
-        for key in self.keys():
+        for key in list(self.keys()):
             yield key
 
     def __len__(self):
-        return len(self.keys())
+        return len(list(self.keys()))
 
     def keys(self):
         keys = set()
         for d in self.dicts:
-            keys.update(d.keys())
+            keys.update(list(d.keys()))
         return list(keys)
 
 

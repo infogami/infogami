@@ -88,7 +88,7 @@ class MacroPattern(markdown.BasePattern):
 
 def replace_macros(html, macros):
     """Replaces the macro place holders with real macro output."""
-    for placeholder, macro_info in macros.items():
+    for placeholder, macro_info in list(macros.items()):
         name, args = macro_info
         html = html.replace("<p>%s\n</p>" % placeholder, web.safestr(call_macro(name, args)))
 
@@ -115,7 +115,7 @@ def ListOfMacros():
     """Lists all available macros."""
     out = ""
     out += "<ul>"
-    for name, macro in macrostore.items():
+    for name, macro in list(macrostore.items()):
         out += '  <li><b>%s</b>: %s</li>\n' % (name, macro.__doc__ or "")
     out += "</ul>"
     return out

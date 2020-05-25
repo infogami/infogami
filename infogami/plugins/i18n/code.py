@@ -46,7 +46,7 @@ def stringify(d):
         >>> stringify({'a': 1, 'b': 2})
         {'string_a': 1, 'string_b': 2}
     """
-    return dict([('string_' + k, v) for k, v in d.items()])
+    return dict([('string_' + k, v) for k, v in list(d.items())])
 
 def unstringify(d):
     """Removes string_ prefix from every key in a dictionary.
@@ -54,7 +54,7 @@ def unstringify(d):
         >>> unstringify({'string_a': 1, 'string_b': 2})
         {'a': 1, 'b': 2}
     """
-    return dict([(web.lstrips(k, 'string_'), v) for k, v in d.items() if k.startswith('string_')])
+    return dict([(web.lstrips(k, 'string_'), v) for k, v in list(d.items()) if k.startswith('string_')])
 
 def pathjoin(a, *p):
     """Join two or more pathname components, inserting '/' as needed.

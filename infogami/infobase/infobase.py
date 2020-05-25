@@ -112,7 +112,7 @@ class Site:
     def _get_many_things(self, keys):
         json = self.get_many(keys)
         d = simplejson.loads(json)
-        return dict((k, common.Thing.from_dict(self.store, k, doc)) for k, doc in d.items())
+        return dict((k, common.Thing.from_dict(self.store, k, doc)) for k, doc in list(d.items()))
 
     def get_many(self, keys):
         return self.store.get_many(keys)

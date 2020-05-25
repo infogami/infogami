@@ -25,7 +25,7 @@ DEBUG = False
 
 def storify(d):
     if isinstance(d, dict):
-        for k, v in d.items():
+        for k, v in list(d.items()):
             d[k] = storify(v)
         return web.storage(d)
     elif isinstance(d, list):
@@ -121,7 +121,7 @@ class RemoteConnection(Connection):
         url = self.base_url + '/' + sitename + path
         path = '/' + sitename + path
         if isinstance(data, dict):
-            for k in data.keys():
+            for k in list(data.keys()):
                 if data[k] is None: del data[k]
 
         if web.config.debug:
@@ -134,7 +134,7 @@ class RemoteConnection(Connection):
 
         if data:
             if isinstance(data, dict):
-                data = dict((web.safestr(k), web.safestr(v)) for k, v in data.items())
+                data = dict((web.safestr(k), web.safestr(v)) for k, v in list(data.items()))
                 data = urlencode(data)
                 headers['Content-Type'] = 'application/x-www-form-urlencoded'
             if method == 'GET':
@@ -246,7 +246,7 @@ class Site:
             return [self._process(v) for v in value]
         elif isinstance(value, dict):
             d = {}
-            for k, v in value.items():
+            for k, v in list(value.items()):
                 d[k] = self._process(v)
             return create_thing(self, None, d)
         elif isinstance(value, common.Reference):
@@ -256,7 +256,7 @@ class Site:
 
     def _process_dict(self, data):
         d = {}
-        for k, v in data.items():
+        for k, v in list(data.items()):
             d[k] = self._process(v)
         return d
 
@@ -528,7 +528,7 @@ class Store:
 
     def update(self, d={}, **kw):
         d2 = dict(d, **kw)
-        docs = [dict(doc, _key=key) for key, doc in d2.items()]
+        docs = [dict(doc, _key=key) for key, doc in list(d2.items())]
         self._request("_save_many", method="POST", data=simplejson.dumps(docs))
 
     def clear(self):
@@ -545,7 +545,7 @@ class Store:
             return self.unlimited_query(type, name, value, offset=offset, include_docs=include_docs)
 
         params = dict(type=type, name=name, value=value, limit=limit, offset=offset, include_docs=str(include_docs))
-        params = dict((k, v) for k, v in params.items() if v is not None)
+        params = dict((k, v) for k, v in list(params.items()) if v is not None)
         return self._request("_query", method="GET", data=params)
 
     def unlimited_query(self, type, name, value, offset=0, include_docs=False):

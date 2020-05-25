@@ -69,7 +69,7 @@ def get_table_prefix(type):
     When the table as values only from a single type, then some of the queries can be optimized.
     """
     table = type2table.get(type, 'datum')
-    multiple = (table == 'datum') or type2table.values().count(table) > 1    
+    multiple = (table == 'datum') or list(type2table.values()).count(table) > 1    
     return table, multiple
 
 def fix_property_keys():
@@ -131,7 +131,7 @@ def fix_property_keys():
         fix_type(type, types[type])
         
 def drop_key_id_foreign_key():
-    table_prefixes = set(type2table.values() + ['datum'])
+    table_prefixes = set(list(type2table.values()) + ['datum'])
     for prefix in table_prefixes:
         for d in DATATYPES:
             table = prefix + '_' + d

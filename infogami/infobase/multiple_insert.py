@@ -32,13 +32,13 @@ def multiple_insert(tablename, values, seqname=None, _test=False):
     if not values:
         return []
 
-    keys = values[0].keys()
+    keys = list(values[0].keys())
 
     #@@ make sure all keys are valid
 
     # make sure all rows have same keys.
     for v in values:
-        if v.keys() != keys:
+        if list(v.keys()) != keys:
             raise Exception('Bad data')
 
     q = web.SQLQuery('INSERT INTO %s (%s) VALUES ' % (tablename, ', '.join(keys))) 

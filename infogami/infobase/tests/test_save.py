@@ -402,7 +402,7 @@ class TestIndex:
     def test_too_long(self):
         assert self.indexer._is_too_long("a" * 10000) is True
         assert self.indexer._is_too_long("a" * 2047) is False
-        c = u'\u20AC'  # 3 bytes in utf-8
+        c = '\u20AC'  # 3 bytes in utf-8
         assert self.indexer._is_too_long(c * 1000) is True
 
 

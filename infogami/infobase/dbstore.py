@@ -292,7 +292,7 @@ class DBSiteStore(common.SiteStore):
                     return '%s.ordering = %s.ordering' % (table, d.table)
             return f
 
-        import readquery
+        from . import readquery
         def process_query(q, ordering_func=None):
             for c in q.conditions:
                 if isinstance(c, readquery.Query):

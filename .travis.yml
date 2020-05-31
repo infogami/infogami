@@ -23,7 +23,9 @@ before_script:
   - flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 script:
   - pytest --doctest-modules || true
-  - pytest tests infogami test
+  - pytest infogami -s
+  - pytest tests
+  - pytest test
 notifications:
   on_success: change
   on_failure: change  # `always` will be the setting once code changes slow down

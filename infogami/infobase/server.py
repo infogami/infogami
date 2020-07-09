@@ -5,12 +5,12 @@ from __future__ import print_function
 
 __version__ = "0.5dev"
 
+import json
 import logging
 import os
 import sys
 import time
 
-import simplejson
 import web
 
 from infogami.infobase import cache, common, config, dbstore, infobase, logreader
@@ -63,8 +63,8 @@ def process_exception(e):
 class JSON:
     """JSON marker. instances of this class not escaped by jsonify.
     """
-    def __init__(self, json):
-        self.json = json
+    def __init__(self, json_data):
+        self.json_data = json_data
 
 def jsonify(f):
     def g(self, *a, **kw):
@@ -94,11 +94,8 @@ def jsonify(f):
             else:
                 process_exception(e)
 
-        if isinstance(d, JSON):
-            result = d.json
-        else:
-            result = simplejson.dumps(d)
-
+        
+        result = d.json_data if isinstance(d, JSON) else json.dumps(d)
         t_end = time.time()
         totaltime = t_end - t_start
         querytime = web.ctx.pop('querytime', 0.0)
@@ -145,7 +142,7 @@ def to_int(value, key):
 
 def from_json(s):
     try:
-        return simplejson.loads(s)
+        return json.loads(s)
     except ValueError as e:
         raise common.BadData(message="Bad JSON: " + str(e))
 
@@ -211,10 +208,10 @@ class withkey:
         i = input("key", revision=None, expand=False)
         site = get_site(sitename)
         revision = i.revision and to_int(i.revision, "revision")
-        json = site.get(i.key, revision=revision)
-        if not json:
+        json_data = site.get(i.key, revision=revision)
+        if not json_data:
             raise common.NotFound(key=i.key)
-        return JSON(json)
+        return JSON(json_data)
 
 class get_many:
     @jsonify
@@ -228,8 +225,7 @@ class save:
     @jsonify
     def POST(self, sitename, key):
         #@@ This takes payload of json instead of form encoded data.
-        json = get_data()
-        data = from_json(json)
+        data = from_json(get_data())
 
         comment = data.pop('_comment', None)
         action = data.pop('_action', None)
@@ -251,7 +247,7 @@ class reindex:
     @jsonify
     def POST(self, sitename):
         i = input("keys")
-        keys = simplejson.loads(i['keys'])
+        keys = json.loads(i['keys'])
         site = get_site(sitename)
         site.store.reindex(keys)
         return {"status": "ok"}
@@ -321,8 +317,7 @@ class store_special:
     @jsonify
     def POST_save_many(self, sitename):
         store = get_site(sitename).get_store()
-        json = get_data()
-        docs = simplejson.loads(json)
+        docs = json.loads(get_data())
         store.put_many(docs)
 
     @jsonify
@@ -345,16 +340,15 @@ class store:
     @jsonify
     def GET(self, sitename, path):
         store = get_site(sitename).get_store()
-        json = store.get_json(path)
-        if not json:
+        json_data = store.get_json(path)
+        if not json_data:
             raise common.NotFound(error="notfound", key=path)
-        return JSON(store.get_json(path))
+        return JSON(json_data)
 
     @jsonify
     def PUT(self, sitename, path):
-        store = get_site(sitename).get_store()
-        json = get_data()
-        doc = simplejson.loads(json)
+        store = get_site(sitename).get_store() 
+        doc = json.loads(get_data())
         store.put(path, doc)
         return JSON('{"ok": true}')
 
@@ -526,13 +520,13 @@ class readlog:
 
     def assert_valid_json(self, line):
         try:
-            simplejson.loads(line)
+            json.loads(line)
         except ValueError:
             raise web.BadRequest()
 
     def valid_json(self, line):
         try:
-            simplejson.loads(line)
+            json.loads(line)
             return True
         except ValueError:
             return False
@@ -562,7 +556,7 @@ class readlog:
                     else:
                         break
                 yield '], \n'
-                yield '"offset": ' + simplejson.dumps(log.tell()) + "\n}\n"
+                yield '"offset": ' + json.dumps(log.tell()) + "\n}\n"
             except Exception as e:
                 print('ERROR:', str(e))
 

@@ -151,13 +151,13 @@ def saferender(templates, *a, **kw):
             if i.debug.lower() == "true":
                 raise
 
-            import delegate
+            from . import delegate
             delegate.register_exception()
 
-            import traceback
+            from . import traceback
             traceback.print_exc()
 
-            import view
+            from . import view
             message = str(t.filename) + ': error in processing template: ' + e.__class__.__name__ + ': ' + str(e) + ' (falling back to default template)'
             view.add_flash_message('error', message)
 

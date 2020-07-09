@@ -68,7 +68,7 @@ var RepetitionElement = {
 			return;
 		this._initialized = true; //SAFARI needs this to be here for some reason...
 		
-		this.style.display = 'none'; //This should preferrably be specified via a stylesheet
+		this.style.display = 'none'; //This should preferably be specified via a stylesheet
 		this.repetitionType = RepetitionElement.REPETITION_TEMPLATE;
 		this.repetitionIndex = 0;
 		this.repetitionTemplate = null; //IMPLEMENT GETTER
@@ -103,7 +103,7 @@ var RepetitionElement = {
 			//Controls in the templateElements attribute cannot be successful; controls inside repetition templates can never be submitted.
 			//   Therefore disable all elements in the template; however, due to the issue below, the original disabled state must be stored in the field's class attribute as "disabled"
 			//   this storing of the original disabled state will enable the elements in cloned blocks to be disabled as originally coded in the template
-			//ISSUE: inputs retain disabled (but not defaultDisabled) attribue after returning to page from back button or reload
+			//ISSUE: inputs retain disabled (but not defaultDisabled) attribute after returning to page from back button or reload
 			//   see http://weblogs.mozillazine.org/gerv/archives/2006/10/firefox_reload_behaviour.html
 			// As a workaround... this implementation requires that authors, in addition to supplying a DISABLED attribute (for Opera), to include a class name "disabled"
 			for(var el, i = 0; el = form.templateElements[i]; i++)
@@ -165,7 +165,7 @@ var RepetitionElement = {
 		if(this._initialized)
 			return;
 			
-		this.style.display = ''; //This should preferrably be specified via a stylesheet
+		this.style.display = ''; //This should preferably be specified via a stylesheet
 		this.repetitionType = RepetitionElement.REPETITION_BLOCK;
 		var _attr;
 		this.repetitionIndex = /^\d+$/.test(_attr = this.getAttribute('repeat')) ? parseInt(_attr) : 0;
@@ -553,7 +553,7 @@ var RepetitionElement = {
 			if(sibling.repetitionType == RepetitionElement.REPETITION_BLOCK && 
 			   sibling.repetitionTemplate == this)
 			{
-				//Old Note: sibling.getAttribute('repeat') is used instead of sibling.repetitionIndex because appearantly
+				//Old Note: sibling.getAttribute('repeat') is used instead of sibling.repetitionIndex because apparently
 				//      the sibling is not yet bound to the document and so the getters are not available
 				//this.repetitionIndex = Math.max(this.repetitionIndex, parseInt(sibling.getAttribute('repeat'))+1);
 				this.repetitionIndex = Math.max(this.repetitionIndex, sibling.repetitionIndex+1);
@@ -596,7 +596,7 @@ var RepetitionElement = {
 		//5. A clone of the template is made. The resulting element is the new repetition block element.
 		//   [Note that the DOM cloneNode method is not invoked in this implementation due to MSIE 
 		//   errors, such as not being able to modify the name attribute of an existing node and strange Gecko behavior
-		//   regarding the inconsistant correspondence of an input node's value attribute and value property.
+		//   regarding the inconsistent correspondence of an input node's value attribute and value property.
 		//   Instead of invoking the native cloneNode method, each element is copied manually when it is iterated over.]
 		//	 [Note: step 11 of the the specification's algorithm has been merged into step 5. See note at step 11 below]
 		//(11). If the template has a name and it is not being ignored (see the previous two steps), then, for every 
@@ -753,7 +753,7 @@ var RepetitionElement = {
 		//11. (Note: the algorithm below which most closely follows the algorithm as described in the specification,
 		//    this has been merged into the cloning of the template in step 5. This has been done because of MSIE 
 		//    errors, such as not being able to modify the name attribute of an existing node and strange Gecko behavior
-		//    regarding the inconsistant correspondence of an input node's value attribute and value property.)
+		//    regarding the inconsistent correspondence of an input node's value attribute and value property.)
 		//if(IDAttrValue && !ignoreName){
 		//	var reTemplateName = new RegExp('(?:\\u005B|\\u02D1)' + IDAttrValue + '(?:\\u005D|\\u00B7)', 'g');
 		//	function processAttrs(node){

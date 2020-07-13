@@ -1,6 +1,6 @@
 group: travis_latest
 os: linux
-dist: focal
+dist: xenial  # focal
 language: python
 env:
   - UPGRADE_WEBPY=false

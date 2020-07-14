@@ -123,7 +123,7 @@ class SaveImpl:
     def _update_index(self, records):
         self.indexUtil.update_index(records)
 
-    def dedup(self, docs):
+    def dedupe(self, docs):
         x = set()
         docs2 = []
         for doc in docs[::-1]:
@@ -135,7 +135,7 @@ class SaveImpl:
         return docs2[::-1]
 
     def _get_records_for_save(self, docs, timestamp):
-        docs = self.dedup(docs)
+        docs = self.dedupe(docs)
         keys = [doc['key'] for doc in docs]
         type_ids = self.get_thing_ids(doc['type']['key'] for doc in docs)
 

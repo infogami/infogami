@@ -8,5 +8,6 @@ rm -rf $OL_DIR/vendor/infogami
 ln -sf $(pwd)/infogami $OL_DIR/vendor/infogami
 
 cd $OL_DIR
+make git
 pip install -r requirements_test.txt
 pytest openlibrary/tests openlibrary/mocks openlibrary/olbase openlibrary/plugins openlibrary/utils openlibrary/catalog openlibrary/coverstore scripts/tests

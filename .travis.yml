@@ -29,6 +29,7 @@ script:
   - pytest infogami -s
   - pytest tests
   - pytest test
+  - bash scripts/test-openlibrary.sh
 notifications:
   on_success: change
   on_failure: change  # `always` will be the setting once code changes slow down

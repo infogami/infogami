@@ -3,6 +3,8 @@ import web
 import os
 import pytest
 
+from six import PY3
+
 from infogami.infobase import dbstore, infobase, common
 
 class InfobaseTestCase(unittest.TestCase):
@@ -42,11 +44,23 @@ class TestSaveTest():
         assert site.save('/foo', d) == {'key': '/foo', 'revision': 2}
 
     def new(self, site, error=None, **d):
+        # Dictionary ordering is different between Python 2 and Python 3.
+        # The py3_error key is the Python 2 error and the py3_error value is the Python 3 error
+        py3_error = {
+            '{"at": {"property": "type", "key": "/c"}, "key": "/type/noobject", "error": "notfound"}':
+            '{"error": "notfound", "key": "/type/noobject", "at": {"key": "/c", "property": "type"}}',
+            '{"error": "notfound", "key": "/type/noobject", "at": {"key": "/c", "property": "type"}}':
+            '{"at": {"property": "type", "key": "/c"}, "key": "/type/noobject", "error": "notfound"}',
+            '{"message": "invalid literal for int() with base 10: \'bad integer\'", "at": {"property": "i", "key": "/e1"}, "value": "bad integer", "error": "bad_data"}':
+            '{"error": "bad_data", "message": "invalid literal for int() with base 10: \'bad integer\'", "at": {"key": "/e1", "property": "i"}, "value": "bad integer"}'
+        }
         try:
             key = d['key']
             assert site.save(key, d) == {'key': key, 'revision': 1}
         except common.InfobaseException as e:
-            assert str(e) == error
+            if PY3:
+                error = py3_error[error]
+            assert str(e) == error, (str(e), error)
 
     def test_type(self, site):
         self.new(site, key='/a', type='/type/object')

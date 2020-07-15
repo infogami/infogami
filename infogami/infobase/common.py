@@ -1,10 +1,16 @@
+import datetime
 import simplejson
-from six import iteritems, text_type
+from six import iteritems, string_types, text_type
 
 import web
 
-from infogami.infobase.core import *
-from infogami.infobase.utils import *
+from infogami.infobase.core import (  # noqa: F401
+    BadData, Conflict, Event, InfobaseException, NotFound, PermissionDenied, Reference,
+    SiteStore, Store, Text, Thing, TypeMismatch, UserNotFound
+)
+from infogami.infobase.utils import (  # noqa: F401
+    flatten_dict, parse_boolean, parse_datetime, safeint
+)
 
 # Primitive types and corresponding python types
 primitive_types = {
@@ -18,12 +24,34 @@ primitive_types = {
 }
 
 # properties present for every type of object.
-COMMON_PROPERTIES = ['key', 'type', 'created', 'last_modified', 'permission', 'child_permission']
+COMMON_PROPERTIES = [
+    'key', 'type', 'created', 'last_modified', 'permission', 'child_permission'
+]
 READ_ONLY_PROPERTIES = ["id", "created", "last_modified", "revision", "latest_revision"]
+
+
+def allow_unicode(s):
+    """
+    # TODO: Remove this function when removing support for legacy Python
+    >>> allow_unicode(u"string")
+    'string'
+    >>> allow_unicode(u'string')
+    'string'
+    >>> allow_unicode('text: u"string"')
+    'text: "string"'
+    >>> allow_unicode("text: u'string'")
+    "text: 'string'"
+    """
+    if not isinstance(s, string_types):
+        s = text_type(s)
+    if s.startswith(("u'", 'u"')):
+        s = s.lstrip("u")
+    return str(s.replace(' u"', ' "').replace(" u'", " '"))
+
 
 def find_type(value):
     if isinstance(value, Thing):
-        return thing.type.key
+        return value.type.key
     elif isinstance(value, Reference):
         return '/type/object'
     elif isinstance(value, Text):
@@ -46,29 +74,32 @@ def parse_query(d):
 
 def parse_data(d, level=0):
     """
-        >>> parse_data(1)
-        1
-        >>> text = {'type': '/type/text', 'value': 'foo'}
-        >>> date= {'type': '/type/datetime', 'value': '2009-01-02T03:04:05'}
-        >>> true = {'type': '/type/boolean', 'value': 'true'}
+    >>> parse_data(1)
+    1
+    >>> text = {'type': '/type/text', 'value': 'foo'}
+    >>> date= {'type': '/type/datetime', 'value': '2009-01-02T03:04:05'}
+    >>> true = {'type': '/type/boolean', 'value': 'true'}
 
-        >>> parse_data(text)
-        <text: u'foo'>
-        >>> parse_data(date)
-        datetime.datetime(2009, 1, 2, 3, 4, 5)
-        >>> parse_data(true)
-        True
-        >>> parse_data({'key': '/type/type'})
-        <Storage {'key': '/type/type'}>
-        >>> parse_data({'key': '/type/type'}, level=1)
-        <ref: u'/type/type'>
-        >>> parse_data([text, date, true])
-        [<text: u'foo'>, datetime.datetime(2009, 1, 2, 3, 4, 5), True]
-        >>> parse_data({'a': text, 'b': date})
-        <Storage {'a': <text: u'foo'>, 'b': datetime.datetime(2009, 1, 2, 3, 4, 5)}>
-
-        >>> parse_query({'works': {'connect': 'update_list', 'value': [{'key': '/w/OL1W'}]}, 'key': '/b/OL1M'})
-        <Storage {'works': <Storage {'connect': 'update_list', 'value': [<ref: u'/w/OL1W'>]}>, 'key': '/b/OL1M'}>
+    >>> allow_unicode(repr(parse_data(text)))
+    "<text: 'foo'>"
+    >>> parse_data(date)
+    datetime.datetime(2009, 1, 2, 3, 4, 5)
+    >>> parse_data(true)
+    True
+    >>> parse_data({'key': '/type/type'})
+    <Storage {'key': '/type/type'}>
+    >>> allow_unicode(parse_data({'key': '/type/type'}, level=1))
+    '/type/type'
+    >>> allow_unicode(parse_data([text, date, true]))
+    "[<text: 'foo'>, datetime.datetime(2009, 1, 2, 3, 4, 5), True]"
+    >>> allow_unicode(parse_data({'a': text, 'b': date}))
+    "<Storage {'a': <text: 'foo'>, 'b': datetime.datetime(2009, 1, 2, 3, 4, 5)}>"
+    >>> allow_unicode(parse_query({'works': {'connect': 'update_list',
+    ...                                      'value': [{'key': '/w/OL1W'}]},
+    ...                            'key': '/b/OL1M'}))  # doctest: +NORMALIZE_WHITESPACE
+    "<Storage {'works': <Storage {'connect': 'update_list',
+                                  'value': [<ref: '/w/OL1W'>]}>,
+               'key': '/b/OL1M'}>"
     """
     if isinstance(d, dict):
         if 'value' in d and 'type' in d and d['type'] in primitive_types:
@@ -87,16 +118,16 @@ def parse_data(d, level=0):
 def format_data(d):
     """Convert a data to a representation that can be saved.
 
-        >>> format_data(1)
-        1
-        >>> format_data('hello')
-        'hello'
-        >>> format_data(Text('hello'))
-        {'type': '/type/text', 'value': u'hello'}
-        >>> format_data(datetime.datetime(2009, 1, 2, 3, 4, 5))
-        {'type': '/type/datetime', 'value': '2009-01-02T03:04:05'}
-        >>> format_data(Reference('/type/type'))
-        {'key': u'/type/type'}
+    >>> format_data(1)
+    1
+    >>> format_data('hello')
+    'hello'
+    >>> allow_unicode(format_data(Text('hello')))
+    "{'type': '/type/text', 'value': 'hello'}"
+    >>> format_data(datetime.datetime(2009, 1, 2, 3, 4, 5))
+    {'type': '/type/datetime', 'value': '2009-01-02T03:04:05'}
+    >>> allow_unicode(format_data(Reference('/type/type')))
+    "{'key': '/type/type'}"
     """
     if isinstance(d, dict):
         return {k: format_data(v) for k, v in iteritems(d)}
@@ -114,7 +145,8 @@ def format_data(d):
 def record_exception():
     """This function is called whenever there is any exception in Infobase.
 
-    Overwrite this function if some action (like logging the exception) needs to be taken on exceptions.
+    Overwrite this function if some action (like logging the exception) needs to be
+    taken on exceptions.
     """
     import traceback
     traceback.print_exc()
@@ -125,12 +157,19 @@ def create_test_store():
     >>> store = create_test_store()
     >>> json = store.get('/type/type')
     >>> t = Thing.from_json(store, u'/type/type', json)
-    >>> t
-    <thing: u'/type/type'>
-    >>> t.properties[0]
-    <Storage {'expected_type': <thing: u'/type/string'>, 'unique': True, 'name': 'name'}>
-    >>> t.properties[0].expected_type.key
-    u'/type/string'
+    >>> allow_unicode(t)
+    "<thing: '/type/type'>"
+    >>> isinstance(t.properties[0], web.utils.Storage)
+    True
+    >>> len(t.properties[0])
+    3
+    >>> allow_unicode(t.properties[0]['expected_type'])
+    "<thing: '/type/string'>"
+    >>> allow_unicode(t.properties[0].expected_type.key)
+    '/type/string'
+    >>> all(item in t.properties[0].items() for item
+    ...     in {'name': 'name', 'unique': True}.items())
+    True
     """
     class Store(web.storage):
         def get(self, key, revision=None):

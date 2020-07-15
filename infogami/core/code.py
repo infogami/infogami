@@ -77,16 +77,13 @@ class edit (delegate.mode):
             d = [x for x in d if x]
             return d
         elif isinstance(d, dict):
-            for k, v in d.items():
+            for k, v in list(d.items()):
                 d[k] = self.trim(v)
-                if d[k] is None or d[k] == '' or d[k] == []:
+                if d[k] in (None, '', []):
                     del d[k]
 
             # hack to stop saving empty properties
-            if d.keys() == [] or d.keys() == ['unique']:
-                return None
-            else:
-                return d
+            return None if list(d) in ([], ['unique']) else d
         else:
             return d.strip()
 

@@ -404,14 +404,16 @@ def parse_db_url(dburl):
 
     >>> parse_db_url("sqlite:///test.db")
     {'dbn': 'sqlite', 'db': 'test.db'}
-    >>> parse_db_url("postgres://joe:secret@dbhost:1234/test")
-    {'pw': 'secret', 'dbn': 'postgres', 'db': 'test', 'host': 'dbhost', 'user': 'joe', 'port': '1234'}
-    >>> parse_db_url("postgres://joe@/test")
-    {'pw': '', 'dbn': 'postgres', 'db': 'test', 'user': 'joe'}
+    >>> parsed = parse_db_url("postgres://joe:secret@dbhost:1234/test")
+    >>> sorted(parsed.items())  # doctest: +NORMALIZE_WHITESPACE
+    [('db', 'test'), ('dbn', 'postgres'), ('host', 'dbhost'),
+     ('port', '1234'), ('pw', 'secret'), ('user', 'joe')]
+    >>> sorted(parse_db_url("postgres://joe@/test").items())
+    [('db', 'test'), ('dbn', 'postgres'), ('pw', ''), ('user', 'joe')]
 
     Note: this should be part of web.py
     """
-    rx = web.re_compile("""
+    rx = web.re_compile(r"""
         (?P<dbn>\w+)://
         (?:
             (?P<user>\w+)

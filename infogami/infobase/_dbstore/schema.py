@@ -1,6 +1,9 @@
 import web
 import os
 
+# https://stackoverflow.com/questions/58518448
+web.template.ALLOWED_AST_NODES.append('Constant')
+
 INDEXED_DATATYPES = ["str", "int", "ref"]
 
 class Schema:

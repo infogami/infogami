@@ -205,10 +205,9 @@ class LazyObject:
 
     def __getattr__(self, key):
         return getattr(self._get(), key)
-    
+
     def __iter__(self):
-        for x in self._get():
-            yield x
+        return self._get().__iter__()
 
 class Site:
     def __init__(self, conn, sitename):

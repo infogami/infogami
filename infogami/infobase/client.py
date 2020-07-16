@@ -191,7 +191,7 @@ _connection_types = {
 class LazyObject:
     """LazyObject which creates the required object on demand.
         >>> o = LazyObject(lambda: [1, 2, 3])
-        >>> o
+        >>> list(o)
         [1, 2, 3]
     """
     def __init__(self, creator):
@@ -205,6 +205,9 @@ class LazyObject:
 
     def __getattr__(self, key):
         return getattr(self._get(), key)
+
+    def __iter__(self):
+        return self._get().__iter__()
 
 class Site:
     def __init__(self, conn, sitename):

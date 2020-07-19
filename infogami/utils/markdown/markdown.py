@@ -120,7 +120,7 @@ ENTITY_NORMALIZATION_EXPRESSIONS = [ (re.compile("&"), "&amp;"),
                                      (re.compile(">"), "&gt;"),
                                      (re.compile("\""), "&quot;")]
 
-ENTITY_NORMALIZATION_EXPRESSIONS_SOFT = [ (re.compile("&(?!\#)"), "&amp;"),
+ENTITY_NORMALIZATION_EXPRESSIONS_SOFT = [ (re.compile(r"&(?!\#)"), "&amp;"),
                                      (re.compile("<"), "&lt;"),
                                      (re.compile(">"), "&gt;"),
                                      (re.compile("\""), "&quot;")]
@@ -684,7 +684,7 @@ LINK_RE = BRK + r'\s*\(([^\)]*)\)'               # [text](url)
 LINK_ANGLED_RE = BRK + r'\s*\(<([^\)]*)>\)'      # [text](<url>)
 IMAGE_LINK_RE = r'\!' + BRK + r'\s*\(([^\)]*)\)' # ![alttxt](http://x.com/)
 REFERENCE_RE = BRK+ r'\s*\[([^\]]*)\]'           # [Google][3]
-IMAGE_REFERENCE_RE = r'\!' + BRK + '\s*\[([^\]]*)\]' # ![alt text][2]
+IMAGE_REFERENCE_RE = r'\!' + BRK + r'\s*\[([^\]]*)\]' # ![alt text][2]
 NOT_STRONG_RE = r'( \* )'                        # stand-alone * or _
 AUTOLINK_RE = r'<(http://[^>]*)>'                # <http://www.123.com>
 AUTOMAIL_RE = r'<([^> \!]*@[^> ]*)>'               # <me@example.com>

@@ -35,8 +35,8 @@ class Indexer:
         >>> r1 = {"key": "/books/foo", "title": "The Foo Book", "authors": [{"key": "/authors/a1"}, {"key": "/authors/a2"}]}
         >>> r2 = {"key": "/books/foo", "title": "The Bar Book", "authors": [{"key": "/authors/a2"}]}
         >>> deletes, inserts = i.diff_index(r1, r2)
-        >>> list(deletes)
-        [('str', 'title', 'The Foo Book'), ('ref', 'authors', '/authors/a1')]
+        >>> sorted(deletes)
+        [('ref', 'authors', '/authors/a1'), ('str', 'title', 'The Foo Book')]
         >>> list(inserts)
         [('str', 'title', 'The Bar Book')]
         """

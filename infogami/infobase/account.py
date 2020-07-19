@@ -1,9 +1,11 @@
-import hmac
-import random
-import datetime
 import time
-import web
 import logging
+from datetime import datetime, timedelta
+from hashlib import md5
+from hmac import HMAC
+from random import random
+
+import web
 
 from infogami.infobase import common, config
 
@@ -71,8 +73,8 @@ class AccountManager:
         if store.get(email_key):
             raise common.BadData(message='Email is already used: ' + email)
 
-        now = datetime.datetime.utcnow()
-        expires_on = now + datetime.timedelta(days=14) # 2 weeks
+        now = datetime.utcnow()
+        expires_on = now + timedelta(days=14)  # 2 weeks
 
         account_doc = {
             "_key": account_key,
@@ -197,7 +199,7 @@ class AccountManager:
             return store.get(account_key)
 
     def set_auth_token(self, user_key):
-        t = datetime.datetime(*time.gmtime()[:6]).isoformat()
+        t = datetime(*time.gmtime()[:6]).isoformat()
         text = "%s,%s" % (user_key, t)
         text += "," + self._generate_salted_hash(self.secret_key, text)
         web.ctx.infobase_auth_token = text
@@ -205,8 +207,15 @@ class AccountManager:
     #### Utilities
 
     def _generate_salted_hash(self, key, text, salt=None):
-        salt = salt or hmac.HMAC(key, str(random.random())).hexdigest()[:5]
-        hash = hmac.HMAC(key, web.safestr(salt) + web.safestr(text)).hexdigest()
+        """
+        Similar to openlibrary/accounts/model.py
+        """
+        if hasattr(key, 'encode'):
+            key = key.encode('utf-8')
+        salt_msg = str(random()).encode('utf-8')
+        salt = salt or HMAC(key, salt_msg, md5).hexdigest()[:5]
+        msg = (web.safestr(salt) + web.safestr(text)).encode('utf-8')
+        hash = HMAC(key, msg, md5).hexdigest()
         return '%s$%s' % (salt, hash)
 
     def _check_salted_hash(self, key, text, salted_hash):
@@ -285,7 +294,7 @@ class AccountManager:
             }
             self.site.store.store.put("account/" + username, doc)
 
-        timestamp = timestamp or datetime.datetime.utcnow()
+        timestamp = timestamp or datetime.utcnow()
         self.site.store.transact(f)
 
         event_data = dict(data, username=username, email=email, password=enc_password)
@@ -321,7 +330,7 @@ class AccountManager:
     def update_user1(self, user, enc_password, email, ip=None, timestamp=None):
         self.site.store.update_user_details(user.key, email=email, password=enc_password)
 
-        timestamp = timestamp or datetime.datetime.utcnow()
+        timestamp = timestamp or datetime.utcnow()
         event_data = dict(username=user.key, email=email, password=enc_password)
         self.site._fire_event("update_user", timestamp=timestamp, ip=ip or web.ctx.ip, username=None, data=event_data)
 

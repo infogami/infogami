@@ -22,7 +22,7 @@ def unicodify(d):
         return {k: unicodify(v) for k, v in iteritems(d)}
     elif isinstance(d, list):
         return [unicodify(x) for x in d]
-    elif isinstance(d, str):
+    elif isinstance(d, bytes):
         return d.decode('utf-8')
     elif isinstance(d, datetime.datetime):
         return d.isoformat()

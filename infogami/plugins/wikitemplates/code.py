@@ -4,13 +4,17 @@ wikitemplates: allow keeping templates and macros in wiki
 from __future__ import print_function
 
 import os
+import sys
 try:
     from collections.abc import Mapping
 except ImportError:
     from collections import Mapping
 
 import web
-
+if "pytest" in sys.modules:
+    web.config.db_parameters = (
+        dict(dbn='postgres', db='infobase_test', user=os.getenv('USER', 'USER'), pw='')
+    )
 import infogami
 from infogami import config
 from infogami.core.db import ValidationException

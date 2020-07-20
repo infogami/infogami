@@ -44,6 +44,13 @@ class WikiSource(Mapping):
 
         return value
 
+    # TODO: Should __iter__() and keys() return the same keys??
+    def __iter__(self):
+        return self.templates.__iter__()
+
+    def __len__(self):
+        return len(self.templates)
+
     def keys(self):
         return [self.unprocess_key(k) for k in self.templates.keys()]
 
@@ -169,7 +176,7 @@ def setup():
     load_all()
 
     from infogami.utils import types
-    types.register_type('/templates/.*\.tmpl$', '/type/template')
+    types.register_type(r'/templates/.*\.tmpl$', '/type/template')
     types.register_type('^/type/[^/]*$', '/type/type')
     types.register_type('/macros/.*$', '/type/macro')
 

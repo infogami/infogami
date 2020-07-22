@@ -10,6 +10,7 @@ except ImportError:
     from collections import Mapping
 
 import web
+
 import infogami
 from infogami import config
 from infogami.core.db import ValidationException

@@ -94,8 +94,7 @@ def jsonify(f):
             else:
                 process_exception(e)
 
-        # use default=str to deal with datetimes on Python 3
-        result = d.json_data if isinstance(d, JSON) else json.dumps(d, default=str)
+        result = d.json_data if isinstance(d, JSON) else json.dumps(d)
         t_end = time.time()
         totaltime = t_end - t_start
         querytime = web.ctx.pop('querytime', 0.0)

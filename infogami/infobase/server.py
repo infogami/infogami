@@ -94,7 +94,7 @@ def jsonify(f):
             else:
                 process_exception(e)
 
-
+        
         result = d.json_data if isinstance(d, JSON) else json.dumps(d)
         t_end = time.time()
         totaltime = t_end - t_start

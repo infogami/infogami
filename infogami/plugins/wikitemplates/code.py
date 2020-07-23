@@ -44,6 +44,13 @@ class WikiSource(Mapping):
 
         return value
 
+    # TODO: Should __iter__() and keys() return the same keys??
+    def __iter__(self):
+        return self.templates.__iter__()
+
+    def __len__(self):
+        return len(self.templates)
+
     def keys(self):
         return [self.unprocess_key(k) for k in self.templates.keys()]
 
@@ -122,7 +129,7 @@ def _stringify(value):
         return value
 
 def _compile_template(name, text):
-    text = web.utf8(_stringify(text))
+    text = web.safestr(_stringify(text))
 
     try:
         return web.template.Template(text, filter=web.websafe, filename=name)
@@ -135,14 +142,14 @@ def _compile_template(name, text):
 def _load_template(page, lazy=False):
     """load template from a wiki page."""
     if lazy:
-        page = web.storage(key=page.key, body=web.utf8(_stringify(page.body)))
+        page = web.storage(key=page.key, body=web.safestr(_stringify(page.body)))
         wikitemplates[page.key] = LazyTemplate(lambda: _load_template(page))
     else:
         wikitemplates[page.key] = _compile_template(page.key, page.body)
 
 def _load_macro(page, lazy=False):
     if lazy:
-        page = web.storage(key=page.key, macro=web.utf8(_stringify(page.macro)), description=page.description or "")
+        page = web.storage(key=page.key, macro=web.safestr(_stringify(page.macro)), description=page.description or "")
         wikimacros[page.key] = LazyTemplate(lambda: _load_macro(page))
     else:
         t = _compile_template(page.key, page.macro)
@@ -169,7 +176,7 @@ def setup():
     load_all()
 
     from infogami.utils import types
-    types.register_type('/templates/.*\.tmpl$', '/type/template')
+    types.register_type(r'/templates/.*\.tmpl$', '/type/template')
     types.register_type('^/type/[^/]*$', '/type/type')
     types.register_type('/macros/.*$', '/type/macro')
 

@@ -37,7 +37,7 @@ jobs:
 install:
   - pip install codespell flake8 pytest psycopg2
   - pip install -r requirements.txt
-  - if [[ "$UPGRADE_WEBPY" == true ]]; then pip install --upgrade web.py; fi
+  - if [[ "$UPGRADE_WEBPY" == true ]]; then pip install --upgrade "web.py<0.60;python_version<'3.5' web.py;python_version>='3.5'" ; fi
 services:
   - postgresql
 before_script:

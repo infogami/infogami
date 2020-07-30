@@ -3,6 +3,12 @@ Support for Internationalization.
 """
 from __future__ import print_function
 
+import os
+import re
+import traceback
+
+from six import PY2
+
 import web
 
 DEFAULT_LANG = 'en'
@@ -15,7 +21,6 @@ def find_i18n_namespace(path):
         >>> find_i18n_namespace('/i18n/strings.en')
         '/'
     """
-    import os.path
     return os.path.dirname(web.lstrips(path, '/i18n'))
 
 class i18n:
@@ -99,9 +104,8 @@ class i18n_string:
         def get(lang):
             return self._i18n._data.get((self._namespace, lang))
         default_data = get(DEFAULT_LANG) or {}
-        # TODO: (cclauss) workaround for internetarchive/infogami#????
-        # Was: data = get(web.ctx.lang) or default_data
-        if "lang" in web.ctx:
+        # TODO: (cclauss) workaround for internetarchive/openlibrary#3641
+        if PY2 or "lang" in web.ctx:
             data = get(web.ctx.lang) or default_data
         else:
             data = default_data
@@ -113,6 +117,7 @@ class i18n_string:
             a = [x or "" for x in a]
             return str(self) % tuple(web.safestr(x) for x in a)
         except:
+            traceback.print_exc()
             print('failed to substitute (%s/%s) in language %s' % (self._namespace, self._key, web.ctx.lang), file=web.debug)
         return str(self)
 
@@ -146,15 +151,13 @@ def i18n_loadhook():
     try:
         web.ctx.lang = parse_query_string() or parse_lang_cookie() or parse_lang_header() or ''
     except:
-        import traceback
         traceback.print_exc()
+        exit()
         web.ctx.lang = None
 
 def find(path, pattern):
     """Find all files matching the given pattern in the file hierarchy rooted at path.
     """
-    import os
-    import re
     for dirname, dirs, files in os.walk(path):
         for f in files:
             if re.match(pattern, f):
@@ -181,8 +184,6 @@ def read_strings(path):
 
 def load_strings(plugin_path):
     """Load string.xx files from plugin/i18n/string.* files."""
-    import os.path
-
     def parse_path(path):
         """Find namespace and lang from path."""
         namespace = os.path.dirname(path)
@@ -196,7 +197,6 @@ def load_strings(plugin_path):
             data = read_strings(p)
             strings._update_strings(namespace, lang, data)
         except:
-            import traceback
             traceback.print_exc()
             print("failed to load strings from", p, file=web.debug)
 

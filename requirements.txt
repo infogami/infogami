@@ -1,5 +1,5 @@
 markdown
 simplejson
 six
-web.py==0.39; python_version < '3.0'
-web.py==0.40; python_version >= '3.0'
+web.py==0.39; python_version < '3.5'
+web.py==0.61; python_version >= '3.5'

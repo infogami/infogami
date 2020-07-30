@@ -10,6 +10,7 @@ template from multiple template sources and error handling.
 """
 import os
 import time
+import traceback
 
 import web
 
@@ -154,7 +155,6 @@ def saferender(templates, *a, **kw):
             from . import delegate
             delegate.register_exception()
 
-            from . import traceback
             traceback.print_exc()
 
             from . import view

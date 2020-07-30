@@ -94,8 +94,8 @@ def jsonify(f):
             else:
                 process_exception(e)
 
-        
-        result = d.json_data if isinstance(d, JSON) else json.dumps(d)
+        # use default=str to deal with TypeError: datetime is not JSON serializable
+        result = d.json_data if isinstance(d, JSON) else json.dumps(d, default=str)
         t_end = time.time()
         totaltime = t_end - t_start
         querytime = web.ctx.pop('querytime', 0.0)

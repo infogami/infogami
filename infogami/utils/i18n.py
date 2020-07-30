@@ -99,7 +99,12 @@ class i18n_string:
         def get(lang):
             return self._i18n._data.get((self._namespace, lang))
         default_data = get(DEFAULT_LANG) or {}
-        data = get(web.ctx.lang) or default_data
+        # TODO: (cclauss) workaround for internetarchive/infogami#????
+        # Was: data = get(web.ctx.lang) or default_data
+        if "lang" in web.ctx:
+            data = get(web.ctx.lang) or default_data
+        else:
+            data = default_data
         text = data.get(self._key) or default_data.get(self._key) or self._key
         return web.safestr(text)
 

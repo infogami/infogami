@@ -10,6 +10,7 @@ template from multiple template sources and error handling.
 """
 import os
 import time
+import traceback
 
 import web
 
@@ -151,13 +152,9 @@ def saferender(templates, *a, **kw):
             if i.debug.lower() == "true":
                 raise
 
-            from . import delegate
+            from . import delegate, view  # avoids circular imports
             delegate.register_exception()
-
-            from . import traceback
             traceback.print_exc()
-
-            from . import view
             message = str(t.filename) + ': error in processing template: ' + e.__class__.__name__ + ': ' + str(e) + ' (falling back to default template)'
             view.add_flash_message('error', message)
 

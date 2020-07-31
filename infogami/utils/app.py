@@ -249,7 +249,8 @@ def path_processor(handler):
         return handler()
 
 # setup load and unload hooks for legacy code
-web._loadhooks = {}
+if not hasattr(web, '_loadhooks'):
+    web._loadhooks = {}
 web.unloadhooks = {}
 web.load = lambda: None
 

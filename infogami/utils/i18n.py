@@ -7,8 +7,6 @@ import os
 import re
 import traceback
 
-from six import PY2
-
 import web
 
 DEFAULT_LANG = 'en'
@@ -45,17 +43,13 @@ class i18n:
 
     def getkeys(self, namespace, lang=None):
         namespace = web.safestr(namespace)
-        # Making a simplified assumption here.
-        # Keys for a language are all the strings defined for that language plus all the
-        # strings defined for default language. By doing this, once a key is added to
-        # default lang, then it will automatically appear in all other languages.
-        keys = set(
-            list(self._data.get((namespace, web.safestr(lang)), {})) +
-            list(self._data.get((namespace, DEFAULT_LANG), {}))
-        )
-        import sys
-        print(sorted(keys), file=web.debug)
-        sys.exit('getkeys()')
+        lang = web.safestr(lang)
+
+        # making a simplified assumption here.
+        # Keys for a language are all the strings defined for that language and
+        # all the strings defined for default language. By doing this, once a key is
+        # added to default lang, then it will automatically appear in all other languages.
+        keys = set(self._data.get((namespace, lang), {}).keys() + self._data.get((namespace, DEFAULT_LANG), {}).keys())
         return sorted(keys)
 
     def _set_strings(self, namespace, lang, data):
@@ -108,11 +102,7 @@ class i18n_string:
         def get(lang):
             return self._i18n._data.get((self._namespace, lang))
         default_data = get(DEFAULT_LANG) or {}
-        # TODO: (cclauss) workaround for internetarchive/openlibrary#3641
-        if PY2 or "lang" in web.ctx:
-            data = get(web.ctx.lang) or default_data
-        else:
-            data = default_data
+        data = get(web.ctx.lang) or default_data
         text = data.get(self._key) or default_data.get(self._key) or self._key
         return web.safestr(text)
 
@@ -205,5 +195,6 @@ def load_strings(plugin_path):
 
 # global state
 strings = i18n()
-if hasattr(web, "_loadhooks"):
-    web._loadhooks['i18n'] = i18n_loadhook
+if not hasattr(web, "_loadhooks"):
+    web._loadhooks = {}
+web._loadhooks['i18n'] = i18n_loadhook

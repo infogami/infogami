@@ -45,13 +45,17 @@ class i18n:
 
     def getkeys(self, namespace, lang=None):
         namespace = web.safestr(namespace)
-        lang = web.safestr(lang)
-
-        # making a simplified assumption here.
-        # Keys for a language are all the strings defined for that language and
-        # all the strings defined for default language. By doing this, once a key is
-        # added to default lang, then it will automatically appear in all other languages.
-        keys = set(self._data.get((namespace, lang), {}).keys() + self._data.get((namespace, DEFAULT_LANG), {}).keys())
+        # Making a simplified assumption here.
+        # Keys for a language are all the strings defined for that language plus all the
+        # strings defined for default language. By doing this, once a key is added to
+        # default lang, then it will automatically appear in all other languages.
+        keys = set(
+            list(self._data.get((namespace, web.safestr(lang)), {})) +
+            list(self._data.get((namespace, DEFAULT_LANG), {}))
+        )
+        import sys
+        print(sorted(keys), file=web.debug)
+        sys.exit('getkeys()')
         return sorted(keys)
 
     def _set_strings(self, namespace, lang, data):
@@ -152,7 +156,6 @@ def i18n_loadhook():
         web.ctx.lang = parse_query_string() or parse_lang_cookie() or parse_lang_header() or ''
     except:
         traceback.print_exc()
-        exit()
         web.ctx.lang = None
 
 def find(path, pattern):

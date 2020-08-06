@@ -11,8 +11,6 @@ import os
 import sys
 import time
 
-from six import PY2
-
 import web
 
 from infogami.infobase import cache, common, config, dbstore, infobase, logreader
@@ -96,10 +94,8 @@ def jsonify(f):
             else:
                 process_exception(e)
 
-        if PY2:  # TODO: (cclauss) Why is this workaround necessary only on Python 3?
-            result = d.json_data if isinstance(d, JSON) else json.dumps(d)
-        else:  # Deal with TypeError: datetime is not JSON serializable
-            result = d.json_data if isinstance(d, JSON) else json.dumps(d, default=str)
+        # use default=str to deal with TypeError: datetime is not JSON serializable
+        result = d.json_data if isinstance(d, JSON) else json.dumps(d, default=str)
         t_end = time.time()
         totaltime = t_end - t_start
         querytime = web.ctx.pop('querytime', 0.0)

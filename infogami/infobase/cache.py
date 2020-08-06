@@ -117,7 +117,7 @@ class Cache:
     def get(self, key, default=None):
         try:
             return self[key]
-        except:
+        except KeyError:
             return default
 
     def __contains__(self, key):

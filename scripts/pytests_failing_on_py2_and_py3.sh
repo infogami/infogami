@@ -9,7 +9,6 @@ FAILING_FILES=(
     infogami/plugins/pages/code.py
     infogami/plugins/review/code.py
     infogami/plugins/review/db.py
-    infogami/plugins/review/view.py
     infogami/plugins/wikitemplates/code.py
     migration/migrate-0.4-0.5.py
     test/bug_239238.py

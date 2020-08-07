@@ -3,6 +3,10 @@ Support for Internationalization.
 """
 from __future__ import print_function
 
+import os
+import re
+import traceback
+
 import web
 
 DEFAULT_LANG = 'en'
@@ -15,7 +19,6 @@ def find_i18n_namespace(path):
         >>> find_i18n_namespace('/i18n/strings.en')
         '/'
     """
-    import os.path
     return os.path.dirname(web.lstrips(path, '/i18n'))
 
 class i18n:
@@ -108,6 +111,7 @@ class i18n_string:
             a = [x or "" for x in a]
             return str(self) % tuple(web.safestr(x) for x in a)
         except:
+            traceback.print_exc()
             print('failed to substitute (%s/%s) in language %s' % (self._namespace, self._key, web.ctx.lang), file=web.debug)
         return str(self)
 
@@ -141,15 +145,12 @@ def i18n_loadhook():
     try:
         web.ctx.lang = parse_query_string() or parse_lang_cookie() or parse_lang_header() or ''
     except:
-        import traceback
         traceback.print_exc()
         web.ctx.lang = None
 
 def find(path, pattern):
     """Find all files matching the given pattern in the file hierarchy rooted at path.
     """
-    import os
-    import re
     for dirname, dirs, files in os.walk(path):
         for f in files:
             if re.match(pattern, f):
@@ -176,8 +177,6 @@ def read_strings(path):
 
 def load_strings(plugin_path):
     """Load string.xx files from plugin/i18n/string.* files."""
-    import os.path
-
     def parse_path(path):
         """Find namespace and lang from path."""
         namespace = os.path.dirname(path)
@@ -191,11 +190,11 @@ def load_strings(plugin_path):
             data = read_strings(p)
             strings._update_strings(namespace, lang, data)
         except:
-            import traceback
             traceback.print_exc()
             print("failed to load strings from", p, file=web.debug)
 
 # global state
 strings = i18n()
-if hasattr(web, "_loadhooks"):
-    web._loadhooks['i18n'] = i18n_loadhook
+if not hasattr(web, "_loadhooks"):
+    web._loadhooks = {}
+web._loadhooks['i18n'] = i18n_loadhook

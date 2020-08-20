@@ -780,7 +780,9 @@ class Thing:
         self._getdata()[key] = value
 
     def __setattr__(self, key, value):
-        if key in ['key', 'revision', 'latest_revision', 'last_modified', 'created'] or key.startswith('_'):
+        if key == '__class__':
+            object.__setattr__(self, '__class__', value)
+        elif key in ['key', 'revision', 'latest_revision', 'last_modified', 'created'] or key.startswith('_'):
             self.__dict__[key] = value
         else:
             self._getdata()[key] = value

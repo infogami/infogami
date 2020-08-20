@@ -258,7 +258,7 @@ class BulkUpload:
         elif isinstance(query, bool):
             return (int(query), TYPES['/type/boolean'])
         else:
-            raise Exception('%s: invalid value: %s' (path, repr(query)))
+            raise Exception('%s: invalid value: %s' % (path, repr(query)))
 
 if __name__ == "__main__":
     web.config.db_parameters = dict(dbn='postgres', host='pharosdb', db='infobase_data2', user='anand', pw='')

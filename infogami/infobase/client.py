@@ -848,10 +848,9 @@ class Thing:
         return web.safestr(self.key)
 
     def __repr__(self):
-        if self.key:
-            return "<Thing: %s>" % repr(self.key)
-        else:
-            return "<Thing: %s>" % repr(self._data)
+        return "{}(site={}, key={}, data={}, revision={})".format(
+            self.__class__.__name__, self._site, self.key, self._data, self._revision
+        )
 
 class Type(Thing):
     def _get_defaults(self):

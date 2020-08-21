@@ -8,7 +8,7 @@ See Bug#231831 for details.
     u'\u1234'
     >>> loads(dumps(u'\u1234'.encode('utf-8')))
     u'\u1234'
-    >>> loads(dumps({'x': u'\u1234'.encode('utf-8')}))
+    >>> loads(dumps({u'x': u'\u1234'.encode('utf-8')}))
     {u'x': u'\u1234'}
 """
 import datetime

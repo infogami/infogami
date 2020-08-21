@@ -51,7 +51,7 @@ script:
   - pytest infogami -s
   - pytest tests
   - pytest test
-  # - pytest --doctest-modules || true
+  - source scripts/run_doctests.sh
 notifications:
   on_success: change
   on_failure: change  # `always` will be the setting once code changes slow down

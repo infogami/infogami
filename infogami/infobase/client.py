@@ -714,7 +714,7 @@ def create_thing(site, key, data, revision=None):
     klass = _thing_class_registry.get(type) or _thing_class_registry.get(None)
     return klass(site, key, data, revision)
 
-class Thing:
+class Thing(object):
     def __init__(self, site, key, data=None, revision=None):
         self._site = site
         self.key = key

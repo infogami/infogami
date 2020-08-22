@@ -217,8 +217,8 @@ class SaveProcessor:
                 raise common.BadData(message="Bad Property: %s" % repr(key), at=dict(key=self.key))
 
     def process_data(self, d, type, old_data=None, prefix=""):
-        for k, v in d.items():
-            if v is None or v == [] or web.safeunicode(v).strip() == '':
+        for k, v in list(d.items()):  # Avoid dictionary changed size during iteration
+            if v in (None, []) or web.safeunicode(v).strip() == '':
                 del d[k]
             else:
                 if old_data and old_data.get(k) == v:

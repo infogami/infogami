@@ -33,7 +33,6 @@ jobs:
       env: UPGRADE_WEBPY=true
   allow_failures:
     - script: bash scripts/pytests_failing_on_py2_and_py3.sh
-    - name: "Python: 3.8 - Test Open Library"
 install:
   - pip install codespell flake8 pytest psycopg2
   - pip install -r requirements.txt

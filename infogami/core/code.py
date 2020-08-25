@@ -92,7 +92,7 @@ class edit (delegate.mode):
         i = web.storage(helpers.unflatten(i))
         i.key = path
 
-        _ = web.storage((k, i.pop(k)) for k in i.keys() if k.startswith('_'))
+        _ = web.storage((k, i.pop(k)) for k in list(i.keys()) if k.startswith('_'))
         action = self.get_action(_)
         comment = _.get('_comment', None)
 

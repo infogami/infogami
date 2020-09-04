@@ -121,8 +121,9 @@ class RemoteConnection(Connection):
         url = self.base_url + '/' + sitename + path
         path = '/' + sitename + path
         if isinstance(data, dict):
-            for k in data.keys():
-                if data[k] is None: del data[k]
+            for k in list(data):
+                if data[k] is None:
+                    del data[k]
 
         if web.config.debug:
             web.ctx.infobase_req_count = 1 + web.ctx.get('infobase_req_count', 0)
@@ -613,7 +614,7 @@ class Sequence:
 
         seq = web.ctx.site.seq
         for i in range(10):
-            print seq.next_value("foo")
+            print(seq.next_value("foo"))
     """
     def __init__(self, conn, sitename):
         self.conn = conn

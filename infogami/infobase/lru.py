@@ -200,7 +200,7 @@ class LRU:
 
     @synchronized
     def keys(self):
-        return self.d.keys()
+        return list(self.d)
 
     @synchronized
     def items(self):

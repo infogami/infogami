@@ -68,6 +68,9 @@ def layout_processor(handler):
     if isinstance(out, string_types):
         out = web.template.TemplateResult(__body__=out)
 
+    if isinstance(out, web.webapi.HTTPError):
+        raise out
+
     if 'title' not in out:
         out.title = path
 

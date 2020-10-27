@@ -7,29 +7,29 @@ env:
   - UPGRADE_WEBPY=true
 python:
   - 2.7
-  - 3.8
+  - 3.9
 jobs:
   include:
     - name: "Python: 2.7 - Fail on Py3 only"
       script: bash scripts/pytests_failing_on_py3_only.sh
       python: 2.7
-    - name: "Python: 3.8 - Fail on Py3 only"
+    - name: "Python: 3.9 - Fail on Py3 only"
       script: bash scripts/pytests_failing_on_py3_only.sh
-      python: 3.8
+      python: 3.9
 
     - name: "Python: 2.7 - Fail on Py2 and Py3"
       script: bash scripts/pytests_failing_on_py2_and_py3.sh
       python: 2.7
-    - name: "Python: 3.8 - Fail on Py2 and Py3"
+    - name: "Python: 3.9 - Fail on Py2 and Py3"
       script: bash scripts/pytests_failing_on_py2_and_py3.sh
-      python: 3.8
+      python: 3.9
 
     - name: "Python: 2.7 - Test Open Library"
       script: bash -x scripts/test-openlibrary.sh
       python: 2.7
-    - name: "Python: 3.8 - Test Open Library"
+    - name: "Python: 3.9 - Test Open Library"
       script: bash -x scripts/test-openlibrary.sh
-      python: 3.8
+      python: 3.9
       env: UPGRADE_WEBPY=true
   allow_failures:
     - script: bash scripts/pytests_failing_on_py2_and_py3.sh

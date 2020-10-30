@@ -59,7 +59,7 @@ def call_macro(name, args):
             result = "%s failed with error: <pre>%s</pre>" % (name, web.websafe(str(e)))
             import traceback
             traceback.print_exc()
-        return str(result).decode('utf-8')
+        return str(result)
     else:
         return "Unknown macro: <pre>%s</pre>" % name
 

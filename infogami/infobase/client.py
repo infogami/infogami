@@ -83,12 +83,11 @@ class Connection:
     def handle_error(self, status, error):
         try:
             data = simplejson.loads(error)
-            message = data.get('message', '')
+            message = data.get('message', data.get('error', ''))
             json = error
-        except:
-            message = error
+        except Exception as e:
+            message = error or str(e)
             json = None
-
         raise ClientException(status, message, json)
 
 class LocalConnection(Connection):
@@ -310,7 +309,7 @@ class Site:
             self._request(path="", method="PUT")
 
     def get(self, key, revision=None, lazy=False):
-        assert key.startswith('/')
+        assert key.startswith('/'), "key {} does not start with '/'".format(key)
 
         if lazy:
             data = None

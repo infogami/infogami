@@ -633,7 +633,8 @@ def start(config_file, *args):
 def load_config(config_file):
     # load config
     import yaml
-    runtime_config = yaml.load(open(config_file)) or {}
+    with open(config_file) as in_file:
+        runtime_config = yaml.safe_load(in_file) or {}
     update_config(runtime_config)
 
 def update_config(runtime_config):

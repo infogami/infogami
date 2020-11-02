@@ -165,7 +165,8 @@ def load_config(config_file):
             return d
 
     # load config
-    runtime_config = yaml.load(open(config_file))
+    with open(config_file) as in_file:
+        runtime_config = yaml.safe_load(in_file)
 
     # update config
     for k, v in runtime_config.items():

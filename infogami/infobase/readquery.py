@@ -52,7 +52,7 @@ def run_things_query(store, query):
         return d
 
     data = [{'key': key} for key in keys]
-    if query.requested.keys() == ['key']:
+    if list(query.requested) == ['key']:
         return data
     else:
         load_things(keys, query)

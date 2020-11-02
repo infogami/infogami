@@ -32,13 +32,13 @@ def multiple_insert(tablename, values, seqname=None, _test=False):
     if not values:
         return []
 
-    keys = values[0].keys()
+    keys = list(values[0])
 
     #@@ make sure all keys are valid
 
     # make sure all rows have same keys.
     for v in values:
-        if v.keys() != keys:
+        if list(v) != keys:
             raise Exception('Bad data')
 
     q = web.SQLQuery('INSERT INTO %s (%s) VALUES ' % (tablename, ', '.join(keys))) 
@@ -64,11 +64,12 @@ def multiple_insert(tablename, values, seqname=None, _test=False):
 
     try:
         out = db_cursor.fetchone()[0]
-        out = range(out-len(values)+1, out+1)
+        out = list(range(out-len(values)+1, out+1))
     except Exception:
         out = None
 
-    if not web.ctx.db_transaction: web.ctx.db.commit()
+    if not web.ctx.db_transaction:
+        web.ctx.db.commit()
     return out
 
 if __name__ == "__main__":

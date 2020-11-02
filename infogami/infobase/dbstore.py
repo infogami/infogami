@@ -489,7 +489,7 @@ class DBSiteStore(common.SiteStore):
         if metadata is None:
             return None
 
-        for k, v in params.items():
+        for k, v in list(params.items()):
             assert k in ['bot', 'active', 'verified', 'email', 'password']
             if v is None:
                 del params[k]

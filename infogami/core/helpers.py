@@ -78,7 +78,7 @@ class betterlist(list):
     def setdefault(self, index, value):
         index = int(index)
         self.fill(index+1)
-        if self[index] == None:
+        if self[index] is None:
             self[index] = value
         return self[index]
 
@@ -86,7 +86,7 @@ class betterlist(list):
         return enumerate(self)
 
     def items(self):
-        return list(self.iteritems())
+        return list(self.iteritems())  # Works on both Python 2 and 3
 
 def trim(x):
     """Remove empty elements from a list or dictionary.

@@ -382,6 +382,8 @@ class account:
     @jsonify
     def delegate(self, sitename, method):
         site = get_site(sitename)
+        if not site:
+            raise RuntimeError("get_site({}) failed".format(sitename))
         methodname = "%s_%s" % (self.get_method(), method)
 
         m = getattr(self, methodname, None)

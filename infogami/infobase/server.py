@@ -208,7 +208,7 @@ class withkey:
         i = input("key", revision=None, expand=False)
         site = get_site(sitename)
         if not site:
-            raise RuntimeError("get_site({}) failed".format(sitename))
+            logger.exception("get_site({}) failed".format(sitename))
         revision = i.revision and to_int(i.revision, "revision")
         json_data = site.get(i.key, revision=revision)
         if not json_data:

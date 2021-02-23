@@ -132,7 +132,7 @@ def i18n_loadhook():
     def parse_lang_cookie():
         """Parses HTTP_LANG cookie."""
         # Quick check to avoid making cookies call
-        if "HTTP_LANG" in web.ctx.get("HTTP_COOKIE", ""):
+        if "HTTP_LANG" in web.ctx.env.get("HTTP_COOKIE", ""):
             cookies = web.cookies()
             return cookies.get('HTTP_LANG')
 

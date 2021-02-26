@@ -1,0 +1,35 @@
+name: lint_python
+on: [pull_request, push]
+jobs:
+  lint_python:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.9]  # 2.7
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: harmon758/postgresql-action@v1
+        with:
+          postgresql version: '13'  # See https://hub.docker.com/_/postgres for available versions
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install bandit black codespell flake8 isort mypy psycopg2 pytest pyupgrade
+      - run: bandit -r . || true
+      - run: black --check . || true
+      - run: codespell . --ignore-words-list=ba,referer --quiet-level=2
+      - run: flake8 . --count --select=E9,F401,F63,F7,F82 --show-source --statistics
+      # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
+      - run: flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      - run: isort --check-only --profile black . || true
+      - run: pip install -r requirements.txt
+      - run: mypy --ignore-missing-imports . || true
+      - run: shopt -s globstar && pyupgrade --py36-plus **/*.py || true
+      - run: psql -c 'create database infobase_test;' -U postgres || true
+      - run: pytest . || true
+      - run: pytest --doctest-modules . || true
+      - run: pytest infogami -s || true
+      - run: pytest tests
+      - run: pytest test || true
+      - run: source scripts/run_doctests.sh

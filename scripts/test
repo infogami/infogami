@@ -49,7 +49,7 @@ def infobase(options=None, *args):
 
 @subcommand.subcommand()
 def alltests(options=None):
-    """Runn all tests."""
+    """Run all tests."""
     doctests([])
     infobase([])
 

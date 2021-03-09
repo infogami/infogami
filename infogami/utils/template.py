@@ -76,7 +76,7 @@ class DiskTemplateSource(web.storage):
         t = dict.__getitem__(self, name)
         if isinstance(t, LazyTemplate):
             t = t.func()
-        elif web.config.debug == True and self.is_template_modified(t):
+        elif web.config.debug is True and self.is_template_modified(t):
             t = self.get_template(t.filepath)
             self[name] = t
 

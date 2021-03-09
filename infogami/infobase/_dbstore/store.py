@@ -72,7 +72,7 @@ class Store:
         return doc
 
     def put(self, key, doc):
-        if doc.get("_delete") == True:
+        if doc.get("_delete") is True:
             return self.delete(key, doc.get("_rev"))
 
         # conflict check is enabled by default. It can be disabled by passing _rev=None in the document.

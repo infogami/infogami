@@ -1,35 +1,51 @@
-name: lint_python
+# https://docs.github.com/en/actions/guides/creating-postgresql-service-containers
+name: python_tests
 on: [pull_request, push]
 jobs:
-  lint_python:
+  python_tests:
     strategy:
       fail-fast: false
       matrix:
-        python-version: [3.9]  # 2.7
+        python-version: [3.9]
     runs-on: ubuntu-latest
+    services:
+      # Label does not set the Postgres host name which will be localhost
+      postgres:
+        # Docker Hub image
+        image: postgres
+        # Provide the password for postgres
+        env:
+          POSTGRES_USER: runner
+          POSTGRES_HOST_AUTH_METHOD: trust
+        # Set health checks to wait until postgres has started
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          # Map TCP port 5432 on service container to the host
+          - 5432:5432
     steps:
       - uses: actions/checkout@v2
-      - uses: harmon758/postgresql-action@v1
-        with:
-          postgresql version: '13'  # See https://hub.docker.com/_/postgres for available versions
       - uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install bandit black codespell flake8 isort mypy psycopg2 pytest pyupgrade
-      - run: bandit -r . || true
+      - run: pip install black codespell flake8 isort mypy pytest pyupgrade safety
       - run: black --check . || true
       - run: codespell . --ignore-words-list=ba,referer --quiet-level=2
       - run: flake8 . --count --select=C,E5,E9,F4,F6,F7,F82 --max-complexity=43 --max-line-length=233 --show-source --statistics
       # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
       - run: flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - run: isort --check-only --profile black . || true
-      - run: pip install -r requirements.txt
+      - run: pip install psycopg2 -r requirements.txt
       - run: mypy .
-      - run: shopt -s globstar && pyupgrade --py36-plus **/*.py || true
-      - run: psql -c 'create database infobase_test;' -U postgres || true
-      - run: pytest . || true
-      - run: pytest --doctest-modules . || true
-      - run: pytest infogami -s || true
+      - run: shopt -s globstar && pyupgrade --py38-plus **/*.py || true
+      # web.py needs to find the database on a host named postgres
+      - run: echo "127.0.0.1 postgres" | sudo tee -a /etc/hosts
+      - run: psql --host=postgres --command='create database infobase_test;'  # MUST have a --host=
+      - run: pytest infogami -s
       - run: pytest tests
-      - run: pytest test || true
-      - run: source scripts/run_doctests.sh
+      - run: pytest test
+      - run: scripts/run_doctests.sh
+      - run: safety check

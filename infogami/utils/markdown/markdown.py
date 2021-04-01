@@ -531,7 +531,7 @@ class HtmlBlockPreprocessor (Preprocessor):
                     left_tag = self._get_left_tag(block)
                     right_tag = self._get_right_tag(left_tag, block)
 
-                    if not (is_block_level(left_tag) \
+                    if not (is_block_level(left_tag)
                         or block[1] in ["!", "?", "@", "%"]):
                         new_blocks.append(block)
                         continue

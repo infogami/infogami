@@ -19,12 +19,12 @@ jobs:
       - run: bandit -r . || true
       - run: black --check . || true
       - run: codespell . --ignore-words-list=ba,referer --quiet-level=2
-      - run: flake8 . --count --select=E9,F401,F63,F7,F82 --show-source --statistics
+      - run: flake8 . --count --select=C,E5,E9,F4,F6,F7,F82 --max-complexity=43 --max-line-length=233 --show-source --statistics
       # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide
       - run: flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
       - run: isort --check-only --profile black . || true
       - run: pip install -r requirements.txt
-      - run: mypy --ignore-missing-imports . || true
+      - run: mypy .
       - run: shopt -s globstar && pyupgrade --py36-plus **/*.py || true
       - run: psql -c 'create database infobase_test;' -U postgres || true
       - run: pytest . || true

@@ -52,7 +52,7 @@ create index transaction_created_idx ON transaction(created);
 
 #@@ type to table prefix mappings. 
 #@@ If there are any special tables in your schema, this should be updated.
-type2table = {
+type2table = {  # type: ignore
 
 }
 

@@ -1,5 +1,5 @@
 import pytest
-import simplejson
+import json
 import web
 
 from six.moves.urllib.parse import urlencode
@@ -68,7 +68,7 @@ def save(key, **data):
 
 def query(**kw):
     url = '/query.json?' + urlencode(kw)
-    return [d['key'] for d in simplejson.loads(b.open(url).read())]
+    return [d['key'] for d in json.loads(b.open(url).read())]
 
 @pytest.mark.skip(reason="Site is None")
 def test_query():

@@ -1,7 +1,7 @@
 import unittest
 
 import pytest
-import simplejson
+import json
 from six.moves.urllib_parse import urlencode, urljoin
 from six.moves.urllib_request import Request
 import web
@@ -24,13 +24,13 @@ def request(path, method="GET", data=None, headers={}):
         path = path + '?' + urlencode(data)
         data = None
     if isinstance(data, dict):
-        data = simplejson.dumps(data)
+        data = json.dumps(data)
     url = urljoin(b.url, path)
     req = Request(url, data, headers)
     req.get_method = lambda: method
     b.do_request(req)
     if b.status == 200:
-        return b.data and simplejson.loads(b.data)
+        return b.data and json.loads(b.data)
     else:
         return None
 
@@ -45,7 +45,7 @@ def save(query):
     return request('/test/save' + query['key'], method='POST', data=query)
 
 def save_many(query, comment=''):
-    return request('/test/save_many', method='POST', data=urlencode({'query': simplejson.dumps(query), 'comment': comment}))
+    return request('/test/save_many', method='POST', data=urlencode({'query': json.dumps(query), 'comment': comment}))
 
 class DatabaseTest(unittest.TestCase):
     pass
@@ -130,10 +130,10 @@ class DocumentTest(InfobaseTestCase):
 
         # verify revisions
         q = {'key': '/new_page'}
-        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'key': '/new_page'})})
+        d = request('/test/versions', method='GET', data={'query': json.dumps({'key': '/new_page'})})
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 1, '*': True}])
 
-        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'limit': 1})})
+        d = request('/test/versions', method='GET', data={'query': json.dumps({'limit': 1})})
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 1, '*': True}])
 
         # try a failed save and make sure new revisions are not created
@@ -141,17 +141,17 @@ class DocumentTest(InfobaseTestCase):
         self.assertNotEqual(b.status, 200)
 
         q = {'key': '/new_page'}
-        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'key': '/new_page'})})
+        d = request('/test/versions', method='GET', data={'query': json.dumps({'key': '/new_page'})})
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 1, '*': True}])
 
-        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'limit': 1})})
+        d = request('/test/versions', method='GET', data={'query': json.dumps({'limit': 1})})
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 1, '*': True}])
 
         # save the page and make sure new revision is created.
         d = request('/test/save/new_page', method='POST', data=dict(x, title='foo'))
         self.assertEqual(d, {'key': '/new_page', 'revision': 2})
 
-        d = request('/test/versions', method='GET', data={'query': simplejson.dumps({'key': '/new_page'})})
+        d = request('/test/versions', method='GET', data={'query': json.dumps({'key': '/new_page'})})
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 2, '*': True}, {'key': '/new_page', 'revision': 1, '*': True}])
 
     def test_save_many(self):
@@ -159,14 +159,14 @@ class DocumentTest(InfobaseTestCase):
             {'key': '/one', 'type': {'key': '/type/object'}, 'n': 1},
             {'key': '/two', 'type': {'key': '/type/object'}, 'n': 2}
         ]
-        d = request('/test/save_many', method='POST', data=urlencode({'query': simplejson.dumps(q)}))
+        d = request('/test/save_many', method='POST', data=urlencode({'query': json.dumps(q)}))
         self.assertEqual(d, [{'key': '/one', 'revision': 1}, {'key': '/two', 'revision': 1}])
 
         self.assertEquals2(get('/one'), {'key': '/one', 'type': {'key': '/type/object'}, 'n': 1, 'revision': 1,'*': True})
         self.assertEquals2(get('/two'), {'key': '/two', 'type': {'key': '/type/object'}, 'n': 2, 'revision': 1, '*': True})
 
         # saving with same data should not create new revisions
-        d = request('/test/save_many', method='POST', data=urlencode({'query': simplejson.dumps(q)}))
+        d = request('/test/save_many', method='POST', data=urlencode({'query': json.dumps(q)}))
         self.assertEqual(d, [])
 
         # try bad query
@@ -175,7 +175,7 @@ class DocumentTest(InfobaseTestCase):
             {'key': '/one', 'type': {'key': '/type/object'}, 'n': 11},
             {'key': '/two', 'type': {'key': '/type/no-such-type'}, 'n': 2}
         ]
-        d = request('/test/save_many', method='POST', data=urlencode({'query': simplejson.dumps(q)}))
+        d = request('/test/save_many', method='POST', data=urlencode({'query': json.dumps(q)}))
         self.assertNotEqual(b.status, 200)
 
         d = get('/zero')

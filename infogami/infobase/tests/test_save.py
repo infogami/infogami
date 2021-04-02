@@ -1,7 +1,7 @@
 import datetime
 
 import pytest
-import simplejson
+import json
 from six import PY2, iteritems
 import web
 
@@ -79,7 +79,7 @@ class Test_get_records_for_save(DBTest):
     def test_existing(self):
         def insert(doc, revision, created, last_modified):
             id = db.insert('thing', key=doc['key'], latest_revision=revision, created=created, last_modified=last_modified)
-            db.insert('data', seqname=False, thing_id=id, revision=revision, data=simplejson.dumps(doc))
+            db.insert('data', seqname=False, thing_id=id, revision=revision, data= json.dumps(doc))
 
         created = datetime.datetime(2010, 1, 1, 1, 1, 1)
         a = {"key": "/a", "type": {"key": "/type/object"}, "title": "a"}
@@ -95,7 +95,7 @@ class Test_get_records_for_save(DBTest):
 class Test_save(DBTest):
     def get_json(self, key):
         d = db.query("SELECT data.data FROM thing, data WHERE data.thing_id=thing.id AND data.revision = thing.latest_revision AND thing.key = '/a'")
-        return simplejson.loads(d[0].data)
+        return json.loads(d[0].data)
 
     def test_save(self):
         s = SaveImpl(db)

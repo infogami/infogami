@@ -1,4 +1,4 @@
-import simplejson
+import json
 
 from infogami.infobase import client
 from infogami.infobase.tests import utils
@@ -178,7 +178,7 @@ class TestSanity:
     """Simple tests to make sure that queries are working fine via all these layers."""
     def test_reindex(self):
         keys = ['/type/page']
-        site._request("/reindex", method="POST", data={"keys": simplejson.dumps(keys)})
+        site._request("/reindex", method="POST", data={"keys": json.dumps(keys)})
 
 class TestAccount:
     """Test account creation, forgot password etc."""

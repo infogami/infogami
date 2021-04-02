@@ -1,0 +1,27 @@
+name: python_tests
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+jobs:
+  openlibrary_tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: [3.9]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Open Library
+        uses: actions/checkout@v2
+        with:
+          repository: internetarchive/openlibrary
+      - name: Checkout current Infogami
+        uses: actions/checkout@v2
+        with:
+          path: vendor/infogami
+      - uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -r requirements_test.txt
+      - run: make test-py

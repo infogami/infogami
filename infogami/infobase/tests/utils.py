@@ -3,7 +3,7 @@ from infogami.infobase import dbstore, client, server
 import os
 import web
 
-db_parameters = dict(dbn='postgres', db='infobase_test', user=os.getenv('USER'), pw='', pooling=False)
+db_parameters = dict(host='postgres', dbn='postgres', db='infobase_test', user=os.getenv('USER'), pw='', pooling=False)
 
 @web.memoize
 def recreate_database():
@@ -11,7 +11,8 @@ def recreate_database():
 
     This function is memoized to recreate the db only once per test session.
     """
-    assert os.system('dropdb infobase_test; createdb infobase_test') == 0
+    assert os.system('dropdb   --host=postgres infobase_test') == 0
+    assert os.system('createdb --host=postgres infobase_test') == 0
 
     db = web.database(**db_parameters)
 

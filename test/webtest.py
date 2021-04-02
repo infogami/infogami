@@ -33,7 +33,7 @@ def runTests(suite):
     
 def main(suite=None):
     user = os.getenv('USER')
-    web.config.db_parameters = dict(dbn='postgres', db='infogami_test', user=user, pw='')
+    web.config.db_parameters = dict(host='postgres', dbn='postgres', db='infogami_test', user=user, pw='')
     web.load()
 
     delegate.app.request('/')

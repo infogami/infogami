@@ -15,7 +15,7 @@ class InfobaseTestCase(unittest.TestCase):
 def site():
     #TODO: this does not clear data between tests. Make this work in scope=class
     user = os.getenv('USER')
-    web.config.db_parameters = dict(dbn='postgres', db='infobase_test', user=user, pw='')
+    web.config.db_parameters = dict(host='postgres', dbn='postgres', db='infobase_test', user=user, pw='')
     store = dbstore.DBStore(dbstore.Schema())
     store.db.printing = False
     ib = infobase.Infobase(store, 'secret')

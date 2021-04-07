@@ -10,7 +10,7 @@ To display flash messages in a template:
         <div class="$flash.type">$flash.message</div>
 """
 
-import simplejson
+import json
 import web
 
 def get_flash_messages():
@@ -25,7 +25,7 @@ def add_flash_message(type, message):
 def flash_processor(handler):
     flash = web.cookies(flash="[]").flash
     try:
-        flash = [web.storage(d) for d in simplejson.loads(flash) if isinstance(d, dict) and 'type' in d and 'message' in d]
+        flash = [web.storage(d) for d in json.loads(flash) if isinstance(d, dict) and 'type' in d and 'message' in d]
     except ValueError:
         flash = []
 
@@ -37,6 +37,6 @@ def flash_processor(handler):
         # Flash changed. Need to save it.
         if flash != web.ctx.flash:
             if web.ctx.flash:
-                web.setcookie('flash', simplejson.dumps(web.ctx.flash))
+                web.setcookie('flash', json.dumps(web.ctx.flash))
             else:
                 web.setcookie('flash', '', expires=-1)

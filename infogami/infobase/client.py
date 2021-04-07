@@ -3,12 +3,11 @@ from __future__ import print_function
 
 import datetime
 import logging
-import socket
 import time
 
+import requests
 import simplejson
 from six import iteritems, string_types, text_type, with_metaclass
-from six.moves.http_client import HTTPConnection
 from six.moves.http_cookies import SimpleCookie
 from six.moves.urllib_parse import urlencode, quote, unquote
 
@@ -142,7 +141,6 @@ class RemoteConnection(Connection):
                 data = None
 
         stats.begin("infobase", path=path, method=method, data=data)
-        conn = HTTPConnection(self.base_url)
         env = web.ctx.get('env') or {}
 
         if self.auth_token:
@@ -155,15 +153,16 @@ class RemoteConnection(Connection):
         headers['X-REMOTE-IP'] = web.ctx.get('ip') or ''
 
         try:
-            conn.request(method, path, data, headers=headers)
-            response = conn.getresponse()
+            response = requests.request(method, path, data=data, headers=headers)
+            if not response.ok:
+                response.raise_for_status()
             stats.end()
-        except socket.error:
+        except requests.exceptions.HTTPError:
             stats.end(error=True)
             logger.error("Unable to connect to infobase server", exc_info=True)
             raise ClientException("503 Service Unavailable", "Unable to connect to infobase server")
 
-        cookie = response.getheader('Set-Cookie')
+        cookie = response.headers.get('Set-Cookie')
         if cookie:
             c = SimpleCookie()
             c.load(cookie)
@@ -176,12 +175,12 @@ class RemoteConnection(Connection):
 
         if web.config.debug:
             b = time.time()
-            print("%.02f (%s):" % (round(b-a, 2), web.ctx.infobase_req_count), response.status, method, _path, _data, file=web.debug)
+            print("%.02f (%s):" % (round(b-a, 2), web.ctx.infobase_req_count), response.status_code, method, _path, _data, file=web.debug)
 
-        if response.status == 200:
-            return response.read()
+        if response.status_code == 200:
+            return response.content
         else:
-            self.handle_error("%d %s" % (response.status, response.reason), response.read())
+            self.handle_error("%d %s" % (response.status_code, response.reason), response.content)
 
 _connection_types = {
     'local': LocalConnection,

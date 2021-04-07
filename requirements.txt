@@ -1,4 +1,5 @@
 markdown
+requests
 simplejson
 six
 web.py==0.39; python_version < '3.5'

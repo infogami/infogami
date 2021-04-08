@@ -1,0 +1,9 @@
+-r requirements.txt
+black
+codespell
+flake8
+isort
+mypy
+psycopg2
+pytest
+pyupgrade

@@ -5,8 +5,8 @@ import datetime
 import logging
 import time
 
+import json
 import requests
-import simplejson
 from six import iteritems, string_types, text_type, with_metaclass
 from six.moves.http_cookies import SimpleCookie
 from six.moves.urllib_parse import urlencode, quote, unquote
@@ -48,7 +48,7 @@ class ClientException(Exception):
 
     def get_data(self):
         if self.json:
-            return simplejson.loads(self.json)
+            return json.loads(self.json)
         else:
             return {}
 
@@ -81,7 +81,7 @@ class Connection:
 
     def handle_error(self, status, error):
         try:
-            data = simplejson.loads(error)
+            data = json.loads(error)
             message = data.get('message', data.get('error', ''))
             json = error
         except Exception as e:
@@ -223,7 +223,7 @@ class Site:
 
         # Allow connection to return dict
         if self._conn.response_type != "dict":
-            out = simplejson.loads(out)
+            out = json.loads(out)
         return storify(out)
 
     def _get(self, key, revision=None):
@@ -334,7 +334,7 @@ class Site:
                 keys = keys[100:]
             return things
 
-        data = dict(keys=simplejson.dumps(keys))
+        data = dict(keys=json.dumps(keys))
         result = self._request('/get_many', data=data)
         things = []
 
@@ -356,7 +356,7 @@ class Site:
         return result
 
     def things(self, query, details=False):
-        query = simplejson.dumps(query)
+        query = json.dumps(query)
         return self._request('/things', 'GET', {'query': query, "details": str(details)})
 
     def versions(self, query):
@@ -365,12 +365,12 @@ class Site:
             v.created = parse_datetime(v.created)
             v.author = v.author and self.get(v.author, lazy=True)
             return v
-        query = simplejson.dumps(query)
+        query = json.dumps(query)
         versions =  self._request('/versions', 'GET', {'query': query})
         return [process(v) for v in versions]
 
     def recentchanges(self, query):
-        query = simplejson.dumps(query)
+        query = json.dumps(query)
         changes = self._request('/_recentchanges', 'GET', {'query': query})
         return [Changeset.create(self, c) for c in changes]
 
@@ -380,7 +380,7 @@ class Site:
 
     def write(self, query, comment=None, action=None):
         self._run_hooks('before_new_version', query)
-        _query = simplejson.dumps(query)
+        _query = json.dumps(query)
         result = self._request('/write', 'POST', dict(query=_query, comment=comment, action=action))
         self._run_hooks('on_new_version', query)
         self._invalidate_cache(result.created + result.updated)
@@ -396,7 +396,7 @@ class Site:
         key = query['key']
 
         #@@ save sends payload of application/json instead of form data
-        data = simplejson.dumps(query)
+        data = json.dumps(query)
         result = self._request('/save' + key, 'POST', data)
         if result:
             self._invalidate_cache([result['key']])
@@ -404,11 +404,11 @@ class Site:
         return result
 
     def save_many(self, query, comment=None, data=None, action=None):
-        _query = simplejson.dumps(query)
+        _query = json.dumps(query)
         #for q in query:
         #    self._run_hooks('before_new_version', q)
         data = data or {}
-        result = self._request('/save_many', 'POST', dict(query=_query, comment=comment, action=action, data=simplejson.dumps(data)))
+        result = self._request('/save_many', 'POST', dict(query=_query, comment=comment, action=action, data=json.dumps(data)))
         self._invalidate_cache([r['key'] for r in result])
         for q in query:
             self._run_hooks('on_new_version', q)
@@ -523,7 +523,7 @@ class Store:
 
     def _request(self, path, method='GET', data=None):
         out = self.conn.request(self.name, "/_store/" + path, method, data)
-        return simplejson.loads(out)
+        return json.loads(out)
 
     def delete(self, key):
         return self._request(key, method='DELETE')
@@ -531,7 +531,7 @@ class Store:
     def update(self, d={}, **kw):
         d2 = dict(d, **kw)
         docs = [dict(doc, _key=key) for key, doc in d2.items()]
-        self._request("_save_many", method="POST", data=simplejson.dumps(docs))
+        self._request("_save_many", method="POST", data=json.dumps(docs))
 
     def clear(self):
         """Removes all keys from the store. Use this with caution!"""
@@ -570,7 +570,7 @@ class Store:
                 raise
 
     def __setitem__(self, key, data):
-        return self._request(key, method='PUT', data=simplejson.dumps(data))
+        return self._request(key, method='PUT', data=json.dumps(data))
 
     def __delitem__(self, key):
         self.delete(key)
@@ -620,7 +620,7 @@ class Sequence:
 
     def _request(self, path, method='GET', data=None):
         out = self.conn.request(self.name, "/_seq/" + path, method, data)
-        return simplejson.loads(out)
+        return json.loads(out)
 
     def get_value(self, name):
         return self._request(name, method="GET")['value']
@@ -743,7 +743,7 @@ class Thing(object):
             # dict is not hashable and converting it to tuple of items isn't #
             # enough as values might again be dictionaries. The simplest
             # solution seems to be converting it to JSON.
-            return hash(simplejson.dumps(d, sort_keys=True))
+            return hash(json.dumps(d, sort_keys=True))
 
     def _getdata(self):
         if self._data is None:

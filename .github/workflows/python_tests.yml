@@ -43,6 +43,7 @@ jobs:
       - name: Install dependencies
         run: |
           source ~/infogami_python_venv/bin/activate
+          pip install --upgrade pip
           pip install -r requirements_test.txt
       - name: Run tests
         run: |

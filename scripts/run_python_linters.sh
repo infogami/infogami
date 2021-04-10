@@ -2,8 +2,7 @@
 # Used for GitHub actions
 
 # Run linters and formatters
-# FIXME: Remove `|| true` once the code is black compliant
-black --check . || true
+black --check .
 codespell . --ignore-words-list=ba,referer --quiet-level=2
 flake8 .
   \ --count

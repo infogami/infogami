@@ -69,6 +69,7 @@ class TestSaveTest:
     def test_expected_type(self, site):
         def p(name, expected_type, unique=True):
             return locals()
+
         self.new(
             site,
             key='/type/test',

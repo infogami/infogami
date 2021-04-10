@@ -88,11 +88,11 @@ class Connection:
         try:
             data = json.loads(error)
             message = data.get('message', data.get('error', ''))
-            json = error
+            json_data = error
         except Exception as e:
             message = error or str(e)
-            json = None
-        raise ClientException(status, message, json)
+            json_data = None
+        raise ClientException(status, message, json_data)
 
 
 class LocalConnection(Connection):

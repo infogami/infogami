@@ -1,0 +1,16 @@
+# This file is used to ignore specific commit revision for `git blame`. It
+# contains a list of commits that are not likely what you are looking for in a
+# blame, such as mass reformatting or renaming. It can be used by any of the
+# following ways:
+#
+# - Include the file in the command:
+#      $ git blame --ignore-revs-file .git-blame-ignore-revs <other options>
+#
+# - Through gitconfig (needs to be set per-project):
+#      $ git config blame.ignoreRevsFile .git-blame-ignore-revs
+#
+# Each commit has to be the full 40 character hash and comments are allowed.
+# Required git version: 2.23
+
+# Format the entire codebase through black (PR #162)
+42acd0ae22c27659959788fdbc82d89a4c35afd4

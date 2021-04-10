@@ -20,9 +20,11 @@ def _get_stats():
         context.stats = web.ctx.stats = []
     return web.ctx.stats
 
+
 def begin(name, **kw):
     stats = _get_stats()
     stats.append(web.storage(name=name, data=kw, t_start=time.time(), time=0.0))
+
 
 def end(**kw):
     stats = _get_stats()
@@ -31,6 +33,7 @@ def end(**kw):
     s.data.update(kw)
     s.t_end = time.time()
     s.time = s.t_end - s.t_start
+
 
 def stats_summary():
     d = web.storage()
@@ -49,6 +52,8 @@ def stats_summary():
 
     # consider the start time of first stat as start of the request
     total_time = time.time() - web.ctx.stats[0].t_start
-    d['total'] = web.storage(count=0, time=total_time, unaccounted=total_time-total_measured)
+    d['total'] = web.storage(
+        count=0, time=total_time, unaccounted=total_time - total_measured
+    )
 
     return d

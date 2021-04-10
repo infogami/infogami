@@ -11,6 +11,7 @@ def add_test(test):
 
         def do_test(test_method=test_method):
             test_method()
+
         name = "test_" + test.id().replace(".", "_")
         globals()[name] = do_test
 

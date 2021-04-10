@@ -3,12 +3,15 @@ from six import string_types
 
 from infogami.utils.view import public
 
+
 def get_version(path, revision=None):
     return web.ctx.site.get(path, revision)
+
 
 @public
 def get_type(path):
     return get_version(path)
+
 
 @public
 def get_expected_type(page, property_name):
@@ -17,7 +20,7 @@ def get_expected_type(page, property_name):
         "key": "/type/key",
         "type": "/type/type",
         "permission": "/type/permission",
-        "child_permission": "/type/permission"
+        "child_permission": "/type/permission",
     }
 
     if property_name in defaults:
@@ -29,6 +32,7 @@ def get_expected_type(page, property_name):
 
     return "/type/string"
 
+
 def new_version(path, type):
     if isinstance(type, string_types):
         type = get_type(type)
@@ -36,22 +40,31 @@ def new_version(path, type):
     assert type is not None
     return web.ctx.site.new(path, {'key': path, 'type': type})
 
+
 @public
 def get_i18n_page(page):
     key = page.key
     if key == '/':
         key = '/index'
+
     def get(lang):
-       return lang and get_version(key + '.' + lang)
+        return lang and get_version(key + '.' + lang)
+
     return get(web.ctx.lang) or get('en') or None
 
-class ValidationException(Exception): pass
+
+class ValidationException(Exception):
+    pass
+
 
 def get_user_preferences(user):
     return get_version(user.key + '/preferences')
 
+
 @public
-def get_recent_changes(key=None, author=None, ip=None, type=None, bot=None, limit=None, offset=None):
+def get_recent_changes(
+    key=None, author=None, ip=None, type=None, bot=None, limit=None, offset=None
+):
     q = {'sort': '-created'}
     if key is not None:
         q['key'] = key
@@ -75,10 +88,12 @@ def get_recent_changes(key=None, author=None, ip=None, type=None, bot=None, limi
         r.thing = web.ctx.site.get(r.key, r.revision, lazy=True)
     return result
 
+
 @public
 def list_pages(path, limit=100, offset=0):
     """Lists all pages with name path/*"""
     return _list_pages(path, limit=limit, offset=offset)
+
 
 def _list_pages(path, limit, offset):
     q = {}
@@ -96,13 +111,8 @@ def _list_pages(path, limit, offset):
     # q['type'] != '/type/delete'
     return [web.ctx.site.get(key, lazy=True) for key in web.ctx.site.things(q)]
 
+
 def get_things(typename, prefix, limit):
     """Lists all things whose names start with typename"""
-    q = {
-        'key~': prefix + '*',
-        'type': typename,
-        'sort': 'key',
-        'limit': limit
-    }
+    q = {'key~': prefix + '*', 'type': typename, 'sort': 'key', 'limit': limit}
     return [web.ctx.site.get(key, lazy=True) for key in web.ctx.site.things(q)]
-

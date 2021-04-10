@@ -13,9 +13,10 @@ def get_thing(store, key, revision=None):
     json = store.get(key, revision)
     return json and common.Thing.from_json(store, key, json)
 
+
 class PermissionEngine:
-    """Engine to check if a user has permission to modify a document.
-    """
+    """Engine to check if a user has permission to modify a document."""
+
     def __init__(self, store):
         self.store = store
         self.things = {}
@@ -52,6 +53,7 @@ class PermissionEngine:
 
     def get_permission(self, key):
         """Returns permission for the specified key."""
+
         def parent(key):
             if key == "/":
                 return None
@@ -63,12 +65,15 @@ class PermissionEngine:
                 return None
             thing = self.get_thing(key)
             if child_permission:
-                permission = thing and (thing.get("child_permission") or thing.get("permission"))
+                permission = thing and (
+                    thing.get("child_permission") or thing.get("permission")
+                )
             else:
                 permission = thing and thing.get("permission")
             return permission or _get_permission(parent(key), child_permission=True)
 
         return _get_permission(key)
+
 
 class SaveProcessor:
     def __init__(self, store, author):
@@ -84,7 +89,10 @@ class SaveProcessor:
 
     def process_many(self, docs):
         keys = [doc['key'] for doc in docs]
-        self.things = dict((doc['key'], common.Thing.from_dict(self.store, doc['key'], doc)) for doc in docs)
+        self.things = dict(
+            (doc['key'], common.Thing.from_dict(self.store, doc['key'], doc))
+            for doc in docs
+        )
 
         def parse_type(value):
             if isinstance(value, string_types):
@@ -102,7 +110,9 @@ class SaveProcessor:
         self.types.update(self.find_types(refs))
 
         prev_data = self.get_many(keys)
-        docs = [self._process(doc['key'], doc, prev_data.get(doc['key'])) for doc in docs]
+        docs = [
+            self._process(doc['key'], doc, prev_data.get(doc['key'])) for doc in docs
+        ]
 
         return [doc for doc in docs if doc]
 
@@ -158,8 +168,7 @@ class SaveProcessor:
         return self._process(key, data, prev_data.get(key))
 
     def _process(self, key, data, prev_data=None):
-        self.key = key # hack to make key available when raising exceptions.
-
+        self.key = key  # hack to make key available when raising exceptions.
 
         if 'key' not in data:
             data['key'] = key
@@ -173,8 +182,12 @@ class SaveProcessor:
         self.validate_properties(data)
         prev_data = prev_data and common.parse_query(prev_data)
 
-        if not web.ctx.get('disable_permission_check', False) and not self.has_permission(self.author, key):
-            raise common.PermissionDenied(message='Permission denied to modify %s' % repr(key))
+        if not web.ctx.get(
+            'disable_permission_check', False
+        ) and not self.has_permission(self.author, key):
+            raise common.PermissionDenied(
+                message='Permission denied to modify %s' % repr(key)
+            )
 
         type = data.get('type')
         if type is None:
@@ -202,9 +215,17 @@ class SaveProcessor:
 
     def get_property(self, type, name):
         if name == 'type':
-            return web.storage(name='type', expected_type=web.storage(key='/type/type', kind="regular"), unique=True)
+            return web.storage(
+                name='type',
+                expected_type=web.storage(key='/type/type', kind="regular"),
+                unique=True,
+            )
         elif name in ['permission', 'child_permission']:
-            return web.storage(name=name, expected_type=web.storage(key='/type/permission', kind="regular"), unique=True)
+            return web.storage(
+                name=name,
+                expected_type=web.storage(key='/type/permission', kind="regular"),
+                unique=True,
+            )
         else:
             for p in type.get('properties', []):
                 if p.get('name') == name:
@@ -214,7 +235,9 @@ class SaveProcessor:
         rx = web.re_compile('^[a-z][a-z0-9_]*$')
         for key in data:
             if not rx.match(key):
-                raise common.BadData(message="Bad Property: %s" % repr(key), at=dict(key=self.key))
+                raise common.BadData(
+                    message="Bad Property: %s" % repr(key), at=dict(key=self.key)
+                )
 
     def process_data(self, d, type, old_data=None, prefix=""):
         for k, v in list(d.items()):  # Avoid dictionary changed size during iteration
@@ -241,14 +264,18 @@ class SaveProcessor:
 
         if isinstance(value, list):
             if unique is True:
-                raise common.BadData(message='expected atom, found list', at=at, value=value)
+                raise common.BadData(
+                    message='expected atom, found list', at=at, value=value
+                )
 
             p = web.storage(property.copy())
             p.unique = True
             return [self.process_value(v, p) for v in value]
 
         if unique is False:
-            raise common.BadData(message='expected list, found atom', at=at, value=value)
+            raise common.BadData(
+                message='expected list, found atom', at=at, value=value
+            )
 
         type_found = common.find_type(value)
 
@@ -263,7 +290,9 @@ class SaveProcessor:
                 raise common.BadData(message=str(e), at=at, value=value)
         elif property.expected_type.kind == 'embeddable':
             if isinstance(value, dict):
-                return self.process_data(value, property.expected_type, prefix=at['property'] + ".")
+                return self.process_data(
+                    value, property.expected_type, prefix=at['property'] + "."
+                )
             else:
                 raise common.TypeMismatch(expected_type, type_found, at=at, value=value)
         else:
@@ -280,7 +309,12 @@ class SaveProcessor:
                 raise common.NotFound(key=text_type(value), at=at)
 
         if expected_type != type_found:
-            raise common.BadData(message='expected %s, found %s' % (property.expected_type.key, type_found), at=at, value=value)
+            raise common.BadData(
+                message='expected %s, found %s'
+                % (property.expected_type.key, type_found),
+                at=at,
+                value=value,
+            )
         return value
 
 
@@ -325,22 +359,23 @@ class WriteQueryProcessor:
     def connect_all(self, data, query):
         """Applies all connects specified in the query to data.
 
-            >>> p = WriteQueryProcessor(None, None)
-            >>> data = {'a': 'foo', 'b': ['foo', 'bar']}
+        >>> p = WriteQueryProcessor(None, None)
+        >>> data = {'a': 'foo', 'b': ['foo', 'bar']}
 
-            >>> query = {'a': {'connect': 'update', 'value': 'bar'}, 'b': {'connect': 'insert', 'value': 'foobar'}}
-            >>> p.connect_all(data, query)
-            {'a': 'bar', 'b': ['foo', 'bar', 'foobar']}
+        >>> query = {'a': {'connect': 'update', 'value': 'bar'}, 'b': {'connect': 'insert', 'value': 'foobar'}}
+        >>> p.connect_all(data, query)
+        {'a': 'bar', 'b': ['foo', 'bar', 'foobar']}
 
-            >>> query = {'a': {'connect': 'update', 'value': 'bar'}, 'b': {'connect': 'delete', 'value': 'foo'}}
-            >>> p.connect_all(data, query)
-            {'a': 'bar', 'b': ['bar']}
+        >>> query = {'a': {'connect': 'update', 'value': 'bar'}, 'b': {'connect': 'delete', 'value': 'foo'}}
+        >>> p.connect_all(data, query)
+        {'a': 'bar', 'b': ['bar']}
 
-            >>> query = {'a': {'connect': 'update', 'value': 'bar'}, 'b': {'connect': 'update_list', 'value': ['foo', 'foobar']}}
-            >>> p.connect_all(data, query)
-            {'a': 'bar', 'b': ['foo', 'foobar']}
+        >>> query = {'a': {'connect': 'update', 'value': 'bar'}, 'b': {'connect': 'update_list', 'value': ['foo', 'foobar']}}
+        >>> p.connect_all(data, query)
+        {'a': 'bar', 'b': ['foo', 'foobar']}
         """
         import copy
+
         data = copy.deepcopy(data)
 
         for k, v in query.items():
@@ -356,19 +391,19 @@ class WriteQueryProcessor:
     def connect(self, data, name, connect, value):
         """Modifies the data dict by performing the specified connect.
 
-            >>> getdata = lambda: {'a': 'foo', 'b': ['foo', 'bar']}
-            >>> p = WriteQueryProcessor(None, None)
+        >>> getdata = lambda: {'a': 'foo', 'b': ['foo', 'bar']}
+        >>> p = WriteQueryProcessor(None, None)
 
-            >>> p.connect(getdata(), 'a', 'update', 'bar')
-            {'a': 'bar', 'b': ['foo', 'bar']}
-            >>> p.connect(getdata(), 'b', 'update_list', ['foobar'])
-            {'a': 'foo', 'b': ['foobar']}
-            >>> p.connect(getdata(), 'b', 'insert', 'foobar')
-            {'a': 'foo', 'b': ['foo', 'bar', 'foobar']}
-            >>> p.connect(getdata(), 'b', 'insert', 'foo')
-            {'a': 'foo', 'b': ['foo', 'bar']}
-            >>> p.connect(getdata(), 'b', 'delete', 'foobar')
-            {'a': 'foo', 'b': ['foo', 'bar']}
+        >>> p.connect(getdata(), 'a', 'update', 'bar')
+        {'a': 'bar', 'b': ['foo', 'bar']}
+        >>> p.connect(getdata(), 'b', 'update_list', ['foobar'])
+        {'a': 'foo', 'b': ['foobar']}
+        >>> p.connect(getdata(), 'b', 'insert', 'foobar')
+        {'a': 'foo', 'b': ['foo', 'bar', 'foobar']}
+        >>> p.connect(getdata(), 'b', 'insert', 'foo')
+        {'a': 'foo', 'b': ['foo', 'bar']}
+        >>> p.connect(getdata(), 'b', 'delete', 'foobar')
+        {'a': 'foo', 'b': ['foo', 'bar']}
         """
         if connect == 'update' or connect == 'update_list':
             data[name] = value
@@ -379,6 +414,7 @@ class WriteQueryProcessor:
             if value in data[name]:
                 data[name].remove(value)
         return data
+
 
 def serialize(query):
     ""
@@ -444,16 +480,20 @@ def serialize(query):
             'key': '/foo'
         }]
     """
+
     def flatten(query, result, path=[], from_list=False):
         """This does two things.
-	    1. It flattens the query and appends it to result.
+            1. It flattens the query and appends it to result.
         2. It returns its minimal value to use in parent query.
         """
         if isinstance(query, list):
-            data = [flatten(q, result, path + [str(i)], from_list=True) for i, q in enumerate(query)]
+            data = [
+                flatten(q, result, path + [str(i)], from_list=True)
+                for i, q in enumerate(query)
+            ]
             return data
         elif isinstance(query, dict):
-            #@@ FIX ME
+            # @@ FIX ME
             q = query.copy()
             for k, v in q.items():
                 q[k] = flatten(v, result, path + [k])
@@ -462,15 +502,23 @@ def serialize(query):
                 result.append(q)
 
             if from_list:
-                #@@ quick fix
+                # @@ quick fix
                 if 'key' in q:
                     data = {'key': q['key']}
                 else:
                     # take keys (connect, key, type, value) from q
-                    data = dict((k, v) for k, v in q.items() if k in ("connect", "key", "type", "value"))
+                    data = dict(
+                        (k, v)
+                        for k, v in q.items()
+                        if k in ("connect", "key", "type", "value")
+                    )
             else:
                 # take keys (connect, key, type, value) from q
-                data = dict((k, v) for k, v in q.items() if k in ("connect", "key", "type", "value"))
+                data = dict(
+                    (k, v)
+                    for k, v in q.items()
+                    if k in ("connect", "key", "type", "value")
+                )
             return data
         else:
             return query
@@ -479,6 +527,8 @@ def serialize(query):
     flatten(query, result)
     return result
 
+
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

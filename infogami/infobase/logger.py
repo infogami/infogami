@@ -19,6 +19,7 @@ import simplejson
 
 def synchronize(f):
     """decorator to synchronize a method."""
+
     def g(self, *a, **kw):
         if not getattr(self, '_lock'):
             self._lock = threading.Lock()
@@ -31,19 +32,21 @@ def synchronize(f):
 
     return f
 
+
 def to_timestamp(iso_date_string):
     """
-        >>> t = '2008-01-01T01:01:01.010101'
-        >>> to_timestamp(t).isoformat()
-        '2008-01-01T01:01:01.010101'
+    >>> t = '2008-01-01T01:01:01.010101'
+    >>> to_timestamp(t).isoformat()
+    '2008-01-01T01:01:01.010101'
     """
-    #@@ python datetime module is ugly.
-    #@@ It takes so much of work to create datetime from isoformat.
+    # @@ python datetime module is ugly.
+    # @@ It takes so much of work to create datetime from isoformat.
     date, time = iso_date_string.split('T', 1)
     y, m, d = date.split('-')
     H, M, S = time.split(':')
     S, ms = S.split('.')
     return datetime.datetime(*map(int, [y, m, d, H, M, S, ms]))
+
 
 class DummyLogger:
     def __init__(self, *a, **kw):
@@ -61,11 +64,13 @@ class DummyLogger:
     def __call__(self, event):
         pass
 
+
 class Logger:
     def __init__(self, root, compress=False):
         self.root = root
         if compress:
             import gzip
+
             self.extn = ".log.gz"
             self._open = gzip.open
         else:
@@ -75,7 +80,12 @@ class Logger:
     def get_path(self, timestamp=None):
         timestamp = timestamp or datetime.datetime.utcnow()
         date = timestamp.date()
-        return os.path.join(self.root, "%02d" % date.year, "%02d" % date.month, "%02d" % date.day) + self.extn
+        return (
+            os.path.join(
+                self.root, "%02d" % date.year, "%02d" % date.month, "%02d" % date.day
+            )
+            + self.extn
+        )
 
     def __call__(self, event):
         data = event.data.copy()
@@ -105,13 +115,24 @@ class Logger:
         if not os.path.exists(dir):
             os.makedirs(dir)
         f = self._open(path, 'a')
-        f.write(simplejson.dumps(dict(action=action, site=sitename, timestamp=timestamp.isoformat(), data=data)))
+        f.write(
+            simplejson.dumps(
+                dict(
+                    action=action,
+                    site=sitename,
+                    timestamp=timestamp.isoformat(),
+                    data=data,
+                )
+            )
+        )
         f.write('\n')
         f.flush()
-        #@@ optimize: call fsync after all modifications are written instead of calling for every modification
+        # @@ optimize: call fsync after all modifications are written instead of calling for every modification
         os.fsync(f.fileno())
         f.close()
 
+
 if __name__ == '__main__':
     import doctest
+
     doctest.testmod()

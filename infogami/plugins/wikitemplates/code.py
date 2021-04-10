@@ -4,6 +4,7 @@ wikitemplates: allow keeping templates and macros in wiki
 from __future__ import print_function
 
 import os
+
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -23,8 +24,10 @@ from infogami.utils.view import require_login
 
 LazyTemplate = template.LazyTemplate
 
+
 class WikiSource(Mapping):
     """Template source for templates in the wiki"""
+
     def __init__(self, templates):
         self.templates = templates
 
@@ -62,6 +65,7 @@ class WikiSource(Mapping):
         key = web.rstrips(key, '.tmpl')
         return key
 
+
 class MacroSource(WikiSource):
     def process_key(self, key):
         # macro foo is available at path macros/foo
@@ -70,11 +74,15 @@ class MacroSource(WikiSource):
     def unprocess_key(self, key):
         return web.lstrips(key, '/macros/')
 
+
 def get_user_preferences():
-    #@ quick hack to avoid querying for user_preferences again and again
+    # @ quick hack to avoid querying for user_preferences again and again
     if 'user_preferences' not in web.ctx:
-        web.ctx.user_preferences = context.get('user') and web.ctx.site.get(context.user.key + "/preferences")
+        web.ctx.user_preferences = context.get('user') and web.ctx.site.get(
+            context.user.key + "/preferences"
+        )
     return web.ctx.user_preferences
+
 
 def get_user_root():
     i = web.input(_method='GET')
@@ -83,15 +91,20 @@ def get_user_root():
     preferences = get_user_preferences()
     return preferences and preferences.get("template_root", None)
 
+
 class UserSource(WikiSource):
     """Template source for user templates."""
+
     def getroot(self):
         return get_user_root()
 
+
 class UserMacroSource(MacroSource):
     """Template source for user macros."""
+
     def getroot(self):
         return get_user_root()
+
 
 wikitemplates = storage.SiteLocalDict()
 template.render.add_source(WikiSource(wikitemplates))
@@ -100,6 +113,7 @@ template.render.add_source(UserSource(wikitemplates))
 wikimacros = storage.SiteLocalDict()
 macro.macrostore.add_dict(MacroSource(wikimacros))
 macro.macrostore.add_dict(UserMacroSource(wikimacros))
+
 
 class hooks(client.hook):
     def on_new_version(self, page):
@@ -128,6 +142,7 @@ def _stringify(value):
     else:
         return value
 
+
 def _compile_template(name, text):
     text = web.safestr(_stringify(text))
 
@@ -136,8 +151,10 @@ def _compile_template(name, text):
     except (web.template.ParseError, SyntaxError) as e:
         print('Template parsing failed for ', name, file=web.debug)
         import traceback
+
         traceback.print_exc()
         raise ValidationException("Template parsing failed: " + str(e))
+
 
 def _load_template(page, lazy=False):
     """load template from a wiki page."""
@@ -147,14 +164,20 @@ def _load_template(page, lazy=False):
     else:
         wikitemplates[page.key] = _compile_template(page.key, page.body)
 
+
 def _load_macro(page, lazy=False):
     if lazy:
-        page = web.storage(key=page.key, macro=web.safestr(_stringify(page.macro)), description=page.description or "")
+        page = web.storage(
+            key=page.key,
+            macro=web.safestr(_stringify(page.macro)),
+            description=page.description or "",
+        )
         wikimacros[page.key] = LazyTemplate(lambda: _load_macro(page))
     else:
         t = _compile_template(page.key, page.macro)
         t.__doc__ = page.description or ''
         wikimacros[page.key] = t
+
 
 def load_all():
     def load_macros(site):
@@ -170,24 +193,29 @@ def load_all():
         load_macros(site)
         load_templates(site)
 
+
 def setup():
     delegate.fakeload()
 
     load_all()
 
     from infogami.utils import types
+
     types.register_type(r'/templates/.*\.tmpl$', '/type/template')
     types.register_type('^/type/[^/]*$', '/type/type')
     types.register_type('/macros/.*$', '/type/macro')
+
 
 def reload():
     """Reload all templates and macros."""
     load_all()
 
+
 @infogami.install_hook
 @infogami.action
 def movetemplates(prefix_pattern=None):
     """Move templates to wiki."""
+
     def get_title(name):
         if name.startswith('/type/'):
             type, name = name.rsplit('/', 1)
@@ -212,7 +240,13 @@ def movetemplates(prefix_pattern=None):
         if prefix_pattern is None or wikipath.startswith(prefix_pattern):
             title = get_title(name)
             body = open(t.filepath).read()
-            d = web.storage(create='unless_exists', key=wikipath, type={"key": '/type/template'}, title=title, body=dict(connect='update', value=body))
+            d = web.storage(
+                create='unless_exists',
+                key=wikipath,
+                type={"key": '/type/template'},
+                title=title,
+                body=dict(connect='update', value=body),
+            )
             templates.append(d)
 
     delegate.admin_login()
@@ -221,6 +255,7 @@ def movetemplates(prefix_pattern=None):
         print("created", p)
     for p in result.updated:
         print("updated", p)
+
 
 @infogami.install_hook
 @infogami.action
@@ -235,7 +270,13 @@ def movemacros():
     for name, m in macro.diskmacros.items():
         key = _wikiname(name, '/macros/', '')
         body = open(m.filepath).read()
-        d = web.storage(create='unless_exists', key=key, type={'key': '/type/macro'}, description='', macro=body)
+        d = web.storage(
+            create='unless_exists',
+            key=key,
+            type={'key': '/type/macro'},
+            description='',
+            macro=body,
+        )
         macros.append(d)
     delegate.admin_login()
     result = web.ctx.site.write(macros)
@@ -244,17 +285,22 @@ def movemacros():
     for p in result.updated:
         print("updated", p)
 
+
 def _wikiname(name, prefix, suffix):
     base, extn = os.path.splitext(name)
     return prefix + base + suffix
 
+
 def _new_version(name, typename, d):
     from infogami.core import db
+
     type = db.get_type(context.site, typename)
     db.new_version(context.site, name, type, d).save()
 
+
 class template_preferences(delegate.page):
     """Preferences to choose template root."""
+
     path = "/account/preferences/template_preferences"
     title = "Change Template Root"
 
@@ -273,29 +319,31 @@ class template_preferences(delegate.page):
             "create": "unless_exists",
             "type": "/type/object",
             "key": context.user.key + "/preferences",
-            "template_root": {
-                "connect": "update",
-                "value": i.path
-            }
+            "template_root": {"connect": "update", "value": i.path},
         }
         web.ctx.site.write(q)
         raise web.seeother('/account/preferences')
 
+
 def monkey_patch_debugerror():
     """Monkey patch web.debug error to display template code."""
+
     def xopen(filename):
         if filename.endswith('.tmpl') or filename.startswith('/macros/'):
             page = web.ctx.site.get(filename)
             if page is None:
                 raise IOError("not found: " + filename)
             from six import StringIO
+
             return StringIO(page.body + "\n" * 100)
         else:
             return open(filename)
 
     web.debugerror.func_globals['open'] = xopen
 
+
 from infogami.core.code import register_preferences
+
 register_preferences(template_preferences)
 
 # load templates and macros from all sites.

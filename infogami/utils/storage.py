@@ -3,6 +3,7 @@ Useful datastructures.
 """
 
 from collections import defaultdict, OrderedDict
+
 try:
     from collections.abc import Mapping
 except ImportError:
@@ -23,6 +24,7 @@ class SiteLocalDict:
     Active site is found from `context.site`.
     see infogami.utils.context.context
     """
+
     def __init__(self):
         self.__dict__['_SiteLocalDict__d'] = {}
 
@@ -42,8 +44,10 @@ class SiteLocalDict:
             self.__d[key] = web.storage()
         return self.__d[key]
 
+
 class ReadOnlyDict:
     """Dictionary wrapper to provide read-only access to a dictionary."""
+
     def __init__(self, d):
         self._d = d
 
@@ -55,6 +59,7 @@ class ReadOnlyDict:
             return self._d[key]
         except KeyError:
             raise AttributeError(key)
+
 
 class DictPile(Mapping):
     """Pile of ditionaries.
@@ -90,12 +95,12 @@ class DictPile(Mapping):
         >>> 'nope' in d
         False
     """
+
     def __init__(self, dicts=[]):
         self.dicts = dicts[:]
 
     def add_dict(self, d):
-        """Adds d to the pile of dicts at the top.
-        """
+        """Adds d to the pile of dicts at the top."""
         self.dicts.append(d)
 
     def __getitem__(self, key):
@@ -121,4 +126,5 @@ class DictPile(Mapping):
 
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

@@ -10,17 +10,22 @@ from infogami.utils.context import context as ctx
 
 import web
 
+
 def get_db_version():
     return tdb.root.d.get('__version__', 0)
 
+
 upgrades = []
+
 
 def upgrade(f):
     upgrades.append(f)
     return f
 
+
 def apply_upgrades():
     from infogami import tdb
+
     tdb.transact()
     try:
         v = get_db_version()
@@ -34,18 +39,22 @@ def apply_upgrades():
     except:
         print('upgrade failed', file=web.debug)
         import traceback
+
         traceback.print_exc()
         tdb.rollback()
 
-@infogami.action        
+
+@infogami.action
 def dbupgrade():
     apply_upgrades()
+
 
 def mark_upgrades():
     tdb.root.__version__ = len(upgrades)
     tdb.root.save()
 
-@upgrade    
+
+@upgrade
 def hash_passwords():
     from infogami.core import auth
 
@@ -57,11 +66,14 @@ def hash_passwords():
             preferences = u._c('preferences')
         except:
             # setup preferences for broken accounts, so that they can use forgot password.
-            preferences = db.new_version(u, 'preferences', db.get_type(ctx.site,'type/thing'), dict(password=''))
+            preferences = db.new_version(
+                u, 'preferences', db.get_type(ctx.site, 'type/thing'), dict(password='')
+            )
             preferences.save()
 
         if preferences.password:
             auth.set_password(u, preferences.password)
+
 
 @upgrade
 def upgrade_types():
@@ -71,7 +83,9 @@ def upgrade_types():
     type = db.get_type(ctx.site, "type/type")
     types = tdb.Things(parent=ctx.site, type=type)
     types = [t for t in types if 'properties' not in t.d and 'is_primitive' not in t.d]
-    primitives = dict(int='type/int', integer='type/int', string='type/string', text='type/text')
+    primitives = dict(
+        int='type/int', integer='type/int', string='type/string', text='type/text'
+    )
 
     newtypes = {}
     for t in types:

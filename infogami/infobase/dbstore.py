@@ -20,14 +20,15 @@ default_schema = None
 
 logger = logging.getLogger("infobase")
 
+
 def process_json(key, json):
-    """Hook to process json.
-    """
+    """Hook to process json."""
     return json
 
+
 class DBSiteStore(common.SiteStore):
-    """
-    """
+    """"""
+
     def __init__(self, db, schema):
         self.db = db
         self.schema = schema
@@ -51,7 +52,9 @@ class DBSiteStore(common.SiteStore):
             key = text_type(key)
 
         if for_update:
-            d = self.db.query('SELECT * FROM thing WHERE key=$key FOR UPDATE NOWAIT', vars=locals())
+            d = self.db.query(
+                'SELECT * FROM thing WHERE key=$key FOR UPDATE NOWAIT', vars=locals()
+            )
         else:
             d = self.db.query('SELECT * FROM thing WHERE key=$key', vars=locals())
         return d and d[0] or None
@@ -60,7 +63,9 @@ class DBSiteStore(common.SiteStore):
         if not keys:
             return {}
 
-        result = self.db.select('thing', what='*', where="key IN $keys", vars=locals()).list()
+        result = self.db.select(
+            'thing', what='*', where="key IN $keys", vars=locals()
+        ).list()
         d = dict((r.key, r) for r in result)
         return d
 
@@ -75,7 +80,9 @@ class DBSiteStore(common.SiteStore):
         if not ids:
             return {}
 
-        result = self.db.select('thing', what='*', where="id IN $ids", vars=locals()).list()
+        result = self.db.select(
+            'thing', what='*', where="id IN $ids", vars=locals()
+        ).list()
         d = dict((r.id, r) for r in result)
         return d
 
@@ -85,7 +92,9 @@ class DBSiteStore(common.SiteStore):
             # repeat until a non-existing key is found.
             # This is required to prevent error in cases where an object with the next key is already created.
             while True:
-                value = self.db.query("SELECT NEXTVAL($seq.name) as value", vars=locals())[0].value
+                value = self.db.query(
+                    "SELECT NEXTVAL($seq.name) as value", vars=locals()
+                )[0].value
                 key = seq.pattern % value
                 if self.get_metadata(key) is None:
                     return key
@@ -108,7 +117,10 @@ class DBSiteStore(common.SiteStore):
         if not metadata:
             return None
         revision = revision or metadata.latest_revision
-        d = self.db.query('SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision', vars=locals())
+        d = self.db.query(
+            'SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision',
+            vars=locals(),
+        )
         json = d and d[0].data or None
         return json
 
@@ -116,9 +128,11 @@ class DBSiteStore(common.SiteStore):
         if not keys:
             return {}
 
-        query = 'SELECT thing.key, data.data from thing, data' \
-            + ' WHERE data.revision = thing.latest_revision and data.thing_id=thing.id' \
+        query = (
+            'SELECT thing.key, data.data from thing, data'
+            + ' WHERE data.revision = thing.latest_revision and data.thing_id=thing.id'
             + ' AND thing.key IN $keys'
+        )
 
         return dict((row.key, row.data) for row in self.db.query(query, vars=locals()))
 
@@ -127,9 +141,13 @@ class DBSiteStore(common.SiteStore):
             return '{}'
 
         xkeys = [web.reparam('$k', dict(k=k)) for k in keys]
-        query = 'SELECT thing.key, data.data from thing, data ' \
-            + 'WHERE data.revision = thing.latest_revision and data.thing_id=thing.id ' \
-            + ' AND thing.key IN (' + self.sqljoin(xkeys, ', ') + ')'
+        query = (
+            'SELECT thing.key, data.data from thing, data '
+            + 'WHERE data.revision = thing.latest_revision and data.thing_id=thing.id '
+            + ' AND thing.key IN ('
+            + self.sqljoin(xkeys, ', ')
+            + ')'
+        )
 
         def process(query):
             yield '{\n'
@@ -140,12 +158,24 @@ class DBSiteStore(common.SiteStore):
                 yield ": "
                 yield process_json(r.key, r.data)
             yield '}'
+
         return "".join(process(query))
 
     def save_many(self, docs, timestamp, comment, data, ip, author, action=None):
         docs = list(docs)
         action = action or "bulk_update"
-        logger.debug("saving %d docs - %s", len(docs), dict(timestamp=timestamp, comment=comment, data=data, ip=ip, author=author, action=action))
+        logger.debug(
+            "saving %d docs - %s",
+            len(docs),
+            dict(
+                timestamp=timestamp,
+                comment=comment,
+                data=data,
+                ip=ip,
+                author=author,
+                action=action,
+            ),
+        )
 
         s = SaveImpl(self.db, self.schema, self.indexer, self.property_manager)
 
@@ -153,7 +183,15 @@ class DBSiteStore(common.SiteStore):
         s.process_json = process_json
 
         docs = common.format_data(docs)
-        changeset = s.save(docs, timestamp=timestamp, comment=comment, ip=ip, author=author, action=action, data=data)
+        changeset = s.save(
+            docs,
+            timestamp=timestamp,
+            comment=comment,
+            ip=ip,
+            author=author,
+            action=action,
+            data=data,
+        )
 
         # update cache.
         # Use the docs from result as they contain the updated revision and last_modified fields.
@@ -162,10 +200,23 @@ class DBSiteStore(common.SiteStore):
 
         return changeset
 
-    def save(self, key, doc, timestamp=None, comment=None, data=None, ip=None, author=None, transaction_id=None, action=None):
+    def save(
+        self,
+        key,
+        doc,
+        timestamp=None,
+        comment=None,
+        data=None,
+        ip=None,
+        author=None,
+        transaction_id=None,
+        action=None,
+    ):
         logger.debug("saving %s", key)
         timestamp = timestamp or datetime.datetime.utcnow
-        return self.save_many([doc], timestamp, comment, data, ip, author, action=action or "update")
+        return self.save_many(
+            [doc], timestamp, comment, data, ip, author, action=action or "update"
+        )
 
     def reindex(self, keys):
         s = SaveImpl(self.db, self.schema, self.indexer, self.property_manager)
@@ -193,7 +244,9 @@ class DBSiteStore(common.SiteStore):
         _sort = query.sort and query.sort.key
         if _sort and _sort.startswith('-'):
             _sort = _sort[1:]
-        type_required = bool([c for c in query.conditions if c.key not in common_properties]) or (_sort and _sort not in common_properties)
+        type_required = bool(
+            [c for c in query.conditions if c.key not in common_properties]
+        ) or (_sort and _sort not in common_properties)
 
         if type_required and type is None:
             raise common.BadData("Type Required")
@@ -249,9 +302,9 @@ class DBSiteStore(common.SiteStore):
                 op = Literal(c.op)
 
             if c.key in ['key', 'type', 'created', 'last_modified']:
-                #@@ special optimization to avoid join with thing.type when there are non-common properties in the query.
-                #@@ Since type information is already present in property table,
-                #@@ getting property id is equivalent to join with type.
+                # @@ special optimization to avoid join with thing.type when there are non-common properties in the query.
+                # @@ Since type information is already present in property table,
+                # @@ getting property id is equivalent to join with type.
                 if c.key == 'type' and type_required:
                     return
 
@@ -269,7 +322,9 @@ class DBSiteStore(common.SiteStore):
                 if not key_id:
                     raise StopIteration
 
-                q1 = web.reparam('%(table)s.key_id=$key_id' % {'table': table}, locals())
+                q1 = web.reparam(
+                    '%(table)s.key_id=$key_id' % {'table': table}, locals()
+                )
 
                 if isinstance(c.value, list):
                     q2 = web.sqlors('%s.value %s ' % (table, op), c.value)
@@ -283,6 +338,7 @@ class DBSiteStore(common.SiteStore):
 
         def make_ordering_func():
             d = web.storage(table=None)
+
             def f(table):
                 d.table = d.table or table
                 if d.table == table:
@@ -290,6 +346,7 @@ class DBSiteStore(common.SiteStore):
                     return "1 = 1"
                 else:
                     return '%s.ordering = %s.ordering' % (table, d.table)
+
             return f
 
         def process_query(q, ordering_func=None):
@@ -310,7 +367,7 @@ class DBSiteStore(common.SiteStore):
                     ascending = ""
 
                 if sort_key in ['key', 'type', 'created', 'last_modified']:
-                    order = 'thing.' + sort_key # make sure c.key is valid
+                    order = 'thing.' + sort_key  # make sure c.key is valid
                     # Add thing table explicitly because get_table is not called
                     tables['_thing'] = DBTable("thing")
                 else:
@@ -336,9 +393,12 @@ class DBSiteStore(common.SiteStore):
 
         def add_joins():
             labels = [t.label for t in tables.values()]
+
             def get_column(table):
-                if table == 'thing': return 'thing.id'
-                else: return table + '.thing_id'
+                if table == 'thing':
+                    return 'thing.id'
+                else:
+                    return table + '.thing_id'
 
             if len(labels) > 1:
                 x = labels[0]
@@ -351,7 +411,10 @@ class DBSiteStore(common.SiteStore):
 
         t = self.db.transaction()
         if config.query_timeout:
-            self.db.query("SELECT set_config('statement_timeout', $query_timeout, false)", dict(query_timeout=config.query_timeout))
+            self.db.query(
+                "SELECT set_config('statement_timeout', $query_timeout, false)",
+                dict(query_timeout=config.query_timeout),
+            )
 
         if 'thing' in table_names:
             result = self.db.select(
@@ -361,7 +424,7 @@ class DBSiteStore(common.SiteStore):
                 order=order,
                 limit=query.limit,
                 offset=query.offset,
-                )
+            )
             keys = [r.key for r in result]
         else:
             result = self.db.select(
@@ -373,7 +436,9 @@ class DBSiteStore(common.SiteStore):
                 offset=query.offset,
             )
             ids = [r.thing_id for r in result]
-            rows = ids and self.db.query('SELECT id, key FROM thing where id in $ids', vars={"ids": ids})
+            rows = ids and self.db.query(
+                'SELECT id, key FROM thing where id in $ids', vars={"ids": ids}
+            )
             d = dict((r.id, r.key) for r in rows)
             keys = [d[id] for id in ids]
         t.commit()
@@ -401,14 +466,15 @@ class DBSiteStore(common.SiteStore):
         return engine.recentchanges(limit=limit, offset=offset, **kwargs)
 
     def get_change(self, id):
-        """Return the info about the requested change.
-        """
+        """Return the info about the requested change."""
         engine = RecentChanges(self.db)
         return engine.get_change(id)
 
     def versions(self, query):
         what = 'thing.key, version.revision, transaction.*'
-        where = 'version.thing_id = thing.id AND version.transaction_id = transaction.id'
+        where = (
+            'version.thing_id = thing.id AND version.transaction_id = transaction.id'
+        )
 
         if config.get('use_machine_comment'):
             what += ", version.machine_comment"
@@ -422,7 +488,16 @@ class DBSiteStore(common.SiteStore):
 
         for c in query.conditions:
             key, value = c.key, c.value
-            assert key in ['key', 'type', 'author', 'ip', 'comment', 'created', 'bot', 'revision']
+            assert key in [
+                'key',
+                'type',
+                'author',
+                'ip',
+                'comment',
+                'created',
+                'bot',
+                'revision',
+            ]
 
             try:
                 if key == 'key':
@@ -441,9 +516,14 @@ class DBSiteStore(common.SiteStore):
                     if key == 'bot' and not config.use_bot_column:
                         bots = get_bot_users(self.db)
                         if value is True or str(value).lower() == "true":
-                            where += web.reparam(" AND transaction.author_id IN $bots", {"bots": bots})
+                            where += web.reparam(
+                                " AND transaction.author_id IN $bots", {"bots": bots}
+                            )
                         else:
-                            where += web.reparam(" AND (transaction.author_id NOT IN $bots OR transaction.author_id IS NULL)", {"bots": bots})
+                            where += web.reparam(
+                                " AND (transaction.author_id NOT IN $bots OR transaction.author_id IS NULL)",
+                                {"bots": bots},
+                            )
                         continue
                     else:
                         key = 'transaction.' + key
@@ -461,9 +541,19 @@ class DBSiteStore(common.SiteStore):
 
         t = self.db.transaction()
         if config.query_timeout:
-            self.db.query("SELECT set_config('statement_timeout', $query_timeout, false)", dict(query_timeout=config.query_timeout))
+            self.db.query(
+                "SELECT set_config('statement_timeout', $query_timeout, false)",
+                dict(query_timeout=config.query_timeout),
+            )
 
-        result = self.db.select(['thing','version', 'transaction'], what=what, where=where, offset=query.offset, limit=query.limit, order=sort)
+        result = self.db.select(
+            ['thing', 'version', 'transaction'],
+            what=what,
+            where=where,
+            offset=query.offset,
+            limit=query.limit,
+            order=sort,
+        )
         result = result.list()
         author_ids = list(set(r.author_id for r in result if r.author_id))
         authors = self.get_metadata_list_from_ids(author_ids)
@@ -480,7 +570,9 @@ class DBSiteStore(common.SiteStore):
         if metadata is None:
             return None
 
-        d = self.db.query("SELECT * FROM account WHERE thing_id=$metadata.id", vars=locals())
+        d = self.db.query(
+            "SELECT * FROM account WHERE thing_id=$metadata.id", vars=locals()
+        )
         return d and d[0] or None
 
     def update_user_details(self, key, **params):
@@ -494,11 +586,15 @@ class DBSiteStore(common.SiteStore):
             if v is None:
                 del params[k]
 
-        self.db.update('account', where='thing_id=$metadata.id', vars=locals(), **params)
+        self.db.update(
+            'account', where='thing_id=$metadata.id', vars=locals(), **params
+        )
 
     def register(self, key, email, enc_password):
         metadata = self.get_metadata(key)
-        self.db.insert('account', False, email=email, password=enc_password, thing_id=metadata.id)
+        self.db.insert(
+            'account', False, email=email, password=enc_password, thing_id=metadata.id
+        )
 
     def transact(self, f):
         t = self.db.transaction()
@@ -530,12 +626,14 @@ class DBSiteStore(common.SiteStore):
                 created={'type': '/type/datetime', 'value': last_modified},
                 revision=1,
                 latest_revision=1,
-                id=id
+                id=id,
             )
 
             self.db.update('thing', type=id, where='id=$id', vars=locals())
             self.db.insert('version', False, thing_id=id, revision=1)
-            self.db.insert('data', False, thing_id=id, revision=1, data=simplejson.dumps(data))
+            self.db.insert(
+                'data', False, thing_id=id, revision=1, data=simplejson.dumps(data)
+            )
             t.commit()
 
     def initialized(self):
@@ -556,10 +654,12 @@ class DBSiteStore(common.SiteStore):
         t.commit()
         self.cache.clear()
 
+
 class DBStore(common.Store):
     """StoreFactory that works with single site.
     It always returns a the same site irrespective of the sitename.
     """
+
     def __init__(self, schema):
         self.schema = schema
         self.sitestore = None
@@ -598,9 +698,10 @@ class DBStore(common.Store):
         d = self.get(sitename)
         d and d.delete()
 
+
 class MultiDBStore(DBStore):
-    """DBStore that works with multiple sites.
-    """
+    """DBStore that works with multiple sites."""
+
     def __init__(self, schema):
         self.schema = schema
         self.sitestores = {}
@@ -626,7 +727,9 @@ class MultiDBStore(DBStore):
             if site_id is None:
                 return None
             else:
-                self.sitestores[sitename] = MultiDBSiteStore(self.schema, sitename, site_id)
+                self.sitestores[sitename] = MultiDBSiteStore(
+                    self.schema, sitename, site_id
+                )
         return self.sitestores[sitename]
 
     def get_site_id(self, sitename):
@@ -636,6 +739,7 @@ class MultiDBStore(DBStore):
     def delete(self, sitename):
         pass
 
+
 class MultiDBSiteStore(DBSiteStore):
     def __init__(self, db, schema, sitename, site_id):
         DBStore.__init__(self, db, schema)
@@ -643,11 +747,15 @@ class MultiDBSiteStore(DBSiteStore):
         self.site_id = site_id
 
     def get_metadata(self, key):
-        d = self.db.query('SELECT * FROM thing WHERE site_id=self.site_id AND key=$key', vars=locals())
+        d = self.db.query(
+            'SELECT * FROM thing WHERE site_id=self.site_id AND key=$key', vars=locals()
+        )
         return d and d[0] or None
 
     def get_metadata_list(self, keys):
-        where = web.reparam('site_id=$self.site_id', locals()) + web.sqlors('key=', keys)
+        where = web.reparam('site_id=$self.site_id', locals()) + web.sqlors(
+            'key=', keys
+        )
         result = self.db.select('thing', what='*', where=where).list()
         d = dict((r.key, r) for r in result)
         return d
@@ -657,22 +765,33 @@ class MultiDBSiteStore(DBSiteStore):
         return self.db.insert('thing', **kw)
 
     def new_account(self, thing_id, email, enc_password):
-        return self.db.insert('account', False, site_id=self.site_id, thing_id=thing_id, email=email, password=enc_password)
+        return self.db.insert(
+            'account',
+            False,
+            site_id=self.site_id,
+            thing_id=thing_id,
+            email=email,
+            password=enc_password,
+        )
 
     def find_user(self, email):
         """Returns the key of the user with the specified email."""
-        d = self.db.select('account', where='site_id=$self.site_id, $email=email', vars=locals())
+        d = self.db.select(
+            'account', where='site_id=$self.site_id, $email=email', vars=locals()
+        )
         thing_id = d and d[0].thing_id or None
         return thing_id and self.get_metadata_from_id(thing_id).key
 
     def delete(self):
         pass
 
+
 def create_database(**params):
     db = web.database(**params)
 
     # monkey-patch query method to collect stats
     _query = db.query
+
     def query(*a, **kw):
         t_start = time.time()
         result = _query(*a, **kw)
@@ -686,6 +805,8 @@ def create_database(**params):
     db.query = query
     return db
 
+
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

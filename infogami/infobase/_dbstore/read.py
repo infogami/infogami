@@ -5,20 +5,29 @@ import web
 from six import string_types
 from infogami.infobase import config
 
+
 def get_user_root():
     user_root = config.get("user_root", "/user")
     return user_root.rstrip("/") + "/"
 
+
 def get_bot_users(db):
-    """Returns thing_id of all bot users.
-    """
-    rows = db.query("SELECT store.key FROM store, store_index WHERE store.id=store_index.store_id AND type='account' AND name='bot' and value='true'")
+    """Returns thing_id of all bot users."""
+    rows = db.query(
+        "SELECT store.key FROM store, store_index WHERE store.id=store_index.store_id AND type='account' AND name='bot' and value='true'"
+    )
     bots = [get_user_root() + row.key.split("/")[-1] for row in rows]
     if bots:
-        bot_ids = [row.id for row in db.query("SELECT id FROM thing WHERE key in $bots", vars=locals())]
+        bot_ids = [
+            row.id
+            for row in db.query(
+                "SELECT id FROM thing WHERE key in $bots", vars=locals()
+            )
+        ]
         return bot_ids or [-1]
     else:
         return [-1]
+
 
 class RecentChanges:
     def __init__(self, db):
@@ -27,7 +36,9 @@ class RecentChanges:
     def get_keys(self, ids):
         ids = list(set(id for id in ids if id is not None))
         if ids:
-            rows = self.db.query("SELECT id, key FROM thing WHERE id in $ids", vars=locals())
+            rows = self.db.query(
+                "SELECT id, key FROM thing WHERE id in $ids", vars=locals()
+            )
             return dict((row.id, row.key) for row in rows)
         else:
             return {}
@@ -113,11 +124,18 @@ class RecentChanges:
                 # bind the current values by calling reparam.
                 wheres.append(web.reparam(q, locals()))
 
-
         wheres = list(self._process_wheres(wheres, locals()))
         where = web.SQLQuery.join(wheres, " AND ")
 
-        rows = self.db.select(tables, what=what, where=where, limit=limit, offset=offset, order=order, vars=locals()).list()
+        rows = self.db.select(
+            tables,
+            what=what,
+            where=where,
+            limit=limit,
+            offset=offset,
+            order=order,
+            vars=locals(),
+        ).list()
 
         authors = self.get_keys(row.author_id for row in rows)
 

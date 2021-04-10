@@ -12,12 +12,20 @@ import datetime
 import simplejson
 import web
 
-from infogami.infobase import (account, bootstrap, cache, common, config, readquery,
-                               writequery)
+from infogami.infobase import (
+    account,
+    bootstrap,
+    cache,
+    common,
+    config,
+    readquery,
+    writequery,
+)
 
 
 class Infobase:
     """Infobase contains multiple sites."""
+
     def __init__(self, store, secret_key):
         self.store = store
         self.secret_key = secret_key
@@ -72,6 +80,7 @@ class Infobase:
 
 class Site:
     """A site of infobase."""
+
     def __init__(self, _infobase, sitename, store, secret_key):
         self._infobase = _infobase
         self.sitename = sitename
@@ -85,7 +94,14 @@ class Site:
         store.seq.set_listener(self._log_store_action)
 
     def _log_store_action(self, name, data):
-        event = web.storage(name=name, ip=web.ctx.ip, author=None, data=data, sitename=self.sitename, timestamp=None)
+        event = web.storage(
+            name=name,
+            ip=web.ctx.ip,
+            author=None,
+            data=data,
+            sitename=self.sitename,
+            timestamp=None,
+        )
         self._infobase.fire_event(event)
 
     def get_account_manager(self):
@@ -112,7 +128,9 @@ class Site:
     def _get_many_things(self, keys):
         json = self.get_many(keys)
         d = simplejson.loads(json)
-        return dict((k, common.Thing.from_dict(self.store, k, doc)) for k, doc in d.items())
+        return dict(
+            (k, common.Thing.from_dict(self.store, k, doc)) for k, doc in d.items()
+        )
 
     def get_many(self, keys):
         return self.store.get_many(keys)
@@ -120,7 +138,17 @@ class Site:
     def new_key(self, type, kw=None):
         return self.store.new_key(type, kw or {})
 
-    def write(self, query, timestamp=None, comment=None, data=None, ip=None, author=None, action=None, _internal=False):
+    def write(
+        self,
+        query,
+        timestamp=None,
+        comment=None,
+        data=None,
+        ip=None,
+        author=None,
+        action=None,
+        _internal=False,
+    ):
         timestamp = timestamp or datetime.datetime.utcnow()
 
         author = author or self.get_account_manager().get_user()
@@ -128,7 +156,9 @@ class Site:
 
         items = p.process(query)
         items = (item for item in items if item)
-        changeset = self.store.save_many(items, timestamp, comment, data, ip, author and author.key, action=action)
+        changeset = self.store.save_many(
+            items, timestamp, comment, data, ip, author and author.key, action=action
+        )
         result = changeset.get('docs', [])
 
         created = [r['key'] for r in result if r and r['revision'] == 1]
@@ -137,19 +167,35 @@ class Site:
         result2 = web.storage(created=created, updated=updated)
 
         if not _internal:
-            event_data = dict(comment=comment, data=data, query=query, result=result2, changeset=changeset)
+            event_data = dict(
+                comment=comment,
+                data=data,
+                query=query,
+                result=result2,
+                changeset=changeset,
+            )
             self._fire_event("write", timestamp, ip, author and author.key, event_data)
 
         self._fire_triggers(result)
 
         return result2
 
-    def save(self, key, doc, timestamp=None, comment=None, data=None, ip=None, author=None, action=None):
+    def save(
+        self,
+        key,
+        doc,
+        timestamp=None,
+        comment=None,
+        data=None,
+        ip=None,
+        author=None,
+        action=None,
+    ):
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
 
-        #@@ why to have key argument at all?
+        # @@ why to have key argument at all?
         doc['key'] = key
 
         p = writequery.SaveProcessor(self.store, author)
@@ -158,17 +204,37 @@ class Site:
         if not doc:
             return {}
         else:
-            changeset = self.store.save(key, doc, timestamp, comment, data, ip, author and author.key, action=action)
+            changeset = self.store.save(
+                key,
+                doc,
+                timestamp,
+                comment,
+                data,
+                ip,
+                author and author.key,
+                action=action,
+            )
             saved_docs = changeset.get("docs")
             saved_doc = saved_docs[0]
-            result={"key": saved_doc['key'], "revision": saved_doc['revision']}
+            result = {"key": saved_doc['key'], "revision": saved_doc['revision']}
 
-            event_data = dict(comment=comment, key=key, query=doc, result=result, changeset=changeset)
+            event_data = dict(
+                comment=comment, key=key, query=doc, result=result, changeset=changeset
+            )
             self._fire_event("save", timestamp, ip, author and author.key, event_data)
             self._fire_triggers([saved_doc])
             return result
 
-    def save_many(self, query, timestamp=None, comment=None, data=None, ip=None, author=None, action=None):
+    def save_many(
+        self,
+        query,
+        timestamp=None,
+        comment=None,
+        data=None,
+        ip=None,
+        author=None,
+        action=None,
+    ):
         timestamp = timestamp or datetime.datetime.utcnow()
         author = author or self.get_account_manager().get_user()
         ip = ip or web.ctx.get('ip', '127.0.0.1')
@@ -179,11 +245,17 @@ class Site:
         if not items:
             return []
 
-        changeset = self.store.save_many(items, timestamp, comment, data, ip, author and author.key, action=action)
+        changeset = self.store.save_many(
+            items, timestamp, comment, data, ip, author and author.key, action=action
+        )
         saved_docs = changeset.get('docs')
 
-        result = [{"key": doc["key"], "revision": doc['revision']} for doc in saved_docs]
-        event_data = dict(comment=comment, query=query, result=result, changeset=changeset)
+        result = [
+            {"key": doc["key"], "revision": doc['revision']} for doc in saved_docs
+        ]
+        event_data = dict(
+            comment=comment, query=query, result=result, changeset=changeset
+        )
         self._fire_event("save_many", timestamp, ip, author and author.key, event_data)
 
         self._fire_triggers(saved_docs)
@@ -232,14 +304,18 @@ class Site:
 
     def _fire_triggers(self, result):
         """Executes all required triggers on write."""
+
         def fire_trigger(type, old, new):
-            triggers = self._triggers.get(type['key'], []) + self._triggers.get(None, [])
+            triggers = self._triggers.get(type['key'], []) + self._triggers.get(
+                None, []
+            )
             for t in triggers:
                 try:
                     t(self, old, new)
                 except:
                     print('Failed to execute trigger', t, file=web.debug)
                     import traceback
+
                     traceback.print_exc()
 
         if not self._triggers:
@@ -261,9 +337,9 @@ class Site:
             # TODO: Remove the old_data argument.
             fire_trigger(thing['type'], None, thing)
 
-            #old = self._get_thing(key, thing.revision-1)
-            #if old.type.key == thing.type.key:
+            # old = self._get_thing(key, thing.revision-1)
+            # if old.type.key == thing.type.key:
             #    fire_trigger(thing.type, old, thing)
-            #else:
+            # else:
             #    fire_trigger(old.type, old, thing)
             #    fire_trigger(thing.type, old, thing)

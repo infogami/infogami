@@ -16,6 +16,7 @@ import datetime
 import simplejson
 from six import iteritems
 
+
 def unicodify(d):
     """Converts all utf-8 encoded strings to unicode recursively."""
     if isinstance(d, dict):
@@ -29,6 +30,7 @@ def unicodify(d):
     else:
         return d
 
+
 class JSONEncoder(simplejson.JSONEncoder):
     def default(self, o):
         if hasattr(o, '__json__'):
@@ -36,20 +38,24 @@ class JSONEncoder(simplejson.JSONEncoder):
         else:
             return simplejson.JSONEncoder.default(self, o)
 
+
 def dumps(obj, **kw):
     """
-        >>> class Foo:
-        ...     def __json__(self): return 'foo'
-        ...
-        >>> a = [Foo(), Foo()]
-        >>> dumps(a)
-        '[foo, foo]'
+    >>> class Foo:
+    ...     def __json__(self): return 'foo'
+    ...
+    >>> a = [Foo(), Foo()]
+    >>> dumps(a)
+    '[foo, foo]'
     """
     return simplejson.dumps(unicodify(obj), cls=JSONEncoder, **kw)
+
 
 def loads(s, **kw):
     return simplejson.loads(s, **kw)
 
+
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

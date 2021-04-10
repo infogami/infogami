@@ -11,34 +11,42 @@ from infogami.infobase import common, config
 
 logger = logging.getLogger("infobase.account")
 
+
 def get_user_root():
     user_root = config.get("user_root", "/user")
     return user_root.rstrip("/") + "/"
 
+
 def make_query(user):
-    q = [dict(user, permission={'key': user.key + '/permission'}),
-    {
-        'key': user.key + '/usergroup',
-        'type': {'key': '/type/usergroup'},
-        'members': [{'key': user.key}]
-    },
-    {
-        'key': user.key + '/permission',
-        'type': {'key': '/type/permission'},
-        'readers': [{'key': '/usergroup/everyone'}],
-        'writers': [{'key': user.key + '/usergroup'}],
-        'admins': [{'key': user.key + '/usergroup'}]
-    }]
+    q = [
+        dict(user, permission={'key': user.key + '/permission'}),
+        {
+            'key': user.key + '/usergroup',
+            'type': {'key': '/type/usergroup'},
+            'members': [{'key': user.key}],
+        },
+        {
+            'key': user.key + '/permission',
+            'type': {'key': '/type/permission'},
+            'readers': [{'key': '/usergroup/everyone'}],
+            'writers': [{'key': user.key + '/usergroup'}],
+            'admins': [{'key': user.key + '/usergroup'}],
+        },
+    ]
     return q
+
 
 def admin_only(f):
     """Decorator to limit a function to admin user only."""
+
     def g(self, *a, **kw):
         user = self.get_user()
         if user is None or user.key != get_user_root() + 'admin':
             raise common.PermissionDenied(message='Permission Denied')
         return f(self, *a, **kw)
+
     return g
+
 
 class AccountManager:
     def __init__(self, site, secret_key):
@@ -54,12 +62,15 @@ class AccountManager:
             if _activate:
                 self.activate(username)
         except:
-            logger.error("Failed to store registration info. username=%s", username, exc_info=True)
+            logger.error(
+                "Failed to store registration info. username=%s",
+                username,
+                exc_info=True,
+            )
             raise
 
     def store_account_info(self, username, email, enc_password, data):
-        """Store account info in the store so that the account can be created after verifying the email.
-        """
+        """Store account info in the store so that the account can be created after verifying the email."""
         store = self.site.store.store
 
         email = email.strip()
@@ -81,19 +92,13 @@ class AccountManager:
             "type": "account",
             "status": "pending",
             "created_on": now.isoformat(),
-
             "username": username,
-            "lusername": username.lower(), # lowercase username
-
+            "lusername": username.lower(),  # lowercase username
             "email": email,
             "enc_password": enc_password,
-            "data": data
+            "data": data,
         }
-        email_doc = {
-            "_key": email_key,
-            "type": "account-email",
-            "username": username
-        }
+        email_doc = {"_key": email_key, "type": "account-email", "username": username}
         store.put_many([account_doc, email_doc])
 
     def activate(self, username):
@@ -125,7 +130,9 @@ class AccountManager:
             user_doc.update(data)
 
             q = make_query(user_doc)
-            self.site.save_many(q, author=user_doc, action='new-account', comment="Created new account.")
+            self.site.save_many(
+                q, author=user_doc, action='new-account', comment="Created new account."
+            )
 
     def login(self, username, password):
         """Returns "ok" on success and an error code on failure.
@@ -169,13 +176,13 @@ class AccountManager:
             # for loop to avoid unexpected errors in case of bad data.
             old_email_docs = store.query("account-email", 'username', username)
             for email_doc in old_email_docs:
-                doc = dict(_key=email_doc['key'], _delete= True)
+                doc = dict(_key=email_doc['key'], _delete=True)
                 docs.append(doc)
 
             new_email_doc = {
                 "_key": "account-email/" + kw['email'].lower().strip(),
                 "type": "account-email",
-                "username": username
+                "username": username,
             }
             docs.append(new_email_doc)
 
@@ -192,7 +199,9 @@ class AccountManager:
         store = self.site.store.store
 
         if email:
-            rows = store.query(type="account", name="email", value=email, include_docs=True)
+            rows = store.query(
+                type="account", name="email", value=email, include_docs=True
+            )
             return rows and rows[0]['doc'] or None
         elif username:
             account_key = "account/" + username
@@ -227,7 +236,9 @@ class AccountManager:
         if details is None or details.get('active', True) is False:
             return False
         else:
-            return self._check_salted_hash(self.secret_key, raw_password, details.password)
+            return self._check_salted_hash(
+                self.secret_key, raw_password, details.password
+            )
 
     def verify_password(self, raw_password, enc_password):
         """Verifies if the raw_password and encrypted password match."""
@@ -246,14 +257,16 @@ class AccountManager:
 
     def get_user(self):
         """Returns the current user from the session."""
-        #@@ TODO: call assert_trusted_machine when user is admin.
+        # @@ TODO: call assert_trusted_machine when user is admin.
         auth_token = web.ctx.get('infobase_auth_token')
         if auth_token:
             try:
                 user_key, login_time, digest = auth_token.split(',')
             except ValueError:
                 return
-            if self._check_salted_hash(self.secret_key, user_key + "," + login_time, digest):
+            if self._check_salted_hash(
+                self.secret_key, user_key + "," + login_time, digest
+            ):
                 return self.site._get_thing(user_key)
 
     #### Old, may be unused
@@ -272,12 +285,23 @@ class AccountManager:
 
             d = web.storage({"key": key, "type": {"key": "/type/user"}})
             d.update(data)
-            self.site.save(key, d, timestamp=timestamp, author=d, comment="Created new account")
+            self.site.save(
+                key, d, timestamp=timestamp, author=d, comment="Created new account"
+            )
 
             q = make_query(d)
             account_bot = config.get('account_bot')
-            account_bot = account_bot and web.storage({"key": account_bot, "type": {"key": "/type/user"}})
-            self.site.save_many(q, ip=ip, timestamp=timestamp, author=account_bot, action='register', comment="Setup new account")
+            account_bot = account_bot and web.storage(
+                {"key": account_bot, "type": {"key": "/type/user"}}
+            )
+            self.site.save_many(
+                q,
+                ip=ip,
+                timestamp=timestamp,
+                author=account_bot,
+                action='register',
+                comment="Setup new account",
+            )
             self.site.store.register(key, email, enc_password)
             self.update_user_details(username, verified=True, active=True)
 
@@ -298,7 +322,13 @@ class AccountManager:
         self.site.store.transact(f)
 
         event_data = dict(data, username=username, email=email, password=enc_password)
-        self.site._fire_event("register", timestamp=timestamp, ip=ip or web.ctx.ip, username=None, data=event_data)
+        self.site._fire_event(
+            "register",
+            timestamp=timestamp,
+            ip=ip or web.ctx.ip,
+            username=None,
+            data=event_data,
+        )
 
         self.set_auth_token(key)
         return username
@@ -324,19 +354,28 @@ class AccountManager:
         new_password and self.assert_password(new_password)
         email and self.assert_email(email)
 
-        enc_password = new_password and self._generate_salted_hash(self.secret_key, new_password)
+        enc_password = new_password and self._generate_salted_hash(
+            self.secret_key, new_password
+        )
         self.update_user1(user, enc_password, email)
 
     def update_user1(self, user, enc_password, email, ip=None, timestamp=None):
-        self.site.store.update_user_details(user.key, email=email, password=enc_password)
+        self.site.store.update_user_details(
+            user.key, email=email, password=enc_password
+        )
 
         timestamp = timestamp or datetime.utcnow()
         event_data = dict(username=user.key, email=email, password=enc_password)
-        self.site._fire_event("update_user", timestamp=timestamp, ip=ip or web.ctx.ip, username=None, data=event_data)
+        self.site._fire_event(
+            "update_user",
+            timestamp=timestamp,
+            ip=ip or web.ctx.ip,
+            username=None,
+            data=event_data,
+        )
 
     def update_user_details(self, username, **params):
-        """Update user details like email, active, bot, verified.
-        """
+        """Update user details like email, active, bot, verified."""
         key = get_user_root() + username
         self.site.store.update_user_details(key, **params)
 
@@ -348,7 +387,9 @@ class AccountManager:
 
     def assert_trusted_machine(self):
         if web.ctx.ip not in config.trusted_machines:
-            raise common.PermissionDenied(message='Permission denied to login as admin from ' + web.ctx.ip)
+            raise common.PermissionDenied(
+                message='Permission denied to login as admin from ' + web.ctx.ip
+            )
 
     @admin_only
     def get_user_email(self, username):
@@ -374,7 +415,10 @@ class AccountManager:
         if doc and doc.get("type") == "pending-account":
             return doc['email']
 
-        raise common.BadData(message='No user registered with username: ' + username, error="account_not_found")
+        raise common.BadData(
+            message='No user registered with username: ' + username,
+            error="account_not_found",
+        )
 
     def get_email(self, user):
         """Used internally by server."""
@@ -396,12 +440,16 @@ class AccountManager:
         # encrypted_password for verification and timestamp for expriry check.
         timestamp = str(int(time.time()))
         text = details.password + '$' + timestamp
-        return username, timestamp + '$' + self._generate_salted_hash(self.secret_key, text)
+        return username, timestamp + '$' + self._generate_salted_hash(
+            self.secret_key, text
+        )
 
     def reset_password(self, username, code, password):
         self.check_reset_code(username, code)
         enc_password = self._generate_salted_hash(self.secret_key, password)
-        self.site.store.update_user_details(get_user_root() + username, password=enc_password, verified=True)
+        self.site.store.update_user_details(
+            get_user_root() + username, password=enc_password, verified=True
+        )
 
     def check_reset_code(self, username, code):
         SEC_PER_WEEK = 7 * 24 * 3600

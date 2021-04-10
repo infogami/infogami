@@ -18,31 +18,54 @@ from infogami.infobase.account import get_user_root
 
 logger = logging.getLogger("infobase")
 
+
 def setup_remoteip():
     web.ctx.ip = web.ctx.env.get('HTTP_X_REMOTE_IP', web.ctx.ip)
 
+
 urls = (
-    "/", "server",
-    "/_echo", "echo",
-    r"/([^_/][^/]*)", "db",
-    r"/([^/]*)/get", "withkey",
-    r"/([^/]*)/get_many", "get_many",
-    r'/([^/]*)/save(/.*)', 'save',
-    r'/([^/]*)/save_many', 'save_many',
-    r"/([^/]*)/reindex", "reindex",
-    r"/([^/]*)/new_key", "new_key",
-    r"/([^/]*)/things", "things",
-    r"/([^/]*)/versions", "versions",
-    r"/([^/]*)/write", "write",
-    r"/([^/]*)/account/(.*)", "account",
-    r"/([^/]*)/permission", "permission",
-    r"/([^/]*)/log/(\d\d\d\d-\d\d-\d\d:\d+)", "readlog",
-    r"/([^/]*)/_store/(_.*)", "store_special",
-    r"/([^/]*)/_store/(.*)", "store",
-    r"/([^/]*)/_seq/(.*)", "seq",
-    r"/([^/]*)/_recentchanges", "recentchanges",
-    r"/([^/]*)/_recentchanges/(\d+)", "change",
-    "/_invalidate", "invalidate"
+    "/",
+    "server",
+    "/_echo",
+    "echo",
+    r"/([^_/][^/]*)",
+    "db",
+    r"/([^/]*)/get",
+    "withkey",
+    r"/([^/]*)/get_many",
+    "get_many",
+    r'/([^/]*)/save(/.*)',
+    'save',
+    r'/([^/]*)/save_many',
+    'save_many',
+    r"/([^/]*)/reindex",
+    "reindex",
+    r"/([^/]*)/new_key",
+    "new_key",
+    r"/([^/]*)/things",
+    "things",
+    r"/([^/]*)/versions",
+    "versions",
+    r"/([^/]*)/write",
+    "write",
+    r"/([^/]*)/account/(.*)",
+    "account",
+    r"/([^/]*)/permission",
+    "permission",
+    r"/([^/]*)/log/(\d\d\d\d-\d\d-\d\d:\d+)",
+    "readlog",
+    r"/([^/]*)/_store/(_.*)",
+    "store_special",
+    r"/([^/]*)/_store/(.*)",
+    "store",
+    r"/([^/]*)/_seq/(.*)",
+    "seq",
+    r"/([^/]*)/_recentchanges",
+    "recentchanges",
+    r"/([^/]*)/_recentchanges/(\d+)",
+    "change",
+    "/_invalidate",
+    "invalidate",
 )
 
 app = web.application(urls, globals(), autoreload=False)
@@ -50,6 +73,7 @@ app = web.application(urls, globals(), autoreload=False)
 app.add_processor(web.loadhook(setup_remoteip))
 app.add_processor(web.loadhook(cache.loadhook))
 app.add_processor(web.unloadhook(cache.unloadhook))
+
 
 def process_exception(e):
     if isinstance(e, common.InfobaseException):
@@ -60,11 +84,13 @@ def process_exception(e):
     msg = str(e)
     raise web.HTTPError(status, {}, msg)
 
+
 class JSON:
-    """JSON marker. instances of this class not escaped by jsonify.
-    """
+    """JSON marker. instances of this class not escaped by jsonify."""
+
     def __init__(self, json_data):
         self.json_data = json_data
+
 
 def jsonify(f):
     def g(self, *a, **kw):
@@ -83,11 +109,18 @@ def jsonify(f):
 
             process_exception(e)
         except Exception as e:
-            logger.error("Error in processing request %s %s", web.ctx.get("method", "-"), web.ctx.get("path","-"), exc_info=True)
+            logger.error(
+                "Error in processing request %s %s",
+                web.ctx.get("method", "-"),
+                web.ctx.get("path", "-"),
+                exc_info=True,
+            )
 
             common.record_exception()
             # call web.internalerror to send email when web.internalerror is set to web.emailerrors
-            process_exception(common.InfobaseException(error="internal_error", message=str(e)))
+            process_exception(
+                common.InfobaseException(error="internal_error", message=str(e))
+            )
 
             if web.ctx.get('infobase_localmode'):
                 raise common.InfobaseException(message=str(e))
@@ -102,7 +135,10 @@ def jsonify(f):
         queries = web.ctx.pop('queries', 0)
 
         if config.get("enabled_stats"):
-            web.header("X-STATS", "tt: %0.3f, tq: %0.3f, nq: %d" % (totaltime, querytime, queries))
+            web.header(
+                "X-STATS",
+                "tt: %0.3f, tq: %0.3f, nq: %d" % (totaltime, querytime, queries),
+            )
 
         if web.ctx.get('infobase_localmode'):
             return result
@@ -114,11 +150,13 @@ def jsonify(f):
 
     return g
 
+
 def get_data():
     if 'infobase_input' in web.ctx:
         return web.ctx.infobase_input
     else:
         return web.data()
+
 
 def input(*required, **defaults):
     if 'infobase_input' in web.ctx:
@@ -134,11 +172,15 @@ def input(*required, **defaults):
     result.update(d)
     return result
 
+
 def to_int(value, key):
     try:
         return int(value)
     except:
-        raise common.BadData(message="Bad integer value for %s: %s" % (repr(key), repr(value)))
+        raise common.BadData(
+            message="Bad integer value for %s: %s" % (repr(key), repr(value))
+        )
+
 
 def from_json(s):
     try:
@@ -146,7 +188,10 @@ def from_json(s):
     except ValueError as e:
         raise common.BadData(message="Bad JSON: " + str(e))
 
+
 _infobase = None
+
+
 def get_site(sitename):
     global _infobase
     if not _infobase:
@@ -155,10 +200,12 @@ def get_site(sitename):
         _infobase = infobase.Infobase(store, config.secret_key)
     return _infobase.get(sitename)
 
+
 class server:
     @jsonify
     def GET(self):
         return {"infobase": "welcome", "version": __version__}
+
 
 class db:
     @jsonify
@@ -187,11 +234,13 @@ class db:
             site.delete()
             return {"ok": True}
 
+
 class echo:
     @jsonify
     def POST(self):
         print(web.data(), file=web.debug)
         return {'ok': True}
+
 
 class write:
     @jsonify
@@ -201,6 +250,7 @@ class write:
         query = from_json(i.query)
         result = site.write(query, comment=i.comment, action=i.action)
         return result
+
 
 class withkey:
     @jsonify
@@ -215,6 +265,7 @@ class withkey:
             raise common.NotFound(key=i.key)
         return JSON(json_data)
 
+
 class get_many:
     @jsonify
     def GET(self, sitename):
@@ -223,10 +274,11 @@ class get_many:
         site = get_site(sitename)
         return JSON(site.get_many(keys))
 
+
 class save:
     @jsonify
     def POST(self, sitename, key):
-        #@@ This takes payload of json instead of form encoded data.
+        # @@ This takes payload of json instead of form encoded data.
         data = from_json(get_data())
 
         comment = data.pop('_comment', None)
@@ -235,6 +287,7 @@ class save:
 
         site = get_site(sitename)
         return site.save(key, data, comment=comment, action=action, data=_data)
+
 
 class save_many:
     @jsonify
@@ -245,6 +298,7 @@ class save_many:
         site = get_site(sitename)
         return site.save_many(docs, comment=i.comment, data=data, action=i.action)
 
+
 class reindex:
     @jsonify
     def POST(self, sitename):
@@ -254,12 +308,14 @@ class reindex:
         site.store.reindex(keys)
         return {"status": "ok"}
 
+
 class new_key:
     @jsonify
     def GET(self, sitename):
         i = input('type')
         site = get_site(sitename)
         return site.new_key(i.type)
+
 
 class things:
     @jsonify
@@ -274,6 +330,7 @@ class things:
         else:
             return result
 
+
 class versions:
     @jsonify
     def GET(self, sitename):
@@ -281,6 +338,7 @@ class versions:
         i = input('query')
         q = from_json(i.query)
         return site.versions(q)
+
 
 class recentchanges:
     @jsonify
@@ -290,11 +348,13 @@ class recentchanges:
         q = from_json(i.query)
         return site.recentchanges(q)
 
+
 class change:
     @jsonify
     def GET(self, sitename, id):
         site = get_site(sitename)
         return site.get_change(int(id))
+
 
 class permission:
     @jsonify
@@ -302,6 +362,7 @@ class permission:
         site = get_site(sitename)
         i = input('key')
         return site.get_permissions(i.key)
+
 
 class store_special:
     def GET(self, sitename, path):
@@ -324,7 +385,9 @@ class store_special:
 
     @jsonify
     def GET_query(self, sitename):
-        i = input(type=None, name=None, value=None, limit=100, offset=0, include_docs="false")
+        i = input(
+            type=None, name=None, value=None, limit=100, offset=0, include_docs="false"
+        )
 
         i.limit = common.safeint(i.limit, 100)
         i.offset = common.safeint(i.offset, 0)
@@ -336,7 +399,9 @@ class store_special:
             value=i.value,
             limit=i.limit,
             offset=i.offset,
-            include_docs=i.include_docs.lower()=="true")
+            include_docs=i.include_docs.lower() == "true",
+        )
+
 
 class store:
     @jsonify
@@ -349,7 +414,7 @@ class store:
 
     @jsonify
     def PUT(self, sitename, path):
-        store = get_site(sitename).get_store() 
+        store = get_site(sitename).get_store()
         doc = json.loads(get_data())
         store.put(path, doc)
         return JSON('{"ok": true}')
@@ -359,6 +424,7 @@ class store:
         store = get_site(sitename).get_store()
         store.delete(path)
         return JSON('{"ok": true}')
+
 
 class seq:
     @jsonify
@@ -371,8 +437,10 @@ class seq:
         seq = get_site(sitename).get_seq()
         return {"name": name, "value": seq.next_value(name)}
 
+
 class account:
     """Code for handling /account/.*"""
+
     def get_method(self):
         if web.ctx.get('infobase_localmode'):
             return web.ctx.infobase_method
@@ -412,7 +480,9 @@ class account:
         password = i.pop('password')
         email = i.pop('email')
 
-        activation_code = a.register(username=username, email=email, password=password, data=i)
+        activation_code = a.register(
+            username=username, email=email, password=password, data=i
+        )
         return {"activation_code": activation_code, "email": email}
 
     def POST_activate(self, site):
@@ -423,7 +493,9 @@ class account:
         if status == "ok":
             return {"ok": "true"}
         else:
-            raise common.BadData(error_code=status, message="Account activation failed.")
+            raise common.BadData(
+                error_code=status, message="Account activation failed."
+            )
 
     def POST_update(self, site):
         i = input('username')
@@ -435,7 +507,9 @@ class account:
         if status == "ok":
             return {"ok": "true"}
         else:
-            raise common.BadData(error_code=status, message="Account activation failed.")
+            raise common.BadData(
+                error_code=status, message="Account activation failed."
+            )
 
     def GET_find(self, site):
         i = input(email=None, username=None)
@@ -507,6 +581,7 @@ class account:
         a = site.get_account_manager()
         return a.update(username, **i)
 
+
 class readlog:
     def get_log(self, offset, i):
         log = logreader.LogFile(config.writelog)
@@ -556,13 +631,17 @@ class readlog:
                             yield sep + line.strip()
                             sep = ",\n"
                         else:
-                            print("ERROR: found invalid json before %s" % log.tell(), file=sys.stderr)
+                            print(
+                                "ERROR: found invalid json before %s" % log.tell(),
+                                file=sys.stderr,
+                            )
                     else:
                         break
                 yield '], \n'
                 yield '"offset": ' + json.dumps(log.tell()) + "\n}\n"
             except Exception as e:
                 print('ERROR:', str(e))
+
 
 def request(path, method, data):
     """Fakes the web request.
@@ -605,8 +684,10 @@ def request(path, method, data):
         # hack to make cache work for local infobase connections
         cache.unloadhook()
 
+
 def run():
     app.run()
+
 
 def parse_db_parameters(d):
     if d is None:
@@ -614,9 +695,19 @@ def parse_db_parameters(d):
 
     # support both <engine, database, username, password> and <dbn, db, user, pw>.
     if 'database' in d:
-        dbn, db, user, pw = d.get('engine', 'postgres'), d['database'], d.get('username'), d.get('password') or ''
+        dbn, db, user, pw = (
+            d.get('engine', 'postgres'),
+            d['database'],
+            d.get('username'),
+            d.get('password') or '',
+        )
     else:
-        dbn, db, user, pw = d.get('dbn', 'postgres'), d['db'], d.get('user'), d.get('pw') or ''
+        dbn, db, user, pw = (
+            d.get('dbn', 'postgres'),
+            d['db'],
+            d.get('user'),
+            d.get('pw') or '',
+        )
 
     if user is None:
         user = os.getenv("USER")
@@ -626,18 +717,22 @@ def parse_db_parameters(d):
         result['host'] = d['host']
     return result
 
+
 def start(config_file, *args):
     load_config(config_file)
     # start running the server
     sys.argv = [sys.argv[0]] + list(args)
     run()
 
+
 def load_config(config_file):
     # load config
     import yaml
+
     with open(config_file) as in_file:
         runtime_config = yaml.safe_load(in_file) or {}
     update_config(runtime_config)
+
 
 def update_config(runtime_config):
     # update config

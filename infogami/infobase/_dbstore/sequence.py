@@ -1,6 +1,7 @@
 """High-level sequence API.
 """
 
+
 class SequenceImpl:
     def __init__(self, db):
         self.db = db
@@ -14,16 +15,20 @@ class SequenceImpl:
 
     def get_value(self, name):
         try:
-            return self.db.query("SELECT * FROM seq WHERE name=$name", vars=locals())[0].value
+            return self.db.query("SELECT * FROM seq WHERE name=$name", vars=locals())[
+                0
+            ].value
         except IndexError:
             return 0
 
     def next_value(self, name, increment=1):
         try:
             tx = self.db.transaction()
-            d = self.db.query("SELECT * FROM seq WHERE name=$name FOR UPDATE", vars=locals())
+            d = self.db.query(
+                "SELECT * FROM seq WHERE name=$name FOR UPDATE", vars=locals()
+            )
             if d:
-                value = d[0].value+1
+                value = d[0].value + 1
                 self.db.update("seq", value=value, where="name=$name", vars=locals())
             else:
                 value = 1
@@ -38,7 +43,9 @@ class SequenceImpl:
     def set_value(self, name, value):
         try:
             tx = self.db.transaction()
-            d = self.db.query("SELECT * FROM seq WHERE name=$name FOR UPDATE", vars=locals())
+            d = self.db.query(
+                "SELECT * FROM seq WHERE name=$name FOR UPDATE", vars=locals()
+            )
             if d:
                 self.db.update("seq", value=value, where="name=$name", vars=locals())
             else:

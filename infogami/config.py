@@ -6,6 +6,7 @@ Infogami configuration.
 def get(name, default=None):
     return globals().get(name, default)
 
+
 middleware = []
 
 cache_templates = True
@@ -36,4 +37,3 @@ infobase_parameters = dict(type='local')
 bugfixer = None
 
 admin_password = "admin123"
-

@@ -20,6 +20,7 @@ from infogami.core import db
 from infogami.utils import delegate
 from infogami.utils.context import context
 
+
 def listfiles(root, filter=None):
     """Returns an iterator over all the files in a directory recursively.
     If filter is specified only those files matching the filter are returned.
@@ -31,18 +32,19 @@ def listfiles(root, filter=None):
     for dirname, dirnames, filenames in os.walk(root):
         for f in filenames:
             path = os.path.join(dirname, f)
-            path = path[len(root):]
+            path = path[len(root) :]
             if filter is None or filter(path):
                 yield path
+
 
 def storify(d):
     """Recursively converts dict to web.storage object.
 
-        >>> d = storify({'x: 1, y={'z': 2}})
-        >>> d.x
-        1
-        >>> d.y.z
-        2
+    >>> d = storify({'x: 1, y={'z': 2}})
+    >>> d.x
+    1
+    >>> d.y.z
+    2
     """
     if isinstance(d, dict):
         return web.storage([(k, storify(v)) for k, v in d.items()])
@@ -51,8 +53,10 @@ def storify(d):
     else:
         return d
 
+
 def _readpages(root):
     """Reads and parses all root/*.page files and returns results as a dict."""
+
     def read(root, path):
         path = path or "__root__"
         text = open(os.path.join(root, path + ".page")).read()
@@ -61,7 +65,7 @@ def _readpages(root):
 
     pages = {}
     for path in listfiles(root, filter=lambda path: path.endswith('.page')):
-        path = path[:-len(".page")]
+        path = path[: -len(".page")]
         if path == "__root__":
             name = ""
         else:
@@ -69,8 +73,10 @@ def _readpages(root):
         pages[name] = read(root, path)
     return pages
 
+
 def _savepage(page, create_dependents=True, comment=None):
     """Saves a page from dict."""
+
     def getthing(name, create=False):
         if isinstance(name, tdb.Thing):
             return name
@@ -85,8 +91,7 @@ def _savepage(page, create_dependents=True, comment=None):
                 raise
 
     def thingify(data, getparent):
-        """Converts data into thing or primitive value.
-        """
+        """Converts data into thing or primitive value."""
         if isinstance(data, list):
             return [thingify(x, getparent) for x in data]
         elif isinstance(data, dict):
@@ -114,9 +119,10 @@ def _savepage(page, create_dependents=True, comment=None):
     _page.save(author=context.user, comment=comment, ip=web.ctx.ip)
     return _page
 
+
 def thing2dict(page):
-    """Converts thing to dict.
-    """
+    """Converts thing to dict."""
+
     def simplify(x, page):
         if isinstance(x, tdb.Thing):
             # for type/property-like values
@@ -137,9 +143,11 @@ def thing2dict(page):
         d[k] = simplify(v, page)
     return data
 
+
 @infogami.action
 def pull(root, paths_files):
     """Move specified pages from wiki to disk."""
+
     def write(path, data):
         dir = os.path.dirname(filepath)
         if not os.path.exists(dir):
@@ -154,7 +162,7 @@ def pull(root, paths_files):
 
     for path in paths:
         if path.endswith('/*'):
-            path = path[:-2] # strip trailing /*
+            path = path[:-2]  # strip trailing /*
             paths2 += [p.name for p in db._list_pages(context.site, path)]
         else:
             paths2.append(path)
@@ -167,11 +175,13 @@ def pull(root, paths_files):
         filepath = os.path.join(root, name + ".page")
         write(filepath, data)
 
+
 @infogami.action
 def push(root):
     """Move pages from disk to wiki."""
     pages = _readpages(root)
     _pushpages(pages)
+
 
 def _pushpages(pages):
     tdb.transact()
@@ -185,6 +195,7 @@ def _pushpages(pages):
     else:
         tdb.commit()
 
+
 @infogami.install_hook
 @infogami.action
 def moveallpages():
@@ -195,10 +206,12 @@ def moveallpages():
         pages.update(_readpages(path))
     _pushpages(pages)
 
+
 @infogami.action
 def tdbdump(filename, created_after=None, created_before=None):
     """Creates tdb log of entire database."""
     from infogami.tdb import logger
+
     f = open(filename, 'w')
     logger.set_logfile(f)
 
@@ -206,8 +219,13 @@ def tdbdump(filename, created_after=None, created_before=None):
     N = 10000
     offset = 0
     while True:
-        versions = tdb.Versions(offset=offset, limit=N, orderby='version.id',
-                        created_after=created_after, created_before=created_before).list()
+        versions = tdb.Versions(
+            offset=offset,
+            limit=N,
+            orderby='version.id',
+            created_after=created_after,
+            created_before=created_before,
+        ).list()
         offset += N
         if not versions:
             break
@@ -221,17 +239,27 @@ def tdbdump(filename, created_after=None, created_before=None):
             if v.revision == 1:
                 logger.log('thing', t.id, name=t.name, parent_id=t.parent.id)
 
-            logger.log('version', v.id, thing_id=t.id, author_id=v.author_id, ip=v.ip,
-                    comment=v.comment, revision=v.revision, created=v.created.isoformat())
+            logger.log(
+                'version',
+                v.id,
+                thing_id=t.id,
+                author_id=v.author_id,
+                ip=v.ip,
+                comment=v.comment,
+                revision=v.revision,
+                created=v.created.isoformat(),
+            )
             logger.log('data', v.id, __type__=t.type, **t.d)
             logger.commit()
     f.close()
+
 
 @infogami.action
 def datadump(filename):
     """Writes dump of latest versions of all pages in the system.
     User info is excluded.
     """
+
     def dump(predicate=None):
         things = {}
         # get in chunks of 10000 to limit the load on db.
@@ -239,7 +267,9 @@ def datadump(filename):
         offset = 0
 
         while True:
-            things = tdb.Things(parent=context.site, offset=offset, limit=N, orderby='thing.id')
+            things = tdb.Things(
+                parent=context.site, offset=offset, limit=N, orderby='thing.id'
+            )
             offset += N
             if not things:
                 break
@@ -254,6 +284,7 @@ def datadump(filename):
     # dump the everything except users
     dump(lambda t: t.type.name != 'type/user')
     f.close()
+
 
 @infogami.action
 def dataload(filename):

@@ -6,16 +6,18 @@ web.template.ALLOWED_AST_NODES.append('Constant')
 
 INDEXED_DATATYPES = ["str", "int", "ref"]
 
+
 class Schema:
     """Schema to map <type, datatype, key> to database table.
 
-        >>> schema = Schema()
-        >>> schema.add_entry('page_str', '/type/page', 'str', None)
-        >>> schema.find_table('/type/page', 'str', 'title')
-        'page_str'
-        >>> schema.find_table('/type/article', 'str', 'title')
-        'datum_str'
+    >>> schema = Schema()
+    >>> schema.add_entry('page_str', '/type/page', 'str', None)
+    >>> schema.find_table('/type/page', 'str', 'title')
+    'page_str'
+    >>> schema.find_table('/type/article', 'str', 'title')
+    'datum_str'
     """
+
     def __init__(self, multisite=False):
         self.entries = []
         self.sequences = {}
@@ -50,8 +52,13 @@ class Schema:
         def f():
             def match(a, b):
                 return a is None or a == b
+
             for e in self.entries:
-                if match(e.type, type) and match(e.datatype, datatype) and match(e.name, name):
+                if (
+                    match(e.type, type)
+                    and match(e.datatype, datatype)
+                    and match(e.name, name)
+                ):
                     return e.table
             return 'datum_' + datatype
 
@@ -83,5 +90,8 @@ class Schema:
         return tables
 
     def __str__(self):
-        lines = ["%s\t%s\t%s\t%s" % (e.table, e.type, e.datatype, e.name) for e in self.entries]
+        lines = [
+            "%s\t%s\t%s\t%s" % (e.table, e.type, e.datatype, e.name)
+            for e in self.entries
+        ]
         return "\n".join(lines)

@@ -25,8 +25,8 @@ def teardown_module(mod):
 
 def subdict(d, keys):
     """Returns a subset of a dictionary.
-        >>> subdict({'a': 1, 'b': 2}, ['a'])
-        {'a': 1}
+    >>> subdict({'a': 1, 'b': 2}, ['a'])
+    {'a': 1}
     """
     return dict((k, d[k]) for k in keys)
 
@@ -70,16 +70,22 @@ class TestInfobase(DBTest):
 
         # now save with some change and make sure new revision is created
         reset()
-        d = site.save('/foo', {'key': '/foo', 'type': '/type/object', 'n': 1, 'p': 'qq'})
+        d = site.save(
+            '/foo', {'key': '/foo', 'type': '/type/object', 'n': 1, 'p': 'qq'}
+        )
         assert d['revision'] == 2
 
     def test_versions(self):
         site.save('/foo', {'key': '/foo', 'type': '/type/object'}, comment='test 1')
         site.save('/bar', {'key': '/bar', 'type': '/type/object'}, comment='test 2')
-        site.save('/foo', {'key': '/foo', 'type': '/type/object', 'x': 1}, comment='test 3')
+        site.save(
+            '/foo', {'key': '/foo', 'type': '/type/object', 'x': 1}, comment='test 3'
+        )
 
         def versions(q):
-            return [subdict(v, ['key', 'revision', 'comment']) for v in site.versions(q)]
+            return [
+                subdict(v, ['key', 'revision', 'comment']) for v in site.versions(q)
+            ]
 
         assert versions({'limit': 3}) == [
             {'key': '/foo', 'revision': 2, 'comment': 'test 3'},
@@ -87,10 +93,18 @@ class TestInfobase(DBTest):
             {'key': '/foo', 'revision': 1, 'comment': 'test 1'},
         ]
 
-        self.create_user('test', 'testt@example.com', 'test123', data={'displayname': 'Test'})
+        self.create_user(
+            'test', 'testt@example.com', 'test123', data={'displayname': 'Test'}
+        )
         assert site._get_thing('/user/test')
 
-        site.save('/foo', {'key': '/foo', 'type': '/type/object', 'x': 2}, comment='test 4', ip='1.2.3.4', author=site._get_thing('/user/test'))
+        site.save(
+            '/foo',
+            {'key': '/foo', 'type': '/type/object', 'x': 2},
+            comment='test 4',
+            ip='1.2.3.4',
+            author=site._get_thing('/user/test'),
+        )
 
         assert versions({'author': '/user/test'})[:-3] == [
             {'key': '/foo', 'revision': 3, 'comment': 'test 4'}
@@ -106,10 +120,24 @@ class TestInfobase(DBTest):
 
     def test_versions_by_bot(self):
         # create user TestBot and mark him as bot
-        self.create_user('TestBot', 'testbot@example.com', 'test123', bot=True, data={'displayname': 'Test Bot'})
+        self.create_user(
+            'TestBot',
+            'testbot@example.com',
+            'test123',
+            bot=True,
+            data={'displayname': 'Test Bot'},
+        )
 
-        site.save('/a', {'key': '/a', 'type': '/type/object'}, ip='1.2.3.4', comment='notbot')
-        site.save('/b', {'key': '/b', 'type': '/type/object'}, ip='1.2.3.4', comment='bot', author=site._get_thing('/user/TestBot'))
+        site.save(
+            '/a', {'key': '/a', 'type': '/type/object'}, ip='1.2.3.4', comment='notbot'
+        )
+        site.save(
+            '/b',
+            {'key': '/b', 'type': '/type/object'},
+            ip='1.2.3.4',
+            comment='bot',
+            author=site._get_thing('/user/TestBot'),
+        )
 
         def f(q):
             return [v['key'] for v in site.versions(q)]
@@ -122,7 +150,7 @@ class TestInfobase(DBTest):
         # Make sure a failed save_many query doesn't pollute property cache
         q = [
             {'key': '/a', 'type': '/type/object', 'a': 1},
-            {'key': '/b', 'type': '/type/object', 'bad property': 1}
+            {'key': '/b', 'type': '/type/object', 'bad property': 1},
         ]
         try:
             site.save_many(q)
@@ -139,10 +167,19 @@ class TestInfobase(DBTest):
         site.save('/b', {'key': '/b', 'type': '/type/object', 'x': 2, 'name': 'b'})
 
         assert site.things({'type': '/type/object'}) == [{'key': '/a'}, {'key': '/b'}]
-        assert site.things({'type': {'key': '/type/object'}}) == [{'key': '/a'}, {'key': '/b'}]
+        assert site.things({'type': {'key': '/type/object'}}) == [
+            {'key': '/a'},
+            {'key': '/b'},
+        ]
 
-        assert site.things({'type': '/type/object', 'sort': 'created'}) == [{'key': '/a'}, {'key': '/b'}]
-        assert site.things({'type': '/type/object', 'sort': '-created'}) == [{'key': '/b'}, {'key': '/a'}]
+        assert site.things({'type': '/type/object', 'sort': 'created'}) == [
+            {'key': '/a'},
+            {'key': '/b'},
+        ]
+        assert site.things({'type': '/type/object', 'sort': '-created'}) == [
+            {'key': '/b'},
+            {'key': '/a'},
+        ]
 
         assert site.things({'type': '/type/object', 'x': 1}) == [{'key': '/a'}]
         assert site.things({'type': '/type/object', 'x': '1'}) == []
@@ -158,38 +195,47 @@ class TestInfobase(DBTest):
         assert site.things({'type': '/type/bad'}) == []
 
     def test_nested_things(self):
-        site.save('/a', {
-            'key': '/a',
-            'type': '/type/object',
-            'links': [{
-                'name': 'x',
-                'url': 'http://example.com/x'
-            },
+        site.save(
+            '/a',
             {
-                'name': 'y',
-                'url': 'http://example.com/y1'
-            }]
-        })
+                'key': '/a',
+                'type': '/type/object',
+                'links': [
+                    {'name': 'x', 'url': 'http://example.com/x'},
+                    {'name': 'y', 'url': 'http://example.com/y1'},
+                ],
+            },
+        )
 
-        site.save('/b', {
-            'key': '/b',
-            'type': '/type/object',
-            'links': [{
-                'name': 'y',
-                'url': 'http://example.com/y2'
-            },
+        site.save(
+            '/b',
             {
-                'name': 'z',
-                'url': 'http://example.com/z'
-            }]
-        })
+                'key': '/b',
+                'type': '/type/object',
+                'links': [
+                    {'name': 'y', 'url': 'http://example.com/y2'},
+                    {'name': 'z', 'url': 'http://example.com/z'},
+                ],
+            },
+        )
 
         site.things({'type': '/type/object', 'links.name': 'x'}) == [{'key': '/a'}]
-        site.things({'type': '/type/object', 'links.name': 'y'}) == [{'key': '/a'}, {'key': '/b'}]
+        site.things({'type': '/type/object', 'links.name': 'y'}) == [
+            {'key': '/a'},
+            {'key': '/b'},
+        ]
         site.things({'type': '/type/object', 'links.name': 'z'}) == [{'key': '/b'}]
 
-        site.things({'type': '/type/object', 'links': {'name': 'x', 'url': 'http://example.com/y1'}}) == [{'key': '/a'}]
+        site.things(
+            {
+                'type': '/type/object',
+                'links': {'name': 'x', 'url': 'http://example.com/y1'},
+            }
+        ) == [{'key': '/a'}]
 
         site.things({'type': '/type/object', 'links': {'name': 'x'}}) == [{'key': '/a'}]
-        site.things({'type': '/type/object', 'links': {'name': 'y'}}) == [{'key': '/a'}, {'key': '/b'}]
+        site.things({'type': '/type/object', 'links': {'name': 'y'}}) == [
+            {'key': '/a'},
+            {'key': '/b'},
+        ]
         site.things({'type': '/type/object', 'links': {'name': 'z'}}) == [{'key': '/b'}]

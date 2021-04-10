@@ -3,15 +3,18 @@ import web
 
 from infogami.infobase import common
 
+
 def get_thing(store, key, revision=None):
     json = key and store.get(key, revision)
     return json and common.Thing.from_json(store, key, json)
+
 
 def run_things_query(store, query):
     query = make_query(store, query)
     keys = store.things(query)
 
     xthings = {}
+
     def load_things(keys, query):
         _things = simplejson.loads(store.get_many(keys))
         xthings.update(_things)
@@ -33,7 +36,9 @@ def run_things_query(store, query):
             return value
 
     def get_data(thingdata, query):
-        fields = dict((web.lstrips(k, query.prefix), v) for k, v in query.requested.items())
+        fields = dict(
+            (web.lstrips(k, query.prefix), v) for k, v in query.requested.items()
+        )
 
         # special care for '*'
         if '*' in fields:
@@ -62,6 +67,7 @@ def run_things_query(store, query):
         data = [d for d in data if d['key'] in xthings]
         return get_nested_data(data, query)
 
+
 class Query:
     """Query is a list of conditions.
     Each condition is a storage object with ("key", "op", "datatype", "value") as keys.
@@ -78,6 +84,7 @@ class Query:
         >>> q
         <query: ['name = str:foo', 'type = ref:/type/page']>
     """
+
     def __init__(self, conditions=None):
         self.conditions = conditions or []
         self.sort = None
@@ -87,20 +94,25 @@ class Query:
         self.requested = {"key": None}
 
     def get_type(self):
-        """Returns the value of the condition for type if there is any.
-        """
+        """Returns the value of the condition for type if there is any."""
         for c in self.conditions:
-            #@@ also make sure op is =
+            # @@ also make sure op is =
             if c.key == 'type':
                 return c.value
 
     def assert_type_required(self):
-        type_required = any(c.key not in common.COMMON_PROPERTIES for c in self.conditions if not isinstance(c, Query))
+        type_required = any(
+            c.key not in common.COMMON_PROPERTIES
+            for c in self.conditions
+            if not isinstance(c, Query)
+        )
         if type_required and self.get_type() is None:
             raise common.BadData(message="missing 'type' in query")
 
     def add_condition(self, key, op, datatype, value):
-        self.conditions.append(web.storage(key=key, op=op, datatype=datatype, value=value))
+        self.conditions.append(
+            web.storage(key=key, op=op, datatype=datatype, value=value)
+        )
 
     def __repr__(self):
         def f(c):
@@ -108,18 +120,20 @@ class Query:
                 return repr(c)
             else:
                 return "%s %s %s:%s" % (c.key, c.op, c.datatype, c.value)
+
         conditions = [f(c) for c in self.conditions]
         return "<query: %s>" % repr(conditions)
 
+
 def make_query(store, query, prefix=""):
     """Creates a query object from query dict.
-        >>> store = common.create_test_store()
-        >>> make_query(store, {'type': '/type/page'})
-        <query: ['type = ref:/type/page']>
-        >>> make_query(store, {'life': 42, 'type': '/type/page', 'title~': 'foo'})
-        <query: ['life = int:42', 'type = ref:/type/page', 'title ~ str:foo']>
-        >>> make_query(store, {'a:life<': 42, 'type': '/type/page', 'title~': 'foo', "b:life>": 420})
-        <query: ['life < int:42', 'type = ref:/type/page', 'title ~ str:foo', 'life > int:420']>
+    >>> store = common.create_test_store()
+    >>> make_query(store, {'type': '/type/page'})
+    <query: ['type = ref:/type/page']>
+    >>> make_query(store, {'life': 42, 'type': '/type/page', 'title~': 'foo'})
+    <query: ['life = int:42', 'type = ref:/type/page', 'title ~ str:foo']>
+    >>> make_query(store, {'a:life<': 42, 'type': '/type/page', 'title~': 'foo', "b:life>": 420})
+    <query: ['life < int:42', 'type = ref:/type/page', 'title ~ str:foo', 'life > int:420']>
     """
     query = common.parse_query(query)
     q = Query()
@@ -130,7 +144,7 @@ def make_query(store, query, prefix=""):
         q.limit = 1000
     sort = query.pop('sort', None)
 
-    nested = (prefix != "")
+    nested = prefix != ""
 
     for k, v in query.items():
         # key foo can also be written as label:foo
@@ -141,7 +155,7 @@ def make_query(store, query, prefix=""):
             # make sure op is ==
             v = dict((k + '.' + key, value) for key, value in v.items())
             q2 = make_query(store, v, prefix=prefix + k + ".")
-            #@@ Anand: Quick-fix
+            # @@ Anand: Quick-fix
             # dbstore.things looks for key to find whether type is required or not.
             q2.key = k
             if q2.conditions:
@@ -156,27 +170,28 @@ def make_query(store, query, prefix=""):
         q.assert_type_required()
 
     type = get_thing(store, q.get_type())
-    #assert type is not None, 'Not found: ' + q.get_type()
+    # assert type is not None, 'Not found: ' + q.get_type()
     for c in q.conditions:
         if not isinstance(c, Query):
             c.datatype = find_datatype(type, c.key, c.value)
 
     if sort:
-        parse_key(sort) # to validate key
+        parse_key(sort)  # to validate key
         q.sort = web.storage(key=sort, datatype=find_datatype(type, sort, None))
     else:
         q.sort = None
 
     return q
 
+
 def find_datatype(type, key, value):
     """
-        >>> find_datatype(None, "foo", 1)
-        'int'
-        >>> find_datatype(None, "foo", True)
-        'boolean'
-        >>> find_datatype(None, "foo", "hello")
-        'str'
+    >>> find_datatype(None, "foo", 1)
+    'int'
+    >>> find_datatype(None, "foo", True)
+    'boolean'
+    >>> find_datatype(None, "foo", "hello")
+    'str'
     """
     # special properties
     d = dict(
@@ -185,7 +200,8 @@ def find_datatype(type, key, value):
         permission="ref",
         child_permission="ref",
         created="datetime",
-        last_modified="datetime")
+        last_modified="datetime",
+    )
 
     if key in d:
         return d[key]
@@ -204,39 +220,40 @@ def find_datatype(type, key, value):
         '/type/int': 'int',
         '/type/float': 'float',
         '/type/boolean': 'boolean',
-        '/type/datetime': 'datetime'
+        '/type/datetime': 'datetime',
     }
 
     # if possible, get the datatype from the type schema
     p = type and type.get_property(key)
     return (p and type2datatype.get(p.expected_type.key, 'ref')) or "str"
 
+
 def parse_key(key):
     """Parses key and returns key and operator.
-        >>> parse_key('foo')
-        ('foo', '=')
-        >>> parse_key('foo=')
-        ('foo', '=')
-        >>> parse_key('foo<')
-        ('foo', '<')
-        >>> parse_key('foo~')
-        ('foo', '~')
-        >>> parse_key('foo!=')
-        ('foo', '!=')
+    >>> parse_key('foo')
+    ('foo', '=')
+    >>> parse_key('foo=')
+    ('foo', '=')
+    >>> parse_key('foo<')
+    ('foo', '<')
+    >>> parse_key('foo~')
+    ('foo', '~')
+    >>> parse_key('foo!=')
+    ('foo', '!=')
     """
     operators = ["!=", "=", "<", "<=", ">=", ">", "~"]
     operator = "="
     for op in operators:
         if key.endswith(op):
-            key = key[:-len(op)]
+            key = key[: -len(op)]
             operator = op
             break
 
     return key, operator
 
+
 def make_versions_query(store, query):
-    """Creates a versions query object from query dict.
-    """
+    """Creates a versions query object from query dict."""
     q = Query()
 
     q.offset = common.safeint(query.pop('offset', None), 0)
@@ -245,7 +262,17 @@ def make_versions_query(store, query):
         q.limit = 1000
     q.sort = query.pop('sort', '-created')
 
-    columns = ['key', 'type', 'revision', 'author', 'comment', 'machine_comment', 'ip', 'created', 'bot']
+    columns = [
+        'key',
+        'type',
+        'revision',
+        'author',
+        'comment',
+        'machine_comment',
+        'ip',
+        'created',
+        'bot',
+    ]
 
     for k, v in query.items():
         if k not in columns:
@@ -254,6 +281,8 @@ def make_versions_query(store, query):
 
     return q
 
+
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

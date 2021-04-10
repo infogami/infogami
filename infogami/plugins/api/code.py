@@ -9,8 +9,11 @@ from infogami.infobase import client
 import simplejson
 
 hooks = {}
+
+
 def add_hook(name, cls):
     hooks[name] = cls
+
 
 class api(delegate.page):
     path = "/api/(.*)"
@@ -36,6 +39,7 @@ class api(delegate.page):
 
     GET = POST = delegate
 
+
 def get_custom_headers():
     opt = web.ctx.env.get('HTTP_OPT')
     if opt is None:
@@ -46,12 +50,19 @@ def get_custom_headers():
 
     if m:
         decl_uri, ns = m.groups()
-        expected_decl_uri = infogami.config.get('http_ext_header_uri', 'http://infogami.org/api')
+        expected_decl_uri = infogami.config.get(
+            'http_ext_header_uri', 'http://infogami.org/api'
+        )
         if expected_decl_uri == decl_uri:
             prefix = 'HTTP_%s_' % ns
-            return dict((web.lstrips(k, prefix).lower(), v) for k, v in web.ctx.env.items() if k.startswith(prefix))
+            return dict(
+                (web.lstrips(k, prefix).lower(), v)
+                for k, v in web.ctx.env.items()
+                if k.startswith(prefix)
+            )
     else:
         return {}
+
 
 class infobase_request:
     def delegate(self):
@@ -98,7 +109,7 @@ class infobase_request:
         except client.ClientException as e:
             raise BadRequest(e.json or str(e))
 
-        #@@ this should be done in the connection.
+        # @@ this should be done in the connection.
         try:
             if path == "/save_many":
                 for q in simplejson.loads(query):
@@ -106,11 +117,15 @@ class infobase_request:
             elif path == "/write":
                 result = simplejson.loads(out)
                 for k in result.get('created', []) + result.get('updated', []):
-                    web.ctx.site._run_hooks("on_new_version", request("/get", data=dict(key=k)))
+                    web.ctx.site._run_hooks(
+                        "on_new_version", request("/get", data=dict(key=k))
+                    )
         except Exception as e:
             import traceback
+
             traceback.print_exc()
         return out
+
 
 # Earlier read API, for backward-compatability
 add_hook("get", infobase_request)
@@ -121,6 +136,7 @@ add_hook("get_many", infobase_request)
 # RESTful write API.
 add_hook("write", infobase_request)
 add_hook("save_many", infobase_request)
+
 
 def jsonapi(f):
     def g(*a, **kw):
@@ -140,18 +156,23 @@ def jsonapi(f):
             content_type = "application/json"
 
         return delegate.RawText(out, content_type=content_type)
+
     return g
+
 
 def request(path, method='GET', data=None):
     return web.ctx.site._conn.request(web.ctx.site.name, path, method=method, data=data)
+
 
 class Forbidden(web.HTTPError):
     def __init__(self, msg=""):
         web.HTTPError.__init__(self, "403 Forbidden", {}, msg)
 
+
 class BadRequest(web.HTTPError):
     def __init__(self, msg=""):
         web.HTTPError.__init__(self, "400 Bad Request", {}, msg)
+
 
 def can_write():
     user = delegate.context.user and delegate.context.user.key
@@ -159,6 +180,7 @@ def can_write():
     usergroup_admin = web.ctx.site.get('/usergroup/admin') or {}
     api_users = usergroup.get('members', []) + usergroup_admin.get('members', [])
     return user in [u.key for u in api_users]
+
 
 class view(delegate.mode):
     encoding = "json"
@@ -185,9 +207,10 @@ class view(delegate.mode):
 
         result = request('/save' + path, 'POST', data)
 
-        #@@ this should be done in the connection.
+        # @@ this should be done in the connection.
         web.ctx.site._run_hooks("on_new_version", data)
         return result
+
 
 def make_query(i, required_keys=None):
     """Removes keys starting with _ and limits the keys to required_keys, if it is specified.
@@ -208,15 +231,19 @@ def make_query(i, required_keys=None):
         query[k] = v
     return query
 
+
 class history(delegate.mode):
     encoding = "json"
 
     @jsonapi
     def GET(self, path):
-        query = make_query(web.input(), required_keys=['author', 'ip', 'offset', 'limit'])
+        query = make_query(
+            web.input(), required_keys=['author', 'ip', 'offset', 'limit']
+        )
         query['key'] = path
         query['sort'] = '-created'
         return request('/versions', data=dict(query=simplejson.dumps(query)))
+
 
 class recentchanges(delegate.page):
     encoding = "json"
@@ -226,12 +253,26 @@ class recentchanges(delegate.page):
         i = web.input(query=None)
         query = i.pop('query')
         if not query:
-            query = simplejson.dumps(make_query(i, required_keys=["key", "type", "author", "ip", "offset", "limit", "bot"]))
+            query = simplejson.dumps(
+                make_query(
+                    i,
+                    required_keys=[
+                        "key",
+                        "type",
+                        "author",
+                        "ip",
+                        "offset",
+                        "limit",
+                        "bot",
+                    ],
+                )
+            )
 
         if features.is_enabled("recentchanges_v2"):
             return request('/_recentchanges', data=dict(query=query))
         else:
             return request('/versions', data=dict(query=query))
+
 
 class query(delegate.page):
     encoding = "json"
@@ -245,6 +286,7 @@ class query(delegate.page):
             query = simplejson.dumps(make_query(i))
         return request('/things', data=dict(query=query, details="true"))
 
+
 class login(delegate.page):
     encoding = "json"
     path = "/account/login"
@@ -253,6 +295,8 @@ class login(delegate.page):
         try:
             d = simplejson.loads(web.data())
             web.ctx.site.login(d['username'], d['password'])
-            web.setcookie(infogami.config.login_cookie_name, web.ctx.conn.get_auth_token())
+            web.setcookie(
+                infogami.config.login_cookie_name, web.ctx.conn.get_auth_token()
+            )
         except Exception as e:
             raise BadRequest(str(e))

@@ -31,9 +31,11 @@ def teardown_module(module):
 
 def monkey_patch_browser():
     def check_errors(self):
-        errors = [self.get_text(e) for e in
-                  self.get_soup().findAll(attrs={'id': 'error'}) +
-                  self.get_soup().findAll(attrs={'class': 'wrong'})]
+        errors = [
+            self.get_text(e)
+            for e in self.get_soup().findAll(attrs={'id': 'error'})
+            + self.get_soup().findAll(attrs={'class': 'wrong'})
+        ]
         if errors:
             raise web.BrowserError(errors[0])
 

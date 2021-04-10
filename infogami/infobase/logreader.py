@@ -14,6 +14,7 @@ import web
 def nextday(date):
     return date + datetime.timedelta(1)
 
+
 def daterange(begin, end=None):
     """Return an iterator over dates from begin to end (inclusive).
     If end is not specified, end is taken as utcnow."""
@@ -28,38 +29,41 @@ def daterange(begin, end=None):
         yield begin
         begin = nextday(begin)
 
+
 def ijoin(iters):
     """Joins given list of iterators as a single iterator.
 
-        >>> list(ijoin([range(0, 5), range(10, 15)]))
-        [0, 1, 2, 3, 4, 10, 11, 12, 13, 14]
+    >>> list(ijoin([range(0, 5), range(10, 15)]))
+    [0, 1, 2, 3, 4, 10, 11, 12, 13, 14]
     """
     return (x for it in iters for x in it)
 
+
 def to_timestamp(iso_date_string):
     """
-        >>> t = '2008-01-01T01:01:01.010101'
-        >>> to_timestamp(t).isoformat()
-        '2008-01-01T01:01:01.010101'
+    >>> t = '2008-01-01T01:01:01.010101'
+    >>> to_timestamp(t).isoformat()
+    '2008-01-01T01:01:01.010101'
     """
-    #@@ python datetime module is ugly.
-    #@@ It takes so much of work to create datetime from isoformat.
+    # @@ python datetime module is ugly.
+    # @@ It takes so much of work to create datetime from isoformat.
     date, time = iso_date_string.split('T', 1)
     y, m, d = date.split('-')
     H, M, S = time.split(':')
     S, ms = S.split('.')
     return datetime.datetime(*map(int, [y, m, d, H, M, S, ms]))
 
+
 class LogReader:
     """
     Reads log file line by line and converts each line to python dict using simplejson.loads.
     """
+
     def __init__(self, logfile):
         self.logfile = logfile
 
     def skip_till(self, timestamp):
-        """Skips the log file till the specified timestamp.
-        """
+        """Skips the log file till the specified timestamp."""
         self.logfile.skip_till(timestamp.date())
 
         offset = self.logfile.tell()
@@ -82,8 +86,7 @@ class LogReader:
             return None
 
     def read_entries(self, n=1000000):
-        """"Reads multiple enties from the log. The maximum entries to be read is specified as argument.
-        """
+        """ "Reads multiple enties from the log. The maximum entries to be read is specified as argument."""
         return [self._loads(line) for line in self.logfile.readlines(n)]
 
     def __iter__(self):
@@ -95,6 +98,7 @@ class LogReader:
         entry = web.storage(entry)
         entry.timestamp = to_timestamp(entry.timestamp)
         return entry
+
 
 class LogFile:
     """A file like interface over log files.
@@ -138,6 +142,7 @@ class LogFile:
         offset = log.tell()
         log.seek(offset)
     """
+
     def __init__(self, root):
         self.root = root
         self.extn = ".log"
@@ -147,8 +152,7 @@ class LogFile:
         self.current_filename = None
 
     def skip_till(self, date):
-        """Skips till file with the specified date.
-        """
+        """Skips till file with the specified date."""
         self.filelist = self.find_filelist(date)
         self.advance()
 
@@ -184,7 +188,9 @@ class LogFile:
 
     def find_filelist(self, from_date=None):
         if from_date is None:
-            filelist = glob.glob('%s/[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9].log' % self.root)
+            filelist = glob.glob(
+                '%s/[0-9][0-9][0-9][0-9]/[0-9][0-9]/[0-9][0-9].log' % self.root
+            )
             filelist.sort()
         else:
             filelist = [self.date2file(date) for date in daterange(from_date)]
@@ -251,14 +257,16 @@ class LogFile:
         offset = self.file.tell()
         return "%04d-%02d-%02d:%d" % (date.year, date.month, date.day, offset)
 
+
 class RsyncLogFile(LogFile):
     """File interface to Remote log files. rsync is used for data transfer.
 
-        log = RsyncLogFile("machine::module_name/path", "log")
+    log = RsyncLogFile("machine::module_name/path", "log")
 
-        for line in log:
-            print(line)
+    for line in log:
+        print(line)
     """
+
     def __init__(self, rsync_root, root):
         LogFile.__init__(self, root)
         self.rsync_root = rsync_root
@@ -282,8 +290,10 @@ class RsyncLogFile(LogFile):
         print(cmd)
         os.system(cmd)
 
+
 class LogPlayback:
     """Playback log"""
+
     def __init__(self, infobase):
         self.infobase = infobase
 
@@ -295,7 +305,7 @@ class LogPlayback:
     def playback(self, entry):
         """Playback one log entry."""
         web.ctx.infobase_auth_token = None
-        #@@ hack to disable permission check
+        # @@ hack to disable permission check
         web.ctx.disable_permission_check = True
         site = self.infobase.get(entry.site)
         return getattr(self, entry.action)(site, entry.timestamp, entry.data)
@@ -303,29 +313,54 @@ class LogPlayback:
     def write(self, site, timestamp, data):
         d = web.storage(data)
         author = d.author and site.withKey(d.author)
-        return site.write(d.query, comment=d.comment, machine_comment=d.machine_comment, ip=d.ip, author=author, timestamp=timestamp)
+        return site.write(
+            d.query,
+            comment=d.comment,
+            machine_comment=d.machine_comment,
+            ip=d.ip,
+            author=author,
+            timestamp=timestamp,
+        )
 
     def save(self, site, timestamp, data):
         d = web.storage(data)
         author = d.author and site.withKey(d.author)
-        return site.save(d.key, d.query, comment=d.comment, machine_comment=d.machine_comment, ip=d.ip, author=author, timestamp=timestamp)
+        return site.save(
+            d.key,
+            d.query,
+            comment=d.comment,
+            machine_comment=d.machine_comment,
+            ip=d.ip,
+            author=author,
+            timestamp=timestamp,
+        )
 
     def new_account(self, site, timestamp, data):
         d = web.storage(data)
         a = site.get_account_manager()
-        return a.register1(username=d.username, email=d.email, enc_password=d.password, data=dict(displayname=d.displayname), ip=d.ip, timestamp=timestamp)
+        return a.register1(
+            username=d.username,
+            email=d.email,
+            enc_password=d.password,
+            data=dict(displayname=d.displayname),
+            ip=d.ip,
+            timestamp=timestamp,
+        )
 
     def update_account(self, site, timestamp, data):
         d = web.storage(data)
         user = site.withKey(d.username)
         a = site.get_account_manager()
-        return a.update_user1(user,
+        return a.update_user1(
+            user,
             enc_password=d.get('password'),
             email=d.get('email'),
-            ip = d.ip,
-            timestamp=timestamp)
+            ip=d.ip,
+            timestamp=timestamp,
+        )
+
 
 if __name__ == "__main__":
     import doctest
-    doctest.testmod()
 
+    doctest.testmod()

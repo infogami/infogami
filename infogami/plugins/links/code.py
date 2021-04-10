@@ -11,9 +11,9 @@ from infogami.utils import delegate
 from infogami.utils.template import render
 
 
-class backlinks (delegate.mode):
+class backlinks(delegate.mode):
     def GET(self, site, path):
-        #@@ fix later
+        # @@ fix later
         return []
         # TODO: (cclauss) unreachable code...
         links = db.Things(type=db.get_type(site, 'type/page'), parent=site, links=path)

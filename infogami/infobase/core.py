@@ -10,6 +10,7 @@ from six import iteritems, text_type
 
 class InfobaseException(Exception):
     status = "500 Internal Server Error"
+
     def __init__(self, **kw):
         self.status = kw.pop('status', self.status)
         kw.setdefault('error', 'unknown')
@@ -25,6 +26,7 @@ class InfobaseException(Exception):
 
 class NotFound(InfobaseException):
     status = "404 Not Found"
+
     def __init__(self, **kw):
         error = kw.pop('error', 'notfound')
         InfobaseException.__init__(self, error=error, **kw)
@@ -32,12 +34,14 @@ class NotFound(InfobaseException):
 
 class UserNotFound(InfobaseException):
     status = "404 Not Found"
+
     def __init__(self, **kw):
         InfobaseException.__init__(self, error='user_notfound', **kw)
 
 
 class PermissionDenied(InfobaseException):
     status = "403 Forbidden"
+
     def __init__(self, **kw):
         InfobaseException.__init__(self, error='permission_denied', **kw)
 
@@ -58,17 +62,21 @@ class Conflict(InfobaseException):
 
 class TypeMismatch(BadData):
     def __init__(self, type_expected, type_found, **kw):
-        BadData.__init__(self, message="expected %s, found %s" % (type_expected, type_found), **kw)
+        BadData.__init__(
+            self, message="expected %s, found %s" % (type_expected, type_found), **kw
+        )
 
 
 class Text(text_type):
     """Python type for /type/text."""
+
     def __repr__(self):
         return "<text: %s>" % text_type.__repr__(self)
 
 
 class Reference(text_type):
     """Python type for reference type."""
+
     def __repr__(self):
         return "<ref: %s>" % text_type.__repr__(self)
 
@@ -106,7 +114,10 @@ class Thing:
             raise AttributeError(key)
 
     def __eq__(self, other):
-        return getattr(other, 'key', None) == self.key and getattr(other, '_data', None) == self._data
+        return (
+            getattr(other, 'key', None) == self.key
+            and getattr(other, '_data', None) == self._data
+        )
 
     def get(self, key, default=None):
         try:
@@ -125,6 +136,7 @@ class Thing:
 
     def format_data(self):
         from infogami.infobase import common
+
         return common.format_data(self._get_data())
 
     def get_property(self, name):
@@ -139,6 +151,7 @@ class Thing:
     @staticmethod
     def from_dict(store, key, data):
         from infogami.infobase import common
+
         data = common.parse_query(data)
         return Thing(store, key, data)
 
@@ -148,6 +161,7 @@ class Store:
 
     Store manages one or many SiteStores.
     """
+
     def create(self, sitename):
         """Creates a new site with the given name and returns store for it."""
         raise NotImplementedError
@@ -163,6 +177,7 @@ class Store:
 
 class SiteStore:
     """Interface for Infobase data storage"""
+
     def get(self, key, revision=None):
         raise NotImplementedError
 
@@ -173,12 +188,21 @@ class SiteStore:
         to the store in generating the new key.
         """
         import uuid
+
         return '/' + str(uuid.uuid1())
 
     def get_many(self, keys):
         return [self.get(key) for key in keys]
 
-    def write(self, query, timestamp=None, comment=None, machine_comment=None, ip=None, author=None):
+    def write(
+        self,
+        query,
+        timestamp=None,
+        comment=None,
+        machine_comment=None,
+        ip=None,
+        author=None,
+    ):
         raise NotImplementedError
 
     def things(self, query):
@@ -192,8 +216,7 @@ class SiteStore:
         raise NotImplementedError
 
     def update_user_details(self, key, email, enc_password):
-        """Update user's email and/or encrypted password.
-        """
+        """Update user's email and/or encrypted password."""
         raise NotImplementedError
 
     def find_user(self, email):
@@ -201,8 +224,7 @@ class SiteStore:
         raise NotImplementedError
 
     def register(self, key, email, encrypted):
-        """Registers a new user.
-        """
+        """Registers a new user."""
         raise NotImplementedError
 
     def transact(self, f):
@@ -225,6 +247,7 @@ class Event:
     Events are fired when something important happens (write, new account etc.).
     Some code can listen to the events and do some action (like logging, updating external cache etc.).
     """
+
     def __init__(self, sitename, name, timestamp, ip, username, data):
         """Creates a new event.
 

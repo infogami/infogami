@@ -59,7 +59,9 @@ class TestStore(DBTest):
         foo3 = store.put("foo", {"name": "foo3", "_rev": None})
 
         # calling with bad/stale _rev should fail
-        assert pytest.raises(common.Conflict, store.put, "foo", {"name": "foo4", "_rev": foo['_rev']})
+        assert pytest.raises(
+            common.Conflict, store.put, "foo", {"name": "foo4", "_rev": foo['_rev']}
+        )
 
     def test_notfound(self):
         assert store.get("xxx") is None
@@ -92,7 +94,12 @@ class TestStore(DBTest):
         assert store.query("char", None, None) == [{"key": "b"}, {"key": "a"}]
 
         # query for all
-        assert store.query(None, None, None) == [{"key": "b"}, {"key": "a"}, {"key": "two"}, {"key": "one"}]
+        assert store.query(None, None, None) == [
+            {"key": "b"},
+            {"key": "a"},
+            {"key": "two"},
+            {"key": "one"},
+        ]
 
     def test_query_order(self):
         store.put("one", {"type": "digit", "name": "one", "value": 1})
@@ -101,7 +108,9 @@ class TestStore(DBTest):
         assert store.query("digit", None, None) == [{"key": "two"}, {"key": "one"}]
 
         # after updating "one", it should show up first in the query results
-        store.put("one", {"type": "digit", "name": "one", "value": 1, "x": 1, "_rev": None})
+        store.put(
+            "one", {"type": "digit", "name": "one", "value": 1, "x": 1, "_rev": None}
+        )
         assert store.query("digit", None, None) == [{"key": "one"}, {"key": "two"}]
 
     def test_query_include_docs(self, wildcard):
@@ -111,16 +120,46 @@ class TestStore(DBTest):
         store.put("two", {"type": "digit", "name": "two", "value": 2})
 
         assert store.query("digit", "name", "one", include_docs=True) == [
-            {'key': "one", "doc": {"type": "digit", "name": "one", "value": 1, "_key": "one", "_rev": wildcard}}
+            {
+                'key': "one",
+                "doc": {
+                    "type": "digit",
+                    "name": "one",
+                    "value": 1,
+                    "_key": "one",
+                    "_rev": wildcard,
+                },
+            }
         ]
         assert store.query(None, None, None, include_docs=True) == [
-            {'key': "two", "doc": {"type": "digit", "name": "two", "value": 2, "_key": "two", "_rev": wildcard}},
-            {'key': "one", "doc": {"type": "digit", "name": "one", "value": 1, "_key": "one", "_rev": wildcard}},
+            {
+                'key': "two",
+                "doc": {
+                    "type": "digit",
+                    "name": "two",
+                    "value": 2,
+                    "_key": "two",
+                    "_rev": wildcard,
+                },
+            },
+            {
+                'key': "one",
+                "doc": {
+                    "type": "digit",
+                    "name": "one",
+                    "value": 1,
+                    "_key": "one",
+                    "_rev": wildcard,
+                },
+            },
         ]
 
     def test_indexer(self):
         s = Store(db)
-        s.put("foo", {"type": "account", "name": "foo", "bot": False, "age": 42, "d": {"x": 1}})
+        s.put(
+            "foo",
+            {"type": "account", "name": "foo", "bot": False, "age": 42, "d": {"x": 1}},
+        )
         rows = db.query("SELECT name, value from store_index")
         d = dict((row.name, row.value) for row in rows)
 
@@ -129,7 +168,7 @@ class TestStore(DBTest):
             "name": "foo",
             "bot": "false",
             "age": "42",
-            "d.x": "1"
+            "d.x": "1",
         }
 
     def test_indexer2(self):
@@ -138,7 +177,9 @@ class TestStore(DBTest):
 
         s.put("book", {"title": "The lord of the rings", "lang": "en"})
         assert store.query("", "lang", "en") == []
-        assert store.query("", "title,lang", "The lord of the rings--en") == [{'key': 'book'}]
+        assert store.query("", "title,lang", "The lord of the rings--en") == [
+            {'key': 'book'}
+        ]
 
     def test_typewise_indexer(self):
         t = TypewiseIndexer()
@@ -147,7 +188,9 @@ class TestStore(DBTest):
         def f(doc):
             return sorted(t.index(doc))
 
-        assert f({"type": "book", "title": "foo", "lang": "en", "name": "foo"}) == [("title,lang", "foo--en")]
+        assert f({"type": "book", "title": "foo", "lang": "en", "name": "foo"}) == [
+            ("title,lang", "foo--en")
+        ]
         assert f({"name": "foo"}) == [("name", "foo")]
 
     def test_typewise_indexer2(self):
@@ -161,7 +204,9 @@ class TestStore(DBTest):
         s.put("foo", {"name": "foo"})
 
         assert store.query("", "lang", "en") == []
-        assert store.query("book", "title,lang", "The lord of the rings--en") == [{"key": "book"}]
+        assert store.query("book", "title,lang", "The lord of the rings--en") == [
+            {"key": "book"}
+        ]
 
         assert store.query("digit", "name", "one") == [{"key": "one"}]
         assert store.query("", "name", "foo") == [{"key": "foo"}]
@@ -179,4 +224,3 @@ class TestStore(DBTest):
 class BookIndexer:
     def index(self, doc):
         yield "title,lang", doc['title'] + "--" + doc['lang']
-

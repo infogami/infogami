@@ -1,9 +1,12 @@
 """Infobase cache.
 """
 
+
 class Node(object):
     """Queue Node."""
+
     __slots__ = ["key", "value", "next", "prev"]
+
     def __init__(self, key):
         self.key = key
         self.value = None
@@ -15,35 +18,37 @@ class Node(object):
 
     __repr__ = __str__
 
+
 class Queue:
     """Classic Queue Datastructure with O(1) inserts and deletes.
 
-        >>> q = Queue()
-        >>> q
-        []
-        >>> a, b, c = Node(1), Node(2), Node(3)
-        >>> q.insert(a)
-        >>> q.insert(b)
-        >>> q.insert(c)
-        >>> q
-        [1, 2, 3]
-        >>> q.peek()
-        1
-        >>> q.remove(b)
-        2
-        >>> q
-        [1, 3]
-        >>> q.remove()
-        1
-        >>> q.remove()
-        3
-        >>> q.remove()
-        Traceback (most recent call last):
-            ... 
-        Exception: Queue is empty
+    >>> q = Queue()
+    >>> q
+    []
+    >>> a, b, c = Node(1), Node(2), Node(3)
+    >>> q.insert(a)
+    >>> q.insert(b)
+    >>> q.insert(c)
+    >>> q
+    [1, 2, 3]
+    >>> q.peek()
+    1
+    >>> q.remove(b)
+    2
+    >>> q
+    [1, 3]
+    >>> q.remove()
+    1
+    >>> q.remove()
+    3
+    >>> q.remove()
+    Traceback (most recent call last):
+        ...
+    Exception: Queue is empty
     """
+
     def __init__(self):
-        # circular linked-list implementation with 
+        # circular linked-list implementation with
         # sentinel node to eliminate boundary checks
         head = self.head = Node("head")
         head.next = head.prev = head
@@ -54,7 +59,7 @@ class Queue:
     def insert(self, node):
         """Inserts a node at the end of the queue."""
         node.next = self.head
-        node.prev = self.head.prev        
+        node.prev = self.head.prev
         node.next.prev = node
         node.prev.next = node
 
@@ -84,15 +89,18 @@ class Queue:
             yield node
             node = node.next
 
+
 def synchronized(f):
     """Decorator to synchronize a method.
     Behavior of this is same as Java synchronized keyword.
     """
+
     def g(self, *a, **kw):
         # allocate the lock when the function is called for the first time.
         lock = getattr(self, '__lock__', None)
         if lock is None:
             import threading
+
             lock = threading.RLock()
             setattr(self, '__lock__', lock)
 
@@ -101,10 +109,12 @@ def synchronized(f):
             return f(self, *a, **kw)
         finally:
             lock.release()
+
     return g
 
+
 class LRU:
-    """Dictionary which discards least recently used items when size 
+    """Dictionary which discards least recently used items when size
     exceeds the specified capacity.
 
         >>> d = LRU(3)
@@ -125,6 +135,7 @@ class LRU:
         >>> d
         [4, 2]
     """
+
     def __init__(self, capacity, d=None):
         self.capacity = capacity
         self.d = d or {}
@@ -141,7 +152,7 @@ class LRU:
 
     @synchronized
     def touch(self, node):
-        # don't call remove for newly created nodes 
+        # don't call remove for newly created nodes
         node.next and self.queue.remove(node)
         self.queue.insert(node)
 
@@ -206,7 +217,7 @@ class LRU:
     def items(self):
         return [(k, node.value) for k, node in self.d.items()]
 
-    @synchronized    
+    @synchronized
     def clear(self):
         self.d.clear()
         self.queue.clear()
@@ -220,21 +231,28 @@ class LRU:
     @synchronized
     def __str__(self):
         return str(self.queue)
+
     __repr__ = __str__
+
 
 def lrumemoize(n):
     def decorator(f):
         cache = LRU(n)
+
         def g(*a, **kw):
             key = a, tuple(kw.items())
             if key not in cache:
                 cache[key] = f(*a, **kw)
             return cache[key]
+
         return g
+
     return decorator
+
 
 class ThingCache(LRU):
     """LRU Cache for storing things. Key can be either id or (site_id, key)."""
+
     def __init__(self, capacity):
         LRU.__init__(self, capacity)
         self.key2id = {}
@@ -270,8 +288,8 @@ class ThingCache(LRU):
     def remove_node(self, node=None):
         node = LRU.remove_node(self, node)
         thing = node.value
-        # when a node is removed, its corresponding entry 
-        # from the key2id map must also be removed 
+        # when a node is removed, its corresponding entry
+        # from the key2id map must also be removed
         del self.key2id[thing._site.id, thing.key]
         return node
 
@@ -279,7 +297,8 @@ class ThingCache(LRU):
         LRU.clear(self)
         self.key2id.clear()
 
+
 if __name__ == "__main__":
     import doctest
-    doctest.testmod()
 
+    doctest.testmod()

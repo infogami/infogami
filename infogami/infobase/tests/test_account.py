@@ -39,16 +39,26 @@ class TestAccount:
 
     def test_register_failures(self, _activate=True):
         a = site.account_manager
-        a.register(username="joe", email="joe@example.com", password="secret", data={}, _activate=_activate)
+        a.register(
+            username="joe",
+            email="joe@example.com",
+            password="secret",
+            data={},
+            _activate=_activate,
+        )
 
         try:
-            a.register(username="joe", email="joe2@example.com", password="secret", data={})
+            a.register(
+                username="joe", email="joe2@example.com", password="secret", data={}
+            )
             assert False
         except common.BadData as e:
             assert e.d['message'] == "User already exists: joe"
 
         try:
-            a.register(username="joe2", email="joe@example.com", password="secret", data={})
+            a.register(
+                username="joe2", email="joe@example.com", password="secret", data={}
+            )
             assert False
         except common.BadData as e:
             assert e.d['message'] == "Email is already used: joe@example.com"
@@ -67,11 +77,20 @@ class TestAccount:
         enc_password = self.encrypt("secret")
 
         assert f(dict(enc_password=enc_password, status="active"), "secret") == "ok"
-        assert f(dict(enc_password=enc_password, status="active"), "bad-password") == "account_bad_password"
+        assert (
+            f(dict(enc_password=enc_password, status="active"), "bad-password")
+            == "account_bad_password"
+        )
 
         # pending accounts should return "account_not_verified" if the password is correct
-        assert f(dict(enc_password=enc_password, status="pending"), "secret") == "account_not_verified"
-        assert f(dict(enc_password=enc_password, status="pending"), "bad-password") == "account_bad_password"
+        assert (
+            f(dict(enc_password=enc_password, status="pending"), "secret")
+            == "account_not_verified"
+        )
+        assert (
+            f(dict(enc_password=enc_password, status="pending"), "bad-password")
+            == "account_bad_password"
+        )
 
     def test_update(self):
         a = site.account_manager
@@ -87,7 +106,14 @@ class TestAccount:
         ## test update email
 
         # registering with the same email should fail.
-        assert pytest.raises(common.BadData, a.register, username="bar", email="foo@example.com", password="secret", data={})
+        assert pytest.raises(
+            common.BadData,
+            a.register,
+            username="bar",
+            email="foo@example.com",
+            password="secret",
+            data={},
+        )
 
         assert a.update("foo", email="foo2@example.com") == "ok"
 
@@ -95,6 +121,11 @@ class TestAccount:
         a.register(username="bar", email="foo@example.com", password="secret", data={})
 
         # and no one should be allowed to register with new email
-        assert pytest.raises(common.BadData, a.register, username="bar", email="foo2@example.com", password="secret", data={})
-
-
+        assert pytest.raises(
+            common.BadData,
+            a.register,
+            username="bar",
+            email="foo2@example.com",
+            password="secret",
+            data={},
+        )

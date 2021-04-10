@@ -22,14 +22,15 @@ def create_site():
     web.ctx.conn = client.connect(**config.infobase_parameters)
 
     # set auto token in the connection
-    if web.ctx.get('env'): # do this only if web.load is already called
+    if web.ctx.get('env'):  # do this only if web.load is already called
         auth_token = web.cookies().get(config.login_cookie_name)
         web.ctx.conn.set_auth_token(auth_token)
 
     return client.Site(web.ctx.conn, site)
 
+
 def fakeload():
-    #web.load()
+    # web.load()
     app.load(dict(REQUEST_METHOD="GET", PATH_INFO="/install"))
     web.ctx.ip = None
     context.load()
@@ -45,6 +46,7 @@ def fakeload():
     context.user = None
     web.ctx.site = create_site()
 
+
 def initialize_context():
     web.ctx.site = create_site()
     context.load()
@@ -56,7 +58,8 @@ def initialize_context():
     context.path = web.ctx.path
 
     i = web.input(_method='GET', rescue="false")
-    context.rescue_mode = (i.rescue.lower() == 'true')
+    context.rescue_mode = i.rescue.lower() == 'true'
+
 
 def layout_processor(handler):
     """Processor to wrap the output in site template."""
@@ -94,26 +97,34 @@ def layout_processor(handler):
 
     return html
 
-def notfound(path = None, create = True):
+
+def notfound(path=None, create=True):
     from infogami.utils import template
+
     path = path or web.ctx.path
-    html = template.render_template("notfound", path, create = create)
+    html = template.render_template("notfound", path, create=create)
     return web.notfound(render_site(config.site, html))
+
 
 app.add_processor(web.loadhook(initialize_context))
 app.add_processor(layout_processor)
 app.add_processor(web.loadhook(features.loadhook))
 app.notfound = notfound
 
+
 class RawText(web.storage):
     def __init__(self, text, **kw):
         web.storage.__init__(self, rawtext=text, **kw)
 
+
 plugins = []
+
+
 @public
 def get_plugins():
     """Return names of all the plugins."""
     return [p.name for p in plugins]
+
 
 def _make_plugin(name):
     # plugin can be present in infogami/plugins directory or <pwd>/plugins directory.
@@ -136,6 +147,7 @@ def _make_plugin(name):
 
     return web.storage(name=name, path=path, module=module)
 
+
 def _make_plugin_module(modname):
     """Makes a plugin object from module name.
 
@@ -145,19 +157,28 @@ def _make_plugin_module(modname):
     path = os.path.dirname(m.__file__)
     return web.storage(name=modname, path=path, module=modname)
 
+
 def _list_plugins(dir):
     if os.path.isdir(dir):
-        return [_make_plugin(name) for name in os.listdir(dir) if os.path.isdir(dir + '/' + name)]
+        return [
+            _make_plugin(name)
+            for name in os.listdir(dir)
+            if os.path.isdir(dir + '/' + name)
+        ]
     else:
         return []
 
+
 def infogami_root():
     import infogami
+
     return os.path.dirname(infogami.__file__)
+
 
 def _load():
     """Imports the files from the plugins directories and loads templates."""
     from infogami.utils import macro, template
+
     global plugins
 
     plugins = [_make_plugin('core')]
@@ -181,22 +202,30 @@ def _load():
 
     features.set_feature_flags(config.get("features", {}))
 
+
 def admin_login(site=None):
     site = site or web.ctx.site
     web.ctx.admin_mode = True
     web.ctx.ip = '127.0.0.1'
     web.ctx.site.login('admin', config.admin_password)
 
+
 exception_hooks = []
+
+
 def add_exception_hook(hook):
     exception_hooks.append(hook)
+
 
 def register_exception():
     """Called to on exceptions to log exception or send exception mail."""
     for h in exception_hooks:
         h()
 
+
 def email_exceptions():
     if config.bugfixer:
         web.emailerrors(config.bugfixer, lambda: None)()
+
+
 add_exception_hook(email_exceptions)

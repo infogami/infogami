@@ -24,6 +24,7 @@ views = collections.defaultdict(dict)
 encodings = set()
 media_types = {"application/json": "json"}
 
+
 class metapage(type):
     def __init__(self, *a, **kw):
         type.__init__(self, *a, **kw)
@@ -35,6 +36,7 @@ class metapage(type):
         pages.setdefault(path, {})
         pages[path][enc] = self
 
+
 class metamode(type):
     def __init__(self, *a, **kw):
         type.__init__(self, *a, **kw)
@@ -45,6 +47,7 @@ class metamode(type):
         encodings.add(enc)
         modes.setdefault(name, {})
         modes[name][enc] = self
+
 
 class metaview(type):
     def __init__(self, *a, **kw):
@@ -67,6 +70,7 @@ class mode(six.with_metaclass(metamode)):
     def GET(self, *a):
         return web.nomethod(web.ctx.method)
 
+
 class page(six.with_metaclass(metapage)):
     def HEAD(self, *a):
         return self.GET(*a)
@@ -74,21 +78,23 @@ class page(six.with_metaclass(metapage)):
     def GET(self, *a):
         return web.nomethod(web.ctx.method)
 
+
 class view(six.with_metaclass(metaview)):
     suffix = None
     types = None
 
     def emit_json(self, data):
         from infogami.utils.delegate import RawText
+
         web.header('Content-Type', 'application/json')
         return RawText(json.dumps(data))
 
     def delegate(self, page):
-        converters = {"json" : self.emit_json}
+        converters = {"json": self.emit_json}
         method = web.ctx.method.upper()
         f = getattr(self, method, None)
         encoding = find_encoding()
-        if encoding and hasattr(self, "%s_%s" % (method,encoding.lower())):
+        if encoding and hasattr(self, "%s_%s" % (method, encoding.lower())):
             f = getattr(self, "%s_%s" % (method, encoding.lower()))
         if f:
             ret = f(page)
@@ -99,12 +105,14 @@ class view(six.with_metaclass(metaview)):
         else:
             raise web.nomethod(web.ctx.method)
 
+
 @web.memoize
 def get_sorted_paths():
     """Sort path such that wildcards go at the end.
     This is called only once. After that the value is memoized.
     """
     return sorted(pages, key=lambda path: ('.*' in path, path))
+
 
 def find_page():
     path = web.ctx.path
@@ -127,10 +135,11 @@ def find_page():
             # FeatureFlags support.
             # A handler can be enabled only if a feature is active.
             if hasattr(cls, "is_enabled") and bool(cls().is_enabled()) is False:
-               continue
+                continue
 
             return cls, args
     return None, None
+
 
 def find_mode():
     what = web.input(_method='GET').get('m', 'view')
@@ -158,33 +167,38 @@ def find_mode():
     else:
         return None, None
 
+
 def find_view():
     def normalize_suffix(s):
         if "." in s:
             return s.split(".")[0]
         else:
             return s
+
     path = web.ctx.path
     key, suffix = path.rsplit("/", 1)
-    suffix = normalize_suffix(suffix) # Review this!
+    suffix = normalize_suffix(suffix)  # Review this!
     if key and suffix in views:
         page = web.ctx.site.get(key)
         d = views[suffix]
         if not page:
-            raise app.notfound(create = False)
+            raise app.notfound(create=False)
         type_key = page.type.key
         handler = d.get(type_key) or d.get(None)
         if not handler:
-            raise app.notfound(create = False)
+            raise app.notfound(create=False)
         return handler, [page]
     return None, None
+
 
 # mode and page are just base classes.
 del modes['mode']
 del pages['/page']
 
+
 class item:
     HEAD = GET = POST = PUT = DELETE = lambda self: delegate()
+
 
 def delegate():
     """Delegate the request to appropriate class."""
@@ -192,9 +206,9 @@ def delegate():
     method = web.ctx.method
     # look for special pages
     cls, args = find_page()
-    if cls is None: # Check for view handlers
+    if cls is None:  # Check for view handlers
         cls, args = find_view()
-    if cls is None: # Check for mode handlers
+    if cls is None:  # Check for mode handlers
         cls, args = find_mode()
     if cls is None:
         raise web.seeother(web.changequery(m=None))
@@ -205,17 +219,19 @@ def delegate():
     else:
         return getattr(cls(), method)(*args)
 
+
 ##  processors
+
 
 def normpath(path):
     """Normalized path.
 
-        >>> normpath("/a b")
-        '/a_b'
-        >>> normpath("/a//b")
-        '/a/b'
-        >>> normpath("//a/b/")
-        '/a/b'
+    >>> normpath("/a b")
+    '/a_b'
+    >>> normpath("/a//b")
+    '/a/b'
+    >>> normpath("//a/b/")
+    '/a/b'
     """
     try:
         # take care of bad unicode values in urls
@@ -231,9 +247,10 @@ def normpath(path):
     path = os.path.normpath(path)
     # os.path.normpath doesn't remove double/triple /'s at the beginning
     path = path.replace("///", "/").replace("//", "/")
-    path = path.replace(' ', '_') # replace space with underscore
+    path = path.replace(' ', '_')  # replace space with underscore
     path = path.replace('\n', '_').replace('\r', '_')
     return path
+
 
 def path_processor(handler):
     """Processor to make sure path is normalized."""
@@ -248,11 +265,13 @@ def path_processor(handler):
     else:
         return handler()
 
+
 # setup load and unload hooks for legacy code
 if not hasattr(web, '_loadhooks'):
     web._loadhooks = {}
 web.unloadhooks = {}
 web.load = lambda: None
+
 
 def hook_processor(handler):
     for h in web._loadhooks.values():
@@ -263,16 +282,17 @@ def hook_processor(handler):
         for h in web.unloadhooks.values():
             h()
 
+
 def parse_accept(header):
     """Parses Accept: header.
 
-        >>> parsed = parse_accept("text/plain; q=0.5, text/html")
-        >>> len(parsed)
-        2
-        >>> parsed[0]
-        {'media_type': 'text/html'}
-        >>> sorted(parsed[1].items())
-        [('media_type', 'text/plain'), ('q', 0.5)]
+    >>> parsed = parse_accept("text/plain; q=0.5, text/html")
+    >>> len(parsed)
+    2
+    >>> parsed[0]
+    {'media_type': 'text/html'}
+    >>> sorted(parsed[1].items())
+    [('media_type', 'text/plain'), ('q', 0.5)]
     """
     result = []
     for media_range in header.split(','):
@@ -296,10 +316,12 @@ def parse_accept(header):
     result.sort(key=lambda m: m.get('q', 1.0), reverse=True)
     return result
 
+
 def find_encoding():
     def find_from_extension():
         for enc in encodings:
-            if enc is None: continue
+            if enc is None:
+                continue
             if web.ctx.path.endswith('.' + enc):
                 return enc
 
@@ -318,9 +340,11 @@ def find_encoding():
         content_type = web.ctx.env.get('CONTENT_TYPE')
         return media_types.get(content_type) or find_from_extension()
 
+
 def encoding_processor(handler):
     web.ctx.encoding = find_encoding()
     return handler()
+
 
 app.add_processor(hook_processor)
 app.add_processor(path_processor)
@@ -329,4 +353,5 @@ app.add_processor(flash.flash_processor)
 
 if __name__ == '__main__':
     import doctest
+
     doctest.testmod()

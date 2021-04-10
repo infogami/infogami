@@ -29,8 +29,7 @@ class DBTest:
 
 
 def update_doc(doc, revision, created, last_modified):
-    """Add revision, latest_revision, created and latest_revision properties to the given doc.
-    """
+    """Add revision, latest_revision, created and latest_revision properties to the given doc."""
     last_modified_repr = {"type": "/type/datetime", "value": last_modified.isoformat()}
     created_repr = {"type": "/type/datetime", "value": created.isoformat()}
 
@@ -39,7 +38,8 @@ def update_doc(doc, revision, created, last_modified):
         revision=revision,
         latest_revision=revision,
         created=created_repr,
-        last_modified=last_modified_repr)
+        last_modified=last_modified_repr,
+    )
 
 
 def assert_record(record, doc, revision, created, timestamp):
@@ -60,8 +60,8 @@ def assert_record(record, doc, revision, created, timestamp):
 
 
 class Test_get_records_for_save(DBTest):
-    """Tests for _dbstore_save._get_records_for_save.
-    """
+    """Tests for _dbstore_save._get_records_for_save."""
+
     def test_new(self):
         s = SaveImpl(db)
         timestamp = datetime.datetime(2010, 1, 1, 1, 1, 1)
@@ -78,8 +78,20 @@ class Test_get_records_for_save(DBTest):
 
     def test_existing(self):
         def insert(doc, revision, created, last_modified):
-            id = db.insert('thing', key=doc['key'], latest_revision=revision, created=created, last_modified=last_modified)
-            db.insert('data', seqname=False, thing_id=id, revision=revision, data= json.dumps(doc))
+            id = db.insert(
+                'thing',
+                key=doc['key'],
+                latest_revision=revision,
+                created=created,
+                last_modified=last_modified,
+            )
+            db.insert(
+                'data',
+                seqname=False,
+                thing_id=id,
+                revision=revision,
+                data=json.dumps(doc),
+            )
 
         created = datetime.datetime(2010, 1, 1, 1, 1, 1)
         a = {"key": "/a", "type": {"key": "/type/object"}, "title": "a"}
@@ -94,7 +106,9 @@ class Test_get_records_for_save(DBTest):
 
 class Test_save(DBTest):
     def get_json(self, key):
-        d = db.query("SELECT data.data FROM thing, data WHERE data.thing_id=thing.id AND data.revision = thing.latest_revision AND thing.key = '/a'")
+        d = db.query(
+            "SELECT data.data FROM thing, data WHERE data.thing_id=thing.id AND data.revision = thing.latest_revision AND thing.key = '/a'"
+        )
         return json.loads(d[0].data)
 
     def test_save(self):
@@ -103,12 +117,13 @@ class Test_save(DBTest):
         a = {"key": "/a", "type": {"key": "/type/object"}, "title": "a"}
 
         status = s.save(
-                    [a],
-                    timestamp=timestamp,
-                    ip="1.2.3.4",
-                    author=None,
-                    comment="Testing create.",
-                    action="save")
+            [a],
+            timestamp=timestamp,
+            ip="1.2.3.4",
+            author=None,
+            comment="Testing create.",
+            action="save",
+        )
 
         assert status['changes'][0]['revision'] == 1
         assert self.get_json('/a') == update_doc(a, 1, timestamp, timestamp)
@@ -116,12 +131,13 @@ class Test_save(DBTest):
         a['title'] = 'b'
         timestamp2 = datetime.datetime(2010, 2, 2, 2, 2, 2)
         status = s.save(
-                    [a],
-                    timestamp=timestamp2,
-                    ip="1.2.3.4",
-                    author=None,
-                    comment="Testing update.",
-                    action="save")
+            [a],
+            timestamp=timestamp2,
+            ip="1.2.3.4",
+            author=None,
+            comment="Testing update.",
+            action="save",
+        )
         assert status['changes'][0]['revision'] == 2
         assert self.get_json('/a') == update_doc(a, 2, timestamp, timestamp2)
 
@@ -130,12 +146,13 @@ class Test_save(DBTest):
         timestamp = datetime.datetime(2010, 1, 1, 1, 1, 1)
         a = {"key": "/a", "type": {"key": "/type/object"}, "title": "a"}
         status = s.save(
-                    [a],
-                    timestamp=timestamp,
-                    ip="1.2.3.4",
-                    author=None,
-                    comment="Testing create.",
-                    action="save")
+            [a],
+            timestamp=timestamp,
+            ip="1.2.3.4",
+            author=None,
+            comment="Testing create.",
+            action="save",
+        )
 
         # insert new type
         type_delete_id = db.insert("thing", key='/type/delete')
@@ -143,12 +160,13 @@ class Test_save(DBTest):
 
         timestamp2 = datetime.datetime(2010, 2, 2, 2, 2, 2)
         status = s.save(
-                    [a],
-                    timestamp=timestamp2,
-                    ip="1.2.3.4",
-                    author=None,
-                    comment="Testing type change.",
-                    action="save")
+            [a],
+            timestamp=timestamp2,
+            ip="1.2.3.4",
+            author=None,
+            comment="Testing type change.",
+            action="save",
+        )
 
         assert status['changes'][0]['revision'] == 2
         assert self.get_json('/a') == update_doc(a, 2, timestamp, timestamp2)
@@ -166,12 +184,12 @@ class Test_save(DBTest):
         author = {
             "key": "/author/%d" % n,
             "type": {"key": "/type/object"},
-            "name": "author %d" % n
+            "name": "author %d" % n,
         }
         book = {
             "key": "/book/%d" % n,
             "type": {"key": "/type/object"},
-            "author": {"key": "/author/%d" % n}
+            "author": {"key": "/author/%d" % n},
         }
         return author, book
 
@@ -185,20 +203,31 @@ class Test_save(DBTest):
     def _save(self, docs):
         s = SaveImpl(db)
         timestamp = datetime.datetime(2010, 1, 1, 1, 1, 1)
-        return s.save(docs, timestamp=timestamp, comment="foo", ip="1.2.3.4", author=None, action="save")
+        return s.save(
+            docs,
+            timestamp=timestamp,
+            comment="foo",
+            ip="1.2.3.4",
+            author=None,
+            action="save",
+        )
 
     def test_save_with_new_type(self):
-        docs = [{
-            "key": "/type/foo",
-            "type": {"key": "/type/type"}
-        }, {
-            "key": "/foo",
-            "type": {"key": "/type/foo"}
-        }]
+        docs = [
+            {"key": "/type/foo", "type": {"key": "/type/type"}},
+            {"key": "/foo", "type": {"key": "/type/foo"}},
+        ]
         s = SaveImpl(db)
         timestamp = datetime.datetime(2010, 1, 1, 1, 1, 1)
 
-        s.save(docs, timestamp=timestamp, comment="foo", ip="1.2.3.4", author=None, action="save")
+        s.save(
+            docs,
+            timestamp=timestamp,
+            comment="foo",
+            ip="1.2.3.4",
+            author=None,
+            action="save",
+        )
 
         type = db.query("SELECT * FROM thing where key='/type/foo'")[0]
         thing = db.query("SELECT * FROM thing where key='/foo'")[0]
@@ -217,23 +246,37 @@ class Test_save(DBTest):
         self._save([doc])
 
     def test_save_with_long_string(self):
-        docs = [{
-            "key": "/type/foo",
-            "type": {"key": "/type/type"},
-            "title": "a" * 4000
-        }]
+        docs = [
+            {"key": "/type/foo", "type": {"key": "/type/type"}, "title": "a" * 4000}
+        ]
         s = SaveImpl(db)
         timestamp = datetime.datetime(2010, 1, 1, 1, 1, 1)
-        s.save(docs, timestamp=timestamp, comment="foo", ip="1.2.3.4", author=None, action="save")
+        s.save(
+            docs,
+            timestamp=timestamp,
+            comment="foo",
+            ip="1.2.3.4",
+            author=None,
+            action="save",
+        )
 
     def test_transaction(self, wildcard):
-        docs = [{
-            "key": "/foo",
-            "type": {"key": "/type/object"},
-        }]
+        docs = [
+            {
+                "key": "/foo",
+                "type": {"key": "/type/object"},
+            }
+        ]
         s = SaveImpl(db)
         timestamp = datetime.datetime(2010, 1, 1, 1, 1, 1)
-        changeset = s.save(docs, timestamp=timestamp, comment="foo", ip="1.2.3.4", author=None, action="save")
+        changeset = s.save(
+            docs,
+            timestamp=timestamp,
+            comment="foo",
+            ip="1.2.3.4",
+            author=None,
+            action="save",
+        )
         changeset.pop("docs")
         changeset.pop("old_docs")
 
@@ -246,7 +289,7 @@ class Test_save(DBTest):
             "ip": "1.2.3.4",
             "author": None,
             "changes": [{"key": "/foo", "revision": 1}],
-            "data": {}
+            "data": {},
         }
 
 
@@ -281,10 +324,7 @@ def testdata(request):
             "y": ["y1", "y2"],
             "z": {"a": "za", "b": "zb"},
             "n": 5,
-            "text": {
-                "type": "/type/text",
-                "value": "foo"
-            }
+            "text": {"type": "/type/text", "value": "foo"},
         },
         "doc1.index": {
             ("/type/object", "/doc1", "int", "n"): [5],
@@ -303,8 +343,14 @@ class TestIndex:
 
     def monkeypatch_indexer(self):
         self.indexer.get_thing_ids = lambda keys: dict((k, "id:" + k) for k in keys)
-        self.indexer.get_property_id = lambda type, name: "p:%s-%s" % (type.split("/")[-1], name)
-        self.indexer.get_table = lambda type, datatype, name: "%s_%s" % (type.split("/")[-1], datatype)
+        self.indexer.get_property_id = lambda type, name: "p:%s-%s" % (
+            type.split("/")[-1],
+            name,
+        )
+        self.indexer.get_table = lambda type, datatype, name: "%s_%s" % (
+            type.split("/")[-1],
+            datatype,
+        )
 
     def test_monkeypatch(self):
         self.monkeypatch_indexer()
@@ -333,23 +379,19 @@ class TestIndex:
             "key": "/books/1",
             "type": {"key": "/type/book"},
             "title": "foo",
-            "author": {"key": "/authors/1"}
+            "author": {"key": "/authors/1"},
         }
         doc2 = dict(doc1, title='bar')
 
         deletes, inserts = self.indexer.diff_index(doc1, doc2)
-        assert deletes == {
-            ("/type/book", "/books/1", "str", "title"): ["foo"]
-        }
-        assert inserts == {
-            ("/type/book", "/books/1", "str", "title"): ["bar"]
-        }
+        assert deletes == {("/type/book", "/books/1", "str", "title"): ["foo"]}
+        assert inserts == {("/type/book", "/books/1", "str", "title"): ["bar"]}
 
         deletes, inserts = self.indexer.diff_index(None, doc1)
         assert deletes == {}
         assert inserts == {
             ("/type/book", "/books/1", "ref", "author"): ["/authors/1"],
-            ("/type/book", "/books/1", "str", "title"): ["foo"]
+            ("/type/book", "/books/1", "str", "title"): ["foo"],
         }
 
         # when type is changed all the old properties must be deleted
@@ -366,18 +408,14 @@ class TestIndex:
             "key": "/books/1",
             "type": {"key": "/type/book"},
             "title": "foo",
-            "author": {"key": "/authors/1"}
+            "author": {"key": "/authors/1"},
         }
         doc2 = dict(doc1, title='bar')
         record = web.storage(key='/books/1', data=doc2, prev=web.storage(data=doc1))
 
         deletes, inserts = self.indexer.diff_records([record])
-        assert deletes == {
-            ("/type/book", "/books/1", "str", "title"): ["foo"]
-        }
-        assert inserts == {
-            ("/type/book", "/books/1", "str", "title"): ["bar"]
-        }
+        assert deletes == {("/type/book", "/books/1", "str", "title"): ["foo"]}
+        assert inserts == {("/type/book", "/books/1", "str", "title"): ["bar"]}
 
     def test_compile_index(self):
         self.monkeypatch_indexer()
@@ -387,17 +425,15 @@ class TestIndex:
             ("/type/book", "/books/2", "ref", "author"): ["/authors/1"],
         }
         self.indexer.compile_index(index) == {
-            ("book_str", "id:/books/1", "p:book-name"): ["Getting started with py.test"],
+            ("book_str", "id:/books/1", "p:book-name"): [
+                "Getting started with py.test"
+            ],
             ("book_ref", "id:/books/2", "p:book-author"): ["id:/authors/1"],
         }
 
         # When the type is changed, property_name will be None to indicate that all the properties are to be removed.
-        index = {
-            ("/type/books", "/books/1", "str", None): []
-        }
-        self.indexer.compile_index(index) == {
-            ("book_str", "id:/books/1", None): []
-        }
+        index = {("/type/books", "/books/1", "str", None): []}
+        self.indexer.compile_index(index) == {("book_str", "id:/books/1", None): []}
 
     def test_too_long(self):
         assert self.indexer._is_too_long("a" * 10000) is True
@@ -410,17 +446,30 @@ class TestIndexWithDB(DBTest):
     def _save(self, docs):
         s = SaveImpl(db)
         timestamp = datetime.datetime(2010, 1, 1, 1, 1, 1)
-        return s.save(docs, timestamp=timestamp, comment="foo", ip="1.2.3.4", author=None, action="save")
+        return s.save(
+            docs,
+            timestamp=timestamp,
+            comment="foo",
+            ip="1.2.3.4",
+            author=None,
+            action="save",
+        )
 
     def test_reindex(self):
         a = {"key": "/a", "type": {"key": "/type/object"}, "title": "a"}
         self._save([a])
 
         thing = db.query("SELECT * FROM thing WHERE key='/a'")[0]
-        key_id = db.query("SELECT * FROM property WHERE type=$thing.type AND name='title'", vars=locals())[0].id
+        key_id = db.query(
+            "SELECT * FROM property WHERE type=$thing.type AND name='title'",
+            vars=locals(),
+        )[0].id
 
         # there should be only one entry in the index
-        d = db.query("SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id", vars=locals())
+        d = db.query(
+            "SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id",
+            vars=locals(),
+        )
         assert len(d) == 1
 
         # corrupt the index table by adding bad entries
@@ -428,12 +477,18 @@ class TestIndexWithDB(DBTest):
             db.insert("datum_str", thing_id=thing.id, key_id=key_id, value="foo %d" % i)
 
         # verify that the bad entries are added
-        d = db.query("SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id", vars=locals())
+        d = db.query(
+            "SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id",
+            vars=locals(),
+        )
         assert len(d) == 11
 
         # reindex now and verify again that there is only one entry
         SaveImpl(db).reindex(["/a"])
-        d = db.query("SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id", vars=locals())
+        d = db.query(
+            "SELECT * FROM datum_str WHERE thing_id=$thing.id AND key_id=$key_id",
+            vars=locals(),
+        )
         assert len(d) == 1
 
 

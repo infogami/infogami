@@ -1,12 +1,14 @@
 from infogami import core
 import web
 
+
 class SQL:
     def get_modified_pages(self, url, user_id):
         site_id = core.db.get_site_id(url)
 
-        #@@ improve later
-        d = web.query("""
+        # @@ improve later
+        d = web.query(
+            """
             SELECT 
                 page.id as id,
                 page.path as path,
@@ -18,20 +20,34 @@ class SQL:
                 ON page.id = review.page_id
                 AND review.user_id=$user_id
             GROUP BY page.id, page.path
-            """, vars=locals())
+            """,
+            vars=locals(),
+        )
 
-        d = [p for p in d if not p.reviewed_revision or p.revision > p.reviewed_revision]
+        d = [
+            p for p in d if not p.reviewed_revision or p.revision > p.reviewed_revision
+        ]
         return d
 
     def approve(self, url, user_id, path, revision):
         site_id = core.db.get_site_id(url)
         page_id = core.db.get_page_id(url, path)
 
-        #@@ is there any better way?
+        # @@ is there any better way?
         web.transact()
         try:
-            web.delete('review', where="site_id=$site_id AND page_id=$page_id AND user_id=$user_id", vars=locals())
-            web.insert('review', site_id=site_id, page_id=page_id, user_id=user_id, revision=revision)
+            web.delete(
+                'review',
+                where="site_id=$site_id AND page_id=$page_id AND user_id=$user_id",
+                vars=locals(),
+            )
+            web.insert(
+                'review',
+                site_id=site_id,
+                page_id=page_id,
+                user_id=user_id,
+                revision=revision,
+            )
         except:
             web.rollback()
             raise
@@ -39,9 +55,11 @@ class SQL:
             web.commit()
 
     def revert(self, url, path, author_id, revision):
-	    """Reverts a page to an older version."""
-	    data = core.db.get_version(url, path, revision).data
-	    core.db.new_version(url, path, author_id, data)
+        """Reverts a page to an older version."""
+        data = core.db.get_version(url, path, revision).data
+        core.db.new_version(url, path, author_id, data)
+
 
 from infogami.utils.delegate import pickdb
+
 pickdb(globals())

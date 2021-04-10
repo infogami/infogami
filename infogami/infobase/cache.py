@@ -36,6 +36,7 @@ from infogami.infobase import lru
 
 logger = logging.getLogger("infobase.cache")
 
+
 class NoneDict:
     def __getitem__(self, key):
         raise KeyError(key)
@@ -46,10 +47,12 @@ class NoneDict:
     def update(self, d):
         pass
 
+
 class MemcachedDict:
     def __init__(self, memcache_client=None, servers=[]):
         if memcache_client is None:
             import memcache
+
             memcache_client = memcache.Client(servers)
         self.memcache_client = memcache_client
 
@@ -73,24 +76,32 @@ class MemcachedDict:
     def clear(self):
         self.memcache_client.flush_all()
 
+
 _cache_classes = {}
+
+
 def register_cache(type, klass):
     _cache_classes[type] = klass
 
+
 register_cache('lru', lru.LRU)
 register_cache('memcache', MemcachedDict)
+
 
 def create_cache(type, **kw):
     klass = _cache_classes.get(type) or NoneDict
     return klass(**kw)
 
+
 special_cache = {}
 global_cache = lru.LRU(200)
+
 
 def loadhook():
     web.ctx.new_objects = {}
     web.ctx.local_cache = {}
     web.ctx.locally_added = {}
+
 
 def unloadhook():
     """Called at the end of every request."""
@@ -101,13 +112,15 @@ def unloadhook():
     if d:
         global_cache.update(d)
 
+
 class Cache:
     def __getitem__(self, key):
         ctx = web.ctx
-        obj = ctx.new_objects.get(key) \
-            or special_cache.get(key)  \
-            or ctx.local_cache.get(key) \
-
+        obj = (
+            ctx.new_objects.get(key)
+            or special_cache.get(key)
+            or ctx.local_cache.get(key)
+        )
         if not obj:
             obj = global_cache[key]
             ctx.local_cache[key] = obj

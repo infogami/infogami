@@ -13,19 +13,26 @@ To display flash messages in a template:
 import json
 import web
 
+
 def get_flash_messages():
     flash = web.ctx.get('flash', [])
     web.ctx.flash = []
     return flash
 
+
 def add_flash_message(type, message):
     flash = web.ctx.setdefault('flash', [])
     flash.append(web.storage(type=type, message=message))
 
+
 def flash_processor(handler):
     flash = web.cookies(flash="[]").flash
     try:
-        flash = [web.storage(d) for d in json.loads(flash) if isinstance(d, dict) and 'type' in d and 'message' in d]
+        flash = [
+            web.storage(d)
+            for d in json.loads(flash)
+            if isinstance(d, dict) and 'type' in d and 'message' in d
+        ]
     except ValueError:
         flash = []
 

@@ -8,10 +8,13 @@ from infogami.utils import view
 def get_links(text):
     """Returns all distinct links in the text."""
     doc = view.get_doc(text)
+
     def is_link(e):
-        return e.type == 'element'      \
-            and e.nodeName == 'a'       \
+        return (
+            e.type == 'element'
+            and e.nodeName == 'a'
             and e.attribute_values.get('class', '') == 'internal'
+        )
 
     links = set()
     for a in doc.find(is_link):
@@ -19,9 +22,13 @@ def get_links(text):
 
     return links
 
+
 link_re = web.re_compile(r'(?<!\\)\[\[(.*?)(?:\|(.*?))?\]\]')
+
+
 class wikilinks:
     """markdown postprocessor for [[wikilink]] support."""
+
     def process_links(self, node):
         doc = node.doc
         text = node.value
@@ -36,7 +43,7 @@ class wikilinks:
             matches = match.groups()
             link = matches[0]
             anchor = matches[1] or link
-            #link = keyencode(link)
+            # link = keyencode(link)
 
             link_node = doc.createElement('a')
             link_node.setAttribute('href', link)
@@ -75,5 +82,6 @@ class wikilinks:
         for node in doc.find(test):
             new_nodes = self.process_links(node)
             self.replace_node(node, new_nodes)
+
 
 view.register_wiki_processor(wikilinks())

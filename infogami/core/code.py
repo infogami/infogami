@@ -13,7 +13,8 @@ def notfound(path):
     web.ctx.status = '404 Not Found'
     return render.notfound(path)
 
-class view (delegate.mode):
+
+class view(delegate.mode):
     def GET(self, path):
         i = web.input(v=None)
 
@@ -26,19 +27,25 @@ class view (delegate.mode):
         elif p.type.key == '/type/delete':
             web.ctx.status = '404 Not Found'
             return render.viewpage(p)
-        elif p.type.key == "/type/redirect" and p.location \
-                and not p.location.startswith('http://') \
-                and not p.location.startswith('://'):
+        elif (
+            p.type.key == "/type/redirect"
+            and p.location
+            and not p.location.startswith('http://')
+            and not p.location.startswith('://')
+        ):
             web.redirect(p.location)
         else:
             return render.viewpage(p)
 
-class edit (delegate.mode):
+
+class edit(delegate.mode):
     def GET(self, path):
         i = web.input(v=None, t=None)
 
         if not web.ctx.site.can_write(path):
-            return render.permission_denied(web.ctx.fullpath, "Permission denied to edit " + path + ".")
+            return render.permission_denied(
+                web.ctx.fullpath, "Permission denied to edit " + path + "."
+            )
 
         if i.v is not None and safeint(i.v, None) is None:
             raise web.seeother(web.changequery(v=None))
@@ -53,7 +60,6 @@ class edit (delegate.mode):
                 p.type = type
 
         return render.editpage(p)
-
 
     def trim(self, d):
         """Trims empty value from d.
@@ -108,7 +114,9 @@ class edit (delegate.mode):
         elif action == 'save':
             try:
                 p._save(comment)
-                path = web.input(_method='GET', redirect=None).redirect or web.changequery(query={})
+                path = web.input(
+                    _method='GET', redirect=None
+                ).redirect or web.changequery(query={})
                 raise web.seeother(path)
             except (ClientException, db.ValidationException) as e:
                 add_flash_message('error', str(e))
@@ -128,10 +136,15 @@ class edit (delegate.mode):
 
     def get_action(self, i):
         """Finds the action from input."""
-        if '_save' in i: return 'save'
-        elif '_preview' in i: return 'preview'
-        elif '_delete' in i: return 'delete'
-        else: return None
+        if '_save' in i:
+            return 'save'
+        elif '_preview' in i:
+            return 'preview'
+        elif '_delete' in i:
+            return 'delete'
+        else:
+            return None
+
 
 class permission(delegate.mode):
     def GET(self, path):
@@ -155,20 +168,22 @@ class permission(delegate.mode):
             'child_permission': {
                 'connect': 'update',
                 'key': i['child_permission.key'] or None,
-            }
+            },
         }
 
         try:
             web.ctx.site.write(q)
         except Exception as e:
             import traceback
+
             traceback.print_exc(e)
             add_flash_message('error', str(e))
             return render.permission(p)
 
         raise web.seeother(web.changequery({}, m='permission'))
 
-class history (delegate.mode):
+
+class history(delegate.mode):
     def GET(self, path):
         page = web.ctx.site.get(path)
         if not page:
@@ -179,18 +194,22 @@ class history (delegate.mode):
         history = db.get_recent_changes(key=path, limit=limit, offset=offset)
         return render.history(page, history)
 
+
 class recentchanges(delegate.page):
     def GET(self):
         return render.recentchanges()
 
-class diff (delegate.mode):
+
+class diff(delegate.mode):
     def GET(self, path):
         i = web.input(b=None, a=None)
         # default value of b is latest revision and default value of a is b-1
 
         def get(path, revision):
             if revision == 0:
-                page = web.ctx.site.new(path, {'revision': 0, 'type': {'key': '/type/object'}, 'key': path})
+                page = web.ctx.site.new(
+                    path, {'revision': 0, 'type': {'key': '/type/object'}, 'key': path}
+                )
             else:
                 page = web.ctx.site.get(path, revision)
             return page
@@ -208,8 +227,9 @@ class diff (delegate.mode):
         if b is None:
             raise web.seeother(web.changequery(query={}))
 
-        a = get(path, max(1, safeint(i.a, b.revision-1)))
+        a = get(path, max(1, safeint(i.a, b.revision - 1)))
         return render.diff(a, b)
+
 
 class login(delegate.page):
     path = "/account/login"
@@ -234,9 +254,12 @@ class login(delegate.page):
         if i.redirect == "/account/login" or i.redirect == "":
             i.redirect = "/"
 
-        expires = (i.remember and 3600*24*7) or ""
-        web.setcookie(config.login_cookie_name, web.ctx.conn.get_auth_token(), expires=expires)
+        expires = (i.remember and 3600 * 24 * 7) or ""
+        web.setcookie(
+            config.login_cookie_name, web.ctx.conn.get_auth_token(), expires=expires
+        )
         raise web.seeother(i.redirect)
+
 
 class register(delegate.page):
     path = "/account/register"
@@ -251,6 +274,7 @@ class register(delegate.page):
             return render.register(f)
         else:
             from infogami.infobase.client import ClientException
+
             try:
                 web.ctx.site.register(i.username, i.displayname, i.email, i.password)
             except ClientException as e:
@@ -259,6 +283,7 @@ class register(delegate.page):
             web.setcookie(config.login_cookie_name, web.ctx.conn.get_auth_token())
             raise web.seeother(i.redirect)
 
+
 class logout(delegate.page):
     path = "/account/logout"
 
@@ -266,6 +291,7 @@ class logout(delegate.page):
         web.setcookie(config.login_cookie_name, "", expires=-1)
         referer = web.ctx.env.get('HTTP_REFERER', '/')
         raise web.seeother(referer)
+
 
 class forgot_password(delegate.page):
     path = "/account/forgot_password"
@@ -281,6 +307,7 @@ class forgot_password(delegate.page):
             return render.forgot_password(f)
         else:
             from infogami.infobase.client import ClientException
+
             try:
                 delegate.admin_login()
                 d = web.ctx.site.get_reset_code(i.email)
@@ -297,8 +324,10 @@ class forgot_password(delegate.page):
             web.sendmail(config.from_address, i.email, msg.subject.strip(), str(msg))
             return render.passwordsent(i.email)
 
+
 class reset_password(delegate.page):
     path = "/account/reset_password"
+
     def GET(self):
         f = forms.reset_password()
         return render.reset_password(f)
@@ -314,11 +343,15 @@ class reset_password(delegate.page):
                 web.ctx.site.login(i.username, i.password, False)
                 raise web.seeother('/')
             except Exception as e:
-                return "Failed to reset password.<br/><br/> Reason: "  + str(e)
+                return "Failed to reset password.<br/><br/> Reason: " + str(e)
+
 
 _preferences = []
+
+
 def register_preferences(cls):
     _preferences.append((cls.title, cls.path))
+
 
 class preferences(delegate.page):
     path = "/account/preferences"
@@ -326,6 +359,7 @@ class preferences(delegate.page):
     @require_login
     def GET(self):
         return render.preferences(_preferences)
+
 
 class change_password(delegate.page):
     path = "/account/preferences/change_password"
@@ -351,25 +385,27 @@ class change_password(delegate.page):
             add_flash_message('info', 'Password updated successfully.')
             raise web.seeother("/account/preferences")
 
+
 register_preferences(change_password)
+
 
 class getthings(delegate.page):
     """Lists all pages with name path/*"""
+
     def GET(self):
         i = web.input("type", property="key")
-        q = {
-            i.property + '~': i.q + '*',
-            'type': i.type,
-            'limit': int(i.limit)
-        }
+        q = {i.property + '~': i.q + '*', 'type': i.type, 'limit': int(i.limit)}
         things = [web.ctx.site.get(t, lazy=True) for t in web.ctx.site.things(q)]
         data = "\n".join("%s|%s" % (t[i.property], t.key) for t in things)
         raise web.HTTPError('200 OK', {}, data)
 
+
 class favicon(delegate.page):
     path = "/favicon.ico"
+
     def GET(self):
         return web.redirect('/static/favicon.ico')
+
 
 class feed(delegate.page):
     def _format_date(self, dt):
@@ -386,21 +422,37 @@ class feed(delegate.page):
         # rfc822 and email.Utils modules assume a timestamp.  The
         # following is based on the rfc822 module.
         return "%s, %02d %s %04d %02d:%02d:%02d GMT" % (
-                ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][dt.weekday()],
-                dt.day,
-                ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                 "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"][dt.month-1],
-                dt.year, dt.hour, dt.minute, dt.second)
+            ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"][dt.weekday()],
+            dt.day,
+            [
+                "Jan",
+                "Feb",
+                "Mar",
+                "Apr",
+                "May",
+                "Jun",
+                "Jul",
+                "Aug",
+                "Sep",
+                "Oct",
+                "Nov",
+                "Dec",
+            ][dt.month - 1],
+            dt.year,
+            dt.hour,
+            dt.minute,
+            dt.second,
+        )
 
     def GET(self):
         i = web.input(key=None)
         changes = db.get_recent_changes(key=i.key, limit=50)
-        site =  web.ctx.home
+        site = web.ctx.home
 
         def diff(key, revision):
             b = db.get_version(key, revision)
 
-            rev_a = revision -1
+            rev_a = revision - 1
             if rev_a == 0:
                 a = web.ctx.site.new(key, {})
                 a.revision = 0
@@ -409,8 +461,9 @@ class feed(delegate.page):
 
             diff = render.diff(a, b)
 
-            #@@ dirty hack to extract diff table from diff
+            # @@ dirty hack to extract diff table from diff
             import re
+
             rx = re.compile(r"^.*(<table.*<\/table>).*$", re.S)
             return rx.sub(r'\1', str(diff))
 

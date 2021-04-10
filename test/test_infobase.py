@@ -17,7 +17,9 @@ def browser():
     else:
         return server.app.browser()
 
+
 b = browser()
+
 
 def request(path, method="GET", data=None, headers={}):
     if method == 'GET' and data is not None:
@@ -34,25 +36,36 @@ def request(path, method="GET", data=None, headers={}):
     else:
         return None
 
+
 def get(key):
     d = request('/test/get?key=' + key)
     return d
 
+
 def echo(msg):
     request('/_echo', method='POST', data=msg)
+
 
 def save(query):
     return request('/test/save' + query['key'], method='POST', data=query)
 
+
 def save_many(query, comment=''):
-    return request('/test/save_many', method='POST', data=urlencode({'query': json.dumps(query), 'comment': comment}))
+    return request(
+        '/test/save_many',
+        method='POST',
+        data=urlencode({'query': json.dumps(query), 'comment': comment}),
+    )
+
 
 class DatabaseTest(unittest.TestCase):
     pass
 
+
 class InfobaseTestCase(unittest.TestCase):
     def clear_threadlocal(self):
         import threading
+
         t = threading.currentThread()
         if hasattr(t, '_d'):
             del t._d
@@ -78,8 +91,7 @@ class InfobaseTestCase(unittest.TestCase):
         request('/test', method="DELETE")
 
     def assertEquals2(self, a, b):
-        """Asserts two objects are same.
-        """
+        """Asserts two objects are same."""
         # special case to say don't worry about this value.
         if b == '*':
             return True
@@ -98,12 +110,18 @@ class InfobaseTestCase(unittest.TestCase):
         else:
             self.assertEqual(a, b)
 
-@pytest.mark.skip(reason="Unsure how these browser tests were run. Try ./scripts/test infobase -d infobase_test")
+
+@pytest.mark.skip(
+    reason="Unsure how these browser tests were run. Try ./scripts/test infobase -d infobase_test"
+)
 class DocumentTest(InfobaseTestCase):
     def test_simple(self):
         self.assertEquals2(request('/'), {'infobase': 'welcome', 'version': '*'})
         self.assertEquals2(request('/test'), {'name': 'test'})
-        self.assertEquals2(request('/test/get?key=/type/type'), {'key': '/type/type', 'type': {'key': '/type/type'}, '*': True})
+        self.assertEquals2(
+            request('/test/get?key=/type/type'),
+            {'key': '/type/type', 'type': {'key': '/type/type'}, '*': True},
+        )
 
         request('/test/get?key=/not-there')
         self.assertEqual(b.status, 404)
@@ -130,106 +148,155 @@ class DocumentTest(InfobaseTestCase):
 
         # verify revisions
         q = {'key': '/new_page'}
-        d = request('/test/versions', method='GET', data={'query': json.dumps({'key': '/new_page'})})
+        d = request(
+            '/test/versions',
+            method='GET',
+            data={'query': json.dumps({'key': '/new_page'})},
+        )
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 1, '*': True}])
 
-        d = request('/test/versions', method='GET', data={'query': json.dumps({'limit': 1})})
+        d = request(
+            '/test/versions', method='GET', data={'query': json.dumps({'limit': 1})}
+        )
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 1, '*': True}])
 
         # try a failed save and make sure new revisions are not created
-        request('/test/save/new_page', method='POST', data={'key': '/new_page', 'type': '/type/no-such-type'})
+        request(
+            '/test/save/new_page',
+            method='POST',
+            data={'key': '/new_page', 'type': '/type/no-such-type'},
+        )
         self.assertNotEqual(b.status, 200)
 
         q = {'key': '/new_page'}
-        d = request('/test/versions', method='GET', data={'query': json.dumps({'key': '/new_page'})})
+        d = request(
+            '/test/versions',
+            method='GET',
+            data={'query': json.dumps({'key': '/new_page'})},
+        )
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 1, '*': True}])
 
-        d = request('/test/versions', method='GET', data={'query': json.dumps({'limit': 1})})
+        d = request(
+            '/test/versions', method='GET', data={'query': json.dumps({'limit': 1})}
+        )
         self.assertEquals2(d, [{'key': '/new_page', 'revision': 1, '*': True}])
 
         # save the page and make sure new revision is created.
         d = request('/test/save/new_page', method='POST', data=dict(x, title='foo'))
         self.assertEqual(d, {'key': '/new_page', 'revision': 2})
 
-        d = request('/test/versions', method='GET', data={'query': json.dumps({'key': '/new_page'})})
-        self.assertEquals2(d, [{'key': '/new_page', 'revision': 2, '*': True}, {'key': '/new_page', 'revision': 1, '*': True}])
+        d = request(
+            '/test/versions',
+            method='GET',
+            data={'query': json.dumps({'key': '/new_page'})},
+        )
+        self.assertEquals2(
+            d,
+            [
+                {'key': '/new_page', 'revision': 2, '*': True},
+                {'key': '/new_page', 'revision': 1, '*': True},
+            ],
+        )
 
     def test_save_many(self):
         q = [
             {'key': '/one', 'type': {'key': '/type/object'}, 'n': 1},
-            {'key': '/two', 'type': {'key': '/type/object'}, 'n': 2}
+            {'key': '/two', 'type': {'key': '/type/object'}, 'n': 2},
         ]
-        d = request('/test/save_many', method='POST', data=urlencode({'query': json.dumps(q)}))
-        self.assertEqual(d, [{'key': '/one', 'revision': 1}, {'key': '/two', 'revision': 1}])
+        d = request(
+            '/test/save_many', method='POST', data=urlencode({'query': json.dumps(q)})
+        )
+        self.assertEqual(
+            d, [{'key': '/one', 'revision': 1}, {'key': '/two', 'revision': 1}]
+        )
 
-        self.assertEquals2(get('/one'), {'key': '/one', 'type': {'key': '/type/object'}, 'n': 1, 'revision': 1,'*': True})
-        self.assertEquals2(get('/two'), {'key': '/two', 'type': {'key': '/type/object'}, 'n': 2, 'revision': 1, '*': True})
+        self.assertEquals2(
+            get('/one'),
+            {
+                'key': '/one',
+                'type': {'key': '/type/object'},
+                'n': 1,
+                'revision': 1,
+                '*': True,
+            },
+        )
+        self.assertEquals2(
+            get('/two'),
+            {
+                'key': '/two',
+                'type': {'key': '/type/object'},
+                'n': 2,
+                'revision': 1,
+                '*': True,
+            },
+        )
 
         # saving with same data should not create new revisions
-        d = request('/test/save_many', method='POST', data=urlencode({'query': json.dumps(q)}))
+        d = request(
+            '/test/save_many', method='POST', data=urlencode({'query': json.dumps(q)})
+        )
         self.assertEqual(d, [])
 
         # try bad query
         q = [
             {'key': '/zero', 'type': {'key': '/type/object'}, 'n': 0},
             {'key': '/one', 'type': {'key': '/type/object'}, 'n': 11},
-            {'key': '/two', 'type': {'key': '/type/no-such-type'}, 'n': 2}
+            {'key': '/two', 'type': {'key': '/type/no-such-type'}, 'n': 2},
         ]
-        d = request('/test/save_many', method='POST', data=urlencode({'query': json.dumps(q)}))
+        d = request(
+            '/test/save_many', method='POST', data=urlencode({'query': json.dumps(q)})
+        )
         self.assertNotEqual(b.status, 200)
 
         d = get('/zero')
         self.assertEqual(b.status, 404)
 
+
 # create author, book and collection types to test validations
-types = [{
-    "key": "/type/author",
-    "type": "/type/type",
-    "kind": "regular",
-    "properties": [{
-        "name": "name",
-        "expected_type": {"key": "/type/string"},
-        "unique": True
-    }, {
-        "name": "bio",
-        "expected_type": {"key": "/type/text"},
-        "unique": True
-    }]
-}, {
-    "key": "/type/book",
-    "type": "/type/type",
-    "kind": "regular",
-    "properties": [{
-        "name": "title",
-        "expected_type": {"key": "/type/string"},
-        "unique": True
-    }, {
-        "name": "authors",
-        "expected_type": {"key": "/type/author"},
-        "unique": False
-    }, {
-        "name": "publisher",
-        "expected_type": {"key": "/type/string"},
-        "unique": True
-    }, {
-        "name": "description",
-        "expected_type": {"key": "/type/text"},
-        "unique": True
-    }]
-}, {
-    "key": "/type/collection",
-    "type": "/type/type",
-    "kind": "regular",
-    "properties": [{
-        "name": "name",
-        "expected_type": {"key": "/type/string"},
-        "unique": True
-    }, {
-        "name": "books",
-        "expected_type": {"key": "/type/book"},
-        "unique": False
-    }]
-}]
+types = [
+    {
+        "key": "/type/author",
+        "type": "/type/type",
+        "kind": "regular",
+        "properties": [
+            {"name": "name", "expected_type": {"key": "/type/string"}, "unique": True},
+            {"name": "bio", "expected_type": {"key": "/type/text"}, "unique": True},
+        ],
+    },
+    {
+        "key": "/type/book",
+        "type": "/type/type",
+        "kind": "regular",
+        "properties": [
+            {"name": "title", "expected_type": {"key": "/type/string"}, "unique": True},
+            {
+                "name": "authors",
+                "expected_type": {"key": "/type/author"},
+                "unique": False,
+            },
+            {
+                "name": "publisher",
+                "expected_type": {"key": "/type/string"},
+                "unique": True,
+            },
+            {
+                "name": "description",
+                "expected_type": {"key": "/type/text"},
+                "unique": True,
+            },
+        ],
+    },
+    {
+        "key": "/type/collection",
+        "type": "/type/type",
+        "kind": "regular",
+        "properties": [
+            {"name": "name", "expected_type": {"key": "/type/string"}, "unique": True},
+            {"name": "books", "expected_type": {"key": "/type/book"}, "unique": False},
+        ],
+    },
+]
+
 
 class MoreDocumentTest(DocumentTest):
     def setUp(self):
@@ -253,19 +320,27 @@ class MoreDocumentTest(DocumentTest):
     def test_validation_when_type_changes(self):
         # create an author and a book
         save({'key': '/author/x', 'type': '/type/author', 'name': 'x'})
-        save({'key': '/book/x', 'type': '/type/book', 'title': 'x', 'authors': [{'key': '/author/x'}], 'publisher': 'publisher_x'})
+        save(
+            {
+                'key': '/book/x',
+                'type': '/type/book',
+                'title': 'x',
+                'authors': [{'key': '/author/x'}],
+                'publisher': 'publisher_x',
+            }
+        )
 
         # change schema of "/type/book" and make expected_type of "publisher" as "/type/publisher"
-        save({
-            "key": "/type/publisher",
-            "type": "/type/type",
-            "kind": "regular",
-            "properties": [{
-                "name": "name",
-                "expected_type": "/type/string",
-                "unique": True
-             }]
-        })
+        save(
+            {
+                "key": "/type/publisher",
+                "type": "/type/type",
+                "kind": "regular",
+                "properties": [
+                    {"name": "name", "expected_type": "/type/string", "unique": True}
+                ],
+            }
+        )
 
         d = get('/type/book')
         assert d['properties'][2]['name'] == "publisher"
@@ -277,6 +352,7 @@ class MoreDocumentTest(DocumentTest):
         d['title'] = 'xx'
         save(d)
         self.assertEqual(b.status, 200)
+
 
 if __name__ == "__main__":
     unittest.main()

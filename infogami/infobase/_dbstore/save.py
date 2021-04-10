@@ -15,9 +15,12 @@ __all__ = ["SaveImpl"]
 
 class SaveImpl:
     """Save implementation."""
+
     def __init__(self, db, schema=None, indexer=None, property_manager=None):
         self.db = db
-        self.indexUtil = IndexUtil(db, schema, indexer, property_manager and property_manager.copy())
+        self.indexUtil = IndexUtil(
+            db, schema, indexer, property_manager and property_manager.copy()
+        )
         self.thing_ids = {}
 
     def process_json(self, key, json):
@@ -37,7 +40,9 @@ class SaveImpl:
             self._update_thing_table(records)
 
             changes = [dict(key=r.key, revision=r.revision) for r in records]
-            bot = bool(author and (self.get_user_details(author) or {}).get('bot', False))
+            bot = bool(
+                author and (self.get_user_details(author) or {}).get('bot', False)
+            )
 
             # add transaction
             changeset = dict(
@@ -54,11 +59,17 @@ class SaveImpl:
             changeset['id'] = str(tx_id)
 
             # add versions
-            versions = [dict(thing_id=r.id, revision=r.revision, transaction_id=tx_id) for r in records]
+            versions = [
+                dict(thing_id=r.id, revision=r.revision, transaction_id=tx_id)
+                for r in records
+            ]
             self.db.multiple_insert('version', versions, seqname=False)
 
             # add data
-            data = [dict(thing_id=r.id, revision=r.revision, data=simplejson.dumps(r.data)) for r in records]
+            data = [
+                dict(thing_id=r.id, revision=r.revision, data=simplejson.dumps(r.data))
+                for r in records
+            ]
             self.db.multiple_insert('data', data, seqname=False)
 
             self._update_index(records)
@@ -74,7 +85,8 @@ class SaveImpl:
     def _add_transaction(self, changeset):
         tx = {
             "action": changeset['kind'],
-            "author_id": changeset['author'] and self.get_thing_id(changeset['author']['key']),
+            "author_id": changeset['author']
+            and self.get_thing_id(changeset['author']['key']),
             "ip": changeset['ip'],
             "comment": changeset['comment'],
             "created": changeset['timestamp'],
@@ -90,6 +102,7 @@ class SaveImpl:
 
     def _index_transaction_data(self, tx_id, data):
         d = []
+
         def index(key, value):
             if isinstance(value, (string_types, int)):
                 d.append({"tx_id": tx_id, "key": key, "value": value})
@@ -142,10 +155,12 @@ class SaveImpl:
         records = self._load_records(keys)
 
         def make_record(doc):
-            doc = dict(doc) # make a copy to avoid modifying the original.
+            doc = dict(doc)  # make a copy to avoid modifying the original.
 
             key = doc['key']
-            r = records.get(key) or web.storage(id=None, key=key, revision=0, type=None, data=None, created=timestamp)
+            r = records.get(key) or web.storage(
+                id=None, key=key, revision=0, type=None, data=None, created=timestamp
+            )
 
             r.prev = web.storage(r)
 
@@ -157,7 +172,10 @@ class SaveImpl:
             doc['latest_revision'] = r.revision
             doc['revision'] = r.revision
             doc['created'] = {"type": "/type/datetime", "value": r.created.isoformat()}
-            doc['last_modified'] = {"type": "/type/datetime", "value": r.last_modified.isoformat()}
+            doc['last_modified'] = {
+                "type": "/type/datetime",
+                "value": r.last_modified.isoformat(),
+            }
             return r
 
         return [make_record(doc) for doc in docs]
@@ -169,11 +187,13 @@ class SaveImpl:
         Each record is a storage object with (id, key, type, revision, last_modified, data) keys.
         """
         try:
-            rows = self.db.query("SELECT thing.*, data.data FROM thing, data" +
-                " WHERE thing.key in $keys" +
-                " AND data.thing_id=thing.id AND data.revision = thing.latest_revision" +
-                " FOR UPDATE NOWAIT",
-                vars=locals())
+            rows = self.db.query(
+                "SELECT thing.*, data.data FROM thing, data"
+                + " WHERE thing.key in $keys"
+                + " AND data.thing_id=thing.id AND data.revision = thing.latest_revision"
+                + " FOR UPDATE NOWAIT",
+                vars=locals(),
+            )
         except:
             raise common.Conflict(keys=keys, reason="Edit conflict detected.")
 
@@ -195,8 +215,17 @@ class SaveImpl:
         timestamp = records[0].last_modified
 
         # insert new records
-        new = [dict(key=r.key, type=r.type, latest_revision=1, created=r.created, last_modified=r.last_modified)
-                for r in records if r.revision == 1]
+        new = [
+            dict(
+                key=r.key,
+                type=r.type,
+                latest_revision=1,
+                created=r.created,
+                last_modified=r.last_modified,
+            )
+            for r in records
+            if r.revision == 1
+        ]
 
         if new:
             ids = self.db.multiple_insert('thing', new)
@@ -210,27 +239,45 @@ class SaveImpl:
         if any(r['type'] is None for r in new):
             for r in new:
                 if r['type'] is None:
-                    self.db.update("thing", type=d[r['key']]['type'], where="key=$key", vars={"key": r['key']})
+                    self.db.update(
+                        "thing",
+                        type=d[r['key']]['type'],
+                        where="key=$key",
+                        vars={"key": r['key']},
+                    )
 
         # update records with type change
         type_changed = [r for r in records if r.type != r.prev.type and r.revision != 1]
         for r in type_changed:
-            self.db.update('thing', where='id=$r.id', vars=locals(),
-                last_modified=timestamp, latest_revision=r.revision, type=r.type)
+            self.db.update(
+                'thing',
+                where='id=$r.id',
+                vars=locals(),
+                last_modified=timestamp,
+                latest_revision=r.revision,
+                type=r.type,
+            )
 
         # update the remaining records
         rest = [r.id for r in records if r.type == r.prev.type and r.revision > 1]
         if rest:
-            self.db.query("UPDATE thing SET latest_revision=latest_revision+1, last_modified=$timestamp WHERE id in $rest", vars=locals())
+            self.db.query(
+                "UPDATE thing SET latest_revision=latest_revision+1, last_modified=$timestamp WHERE id in $rest",
+                vars=locals(),
+            )
 
     def get_thing_ids(self, keys):
         keys = list(set(keys))
 
-        thing_ids = dict((key, self.thing_ids[key]) for key in keys if key in self.thing_ids)
+        thing_ids = dict(
+            (key, self.thing_ids[key]) for key in keys if key in self.thing_ids
+        )
         notfound = [key for key in keys if key not in thing_ids]
 
         if notfound:
-            rows = self.db.query("SELECT id, key FROM thing WHERE key in $notfound", vars=locals())
+            rows = self.db.query(
+                "SELECT id, key FROM thing WHERE key in $notfound", vars=locals()
+            )
             d = dict((r.key, r.id) for r in rows)
             thing_ids.update(d)
             self.thing_ids.update(d)
@@ -243,11 +290,14 @@ class SaveImpl:
     def get_user_details(self, key):
         """Returns a storage object with user email and encrypted password."""
         account_key = "account/" + key.split("/")[-1]
-        rows = self.db.query("SELECT * FROM store WHERE key=$account_key", vars=locals())
+        rows = self.db.query(
+            "SELECT * FROM store WHERE key=$account_key", vars=locals()
+        )
         if rows:
             return simplejson.loads(rows[0].json)
         else:
             return None
+
 
 class IndexUtil:
     """
@@ -268,6 +318,7 @@ class IndexUtil:
     Dictionary of (table, thing_id, property_id) -> [values] for a set of documents.
     This is generated by compiling the document index.
     """
+
     def __init__(self, db, schema=None, indexer=None, property_manager=None):
         self.db = db
         self.schema = schema or Schema()
@@ -276,18 +327,29 @@ class IndexUtil:
         self.thing_ids = {}
 
     def compute_index(self, doc):
-        """Computes the doc-index for given doc.
-        """
+        """Computes the doc-index for given doc."""
         type = doc['type']['key']
         key = doc['key']
 
-        special = ["id", "type", "revision", "latest_revision", "created", "last_modified"]
+        special = [
+            "id",
+            "type",
+            "revision",
+            "latest_revision",
+            "created",
+            "last_modified",
+        ]
 
         def ignorable(name, value):
             # ignore special properties
             # boolean values are not supported.
             # ignore empty strings and Nones
-            return name in special or isinstance(value, bool) or value is None or value == ""
+            return (
+                name in special
+                or isinstance(value, bool)
+                or value is None
+                or value == ""
+            )
 
         index = defaultdict(list)
         for datatype, name, value in self._indexer.compute_index(doc):
@@ -297,6 +359,7 @@ class IndexUtil:
 
     def diff_index(self, old_doc, new_doc):
         """Takes old and new docs and returns the indexes to be deleted and inserted."""
+
         def get_type(doc):
             return doc and doc.get('type', {}).get('key', None)
 
@@ -329,14 +392,12 @@ class IndexUtil:
             return deletes, inserts
 
     def _dict_difference(self, d1, d2, eq=None):
-        """Returns set equivalent of d1.difference(d2) for dictionaries.
-        """
+        """Returns set equivalent of d1.difference(d2) for dictionaries."""
         eq = eq or (lambda a, b: a == b)
         return {k: v for k, v in iteritems(d1) if not eq(v, d2.get(k))}
 
     def diff_records(self, records):
-        """Takes a list of records and returns the index to be deleted and index to be inserted.
-        """
+        """Takes a list of records and returns the index to be deleted and index to be inserted."""
         deletes = {}
         inserts = {}
 
@@ -363,8 +424,7 @@ class IndexUtil:
         self.insert_index(inserts)
 
     def compile_index(self, index):
-        """Compiles doc-index into db-index.
-        """
+        """Compiles doc-index into db-index."""
         keys = set(key for type, key, datatype, name in index)
         for (type, key, datatype, name), values in iteritems(index):
             if datatype == 'ref':
@@ -396,25 +456,26 @@ class IndexUtil:
         return dbindex
 
     def group_index(self, index):
-        """Groups the index based on table.
-        """
+        """Groups the index based on table."""
         groups = defaultdict(dict)
         for (table, thing_id, property_id), values in iteritems(index):
             groups[table][thing_id, property_id] = values
         return groups
 
     def ignore_long_values(self, index):
-        """The DB schema has a limit of 2048 chars on string values. This function ignores values which are longer than that.
-        """
+        """The DB schema has a limit of 2048 chars on string values. This function ignores values which are longer than that."""
         is_too_long = self._is_too_long
-        return {k: [v for v in values if not is_too_long(v)] for k, values in iteritems(index)}
+        return {
+            k: [v for v in values if not is_too_long(v)]
+            for k, values in iteritems(index)
+        }
 
     def _is_too_long(self, v, limit=2048):
         return (
             isinstance(v, string_types)
             # unicode string can be as long as 4 bytes in utf-8.
             # This check avoid UTF-8 conversion for small strings.
-            and len(v) > limit/4
+            and len(v) > limit / 4
             and len(web.safestr(v)) > limit
         )
 
@@ -423,16 +484,18 @@ class IndexUtil:
         for table, group in iteritems(self.group_index(index)):
             # ignore values longer than 2048, the limit specified by the db schema.
             group = self.ignore_long_values(group)
-            data = [dict(thing_id=thing_id, key_id=property_id, value=v)
+            data = [
+                dict(thing_id=thing_id, key_id=property_id, value=v)
                 for (thing_id, property_id), values in iteritems(group)
-                for v in values]
+                for v in values
+            ]
             self.db.multiple_insert(table, data, seqname=False)
 
     def delete_index(self, index):
         """Deletes the given index from database."""
         for table, group in iteritems(self.group_index(index)):
 
-            thing_ids = [] # thing_ids to delete all
+            thing_ids = []  # thing_ids to delete all
 
             # group all deletes for a thing_id
             d = defaultdict(list)
@@ -446,7 +509,9 @@ class IndexUtil:
                 self.db.delete(table, where='thing_id IN $thing_ids', vars=locals())
 
             for thing_id, pids in iteritems(d):
-                self.db.delete(table, where="thing_id=$thing_id AND key_id IN $pids", vars=locals())
+                self.db.delete(
+                    table, where="thing_id=$thing_id AND key_id IN $pids", vars=locals()
+                )
 
     def get_thing_ids(self, keys):
         ### TODO: same function is there is SaveImpl too. Get rid of this duplication.
@@ -454,11 +519,15 @@ class IndexUtil:
         if not keys:
             return {}
 
-        thing_ids = dict((key, self.thing_ids[key]) for key in keys if key in self.thing_ids)
+        thing_ids = dict(
+            (key, self.thing_ids[key]) for key in keys if key in self.thing_ids
+        )
         notfound = [key for key in keys if key not in thing_ids]
 
         if notfound:
-            rows = self.db.query("SELECT id, key FROM thing WHERE key in $notfound", vars=locals())
+            rows = self.db.query(
+                "SELECT id, key FROM thing WHERE key in $notfound", vars=locals()
+            )
             d = dict((r.key, r.id) for r in rows)
             thing_ids.update(d)
             self.thing_ids.update(d)
@@ -471,9 +540,10 @@ class IndexUtil:
     def find_table(self, type, datatype, name):
         return self.schema.find_table(type, datatype, name)
 
+
 class PropertyManager:
-    """Class to manage property ids.
-    """
+    """Class to manage property ids."""
+
     def __init__(self, db):
         self.db = db
         self._cache = None
@@ -489,7 +559,10 @@ class PropertyManager:
 
             rows = self.db.select('property').list()
             type_ids = list(set(r.type for r in rows)) or [-1]
-            types = dict((r.id, r.key) for r in self.db.select("thing", where='id IN $type_ids', vars=locals()))
+            types = dict(
+                (r.id, r.key)
+                for r in self.db.select("thing", where='id IN $type_ids', vars=locals())
+            )
             for r in rows:
                 self._cache[types[r.type], r.name] = r.id
 
@@ -503,7 +576,10 @@ class PropertyManager:
             return self.get_cache()[type, name]
         except KeyError:
             type_id = self.get_thing_id(type)
-            d = self.db.query("SELECT * FROM property WHERE type=$type_id AND name=$name", vars=locals())
+            d = self.db.query(
+                "SELECT * FROM property WHERE type=$type_id AND name=$name",
+                vars=locals(),
+            )
 
             if d:
                 pid = d[0].id
@@ -519,7 +595,9 @@ class PropertyManager:
         try:
             id = self.thing_ids[key]
         except KeyError:
-            id = self.db.query("SELECT id FROM thing WHERE key=$key", vars=locals())[0].id
+            id = self.db.query("SELECT id FROM thing WHERE key=$key", vars=locals())[
+                0
+            ].id
             self.thing_ids[key] = id
         return id
 

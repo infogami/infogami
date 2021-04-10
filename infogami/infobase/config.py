@@ -17,15 +17,15 @@ query_timeout = "60000"
 
 user_root = "/user/"
 
-#@@ Hack to execute some code when infobase is created. 
-#@@ This will be replaced with a better method soon.
+# @@ Hack to execute some code when infobase is created.
+# @@ This will be replaced with a better method soon.
 startup_hook = None
 
 bind_address = None
 port = 5964
 fastcgi = False
 
-# earlier there used to be a machine_comment column in version table. 
+# earlier there used to be a machine_comment column in version table.
 # Set this flag to True to continue to use that field in earlier installations.
 use_machine_comment = False
 
@@ -34,6 +34,6 @@ use_bot_column = True
 
 verify_user_email = False
 
+
 def get(key, default=None):
     return globals().get(key, default)
-

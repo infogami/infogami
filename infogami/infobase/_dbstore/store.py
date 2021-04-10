@@ -35,9 +35,10 @@ import web
 
 from infogami.infobase import common
 
+
 class Store:
-    """JSON Store.
-    """
+    """JSON Store."""
+
     def __init__(self, db):
         self.db = db
         self.indexer = StoreIndexer()
@@ -98,7 +99,10 @@ class Store:
                 # store query results are always order by id column.
                 # It is important to update the id so that the newly modified
                 # records show up first in the results.
-                self.db.query("UPDATE store SET json=$json, id=nextval('store_id_seq') WHERE key=$key", vars=locals())
+                self.db.query(
+                    "UPDATE store SET json=$json, id=nextval('store_id_seq') WHERE key=$key",
+                    vars=locals(),
+                )
 
                 id = self.get_row(key=key).id
             else:
@@ -118,8 +122,7 @@ class Store:
         return doc
 
     def put_many(self, docs):
-        """Stores multiple docs in a single transaction.
-        """
+        """Stores multiple docs in a single transaction."""
         with self.db.transaction():
             for doc in docs:
                 key = doc['_key']
@@ -156,7 +159,14 @@ class Store:
         All the documents are returned when the type is None.
         """
         if type is None:
-            rows = self.db.select("store", what="store.*", limit=limit, offset=offset, order="store.id desc", vars=locals())
+            rows = self.db.select(
+                "store",
+                what="store.*",
+                limit=limit,
+                offset=offset,
+                order="store.id desc",
+                vars=locals(),
+            )
         else:
             tables = ["store", "store_index"]
             wheres = ["store.id = store_index.store_id", "type = $type"]
@@ -165,7 +175,15 @@ class Store:
                 wheres.append("name='_key'")
             else:
                 wheres.append("name=$name AND value=$value")
-            rows = self.db.select(tables, what='store.*', where=" AND ".join(wheres), limit=limit, offset=offset, order="store.id desc", vars=locals())
+            rows = self.db.select(
+                tables,
+                what='store.*',
+                where=" AND ".join(wheres),
+                limit=limit,
+                offset=offset,
+                order="store.id desc",
+                vars=locals(),
+            )
 
         def process_row(row):
             if include_docs:
@@ -193,24 +211,26 @@ class Store:
         if d:
             self.db.multiple_insert('store_index', d)
 
+
 class StoreIndexer:
     """Default indexer for store.
 
     Indexes all properties of the given document.
     """
+
     def index(self, doc):
         return common.flatten_dict(doc)
 
+
 class TypewiseIndexer:
-    """An indexer that delegates the indexing to sub-indexers based on the document type.
-    """
+    """An indexer that delegates the indexing to sub-indexers based on the document type."""
+
     def __init__(self):
         self.indexers = {}
         self.default_indexer = StoreIndexer()
 
     def set_indexer(self, type, indexer):
-        """Installs indexer for the given type of documents.
-        """
+        """Installs indexer for the given type of documents."""
         self.indexers[type] = indexer
 
     def get_indexer(self, type):

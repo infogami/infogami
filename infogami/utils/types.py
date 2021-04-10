@@ -7,8 +7,10 @@ from infogami.utils import storage
 default_type = '/type/page'
 type_patterns = storage.OrderedDict()
 
+
 def register_type(pattern, typename):
     type_patterns[pattern] = typename
+
 
 def guess_type(path):
     for pattern, typename in type_patterns.items():

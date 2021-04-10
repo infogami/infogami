@@ -27,23 +27,26 @@ import re
 from infogami.utils.markdown import markdown
 
 
-class FootnoteExtension (markdown.Extension):
+class FootnoteExtension(markdown.Extension):
 
     DEF_RE = re.compile(r'(\ ?\ ?\ ?)\[\^([^\]]*)\]:\s*(.*)')
-    SHORT_USE_RE = re.compile(r'\[\^([^\]]*)\]', re.M) # [^a]
+    SHORT_USE_RE = re.compile(r'\[\^([^\]]*)\]', re.M)  # [^a]
 
-    def __init__ (self, configs) :
+    def __init__(self, configs):
 
-        self.config = {'PLACE_MARKER' :
-                       ["///Footnotes Go Here///",
-                        "The text string that marks where the footnotes go"]}
+        self.config = {
+            'PLACE_MARKER': [
+                "///Footnotes Go Here///",
+                "The text string that marks where the footnotes go",
+            ]
+        }
 
-        for key, value in configs :
+        for key, value in configs:
             self.config[key][0] = value
 
         self.reset()
 
-    def extendMarkdown(self, md, md_globals) :
+    def extendMarkdown(self, md, md_globals):
 
         self.md = md
 
@@ -57,7 +60,7 @@ class FootnoteExtension (markdown.Extension):
         md.preprocessors.insert(index, preprocessor)
 
         # Insert an inline pattern before ImageReferencePattern
-        FOOTNOTE_RE = r'\[\^([^\]]*)\]' # blah blah [^1] blah
+        FOOTNOTE_RE = r'\[\^([^\]]*)\]'  # blah blah [^1] blah
         index = md.inlinePatterns.index(md_globals['IMAGE_REFERENCE_PATTERN'])
         md.inlinePatterns.insert(index, FootnotePattern(FOOTNOTE_RE, self))
 
@@ -71,41 +74,39 @@ class FootnoteExtension (markdown.Extension):
 
         md.textPostprocessors.append(textPostprocessor)
 
-
-    def reset(self) :
+    def reset(self):
         # May be called by Markdown is state reset is desired
 
-        self.footnote_suffix = "-" + str(int(random.random()*1000000000))
-        self.used_footnotes={}
+        self.footnote_suffix = "-" + str(int(random.random() * 1000000000))
+        self.used_footnotes = {}
         self.footnotes = {}
 
-    def findFootnotesPlaceholder(self, doc) :
+    def findFootnotesPlaceholder(self, doc):
         def findFootnotePlaceholderFn(node=None, indent=0):
             if node.type == 'text':
-                if node.value.find(self.getConfig("PLACE_MARKER")) > -1 :
+                if node.value.find(self.getConfig("PLACE_MARKER")) > -1:
                     return True
 
         fn_div_list = doc.find(findFootnotePlaceholderFn)
-        if fn_div_list :
+        if fn_div_list:
             return fn_div_list[0]
 
-
-    def setFootnote(self, id, text) :
+    def setFootnote(self, id, text):
         self.footnotes[id] = text
 
-    def makeFootnoteId(self, num) :
+    def makeFootnoteId(self, num):
         return 'fn%d%s' % (num, self.footnote_suffix)
 
-    def makeFootnoteRefId(self, num) :
+    def makeFootnoteRefId(self, num):
         return 'fnr%d%s' % (num, self.footnote_suffix)
 
-    def makeFootnotesDiv (self, doc) :
+    def makeFootnotesDiv(self, doc):
         """Creates the div with class='footnote' and populates it with
-           the text of the footnotes.
+        the text of the footnotes.
 
-           @returns: the footnote div as a dom element """
+        @returns: the footnote div as a dom element"""
 
-        if not self.footnotes.keys() :
+        if not self.footnotes.keys():
             return None
 
         div = doc.createElement("div")
@@ -115,28 +116,26 @@ class FootnoteExtension (markdown.Extension):
         ol = doc.createElement("ol")
         div.appendChild(ol)
 
-        footnotes = [(self.used_footnotes[id], id)
-                     for id in self.footnotes.keys()]
+        footnotes = [(self.used_footnotes[id], id) for id in self.footnotes.keys()]
         footnotes.sort()
 
-        for i, id in footnotes :
+        for i, id in footnotes:
             li = doc.createElement('li')
             li.setAttribute('id', self.makeFootnoteId(i))
 
             self.md._processSection(li, self.footnotes[id].split("\n"))
 
-            #li.appendChild(doc.createTextNode(self.footnotes[id]))
+            # li.appendChild(doc.createTextNode(self.footnotes[id]))
 
             backlink = doc.createElement('a')
             backlink.setAttribute('href', '#' + self.makeFootnoteRefId(i))
             backlink.setAttribute('class', 'footnoteBackLink')
-            backlink.setAttribute('title',
-                                  'Jump back to footnote %d in the text' % 1)
+            backlink.setAttribute('title', 'Jump back to footnote %d in the text' % 1)
             backlink.appendChild(doc.createTextNode(FN_BACKLINK_TEXT))
 
-            if li.childNodes :
+            if li.childNodes:
                 node = li.childNodes[-1]
-                if node.type == "text" :
+                if node.type == "text":
                     node = li
                 node.appendChild(backlink)
 
@@ -145,15 +144,14 @@ class FootnoteExtension (markdown.Extension):
         return div
 
 
-class FootnotePreprocessor :
-
-    def __init__ (self, footnotes) :
+class FootnotePreprocessor:
+    def __init__(self, footnotes):
         self.footnotes = footnotes
 
-    def run(self, lines) :
+    def run(self, lines):
 
         self.blockGuru = markdown.BlockGuru()
-        lines = self._handleFootnoteDefinitions (lines)
+        lines = self._handleFootnoteDefinitions(lines)
 
         # Make a hash of all footnote marks in the text so that we
         # know in what order they are supposed to appear.  (This
@@ -165,63 +163,58 @@ class FootnotePreprocessor :
 
         return text.split("\n")
 
-
-    def recordFootnoteUse(self, match) :
+    def recordFootnoteUse(self, match):
 
         id = match.group(1)
         id = id.strip()
         nextNum = len(self.footnotes.used_footnotes.keys()) + 1
         self.footnotes.used_footnotes[id] = nextNum
 
-
-    def _handleFootnoteDefinitions(self, lines) :
+    def _handleFootnoteDefinitions(self, lines):
         """Recursively finds all footnote definitions in the lines.
 
-            @param lines: a list of lines of text
-            @returns: a string representing the text with footnote
-                      definitions removed """
+        @param lines: a list of lines of text
+        @returns: a string representing the text with footnote
+                  definitions removed"""
 
         i, id, footnote = self._findFootnoteDefinition(lines)
 
-        if id :
+        if id:
 
             plain = lines[:i]
 
-            detabbed, theRest = self.blockGuru.detectTabbed(lines[i+1:])
+            detabbed, theRest = self.blockGuru.detectTabbed(lines[i + 1 :])
 
-            self.footnotes.setFootnote(id,
-                                       footnote + "\n"
-                                       + "\n".join(detabbed))
+            self.footnotes.setFootnote(id, footnote + "\n" + "\n".join(detabbed))
 
             more_plain = self._handleFootnoteDefinitions(theRest)
             return plain + [""] + more_plain
 
-        else :
+        else:
             return lines
 
-    def _findFootnoteDefinition(self, lines) :
+    def _findFootnoteDefinition(self, lines):
         """Finds the first line of a footnote definition.
 
-            @param lines: a list of lines of text
-            @returns: the index of the line containing a footnote definition """
+        @param lines: a list of lines of text
+        @returns: the index of the line containing a footnote definition"""
 
         counter = 0
-        for line in lines :
+        for line in lines:
             m = self.footnotes.DEF_RE.match(line)
-            if m :
+            if m:
                 return counter, m.group(2), m.group(3)
             counter += 1
         return counter, None, None
 
 
-class FootnotePattern (markdown.Pattern) :
-
-    def __init__ (self, pattern, footnotes) :
+class FootnotePattern(markdown.Pattern):
+    def __init__(self, pattern, footnotes):
 
         markdown.Pattern.__init__(self, pattern)
         self.footnotes = footnotes
 
-    def handleMatch(self, m, doc) :
+    def handleMatch(self, m, doc):
         sup = doc.createElement('sup')
         a = doc.createElement('a')
         sup.appendChild(a)
@@ -233,29 +226,27 @@ class FootnotePattern (markdown.Pattern) :
         return sup
 
 
-class FootnotePostprocessor (markdown.Postprocessor):
-
-    def __init__ (self, footnotes) :
+class FootnotePostprocessor(markdown.Postprocessor):
+    def __init__(self, footnotes):
         self.footnotes = footnotes
 
-    def run(self, doc) :
+    def run(self, doc):
         footnotesDiv = self.footnotes.makeFootnotesDiv(doc)
-        if footnotesDiv :
+        if footnotesDiv:
             fnPlaceholder = self.extension.findFootnotesPlaceholder(doc)
-            if fnPlaceholder :
+            if fnPlaceholder:
                 fnPlaceholder.parent.replaceChild(fnPlaceholder, footnotesDiv)
-            else :
+            else:
                 doc.documentElement.appendChild(footnotesDiv)
 
 
-class FootnoteTextPostprocessor (markdown.Postprocessor):
-
-    def __init__ (self, footnotes) :
+class FootnoteTextPostprocessor(markdown.Postprocessor):
+    def __init__(self, footnotes):
         self.footnotes = footnotes
 
-    def run(self, text) :
+    def run(self, text):
         return text.replace(FN_BACKLINK_TEXT, "&#8617;")
 
 
-def makeExtension(configs=None) :
+def makeExtension(configs=None):
     return FootnoteExtension(configs=configs)

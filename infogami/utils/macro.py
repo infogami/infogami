@@ -22,6 +22,7 @@ macrostore = storage.DictPile()
 macrostore.add_dict(diskmacros)
 macrostore.add_dict(codemacros)
 
+
 def macro(f):
     """Decorator to register a markdown macro.
     Macro is a function that takes argument string and returns result as markdown string.
@@ -29,22 +30,28 @@ def macro(f):
     codemacros[f.__name__] = f
     return f
 
+
 def load_macros(plugin_root, lazy=False):
     """Adds $plugin_root/macros to macro search path."""
     path = os.path.join(plugin_root, 'macros')
     if os.path.isdir(path):
         diskmacros.load_templates(path, lazy=lazy)
 
-#-- macro execution
+
+# -- macro execution
+
 
 def safeeval_args(args):
     """Evalues the args string safely using templator."""
     result = [None]
+
     def f(*args, **kwargs):
         result[0] = args, kwargs
+
     code = "$def with (f)\n$f(%s)" % args
     web.template.Template(web.safestr(code))(f)
     return result[0]
+
 
 def call_macro(name, args):
     if name in macrostore:
@@ -58,15 +65,19 @@ def call_macro(name, args):
                 raise
             result = "%s failed with error: <pre>%s</pre>" % (name, web.websafe(str(e)))
             import traceback
+
             traceback.print_exc()
         return str(result)
     else:
         return "Unknown macro: <pre>%s</pre>" % name
 
+
 MACRO_PLACEHOLDER = "asdfghjjkl%sqwertyuiop"
+
 
 class MacroPattern(markdown.BasePattern):
     """Inline pattern to replace macros."""
+
     def __init__(self, md):
         pattern = r'{{([a-zA-Z0-9_]*)\((.*)\)}}'
         markdown.BasePattern.__init__(self, pattern)
@@ -86,13 +97,17 @@ class MacroPattern(markdown.BasePattern):
         md.macros[placeholder] = macro_info
         return placeholder
 
+
 def replace_macros(html, macros):
     """Replaces the macro place holders with real macro output."""
     for placeholder, macro_info in macros.items():
         name, args = macro_info
-        html = html.replace("<p>%s\n</p>" % placeholder, web.safestr(call_macro(name, args)))
+        html = html.replace(
+            "<p>%s\n</p>" % placeholder, web.safestr(call_macro(name, args))
+        )
 
     return html
+
 
 class MacroExtension(markdown.Extension):
     def extendMarkdown(self, md, md_globals):
@@ -100,15 +115,19 @@ class MacroExtension(markdown.Extension):
         md.macro_count = 0
         md.macros = {}
 
+
 def makeExtension(configs={}):
     return MacroExtension(configs=configs)
 
-#-- sample macros
+
+# -- sample macros
+
 
 @macro
 def HelloWorld():
     """Hello world macro."""
     return "<b>Hello, world</b>."
+
 
 @macro
 def ListOfMacros():
@@ -119,6 +138,7 @@ def ListOfMacros():
         out += '  <li><b>%s</b>: %s</li>\n' % (name, macro.__doc__ or "")
     out += "</ul>"
     return out
+
 
 if __name__ == "__main__":
     text = "{{HelloWorld()}}"

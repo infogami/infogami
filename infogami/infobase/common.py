@@ -5,11 +5,25 @@ from six import iteritems, string_types, text_type
 import web
 
 from infogami.infobase.core import (  # noqa: F401
-    BadData, Conflict, Event, InfobaseException, NotFound, PermissionDenied, Reference,
-    SiteStore, Store, Text, Thing, TypeMismatch, UserNotFound
+    BadData,
+    Conflict,
+    Event,
+    InfobaseException,
+    NotFound,
+    PermissionDenied,
+    Reference,
+    SiteStore,
+    Store,
+    Text,
+    Thing,
+    TypeMismatch,
+    UserNotFound,
 )
 from infogami.infobase.utils import (  # noqa: F401
-    flatten_dict, parse_boolean, parse_datetime, safeint
+    flatten_dict,
+    parse_boolean,
+    parse_datetime,
+    safeint,
 )
 
 # Primitive types and corresponding python types
@@ -25,7 +39,12 @@ primitive_types = {
 
 # properties present for every type of object.
 COMMON_PROPERTIES = [
-    'key', 'type', 'created', 'last_modified', 'permission', 'child_permission'
+    'key',
+    'type',
+    'created',
+    'last_modified',
+    'permission',
+    'child_permission',
 ]
 READ_ONLY_PROPERTIES = ["id", "created", "last_modified", "revision", "latest_revision"]
 
@@ -69,8 +88,10 @@ def find_type(value):
     else:
         return '/type/string'
 
+
 def parse_query(d):
     return parse_data(d, level=0)
+
 
 def parse_data(d, level=0):
     """
@@ -109,11 +130,12 @@ def parse_data(d, level=0):
         elif level != 0 and 'key' in d and len(d) == 1:
             return Reference(d['key'])
         else:
-            return web.storage((k, parse_data(v, level+1)) for k, v in iteritems(d))
+            return web.storage((k, parse_data(v, level + 1)) for k, v in iteritems(d))
     elif isinstance(d, list):
-        return [parse_data(v, level+1) for v in d]
+        return [parse_data(v, level + 1) for v in d]
     else:
         return d
+
 
 def format_data(d):
     """Convert a data to a representation that can be saved.
@@ -142,6 +164,7 @@ def format_data(d):
     else:
         return d
 
+
 def record_exception():
     """This function is called whenever there is any exception in Infobase.
 
@@ -149,7 +172,9 @@ def record_exception():
     taken on exceptions.
     """
     import traceback
+
     traceback.print_exc()
+
 
 def create_test_store():
     """Creates a test implementation for using in doctests.
@@ -171,6 +196,7 @@ def create_test_store():
     ...     in {'name': 'name', 'unique': True}.items())
     True
     """
+
     class Store(web.storage):
         def get(self, key, revision=None):
             return simplejson.dumps(self[key].format_data())
@@ -178,55 +204,63 @@ def create_test_store():
     store = Store()
 
     def add_primitive_type(key):
-        add_object({
-            'key': key,
-            'type': {'key': '/type/type'},
-            'king': 'primitive'
-        })
+        add_object({'key': key, 'type': {'key': '/type/type'}, 'king': 'primitive'})
 
     def add_object(data):
         key = data.pop('key')
         store[key] = Thing(store, key, parse_data(data))
         return store[key]
 
-    add_object({
-        'key': '/type/type',
-        'type': {'key': '/type/type'},
-        'kind': 'regular',
-        'properties': [{
-            'name': 'name',
-            'expected_type': {'key': '/type/string'},
-            'unique': True
-        }, {
-            'name': 'kind',
-            'expected_type': {'key': '/type/string'},
-            'options': ['primitive', 'regular', 'embeddable'],
-            'unique': True
-        }, {
-            'name': 'properties',
-            'expected_type': {'key': '/type/property'},
-            'unique': False
-        }]
-    })
+    add_object(
+        {
+            'key': '/type/type',
+            'type': {'key': '/type/type'},
+            'kind': 'regular',
+            'properties': [
+                {
+                    'name': 'name',
+                    'expected_type': {'key': '/type/string'},
+                    'unique': True,
+                },
+                {
+                    'name': 'kind',
+                    'expected_type': {'key': '/type/string'},
+                    'options': ['primitive', 'regular', 'embeddable'],
+                    'unique': True,
+                },
+                {
+                    'name': 'properties',
+                    'expected_type': {'key': '/type/property'},
+                    'unique': False,
+                },
+            ],
+        }
+    )
 
-    add_object({
-        'key': '/type/property',
-        'type': '/type/type',
-        'kind': 'embeddable',
-        'properties': [{
-            'name': 'name',
-            'expected_type': {'key': '/type/string'},
-            'unique': True
-        }, {
-            'name': 'expected_type',
-            'expected_type': {'key': '/type/type'},
-            'unique': True
-        }, {
-            'name': 'unique',
-            'expected_type': {'key': '/type/boolean'},
-            'unique': True
-        }]
-    })
+    add_object(
+        {
+            'key': '/type/property',
+            'type': '/type/type',
+            'kind': 'embeddable',
+            'properties': [
+                {
+                    'name': 'name',
+                    'expected_type': {'key': '/type/string'},
+                    'unique': True,
+                },
+                {
+                    'name': 'expected_type',
+                    'expected_type': {'key': '/type/type'},
+                    'unique': True,
+                },
+                {
+                    'name': 'unique',
+                    'expected_type': {'key': '/type/boolean'},
+                    'unique': True,
+                },
+            ],
+        }
+    )
 
     add_primitive_type('/type/string')
     add_primitive_type('/type/int')
@@ -235,17 +269,22 @@ def create_test_store():
     add_primitive_type('/type/text')
     add_primitive_type('/type/datetime')
 
-    add_object({
-        'key': '/type/page',
-        'type': '/type/page',
-        'kind': 'regular',
-        'properties': [{
-            'name': 'title',
-            'expected_type': {'key': '/type/string'},
-            'unique': True
-        }]
-    })
+    add_object(
+        {
+            'key': '/type/page',
+            'type': '/type/page',
+            'kind': 'regular',
+            'properties': [
+                {
+                    'name': 'title',
+                    'expected_type': {'key': '/type/string'},
+                    'unique': True,
+                }
+            ],
+        }
+    )
     return store
+
 
 class LazyThing:
     def __init__(self, store, key, json):
@@ -268,6 +307,8 @@ class LazyThing:
     def __repr__(self):
         return "<LazyThing: %s>" % repr(self._key)
 
+
 if __name__ == "__main__":
     import doctest
+
     doctest.testmod()

@@ -1,9 +1,11 @@
 import datetime
 from infogami.infobase import logreader
 
+
 def test_nextday():
     assert logreader.nextday(datetime.date(2010, 10, 20)) == datetime.date(2010, 10, 21)
-    assert logreader.nextday(datetime.date(2010, 10, 31)) == datetime.date(2010, 11, 1)    
+    assert logreader.nextday(datetime.date(2010, 10, 31)) == datetime.date(2010, 11, 1)
+
 
 def test_daterange():
     def f(begin, end):
@@ -15,14 +17,17 @@ def test_daterange():
     assert f(oct10, oct11) == [oct10, oct11]
     assert f(oct11, oct10) == []
 
+
 def test_to_timestamp():
-    assert logreader.to_timestamp('2010-01-02T03:04:05.678900') == datetime.datetime(2010, 1, 2, 3, 4, 5, 678900)
+    assert logreader.to_timestamp('2010-01-02T03:04:05.678900') == datetime.datetime(
+        2010, 1, 2, 3, 4, 5, 678900
+    )
+
 
 class TestLogFile:
     def test_file2date(self):
         logfile = logreader.LogFile("foo")
         assert logfile.file2date("foo/2010/10/20.log") == datetime.date(2010, 10, 20)
-
 
     def test_date2file(self):
         logfile = logreader.LogFile("foo")
@@ -50,7 +55,9 @@ class TestLogFile:
         f2 = d.join("02.log")
         f2.write("")
         assert logfile.find_filelist() == [f1.strpath, f2.strpath]
-        assert logfile.find_filelist(from_date=datetime.date(2010, 10, 2)) == [f2.strpath]
+        assert logfile.find_filelist(from_date=datetime.date(2010, 10, 2)) == [
+            f2.strpath
+        ]
 
         # create a bad file and make it behaves correctly
         d.join("foo.log").write("")
@@ -89,4 +96,3 @@ class TestLogFile:
 
         logfile.seek("2010-10-10:0")
         assert logfile.tell() == "2010-10-20:0"
-

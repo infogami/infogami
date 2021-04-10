@@ -4,6 +4,7 @@ from infogami.infobase import client
 from infogami.infobase.tests import utils
 from infogami.infobase.tests.pytest_wildcard import wildcard  # noqa: F401
 
+
 def setup_module(mod):
     utils.setup_conn(mod)
     utils.setup_server(mod)
@@ -30,16 +31,18 @@ class TestRecentChanges:
         self.save_doc("/foo", comment="test recentchanges")
 
         changes = self.recentchanges(limit=1)
-        assert changes == [{
-            "id": wildcard,
-            "kind": "update",
-            "author": None,
-            "ip": wildcard,
-            "timestamp": wildcard,
-            "changes": [{"key": "/foo", "revision": 1}],
-            "comment": "test recentchanges",
-            "data": {}
-        }]
+        assert changes == [
+            {
+                "id": wildcard,
+                "kind": "update",
+                "author": None,
+                "ip": wildcard,
+                "timestamp": wildcard,
+                "changes": [{"key": "/foo", "revision": 1}],
+                "comment": "test recentchanges",
+                "data": {},
+            }
+        ]
 
         assert site.get_change(changes[0]["id"]).dict() == {
             "id": wildcard,
@@ -49,7 +52,7 @@ class TestRecentChanges:
             "timestamp": wildcard,
             "comment": "test recentchanges",
             "changes": [{"key": "/foo", "revision": 1}],
-            "data": {}
+            "data": {},
         }
 
     def test_key(self, wildcard):
@@ -68,6 +71,7 @@ class TestRecentChanges:
 
         changes = self.recentchanges(data={"x": "two"})
         assert [c['data'] for c in changes] == [{"x": "two"}]
+
 
 class TestStore:
     global site
@@ -133,11 +137,11 @@ class TestStore:
         assert s.values() == [
             {"type": "bar", "name": "z", "_key": "z", "_rev": wildcard},
             {"type": "bar", "name": "y", "_key": "y", "_rev": wildcard},
-            {"type": "foo", "name": "x", "_key": "x", "_rev": wildcard}
+            {"type": "foo", "name": "x", "_key": "x", "_rev": wildcard},
         ]
         assert s.values(type='bar') == [
             {"type": "bar", "name": "z", "_key": "z", "_rev": wildcard},
-            {"type": "bar", "name": "y", "_key": "y", "_rev": wildcard}
+            {"type": "bar", "name": "y", "_key": "y", "_rev": wildcard},
         ]
         assert s.values(type='bar', name="name", value="y") == [
             {"type": "bar", "name": "y", "_key": "y", "_rev": wildcard}
@@ -146,7 +150,7 @@ class TestStore:
         assert s.items() == [
             ("z", {"type": "bar", "name": "z", "_key": "z", "_rev": wildcard}),
             ("y", {"type": "bar", "name": "y", "_key": "y", "_rev": wildcard}),
-            ("x", {"type": "foo", "name": "x", "_key": "x", "_rev": wildcard})
+            ("x", {"type": "foo", "name": "x", "_key": "x", "_rev": wildcard}),
         ]
         assert s.items(type='bar') == [
             ("z", {"type": "bar", "name": "z", "_key": "z", "_rev": wildcard}),
@@ -165,6 +169,7 @@ class TestStore:
         s.update(docs)
         assert sorted(s.keys()) == (["x", "y", "z"])
 
+
 class TestSeq:
     def test_seq(self):
         global seq
@@ -172,20 +177,26 @@ class TestSeq:
         seq.get_value("bar") == 0
 
         for i in range(10):
-            seq.next_value("foo") == i+1
+            seq.next_value("foo") == i + 1
+
 
 class TestSanity:
     """Simple tests to make sure that queries are working fine via all these layers."""
+
     def test_reindex(self):
         keys = ['/type/page']
         site._request("/reindex", method="POST", data={"keys": json.dumps(keys)})
 
+
 class TestAccount:
     """Test account creation, forgot password etc."""
+
     def test_register(self):
         global site
         email = "joe@example.com"
-        response = site.register(username="joe", displayname="Joe", email=email, password="secret")
+        response = site.register(
+            username="joe", displayname="Joe", email=email, password="secret"
+        )
 
         assert site.activate_account(username="joe") == {'ok': 'true'}
 

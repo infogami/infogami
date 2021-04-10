@@ -14,21 +14,23 @@ from infogami.utils.template import render
 from infogami.utils.view import require_login
 
 
-class changes (delegate.page):
+class changes(delegate.page):
     @require_login
     def GET(self, site):
         user = core.auth.get_user()
         d = db.get_modified_pages(site, user.id)
         return render.changes(web.ctx.homepath, d)
 
-def input():
-	i = web.input("a", "b", "c")
-	i.a = (i.a and int(i.a) or 0)
-	i.b = int(i.b)
-	i.c = int(i.c)
-	return i
 
-class review (delegate.mode):
+def input():
+    i = web.input("a", "b", "c")
+    i.a = i.a and int(i.a) or 0
+    i.b = int(i.b)
+    i.c = int(i.c)
+    return i
+
+
+class review(delegate.mode):
     @require_login
     def GET(self, site, path):
         user = core.auth.get_user()
@@ -50,7 +52,8 @@ class review (delegate.mode):
 
         return render.review(path, diff, i.a, i.b, i.c)
 
-class approve (delegate.mode):
+
+class approve(delegate.mode):
     @require_login
     def POST(self, site, path):
         i = input()
@@ -60,16 +63,17 @@ class approve (delegate.mode):
 
         user = core.auth.get_user()
 
-        if i.b != i.c: # user requested for some reverts before approving this
+        if i.b != i.c:  # user requested for some reverts before approving this
             db.revert(site, path, user.id, i.b)
-            revision = i.c + 1 # one new version has been added by revert
+            revision = i.c + 1  # one new version has been added by revert
         else:
             revision = i.b
 
         db.approve(site, user.id, path, revision)
         web.seeother(web.changequery(m=None, a=None, b=None, c=None))
 
-class revert (delegate.mode):
+
+class revert(delegate.mode):
     @require_login
     def POST(self, site, path):
         i = input()
@@ -78,6 +82,6 @@ class revert (delegate.mode):
             return render.parallel_modification()
 
         if i.a == i.b:
-	        return approve().POST(site, path)
+            return approve().POST(site, path)
         else:
-            web.seeother(web.changequery(m='review', b=i.b-1))
+            web.seeother(web.changequery(m='review', b=i.b - 1))

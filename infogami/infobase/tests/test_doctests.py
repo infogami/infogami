@@ -19,6 +19,7 @@ modules = [
     "infogami.infobase.writequery",
 ]
 
+
 @pytest.mark.parametrize('module', modules)
 def test_doctest(module):
     mod = __import__(module, None, None, ['x'])

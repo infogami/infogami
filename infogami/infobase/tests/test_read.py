@@ -25,26 +25,33 @@ class DBTest:
 
 
 class TestRecentChanges(DBTest):
-    def _save(self, docs, author=None, ip="1.2.3.4", comment="testing", kind="test_save", timestamp=None, data=None):
-        timestamp = timestamp=timestamp or datetime.datetime(2010, 1, 2, 3, 4, 5)
+    def _save(
+        self,
+        docs,
+        author=None,
+        ip="1.2.3.4",
+        comment="testing",
+        kind="test_save",
+        timestamp=None,
+        data=None,
+    ):
+        timestamp = timestamp = timestamp or datetime.datetime(2010, 1, 2, 3, 4, 5)
         s = SaveImpl(db)
-        s.save(docs,
+        s.save(
+            docs,
             timestamp=timestamp,
             comment=comment,
             ip=ip,
             author=author,
             action=kind,
-            data=data
+            data=data,
         )
 
     def recentchanges(self, **kw):
         return RecentChanges(db).recentchanges(**kw)
 
     def doc(self, key, **kw):
-        doc = {
-            "key": key,
-            "type": {"key": "/type/object"}
-        }
+        doc = {"key": key, "type": {"key": "/type/object"}}
         doc.update(kw)
         return doc
 
@@ -55,7 +62,7 @@ class TestRecentChanges(DBTest):
     def test_all(self, wildcard):
         docs = [
             {"key": "/foo", "type": {"key": "/type/object"}, "title": "foo"},
-            {"key": "/bar", "type": {"key": "/type/object"}, "title": "bar"}
+            {"key": "/bar", "type": {"key": "/type/object"}, "title": "bar"},
         ]
         timestamp = datetime.datetime(2010, 1, 2, 3, 4, 5)
         self._save(docs, comment="testing recentchanges", timestamp=timestamp)
@@ -63,19 +70,21 @@ class TestRecentChanges(DBTest):
         engine = RecentChanges(db)
         changes = engine.recentchanges(limit=1)
 
-        assert changes == [{
-            "id": wildcard,
-            "kind": "test_save",
-            "timestamp": timestamp.isoformat(),
-            "comment": "testing recentchanges",
-            "ip": "1.2.3.4",
-            "author": None,
-            "changes": [
-                {"key": "/foo", "revision": 1},
-                {"key": "/bar", "revision": 1},
-            ],
-            "data": {}
-        }]
+        assert changes == [
+            {
+                "id": wildcard,
+                "kind": "test_save",
+                "timestamp": timestamp.isoformat(),
+                "comment": "testing recentchanges",
+                "ip": "1.2.3.4",
+                "author": None,
+                "changes": [
+                    {"key": "/foo", "revision": 1},
+                    {"key": "/bar", "revision": 1},
+                ],
+                "data": {},
+            }
+        ]
 
         engine.get_change(changes[0]['id']) == {
             "id": wildcard,
@@ -88,7 +97,7 @@ class TestRecentChanges(DBTest):
                 {"key": "/foo", "revision": 1},
                 {"key": "/bar", "revision": 1},
             ],
-            "data": {}
+            "data": {},
         }
 
     def test_author(self):
@@ -130,10 +139,7 @@ class TestRecentChanges(DBTest):
         db.insert("thing", key='/user/' + username)
 
         store = Store(db)
-        store.put("account/" + username, dict(kw,
-            type="account",
-            status="active"
-        ))
+        store.put("account/" + username, dict(kw, type="account", status="active"))
 
     def test_bot(self):
         self.new_account("one", bot=False)
@@ -163,8 +169,12 @@ class TestRecentChanges(DBTest):
         self.save_doc("/one", data={"x": "one"})
         self.save_doc("/two", data={"x": "two"})
 
-        assert self.recentchanges(limit=1, data={"x": "one"})[0]['changes'] == [{"key": "/one", "revision": 1}]
-        assert self.recentchanges(limit=1, data={"x": "two"})[0]['changes'] == [{"key": "/two", "revision": 1}]
+        assert self.recentchanges(limit=1, data={"x": "one"})[0]['changes'] == [
+            {"key": "/one", "revision": 1}
+        ]
+        assert self.recentchanges(limit=1, data={"x": "two"})[0]['changes'] == [
+            {"key": "/two", "revision": 1}
+        ]
 
     def test_kind(self):
         self.save_doc("/zero", kind="foo")
@@ -200,5 +210,10 @@ class TestRecentChanges(DBTest):
         assert changes(end_date=date("2010-01-03")) == ['a']
         assert changes(end_date=date("2010-01-04")) == ['b', 'a']
 
-        assert changes(begin_date=date("2010-01-01"), end_date=date("2010-01-03")) == ['a']
-        assert changes(begin_date=date("2010-01-01"), end_date=date("2010-01-04")) == ['b', 'a']
+        assert changes(begin_date=date("2010-01-01"), end_date=date("2010-01-03")) == [
+            'a'
+        ]
+        assert changes(begin_date=date("2010-01-01"), end_date=date("2010-01-04")) == [
+            'b',
+            'a',
+        ]

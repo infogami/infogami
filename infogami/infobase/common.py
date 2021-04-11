@@ -1,5 +1,5 @@
 import datetime
-import simplejson
+import json
 from six import iteritems, string_types, text_type
 
 import web
@@ -199,7 +199,7 @@ def create_test_store():
 
     class Store(web.storage):
         def get(self, key, revision=None):
-            return simplejson.dumps(self[key].format_data())
+            return json.dumps(self[key].format_data())
 
     store = Store()
 

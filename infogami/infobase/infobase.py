@@ -122,12 +122,12 @@ class Site:
     withKey = get
 
     def _get_thing(self, key, revision=None):
-        json = self.get(key, revision)
-        return json and common.Thing.from_json(self.store, key, json)
+        json_data = self.get(key, revision)
+        return json_data and common.Thing.from_json(self.store, key, json_data)
 
     def _get_many_things(self, keys):
-        json = self.get_many(keys)
-        d = simplejson.loads(json)
+        json_data = self.get_many(keys)
+        d = simplejson.loads(json_data)
         return dict(
             (k, common.Thing.from_dict(self.store, k, doc)) for k, doc in d.items()
         )

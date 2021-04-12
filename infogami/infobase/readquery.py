@@ -5,8 +5,8 @@ from infogami.infobase import common
 
 
 def get_thing(store, key, revision=None):
-    json = key and store.get(key, revision)
-    return json and common.Thing.from_json(store, key, json)
+    json_data = key and store.get(key, revision)
+    return json_data and common.Thing.from_json(store, key, json_data)
 
 
 def run_things_query(store, query):

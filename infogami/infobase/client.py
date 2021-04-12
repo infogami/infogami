@@ -44,16 +44,13 @@ def unstorify(d):
 
 
 class ClientException(Exception):
-    def __init__(self, status, msg, json=None):
+    def __init__(self, status, msg, json_data=None):
         self.status = status
-        self.json = json
+        self.json = json_data
         Exception.__init__(self, msg)
 
     def get_data(self):
-        if self.json:
-            return json.loads(self.json)
-        else:
-            return {}
+        return json.loads(self.json) if self.json else {}
 
 
 class NotFound(ClientException):

@@ -10,8 +10,8 @@ from infogami.infobase import account, common
 def get_thing(store, key, revision=None):
     if isinstance(key, common.Reference):
         key = text_type(key)
-    json = store.get(key, revision)
-    return json and common.Thing.from_json(store, key, json)
+    json_data = store.get(key, revision)
+    return json_data and common.Thing.from_json(store, key, json_data)
 
 
 class PermissionEngine:
@@ -161,7 +161,7 @@ class SaveProcessor:
 
     def get_many(self, keys):
         d = self.store.get_many_as_dict(keys)
-        return dict((k, simplejson.loads(json)) for k, json in d.items())
+        return dict((k, simplejson.loads(json_data)) for k, json_data in d.items())
 
     def process(self, key, data):
         prev_data = self.get_many([key])

@@ -21,9 +21,9 @@ default_schema = None
 logger = logging.getLogger("infobase")
 
 
-def process_json(key, json):
-    """Hook to process json."""
-    return json
+def process_json(key, json_data):
+    """Hook to process json data."""
+    return json_data
 
 
 class DBSiteStore(common.SiteStore):
@@ -103,14 +103,14 @@ class DBSiteStore(common.SiteStore):
 
     def get(self, key, revision=None):
         if self.cache is None or revision is not None:
-            json = self._get(key, revision)
+            json_data = self._get(key, revision)
         else:
-            json = self.cache.get(key)
-            if json is None:
-                json = self._get(key, revision)
-                if json:
-                    self.cache[key] = json
-        return process_json(key, json)
+            json_data = self.cache.get(key)
+            if json_data is None:
+                json_data = self._get(key, revision)
+                if json_data:
+                    self.cache[key] = json_data
+        return process_json(key, json_data)
 
     def _get(self, key, revision):
         metadata = self.get_metadata(key)
@@ -121,8 +121,8 @@ class DBSiteStore(common.SiteStore):
             'SELECT data FROM data WHERE thing_id=$metadata.id AND revision=$revision',
             vars=locals(),
         )
-        json = d and d[0].data or None
-        return json
+        json_data = d and d[0].data or None
+        return json_data
 
     def get_many_as_dict(self, keys):
         if not keys:
@@ -179,7 +179,7 @@ class DBSiteStore(common.SiteStore):
 
         s = SaveImpl(self.db, self.schema, self.indexer, self.property_manager)
 
-        # Hack to allow processing of json before using. Required for OL legacy.
+        # Hack to allow processing of json data before using. Required for OL legacy.
         s.process_json = process_json
 
         docs = common.format_data(docs)
@@ -220,7 +220,7 @@ class DBSiteStore(common.SiteStore):
 
     def reindex(self, keys):
         s = SaveImpl(self.db, self.schema, self.indexer, self.property_manager)
-        # Hack to allow processing of json before using. Required for OL legacy.
+        # Hack to allow processing of json data before using. Required for OL legacy.
         s.process_json = process_json
         return s.reindex(keys)
 

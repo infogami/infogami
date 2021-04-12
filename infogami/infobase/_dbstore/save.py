@@ -23,9 +23,9 @@ class SaveImpl:
         )
         self.thing_ids = {}
 
-    def process_json(self, key, json):
+    def process_json(self, key, json_data):
         """Hack to allow processing of json before using. Required for OL legacy."""
-        return json
+        return json_data
 
     def save(self, docs, timestamp, comment, ip, author, action, data=None):
         docs = list(docs)
@@ -200,8 +200,8 @@ class SaveImpl:
         records = dict((r.key, r) for r in rows)
         for r in records.values():
             r.revision = r.latest_revision
-            json = r.data and self.process_json(r.key, r.data)
-            r.data = simplejson.loads(json)
+            json_data = r.data and self.process_json(r.key, r.data)
+            r.data = simplejson.loads(json_data)
         return records
 
     def _fill_types(self, records):

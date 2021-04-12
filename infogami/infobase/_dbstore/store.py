@@ -6,8 +6,8 @@ This provides a simple and limited interface for storing, retrieving, querying d
     - put(key, data)
     - delete(key)
 
-    - get_json(key) -> json
-    - set_json(key, json)
+    - get_json(key) -> json_data
+    - set_json(key, json_data)
 
     - list(limit=100, offset=0) -> keys
     - query(type, name, value, limit=100, offset=0) -> keys
@@ -85,7 +85,7 @@ class Store:
         doc.pop("_key", None)
         rev = doc.pop("_rev", None)
 
-        json = simplejson.dumps(doc)
+        json_data = simplejson.dumps(doc)
 
         tx = self.db.transaction()
         try:
@@ -100,13 +100,13 @@ class Store:
                 # It is important to update the id so that the newly modified
                 # records show up first in the results.
                 self.db.query(
-                    "UPDATE store SET json=$json, id=nextval('store_id_seq') WHERE key=$key",
+                    "UPDATE store SET json=$json_data, id=nextval('store_id_seq') WHERE key=$key",
                     vars=locals(),
                 )
 
                 id = self.get_row(key=key).id
             else:
-                id = self.db.insert("store", key=key, json=json)
+                id = self.db.insert("store", key=key, json=json_data)
 
             self.add_index(id, key, doc)
 
@@ -128,8 +128,8 @@ class Store:
                 key = doc['_key']
                 self.put(key, doc)
 
-    def put_json(self, key, json):
-        self.put(key, simplejson.loads(json))
+    def put_json(self, key, json_data):
+        self.put(key, simplejson.loads(json_data))
 
     def delete(self, key, rev=None):
         tx = self.db.transaction()

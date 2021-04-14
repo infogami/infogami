@@ -2,7 +2,7 @@
 """
 import copy
 
-import simplejson
+import json
 import web
 
 from six import iteritems, text_type
@@ -18,7 +18,7 @@ class InfobaseException(Exception):
         Exception.__init__(self)
 
     def __str__(self):
-        return simplejson.dumps(self.d)
+        return json.dumps(self.d)
 
     def dict(self):
         return dict(self.d)
@@ -146,7 +146,7 @@ class Thing:
 
     @staticmethod
     def from_json(store, key, data):
-        return Thing.from_dict(store, key, simplejson.loads(data))
+        return Thing.from_dict(store, key, json.loads(data))
 
     @staticmethod
     def from_dict(store, key, data):
@@ -245,7 +245,8 @@ class Event:
     """Infobase Event.
 
     Events are fired when something important happens (write, new account etc.).
-    Some code can listen to the events and do some action (like logging, updating external cache etc.).
+    Some code can listen to the events and do some action
+    (like logging, updating external cache etc.).
     """
 
     def __init__(self, sitename, name, timestamp, ip, username, data):

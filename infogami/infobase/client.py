@@ -159,7 +159,9 @@ class RemoteConnection(Connection):
         headers['X-REMOTE-IP'] = web.ctx.get('ip') or ''
 
         try:
-            response = requests.request(method, path, data=data, headers=headers)
+            response = requests.request(
+                method, f'http://{self.base_url}{path}', data=data, headers=headers
+            )
             if not response.ok:
                 response.raise_for_status()
             stats.end()

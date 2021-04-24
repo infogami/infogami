@@ -1,8 +1,8 @@
 """Script to migrate data from 0.4 to 0.5
 """
-from __future__ import print_function
+import os
+import sys
 from optparse import OptionParser
-import os, sys
 import web
 
 DATATYPES = ["str", "int", "float", "boolean", "ref"]
@@ -62,7 +62,7 @@ create table transaction (
     author_id int references thing,
     ip inet,
     comment text,
-    created timestamp default (current_timestamp at time zone 'utc')    
+    created timestamp default (current_timestamp at time zone 'utc')
 );
 """
 

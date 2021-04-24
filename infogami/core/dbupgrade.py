@@ -1,5 +1,5 @@
 """
-module for doing database upgrades when code changes. 
+module for doing database upgrades when code changes.
 """
 from __future__ import print_function
 import infogami

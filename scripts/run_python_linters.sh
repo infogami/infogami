@@ -7,9 +7,9 @@ black --skip-string-normalization --check .
 codespell . --ignore-words-list=ba,referer --quiet-level=2
 flake8 . \
   --count \
-  --select=C,E5,E9,F4,F6,F7,F82 \
+  --ignore=E203,E402,E722,E731,F811,F841,W503 \
   --max-complexity=43 \
-  --max-line-length=233 \
+  --max-line-length=175 \
   --show-source \
   --statistics
 # exit-zero treats all errors as warnings.  The GitHub editor is 127 chars wide

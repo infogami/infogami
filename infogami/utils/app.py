@@ -220,7 +220,7 @@ def delegate():
         return getattr(cls(), method)(*args)
 
 
-##  processors
+#  processors
 
 
 def normpath(path):

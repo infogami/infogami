@@ -1,11 +1,11 @@
 """webtest: test utilities.
 """
-import sys, os
+import os
+import sys
+import unittest
 
 # adding current directory to path to make sure local copy of web module is used.
 sys.path.insert(0, '.')
-
-import unittest
 
 from infogami.utils import delegate
 import web

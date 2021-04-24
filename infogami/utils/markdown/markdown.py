@@ -74,7 +74,7 @@ BOMS = {
         six.text_type(codecs.BOM_UTF16_LE, "utf-16"),
         six.text_type(codecs.BOM_UTF16_BE, "utf-16"),
     ),
-    #'utf-32' : (six.text_type(codecs.BOM_UTF32_LE, "utf-32"),
+    # 'utf-32' : (six.text_type(codecs.BOM_UTF32_LE, "utf-32"),
     #            six.text_type(codecs.BOM_UTF32_BE, "utf-32")),
 }
 

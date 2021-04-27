@@ -1,7 +1,8 @@
 """
 Infobase Logger module.
 
-Infogami log file is a stream of events where each event is a dictionary represented in JSON format having keys [`action`, `site`, `data`].
+Infogami log file is a stream of events where each event is a dictionary represented in
+JSON format having keys [`action`, `site`, `data`].
 
    * action: Name of action being logged. Possible values are write, new_account and update_object.
    * site: Name of site
@@ -14,7 +15,7 @@ import datetime
 import os
 import threading
 
-import simplejson
+import json
 
 
 def synchronize(f):
@@ -116,7 +117,7 @@ class Logger:
             os.makedirs(dir)
         f = self._open(path, 'a')
         f.write(
-            simplejson.dumps(
+            json.dumps(
                 dict(
                     action=action,
                     site=sitename,

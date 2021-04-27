@@ -1,11 +1,10 @@
 """Infobase client."""
-from __future__ import print_function
-
 import datetime
+import json
 import logging
+import re
 import time
 
-import json
 import requests
 from six import iteritems, string_types, text_type, with_metaclass
 from six.moves.http_cookies import SimpleCookie
@@ -695,8 +694,6 @@ def parse_datetime(datestring):
     """Parses from isoformat.
     Is there any way to do this in stdlib?
     """
-    import re, datetime
-
     tokens = re.split(r'-|T|:|\.| ', datestring)
     return datetime.datetime(*map(int, tokens))
 

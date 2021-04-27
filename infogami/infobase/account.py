@@ -213,7 +213,7 @@ class AccountManager:
         text += "," + self._generate_salted_hash(self.secret_key, text)
         web.ctx.infobase_auth_token = text
 
-    #### Utilities
+    # Utilities
 
     def _generate_salted_hash(self, key, text, salt=None):
         """
@@ -247,7 +247,7 @@ class AccountManager:
     def generate_hash(self, raw_password):
         return self._generate_salted_hash(self.secret_key, raw_password)
 
-    #### Lagacy
+    # Lagacy
 
     def find_user_by_email(self, email):
         """Returns key of the user with given email."""
@@ -269,7 +269,7 @@ class AccountManager:
             ):
                 return self.site._get_thing(user_key)
 
-    #### Old, may be unused
+    # Old, may be unused
 
     def register1(self, username, email, enc_password, data, ip=None, timestamp=None):
         ip = ip or web.ctx.ip

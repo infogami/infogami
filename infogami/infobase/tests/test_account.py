@@ -103,7 +103,7 @@ class TestAccount:
         assert a.login("foo", "secret") == "account_bad_password"
         assert a.login("foo", "more-secret") == "ok"
 
-        ## test update email
+        # test update email
 
         # registering with the same email should fail.
         assert pytest.raises(

@@ -514,7 +514,7 @@ class IndexUtil:
                 )
 
     def get_thing_ids(self, keys):
-        ### TODO: same function is there is SaveImpl too. Get rid of this duplication.
+        # TODO: same function is there is SaveImpl too. Get rid of this duplication.
         keys = list(set(keys))
         if not keys:
             return {}

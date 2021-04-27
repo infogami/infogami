@@ -9,14 +9,14 @@ class SQL:
         # @@ improve later
         d = web.query(
             """
-            SELECT 
+            SELECT
                 page.id as id,
                 page.path as path,
-                MAX(version.revision) as revision, 
+                MAX(version.revision) as revision,
                 MAX(review.revision) as reviewed_revision
             FROM page
             JOIN version ON page.id = version.page_id
-            LEFT OUTER JOIN review 
+            LEFT OUTER JOIN review
                 ON page.id = review.page_id
                 AND review.user_id=$user_id
             GROUP BY page.id, page.path
@@ -37,12 +37,12 @@ class SQL:
         web.transact()
         try:
             web.delete(
-                'review',
+                "review",
                 where="site_id=$site_id AND page_id=$page_id AND user_id=$user_id",
                 vars=locals(),
             )
             web.insert(
-                'review',
+                "review",
                 site_id=site_id,
                 page_id=page_id,
                 user_id=user_id,

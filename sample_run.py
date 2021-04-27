@@ -4,16 +4,16 @@ Sample run.py
 from __future__ import print_function
 import infogami
 
-## your db parameters
+# your db parameters
 infogami.config.db_parameters = dict(
     dbn='postgres', db="infogami", user='yourname', pw=''
 )
 
-## site name
+# site name
 infogami.config.site = 'infogami.org'
 infogami.config.admin_password = "admin123"
 
-## add additional plugins and plugin path
+# add additional plugins and plugin path
 # infogami.config.plugin_path += ['plugins']
 # infogami.config.plugins += ['search']
 

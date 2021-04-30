@@ -1,5 +1,3 @@
-"""
-"""
 import web
 import simplejson
 from six import iteritems, string_types, text_type
@@ -417,7 +415,8 @@ class WriteQueryProcessor:
 
 
 def serialize(query):
-    ""
+    """TODO: Remove this line and fix doctests below."""
+    # fmt: off
     r"""Serializes a nested query such that each subquery acts on a single object.
 
         >>> q = {
@@ -480,6 +479,7 @@ def serialize(query):
             'key': '/foo'
         }]
     """
+    # fmt: on
 
     def flatten(query, result, path=[], from_list=False):
         """This does two things.

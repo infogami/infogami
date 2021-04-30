@@ -302,7 +302,7 @@ class Element:
         pass
 
     def find(self, test, depth=0):
-        """ Returns a list of descendants that pass the test function """
+        """Returns a list of descendants that pass the test function"""
         matched_nodes = []
         for child in self.childNodes:
             if test(child):
@@ -1001,7 +1001,7 @@ class BlockGuru:
         return items, lines[i:]
 
     def detabbed_fn(self, line):
-        """ An auxiliary method to be passed to _findHead """
+        """An auxiliary method to be passed to _findHead"""
         m = RE.regExp['tabbed'].match(line)
         if m:
             return m.group(4)
@@ -1019,7 +1019,7 @@ def print_error(string):
 
 
 def dequote(string):
-    """ Removes quotes from around a string """
+    """Removes quotes from around a string"""
     if (string.startswith('"') and string.endswith('"')) or (
         string.startswith("'") and string.endswith("'")
     ):
@@ -1168,7 +1168,7 @@ class Markdown:
                 extension.extendMarkdown(self, globals())
 
     def registerExtension(self, extension):
-        """ This gets called by the extension """
+        """This gets called by the extension"""
         self.registeredExtensions.append(extension)
 
     def reset(self):
@@ -1856,7 +1856,7 @@ def parse_options():
 
 
 if __name__ == '__main__':
-    """ Run Markdown from the command line. """
+    """Run Markdown from the command line."""
 
     options = parse_options()
 

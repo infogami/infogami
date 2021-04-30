@@ -288,7 +288,7 @@ def datadump(filename):
 
 @infogami.action
 def dataload(filename):
-    """"Loads data dumped using datadump action into the database."""
+    """Loads data dumped using datadump action into the database."""
     lines = open(filename).xreadlines()
     tdb.transact()
     try:

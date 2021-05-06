@@ -1,5 +1,4 @@
-"""Infobase Implementation based on database.
-"""
+"""Infobase Implementation based on database."""
 
 import datetime
 import logging
@@ -27,8 +26,6 @@ def process_json(key, json_data):
 
 
 class DBSiteStore(common.SiteStore):
-    """"""
-
     def __init__(self, db, schema):
         self.db = db
         self.schema = schema

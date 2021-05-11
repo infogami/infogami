@@ -37,17 +37,12 @@ jobs:
           python-version: ${{ matrix.python-version }}
       - uses: actions/cache@v2
         with:
-          path: ~/infogami_python_venv
-          key: ${{ runner.os }}-venv-${{ hashFiles('requirements*.txt') }}
-      - run: python3 -m venv ~/infogami_python_venv
+          path: ${{ env.pythonLocation }}
+          key: ${{ runner.os }}-venv-${{ env.pythonLocation }}-${{ hashFiles('requirements*.txt') }}
       - name: Install dependencies
         run: |
-          source ~/infogami_python_venv/bin/activate
           pip install --upgrade pip
           pip install -r requirements_test.txt
-      - name: Run tests
-        run: |
-          source ~/infogami_python_venv/bin/activate
-          scripts/run_python_linters.sh
-          scripts/run_python_tests.sh
-          scripts/run_doctests.sh
+      - run: scripts/run_python_linters.sh
+      - run: scripts/run_python_tests.sh
+      - run: scripts/run_doctests.sh

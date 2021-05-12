@@ -66,7 +66,7 @@ class InfobaseTestCase(unittest.TestCase):
     def clear_threadlocal(self):
         import threading
 
-        t = threading.currentThread()
+        t = threading.current_thread()
         if hasattr(t, '_d'):
             del t._d
 

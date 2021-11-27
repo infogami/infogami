@@ -157,6 +157,7 @@ def jsonapi(f):
 
         return delegate.RawText(out, content_type=content_type)
 
+    g.__doc__ = f.__doc__  # Preserve docstrings for the inspect module
     return g
 
 

@@ -521,7 +521,7 @@ var RepetitionElement = {
 	 ##############################################################################################*/
 	
 	//Element addRepetitionBlock(in Node refNode);
-	addRepetitionBlock : function(refNode, index){ //addRepetitionBlockByIndex functionalty enabled if @index defined
+	addRepetitionBlock : function(refNode, index){ //addRepetitionBlockByIndex functionality enabled if @index defined
 		if(refNode && !refNode.nodeType)
 			throw Error("Exception: WRONG_ARGUMENTS_ERR");
 

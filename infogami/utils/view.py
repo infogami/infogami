@@ -95,7 +95,7 @@ def public(f):
 
 @public
 def safeint(value, default=0):
-    """Convers the value to integer. Returns 0, if the conversion fails."""
+    """Convert the value to integer. Return 0, if the conversion fails."""
     try:
         return int(value)
     except Exception:

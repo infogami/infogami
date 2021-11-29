@@ -1,14 +1,8 @@
 """
 wikitemplates: allow keeping templates and macros in wiki
 """
-from __future__ import print_function
-
 import os
-
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
+from collections.abc import Mapping
 
 import web
 

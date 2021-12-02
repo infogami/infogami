@@ -1,12 +1,14 @@
 """
 Infogami read/write API.
 """
+import json
+from functools import wraps
+
 import web
 import infogami
 from infogami.utils import delegate, features
 from infogami.utils.view import safeint
 from infogami.infobase import client
-import json
 
 hooks = {}
 
@@ -139,6 +141,7 @@ add_hook("save_many", infobase_request)
 
 
 def jsonapi(f):
+    @wraps(f)
     def g(*a, **kw):
         try:
             out = f(*a, **kw)
@@ -157,7 +160,6 @@ def jsonapi(f):
 
         return delegate.RawText(out, content_type=content_type)
 
-    g.__doc__ = f.__doc__  # Preserve docstrings for the inspect module
     return g
 
 

@@ -161,10 +161,8 @@ class RemoteConnection(Connection):
             response = requests.request(
                 method, f'http://{self.base_url}{path}', data=data, headers=headers
             )
-            if not response.ok:
-                response.raise_for_status()
             stats.end()
-        except requests.exceptions.HTTPError:
+        except requests.exceptions.ConnectionError:
             stats.end(error=True)
             logger.error("Unable to connect to infobase server", exc_info=True)
             raise ClientException(

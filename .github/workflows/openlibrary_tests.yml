@@ -14,11 +14,11 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Open Library
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           repository: internetarchive/openlibrary
       - name: Checkout current Infogami
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
         with:
           path: vendor/infogami
       - uses: actions/setup-python@v3

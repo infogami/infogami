@@ -3,11 +3,7 @@ Useful datastructures.
 """
 
 from collections import defaultdict, OrderedDict
-
-try:
-    from collections.abc import Mapping
-except ImportError:
-    from collections import Mapping
+from collections.abc import Mapping
 
 import web
 

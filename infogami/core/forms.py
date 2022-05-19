@@ -74,7 +74,7 @@ _ = i18n.strings.get_namespace('/account/forgot_password')
 
 validemail = Validator(
     _.email_not_registered,
-    lambda email: db.get_user_by_email(context.site, email)  # type: ignore
+    lambda email: db.get_user_by_email(context.site, email),  # type: ignore
 )
 forgot_password = Form(
     Textbox('email', notnull, vemail, description=_.email),

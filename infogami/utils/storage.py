@@ -12,7 +12,7 @@ except ImportError:
 import web
 
 
-storage = defaultdict(OrderedDict)
+storage: dict[str, dict] = defaultdict(OrderedDict)
 
 
 class SiteLocalDict:

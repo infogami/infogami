@@ -2,23 +2,25 @@
 Infogami configuration.
 """
 
+from typing import Optional
+
 
 def get(name, default=None):
     return globals().get(name, default)
 
 
-middleware = []
+middleware = []  # type: ignore
 
 cache_templates = True
 db_printing = False
 db_kind = 'SQL'
 
-db_parameters = None
+db_parameters: Optional[dict[str, str]] = None
 infobase_host = None
 site = "infogami.org"
 
 plugins = ['links']
-plugin_modules = []
+plugin_modules = []  # type: ignore
 
 plugin_path = ['infogami.plugins']
 

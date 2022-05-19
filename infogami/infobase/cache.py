@@ -93,7 +93,7 @@ def create_cache(type, **kw):
     return klass(**kw)
 
 
-special_cache = {}
+special_cache: dict = {}
 global_cache = lru.LRU(200)
 
 

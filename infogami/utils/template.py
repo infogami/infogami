@@ -21,7 +21,7 @@ assert web.__version__ != "0.34", "Please pip install --upgrade web.py"
 web_render = web.template.render
 
 
-class TemplateRender(web_render):
+class TemplateRender(web_render):  # type: ignore
     def _lookup(self, name):
         path = os.path.join(self._loc, name)
         filepath = self._findfile(path)
@@ -208,11 +208,11 @@ render = Render()
 render.add_source(disktemplates)
 
 # setup type templates
-render.view = typetemplate('view')
-render.edit = typetemplate('edit')
-render.repr = typetemplate('repr')
-render.input = typetemplate('input')
-render.xdiff = typetemplate('diff')
+render.view = typetemplate('view')  # type: ignore
+render.edit = typetemplate('edit')  # type: ignore
+render.repr = typetemplate('repr')  # type: ignore
+render.input = typetemplate('input')  # type: ignore
+render.xdiff = typetemplate('diff')  # type: ignore
 
 
 def render_template(name, *a, **kw):

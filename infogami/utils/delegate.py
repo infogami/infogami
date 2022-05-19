@@ -117,7 +117,7 @@ class RawText(web.storage):
         web.storage.__init__(self, rawtext=text, **kw)
 
 
-plugins = []
+plugins: list = []
 
 
 @public

@@ -17,9 +17,9 @@ app = web.application(urls, globals(), autoreload=False)
 
 # magical metaclasses for registering special paths and modes.
 # Whenever any class extends from page/mode, an entry is added to pages/modes.
-modes = {}
-pages = {}
-views = collections.defaultdict(dict)
+modes: dict[str, dict] = {}
+pages: dict[str, dict] = {}
+views: dict[str, dict] = collections.defaultdict(dict)
 
 encodings = set()
 media_types = {"application/json": "json"}

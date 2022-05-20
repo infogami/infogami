@@ -60,6 +60,6 @@ class SQL:
         core.db.new_version(url, path, author_id, data)
 
 
-from infogami.utils.delegate import pickdb
+from infogami.utils.delegate import pickdb  # type: ignore
 
 pickdb(globals())

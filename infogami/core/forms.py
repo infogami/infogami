@@ -42,7 +42,7 @@ vpass = regexp(r".{3,20}", 'must be between 3 and 20 characters')
 vemail = regexp(r".*@.*", "must be a valid email address")
 not_already_used = Validator(
     'This email is already used',
-    lambda email: db.get_user_by_email(context.site, email) is None,
+    lambda email: db.get_user_by_email(context.site, email) is None,  # type: ignore
 )
 
 _ = i18n.strings.get_namespace('/account/register')
@@ -73,7 +73,8 @@ login_preferences = Form(
 _ = i18n.strings.get_namespace('/account/forgot_password')
 
 validemail = Validator(
-    _.email_not_registered, lambda email: db.get_user_by_email(context.site, email)
+    _.email_not_registered,
+    lambda email: db.get_user_by_email(context.site, email),  # type: ignore
 )
 forgot_password = Form(
     Textbox('email', notnull, vemail, description=_.email),

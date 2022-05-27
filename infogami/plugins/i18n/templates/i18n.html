@@ -21,7 +21,7 @@ Language: $:Dropdown('lang', _.get_languages(), onchange="changelang();", value=
 <tr>
 <td style="vertical-align: top">
 $for ns in _.get_namespaces():
-    <a href="$:changequery(ns=ns)" >$(ns or "root")</a> <span id="count" style="font-size: 0.8em; ">$(_.get_count(ns, lang))/$_.get_count(ns)</span> <br/>
+    <a href="$changequery(ns=ns)" >$(ns or "root")</a> <span id="count" style="font-size: 0.8em; ">$(_.get_count(ns, lang))/$_.get_count(ns)</span> <br/>
 </td>
 <td style="vertical-align: top">
 $if page:

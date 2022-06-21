@@ -243,7 +243,7 @@ def bootstrap(site, admin_password):
     import string
 
     def random_password(length=20):
-        chars = string.letters + string.digits
+        chars = string.ascii_letters + string.digits
         return "".join(random.choice(chars) for i in range(length))
 
     # Account Bot is not created till now. Set account_bot to None in config until he is created.

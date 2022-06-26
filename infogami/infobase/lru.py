@@ -2,7 +2,7 @@
 """
 
 
-class Node(object):
+class Node:
     """Queue Node."""
 
     __slots__ = ["key", "value", "next", "prev"]

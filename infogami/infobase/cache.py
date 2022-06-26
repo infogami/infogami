@@ -69,7 +69,7 @@ class MemcachedDict:
         self.memcache_client.set(key, value)
 
     def update(self, d):
-        d = dict((web.safestr(k), v) for k, v in d.items())
+        d = {web.safestr(k): v for k, v in d.items()}
         logger.debug("MemcachedDict.update: %s", list(d))
         self.memcache_client.set_multi(d)
 

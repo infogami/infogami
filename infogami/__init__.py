@@ -1,5 +1,4 @@
 """Infogami: Structured Wiki (http://infogami.org)"""
-from __future__ import print_function
 
 __version__ = "0.5dev"
 
@@ -86,11 +85,11 @@ def help(name=None):
     print("")
 
     if a:
-        print("    %s\t%s" % (a.__name__, a.__doc__))
+        print(f"    {a.__name__}\t{a.__doc__}")
     else:
         print("Available actions")
         for a in _actions:
-            print("    %s\t%s" % (a.__name__, a.__doc__))
+            print(f"    {a.__name__}\t{a.__doc__}")
 
 
 @action

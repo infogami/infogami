@@ -2,8 +2,8 @@ import unittest
 
 import pytest
 import json
-from six.moves.urllib_parse import urlencode, urljoin
-from six.moves.urllib_request import Request
+from urllib.parse import urlencode, urljoin
+from urllib.request import Request
 import web
 
 from infogami.infobase import server

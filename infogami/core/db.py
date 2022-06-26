@@ -1,5 +1,4 @@
 import web
-from six import string_types
 
 from infogami.utils.view import public
 
@@ -34,7 +33,7 @@ def get_expected_type(page, property_name):
 
 
 def new_version(path, type):
-    if isinstance(type, string_types):
+    if isinstance(type, str):
         type = get_type(type)
 
     assert type is not None

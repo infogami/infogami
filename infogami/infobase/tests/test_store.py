@@ -161,7 +161,7 @@ class TestStore(DBTest):
             {"type": "account", "name": "foo", "bot": False, "age": 42, "d": {"x": 1}},
         )
         rows = db.query("SELECT name, value from store_index")
-        d = dict((row.name, row.value) for row in rows)
+        d = {row.name: row.value for row in rows}
 
         assert d == {
             "_key": "foo",

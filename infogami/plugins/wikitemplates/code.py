@@ -3,6 +3,7 @@ wikitemplates: allow keeping templates and macros in wiki
 """
 import os
 from collections.abc import Mapping
+from io import StringIO
 
 import web
 
@@ -213,7 +214,7 @@ def movetemplates(prefix_pattern=None):
     def get_title(name):
         if name.startswith('/type/'):
             type, name = name.rsplit('/', 1)
-            title = '%s template for %s' % (name, type)
+            title = f'{name} template for {type}'
         else:
             title = '%s template' % (name)
         return title
@@ -326,9 +327,7 @@ def monkey_patch_debugerror():
         if filename.endswith('.tmpl') or filename.startswith('/macros/'):
             page = web.ctx.site.get(filename)
             if page is None:
-                raise IOError("not found: " + filename)
-            from six import StringIO
-
+                raise OSError("not found: " + filename)
             return StringIO(page.body + "\n" * 100)
         else:
             return open(filename)

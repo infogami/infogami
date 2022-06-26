@@ -5,7 +5,6 @@ Infobase is a structured database which contains multiple sites.
 Each site is an independent collection of objects.
 """
 
-from __future__ import print_function
 
 import datetime
 
@@ -128,9 +127,7 @@ class Site:
     def _get_many_things(self, keys):
         json_data = self.get_many(keys)
         d = json.loads(json_data)
-        return dict(
-            (k, common.Thing.from_dict(self.store, k, doc)) for k, doc in d.items()
-        )
+        return {k: common.Thing.from_dict(self.store, k, doc) for k, doc in d.items()}
 
     def get_many(self, keys):
         return self.store.get_many(keys)
@@ -324,7 +321,7 @@ class Site:
         created = [doc['key'] for doc in result if doc and doc['revision'] == 1]
         updated = [doc['key'] for doc in result if doc and doc['revision'] != 1]
 
-        things = dict((doc['key'], doc) for doc in result)
+        things = {doc['key']: doc for doc in result}
 
         for key in created:
             thing = things[key]

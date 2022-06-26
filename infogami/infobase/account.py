@@ -209,7 +209,7 @@ class AccountManager:
 
     def set_auth_token(self, user_key):
         t = datetime(*time.gmtime()[:6]).isoformat()
-        text = "%s,%s" % (user_key, t)
+        text = f"{user_key},{t}"
         text += "," + self._generate_salted_hash(self.secret_key, text)
         web.ctx.infobase_auth_token = text
 
@@ -225,7 +225,7 @@ class AccountManager:
         salt = salt or HMAC(key, salt_msg, md5).hexdigest()[:5]
         msg = (web.safestr(salt) + web.safestr(text)).encode('utf-8')
         hash = HMAC(key, msg, md5).hexdigest()
-        return '%s$%s' % (salt, hash)
+        return f'{salt}${hash}'
 
     def _check_salted_hash(self, key, text, salted_hash):
         salt, hash = salted_hash.split('$', 1)

@@ -1,6 +1,5 @@
 import os.path
 
-from six import string_types
 import web
 
 from infogami import config
@@ -70,7 +69,7 @@ def layout_processor(handler):
     if out is None:
         out = RawText("")
 
-    if isinstance(out, string_types):
+    if isinstance(out, str):
         out = web.template.TemplateResult(__body__=out)
 
     if isinstance(out, web.webapi.HTTPError):

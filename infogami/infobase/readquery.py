@@ -36,13 +36,11 @@ def run_things_query(store, query):
             return value
 
     def get_data(thingdata, query):
-        fields = dict(
-            (web.lstrips(k, query.prefix), v) for k, v in query.requested.items()
-        )
+        fields = {web.lstrips(k, query.prefix): v for k, v in query.requested.items()}
 
         # special care for '*'
         if '*' in fields:
-            f = dict((k, None) for k in thingdata.keys())
+            f = {k: None for k in thingdata.keys()}
             fields.pop('*')
             f.update(fields)
             fields = f
@@ -119,7 +117,7 @@ class Query:
             if isinstance(c, Query):
                 return repr(c)
             else:
-                return "%s %s %s:%s" % (c.key, c.op, c.datatype, c.value)
+                return f"{c.key} {c.op} {c.datatype}:{c.value}"
 
         conditions = [f(c) for c in self.conditions]
         return "<query: %s>" % repr(conditions)
@@ -153,7 +151,7 @@ def make_query(store, query, prefix=""):
             q.requested[k] = v
         elif isinstance(v, dict):
             # make sure op is ==
-            v = dict((k + '.' + key, value) for key, value in v.items())
+            v = {k + '.' + key: value for key, value in v.items()}
             q2 = make_query(store, v, prefix=prefix + k + ".")
             # @@ Anand: Quick-fix
             # dbstore.things looks for key to find whether type is required or not.

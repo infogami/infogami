@@ -79,19 +79,16 @@ class Schema:
 
         self.add_table_group("datum", None)
 
-        tables = sorted(set([(e.table, e.datatype) for e in self.entries]))
+        tables = sorted({(e.table, e.datatype) for e in self.entries})
         web.template.Template.globals['dict'] = dict
         web.template.Template.globals['enumerate'] = enumerate
         return t(tables, sequences, self.multisite)
 
     def list_tables(self):
         self.add_table_group("datum", None)
-        tables = sorted(set([e.table for e in self.entries]))
+        tables = sorted({e.table for e in self.entries})
         return tables
 
     def __str__(self):
-        lines = [
-            "%s\t%s\t%s\t%s" % (e.table, e.type, e.datatype, e.name)
-            for e in self.entries
-        ]
+        lines = [f"{e.table}\t{e.type}\t{e.datatype}\t{e.name}" for e in self.entries]
         return "\n".join(lines)

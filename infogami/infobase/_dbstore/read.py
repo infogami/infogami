@@ -2,7 +2,6 @@
 
 import simplejson
 import web
-from six import string_types
 from infogami.infobase import config
 
 
@@ -34,12 +33,12 @@ class RecentChanges:
         self.db = db
 
     def get_keys(self, ids):
-        ids = list(set(id for id in ids if id is not None))
+        ids = list({id for id in ids if id is not None})
         if ids:
             rows = self.db.query(
                 "SELECT id, key FROM thing WHERE id in $ids", vars=locals()
             )
-            return dict((row.id, row.key) for row in rows)
+            return {row.id: row.key for row in rows}
         else:
             return {}
 
@@ -119,7 +118,7 @@ class RecentChanges:
             for i, (k, v) in enumerate(data.items()):
                 t = 'ti%d' % i
                 tables.append('transaction_index ' + t)
-                q = '%s.tx_id = t.id AND %s.key=$k AND %s.value=$v' % (t, t, t)
+                q = f'{t}.tx_id = t.id AND {t}.key=$k AND {t}.value=$v'
                 # k, v are going to change in the next iter of the loop.
                 # bind the current values by calling reparam.
                 wheres.append(web.reparam(q, locals()))
@@ -143,7 +142,7 @@ class RecentChanges:
 
     def _process_wheres(self, wheres, vars):
         for w in wheres:
-            if isinstance(w, string_types):
+            if isinstance(w, str):
                 yield web.reparam(w, vars)
             else:
                 yield w

@@ -28,7 +28,7 @@ def subdict(d, keys):
     >>> subdict({'a': 1, 'b': 2}, ['a'])
     {'a': 1}
     """
-    return dict((k, d[k]) for k in keys)
+    return {k: d[k] for k in keys}
 
 
 class DBTest(unittest.TestCase):

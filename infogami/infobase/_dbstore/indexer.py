@@ -1,6 +1,5 @@
 from infogami.infobase import common
 import web
-from six import string_types
 
 
 class Indexer:
@@ -25,16 +24,16 @@ class Indexer:
             "last_modified",
             "created",
         ]
-        index = set(
+        index = {
             (k, v)
             for k, v in index
             if k not in skip and not k.endswith(".value") and not k.endswith(".type")
-        )
+        }
 
         for k, v in index:
             if k.endswith(".key"):
                 yield 'ref', web.rstrips(k, ".key"), v
-            elif isinstance(v, string_types):
+            elif isinstance(v, str):
                 yield 'str', k, v
             elif isinstance(v, int):
                 yield 'int', k, v

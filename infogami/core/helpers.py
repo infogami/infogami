@@ -2,8 +2,6 @@
 Generic Utilities.
 """
 
-from six import iteritems
-
 
 class xdict:
     """Dictionary wrapper to give sorted repr.
@@ -21,9 +19,7 @@ class xdict:
                 return d
 
         return (
-            '{'
-            + ", ".join(["'%s': %s" % (k, f(v)) for k, v in sorted(self.d.items())])
-            + '}'
+            '{' + ", ".join([f"'{k}': {f(v)}" for k, v in sorted(self.d.items())]) + '}'
         )
 
 
@@ -36,7 +32,7 @@ def flatten(d):
     """
 
     def traverse(d, prefix, delim, visit):
-        for k, v in iteritems(d):
+        for k, v in d.items():
             k = str(k)
             if isinstance(v, dict):
                 traverse(v, prefix + delim + k, '.', visit)
@@ -77,7 +73,7 @@ def unflatten(d):
             return d.setdefault(k, v)
 
     d2 = {}
-    for k, v in iteritems(d):
+    for k, v in d.items():
         setdefault(d2, k, v)
     return d2
 
@@ -131,7 +127,7 @@ def trim(x):
 
     def trimdict(x):
         y = {}
-        for k, v in iteritems(x):
+        for k, v in x.items():
             if isinstance(v, list):
                 v = trimlist(v)
             elif isinstance(v, dict):
@@ -156,7 +152,7 @@ def subdict(d, keys):
     >>> subdict({'a': 1, 'b': 2, 'c': 3}, ['a', 'c', 'd'])
     {'a': 1, 'c': 3}
     """
-    return dict((k, d[k]) for k in keys if k in d)
+    return {k: d[k] for k in keys if k in d}
 
 
 if __name__ == "__main__":

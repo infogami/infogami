@@ -1,6 +1,5 @@
 """Generic utilities.
 """
-from __future__ import print_function
 import datetime
 import re
 import web
@@ -35,7 +34,7 @@ def dict_diff(d1, d2):
     >>> sorted(a), sorted(b), sorted(c)
     (['x', 'y'], ['z'], ['w', 'x'])
     """
-    same = set(k for k in d1 if d1[k] == d2.get(k))
+    same = {k for k in d1 if d1[k] == d2.get(k)}
     left = set(d1.keys()).difference(same)
     right = set(d2.keys()).difference(same)
     return left, same, right

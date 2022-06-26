@@ -113,7 +113,7 @@ def fix_property_keys():
         print('fixing type', type, file=web.debug)
         prefix, multiple_types = get_table_prefix(type)
         keys_table = prefix + "_keys"
-        keys = dict((r.key, r.id) for r in db.query('SELECT * FROM ' + keys_table))
+        keys = {r.key: r.id for r in db.query('SELECT * FROM ' + keys_table)}
         newkeys = {}
 
         # @@ There is a chance that we may overwrite one update with another when new id is in the same range of old ids.
@@ -170,11 +170,11 @@ def fix_property_keys():
     ]
     # add embeddable types too
     primitive += ['/type/property', '/type/backreference', '/type/link']
-    types = dict(
-        (r.key, r.id)
+    types = {
+        r.key: r.id
         for r in db.query("SELECT * FROM thing WHERE type=1")
         if r.key not in primitive
-    )
+    }
 
     for type in types:
         fix_type(type, types[type])
@@ -185,7 +185,7 @@ def drop_key_id_foreign_key():
     for prefix in table_prefixes:
         for d in DATATYPES:
             table = prefix + '_' + d
-            db.query('ALTER TABLE %s DROP CONSTRAINT %s_key_id_fkey' % (table, table))
+            db.query(f'ALTER TABLE {table} DROP CONSTRAINT {table}_key_id_fkey')
 
 
 def add_key_id_foreign_key():
@@ -236,7 +236,7 @@ def fix_version_table():
     db.query('ALTER TABLE version add column transaction_id int references transaction')
     db.query('UPDATE version set transaction_id=id')
     db.query(TRANSACTION_INDEXES)
-    os.system('rm %s %s' % (filename, new_filename))
+    os.system(f'rm {filename} {new_filename}')
 
 
 def main():

@@ -2,7 +2,6 @@
 i18n: allow keeping i18n strings in wiki
 """
 
-from six import iteritems
 import web
 
 import infogami
@@ -52,7 +51,7 @@ def stringify(d):
     >>> stringify({'a': 1, 'b': 2})
     {'string_a': 1, 'string_b': 2}
     """
-    return dict([('string_' + k, v) for k, v in d.items()])
+    return {'string_' + k: v for k, v in d.items()}
 
 
 def unstringify(d):
@@ -61,13 +60,9 @@ def unstringify(d):
     >>> unstringify({'string_a': 1, 'string_b': 2})
     {'a': 1, 'b': 2}
     """
-    return dict(
-        [
-            (web.lstrips(k, 'string_'), v)
-            for k, v in d.items()
-            if k.startswith('string_')
-        ]
-    )
+    return {
+        web.lstrips(k, 'string_'): v for k, v in d.items() if k.startswith('string_')
+    }
 
 
 def pathjoin(a, *p):
@@ -92,7 +87,7 @@ def pathjoin(a, *p):
 def movestrings():
     """Moves i18n strings to wiki."""
     query = []
-    for (namespace, lang), d in iteritems(i18n.strings._data):
+    for (namespace, lang), d in i18n.strings._data.items():
         q = stringify(d)
         q['create'] = 'unless_exists'
         q['key'] = pathjoin('/i18n', namespace, '/strings.' + lang)

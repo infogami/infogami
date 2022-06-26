@@ -2,7 +2,7 @@ import pytest
 import json
 import web
 
-from six.moves.urllib.parse import urlencode
+from urllib.parse import urlencode
 
 from infogami.utils.delegate import app
 

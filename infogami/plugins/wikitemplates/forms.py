@@ -1,4 +1,3 @@
-from __future__ import print_function
 from web.form import Button, Form, Textbox, net
 from infogami.utils import i18n
 
@@ -7,7 +6,7 @@ class BetterButton(Button):
     def render(self):
         label = self.attrs.get('label', self.name)
         safename = net.websafe(self.name)
-        x = '<button name="%s"%s>%s</button>' % (safename, self.addatts(), label)
+        x = f'<button name="{safename}"{self.addatts()}>{label}</button>'
         return x
 
 

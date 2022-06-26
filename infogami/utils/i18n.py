@@ -1,7 +1,6 @@
 """
 Support for Internationalization.
 """
-from __future__ import print_function
 
 import os
 import re
@@ -31,10 +30,10 @@ class i18n:
         return web.ctx.lang
 
     def get_namespaces(self):
-        return sorted(set(k[0] for k in self._data))
+        return sorted({k[0] for k in self._data})
 
     def get_languages(self):
-        return sorted(set(k[1] for k in self._data))
+        return sorted({k[1] for k in self._data})
 
     def get_count(self, namespace, lang=None):
         lang = lang or DEFAULT_LANG

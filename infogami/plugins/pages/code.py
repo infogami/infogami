@@ -7,11 +7,9 @@ push moves pages from disk to wiki and pull moves pages from wiki to disk.
 TODOs:
 * As of now pages are stored as python dict. Replace it with a human-readable format.
 """
-from __future__ import print_function
 
 import os
 
-from six import iteritems
 import web
 
 import infogami
@@ -97,7 +95,7 @@ def _savepage(page, create_dependents=True, comment=None):
         elif isinstance(data, dict):
             name = data.name
             if data.get('child'):
-                d = dict([(k, thingify(v, getparent)) for k, v in data.d.items()])
+                d = {k: thingify(v, getparent) for k, v in data.d.items()}
                 type = thingify(data.type, getparent)
                 thing = db.new_version(getparent(), name, type, d)
                 thing.save()
@@ -139,7 +137,7 @@ def thing2dict(page):
 
     data = dict(name=page.name, type={'name': page.type.name})
     d = data['d'] = {}
-    for k, v in iteritems(page.d):
+    for k, v in page.d.items():
         d[k] = simplify(v, page)
     return data
 

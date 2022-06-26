@@ -14,13 +14,12 @@ See Bug#231831 for details.
 import datetime
 
 import simplejson
-from six import iteritems
 
 
 def unicodify(d):
     """Converts all utf-8 encoded strings to unicode recursively."""
     if isinstance(d, dict):
-        return {k: unicodify(v) for k, v in iteritems(d)}
+        return {k: unicodify(v) for k, v in d.items()}
     elif isinstance(d, list):
         return [unicodify(x) for x in d]
     elif isinstance(d, bytes):

@@ -1,6 +1,5 @@
 import datetime
 import json
-from six import iteritems, string_types, text_type
 
 import web
 
@@ -61,8 +60,8 @@ def allow_unicode(s):
     >>> allow_unicode("text: u'string'")
     "text: 'string'"
     """
-    if not isinstance(s, string_types):
-        s = text_type(s)
+    if not isinstance(s, str):
+        s = str(s)
     if s.startswith(("u'", 'u"')):
         s = s.lstrip("u")
     return str(s.replace(' u"', ' "').replace(" u'", " '"))
@@ -130,7 +129,7 @@ def parse_data(d, level=0):
         elif level != 0 and 'key' in d and len(d) == 1:
             return Reference(d['key'])
         else:
-            return web.storage((k, parse_data(v, level + 1)) for k, v in iteritems(d))
+            return web.storage((k, parse_data(v, level + 1)) for k, v in d.items())
     elif isinstance(d, list):
         return [parse_data(v, level + 1) for v in d]
     else:
@@ -152,13 +151,13 @@ def format_data(d):
     "{'key': '/type/type'}"
     """
     if isinstance(d, dict):
-        return {k: format_data(v) for k, v in iteritems(d)}
+        return {k: format_data(v) for k, v in d.items()}
     elif isinstance(d, list):
         return [format_data(v) for v in d]
     elif isinstance(d, Text):
-        return {'type': '/type/text', 'value': text_type(d)}
+        return {'type': '/type/text', 'value': str(d)}
     elif isinstance(d, Reference):
-        return {'key': text_type(d)}
+        return {'key': str(d)}
     elif isinstance(d, datetime.datetime):
         return {'type': '/type/datetime', 'value': d.isoformat()}
     else:

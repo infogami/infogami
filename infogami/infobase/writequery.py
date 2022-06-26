@@ -1,13 +1,12 @@
 import web
 import simplejson
-from six import iteritems, string_types, text_type
 
 from infogami.infobase import account, common
 
 
 def get_thing(store, key, revision=None):
     if isinstance(key, common.Reference):
-        key = text_type(key)
+        key = str(key)
     json_data = store.get(key, revision)
     return json_data and common.Thing.from_json(store, key, json_data)
 
@@ -87,13 +86,13 @@ class SaveProcessor:
 
     def process_many(self, docs):
         keys = [doc['key'] for doc in docs]
-        self.things = dict(
-            (doc['key'], common.Thing.from_dict(self.store, doc['key'], doc))
+        self.things = {
+            doc['key']: common.Thing.from_dict(self.store, doc['key'], doc)
             for doc in docs
-        )
+        }
 
         def parse_type(value):
-            if isinstance(value, string_types):
+            if isinstance(value, str):
                 return value
             elif isinstance(value, dict) and 'key' in value:
                 return value['key']
@@ -119,7 +118,7 @@ class SaveProcessor:
 
         if keys:
             d = self.store.get_metadata_list(keys)
-            type_ids = list(set(row.type for row in d.values()))
+            type_ids = list({row.type for row in d.values()})
             typedict = self.store.get_metadata_list_from_ids(type_ids)
 
             for k, row in d.items():
@@ -134,7 +133,7 @@ class SaveProcessor:
             if len(d) == 1 and d.keys() == ["key"]:
                 result.add(d['key'])
             else:
-                for k, v in iteritems(d):
+                for k, v in d.items():
                     if k != "type":
                         self.find_references(v, result)
         elif isinstance(d, list):
@@ -159,7 +158,7 @@ class SaveProcessor:
 
     def get_many(self, keys):
         d = self.store.get_many_as_dict(keys)
-        return dict((k, simplejson.loads(json_data)) for k, json_data in d.items())
+        return {k: simplejson.loads(json_data) for k, json_data in d.items()}
 
     def process(self, key, data):
         prev_data = self.get_many([key])
@@ -304,7 +303,7 @@ class SaveProcessor:
 
             # type is not found only when the thing id not found.
             if type_found is None:
-                raise common.NotFound(key=text_type(value), at=at)
+                raise common.NotFound(key=str(value), at=at)
 
         if expected_type != type_found:
             raise common.BadData(
@@ -507,18 +506,18 @@ def serialize(query):
                     data = {'key': q['key']}
                 else:
                     # take keys (connect, key, type, value) from q
-                    data = dict(
-                        (k, v)
+                    data = {
+                        k: v
                         for k, v in q.items()
                         if k in ("connect", "key", "type", "value")
-                    )
+                    }
             else:
                 # take keys (connect, key, type, value) from q
-                data = dict(
-                    (k, v)
+                data = {
+                    k: v
                     for k, v in q.items()
                     if k in ("connect", "key", "type", "value")
-                )
+                }
             return data
         else:
             return query

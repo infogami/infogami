@@ -1,12 +1,9 @@
-from __future__ import absolute_import, print_function
-
 import os
 import re
 import shutil
 import string
 
-import six
-from six.moves.urllib.parse import urlencode
+from urllib.parse import urlencode
 import web
 
 import infogami
@@ -58,8 +55,8 @@ web.template.Template.globals.update(
         # common utilities
         int=int,
         str=str,
-        basestring=six.string_types,
-        unicode=six.text_type,
+        basestring=str,
+        unicode=str,
         bool=bool,
         list=list,
         set=set,
@@ -145,7 +142,7 @@ def _format(text, safe_mode=False):
 
 @public
 def link(path, text=None):
-    return '<a href="%s">%s</a>' % (web.ctx.homepath + path, text or path)
+    return f'<a href="{web.ctx.homepath + path}">{text or path}</a>'
 
 
 @public
@@ -202,29 +199,27 @@ def thingrepr(value, type=None):
     if isinstance(value, client.Thing):
         type = value.type
 
-    return six.text_type(render.repr(thingify(type, value)))
+    return str(render.repr(thingify(type, value)))
 
 
 # @public
 # def thinginput(type, name, value, **attrs):
 #    """Renders html input field of given type."""
-#    return six.text_type(render.input(thingify(type, value), name))
+#    return str(render.input(thingify(type, value), name))
 
 
 @public
 def thinginput(value, property=None, **kw):
     if property is None:
         if 'expected_type' in kw:
-            if isinstance(kw['expected_type'], six.string_types):
+            if isinstance(kw['expected_type'], str):
                 from infogami.core import db
 
                 kw['expected_type'] = db.get_version(kw['expected_type'])
         else:
             raise ValueError("missing expected_type")
         property = web.storage(kw)
-    return six.text_type(
-        render.input(thingify(property.expected_type, value), property)
-    )
+    return str(render.input(thingify(property.expected_type, value), property))
 
 
 def thingify(type, value):
@@ -232,7 +227,7 @@ def thingify(type, value):
     if type is None:
         type = '/type/string'
 
-    if isinstance(type, six.string_types):
+    if isinstance(type, str):
         from infogami.core import db
 
         type = db.get_version(type)
@@ -247,11 +242,7 @@ def thingify(type, value):
         "/type/uri",
     )
 
-    if (
-        type.key not in PRIMITIVE_TYPES
-        and isinstance(value, six.string_types)
-        and not value.strip()
-    ):
+    if type.key not in PRIMITIVE_TYPES and isinstance(value, str) and not value.strip():
         value = web.ctx.site.new('', {'type': type})
 
     if type.key not in PRIMITIVE_TYPES and (
@@ -278,13 +269,13 @@ def thingdiff(type, name, v1, v2):
         return "".join(thingdiff(type, name, a, b) for a, b in zip(v1, v2))
 
     def strip(v):
-        return v.strip() if isinstance(v, six.string_types) else v
+        return v.strip() if isinstance(v, str) else v
 
     # ignore white-space changes and treat empty dictionaries as nothing
     if v1 == v2 or (not strip(v1) and not strip(v2)):
         return ""
     else:
-        return six.text_type(render.xdiff(thingify(type, v1), thingify(type, v2), name))
+        return str(render.xdiff(thingify(type, v1), thingify(type, v2), name))
 
 
 @public
@@ -314,7 +305,7 @@ def movefiles():
                 to = os.path.join(dest, f)
                 cp_r(frm, to)
         else:
-            print('copying %s to %s' % (src, dest))
+            print(f'copying {src} to {dest}')
             shutil.copy(src, dest)
 
     static_dir = os.path.join(os.getcwd(), "static")
@@ -379,7 +370,7 @@ def movetypes():
                 else:
                     pages.append(d)
 
-    pagedict = dict((p['key'], p) for p in pages)
+    pagedict = {p['key']: p for p in pages}
     web.ctx.site.save_many(pagedict.values(), 'install')
 
 
@@ -418,7 +409,8 @@ def write(filename):
     print(web.ctx.site.write(q))
 
 
-# this is not really the right place to move this, but couldn't find a better place than this.
+# this is not really the right place to move this, but couldn't find a better place
+# than this.
 def require_login(f):
     def g(*a, **kw):
         if not web.ctx.site.get_user():
@@ -459,10 +451,10 @@ def datestr(then, now=None):
     _ = i18n.strings.get_namespace('/utils/date')
     if result[0] in string.digits:  # eg: 2 milliseconds ago
         t, unit, ago = result.split(' ', 2)
-        return "%s %s %s" % (t, _[unit], _[ago.replace(' ', '_')])
+        return "{} {} {}".format(t, _[unit], _[ago.replace(' ', '_')])
     else:
         month, rest = result.split(' ', 1)
-        return "%s %s" % (_[month.lower()], rest)
+        return f"{_[month.lower()]} {rest}"
 
 
 @public

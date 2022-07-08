@@ -1,5 +1,4 @@
 markdown
 requests
 simplejson
-six
 web.py

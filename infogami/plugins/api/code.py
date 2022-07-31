@@ -5,10 +5,11 @@ import json
 from functools import wraps
 
 import web
+
 import infogami
+from infogami.infobase import client
 from infogami.utils import delegate, features
 from infogami.utils.view import safeint
-from infogami.infobase import client
 
 hooks = {}
 

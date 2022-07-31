@@ -2,9 +2,8 @@
 """
 
 import collections
-import os
-
 import json
+import os
 
 import web
 

@@ -1,5 +1,6 @@
-import web
 import os
+
+import web
 
 # https://stackoverflow.com/questions/58518448
 web.template.ALLOWED_AST_NODES.append('Constant')

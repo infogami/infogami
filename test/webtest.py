@@ -7,10 +7,11 @@ import unittest
 # adding current directory to path to make sure local copy of web module is used.
 sys.path.insert(0, '.')
 
-from infogami.utils import delegate
 import web
-import infogami
 from web.browser import Browser
+
+import infogami
+from infogami.utils import delegate
 
 web.config.debug = False
 infogami.config.site = 'infogami.org'

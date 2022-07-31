@@ -6,9 +6,10 @@ Change author of a book from a1 to a2.
 That book is not listed in a2.books.
 """
 
+from infogami.infobase import client
+
 from . import webtest
 from .test_infobase import InfobaseTestCase
-from infogami.infobase import client
 
 
 class Test(InfobaseTestCase):

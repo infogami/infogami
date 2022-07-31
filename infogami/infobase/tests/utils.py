@@ -1,7 +1,8 @@
-from infogami.infobase import dbstore, client, server
-
 import os
+
 import web
+
+from infogami.infobase import client, dbstore, server
 
 db_parameters = dict(
     host='postgres',

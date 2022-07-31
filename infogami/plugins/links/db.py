@@ -1,5 +1,5 @@
-from infogami.core import db
 from infogami import tdb
+from infogami.core import db
 
 
 def get_links_type():

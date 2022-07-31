@@ -2,10 +2,11 @@
 
 __version__ = "0.5dev"
 
-import web
 import sys
-from infogami import config
 
+import web
+
+from infogami import config
 
 usage = """
 Infogami
@@ -119,9 +120,10 @@ def shell(*args):
         # remove an argument that confuses ipython
         sys.argv.pop(sys.argv.index("--ipython"))
         from IPython.Shell import IPShellEmbed
+
         import infogami  # noqa: F401
-        from infogami.utils import delegate
         from infogami.core import db  # noqa: F401
+        from infogami.utils import delegate
         from infogami.utils.context import context as ctx  # noqa: F401
 
         delegate.fakeload()
@@ -170,9 +172,10 @@ def run(args=None):
 
 def load_config(config_file):
     import yaml
+
     from infogami.infobase import config as infobase_config
-    from infogami.infobase import server as infobase_server
     from infogami.infobase import lru
+    from infogami.infobase import server as infobase_server
 
     def storify(d):
         if isinstance(d, dict):

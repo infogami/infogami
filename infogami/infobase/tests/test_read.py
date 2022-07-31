@@ -1,8 +1,8 @@
 import datetime
 
+from infogami.infobase._dbstore.read import RecentChanges
 from infogami.infobase._dbstore.save import SaveImpl
 from infogami.infobase._dbstore.store import Store
-from infogami.infobase._dbstore.read import RecentChanges
 from infogami.infobase.tests import utils
 from infogami.infobase.tests.pytest_wildcard import wildcard  # noqa: F401
 

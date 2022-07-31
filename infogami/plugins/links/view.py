@@ -1,7 +1,8 @@
-from infogami.utils import view
-
 import re
+
 import web
+
+from infogami.utils import view
 
 
 def keyencode(key):

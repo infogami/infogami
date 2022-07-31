@@ -1,8 +1,8 @@
-import pytest
 import json
-import web
-
 from urllib.parse import urlencode
+
+import pytest
+import web
 
 from infogami.utils.delegate import app
 

@@ -6,12 +6,13 @@ import time
 
 import web
 
-from infogami.infobase import common, config, readquery, _json as simplejson
-from infogami.infobase._dbstore import store, sequence
+from infogami.infobase import _json as simplejson
+from infogami.infobase import common, config, readquery
+from infogami.infobase._dbstore import sequence, store
 from infogami.infobase._dbstore.indexer import Indexer
-from infogami.infobase._dbstore.save import SaveImpl, PropertyManager
-from infogami.infobase._dbstore.schema import Schema  # noqa: F401
 from infogami.infobase._dbstore.read import RecentChanges, get_bot_users
+from infogami.infobase._dbstore.save import PropertyManager, SaveImpl
+from infogami.infobase._dbstore.schema import Schema  # noqa: F401
 
 default_schema = None
 

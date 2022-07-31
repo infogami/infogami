@@ -2,11 +2,10 @@
 Useful datastructures.
 """
 
-from collections import defaultdict, OrderedDict
+from collections import OrderedDict, defaultdict
 from collections.abc import Mapping
 
 import web
-
 
 storage: dict[str, dict] = defaultdict(OrderedDict)
 

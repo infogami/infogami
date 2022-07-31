@@ -2,6 +2,7 @@
 Infobase.
 """
 import sys
+
 import web
 
 from infogami.infobase import infobase, server

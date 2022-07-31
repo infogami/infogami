@@ -23,7 +23,6 @@ Contact: yuri [at] freewisdom.org
 License: GPL 2 (http://www.gnu.org/copyleft/gpl.html) or BSD
 
 """
-
 import codecs
 import re
 import sys

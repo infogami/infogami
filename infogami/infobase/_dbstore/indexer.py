@@ -1,5 +1,6 @@
-from infogami.infobase import common
 import web
+
+from infogami.infobase import common
 
 
 class Indexer:

@@ -1,9 +1,10 @@
-import unittest
-import web
 import os
-import pytest
+import unittest
 
-from infogami.infobase import dbstore, infobase, common
+import pytest
+import web
+
+from infogami.infobase import common, dbstore, infobase
 
 
 class InfobaseTestCase(unittest.TestCase):

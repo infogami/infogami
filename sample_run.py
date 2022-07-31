@@ -19,7 +19,8 @@ infogami.config.admin_password = "admin123"
 
 def createsite():
     import web
-    from infogami.infobase import dbstore, infobase, config, server
+
+    from infogami.infobase import config, dbstore, infobase, server
 
     web.config.db_parameters = infogami.config.db_parameters
     web.config.db_printing = True

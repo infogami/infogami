@@ -4,17 +4,16 @@ import json
 import logging
 import re
 import time
-
-import requests
 from http.cookies import SimpleCookie
 from urllib.parse import urlencode, quote, unquote
 
+
+import requests
 import web
 
 from infogami import config
 from infogami.infobase import common, server
 from infogami.utils import stats
-
 
 logger = logging.getLogger("infobase.client")
 
@@ -120,7 +119,7 @@ class RemoteConnection(Connection):
         self.base_url = base_url
 
     def request(self, sitename, path, method='GET', data=None):
-        url = self.base_url + '/' + sitename + path
+        # url = self.base_url + '/' + sitename + path
         path = '/' + sitename + path
         if isinstance(data, dict):
             for k in list(data):
@@ -145,7 +144,7 @@ class RemoteConnection(Connection):
                 data = None
 
         stats.begin("infobase", path=path, method=method, data=data)
-        env = web.ctx.get('env') or {}
+        # env = web.ctx.get('env') or {}
 
         if self.auth_token:
             c = SimpleCookie()
@@ -652,7 +651,7 @@ class Store:
 
     def values(self, **kw):
         return list(self.itervalues(**kw))
-        rows = self.query(**kw)
+        # rows = self.query(**kw)
 
     def iteritems(self, **kw):
         rows = self.query(include_docs=True, **kw)

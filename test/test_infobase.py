@@ -1,9 +1,9 @@
-import unittest
-
-import pytest
 import json
+import unittest
 from urllib.parse import urlencode, urljoin
 from urllib.request import Request
+
+import pytest
 import web
 
 from infogami.infobase import server

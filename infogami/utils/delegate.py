@@ -4,10 +4,10 @@ import web
 
 from infogami import config
 from infogami.utils import features, i18n
-from infogami.utils.app import app, mode, page  # noqa: F401
 from infogami.utils.app import *  # noqa: F40 TODO (cclauss): Remove wildcard imports
+from infogami.utils.app import app, mode, page  # noqa: F401
 from infogami.utils.context import context
-from infogami.utils.view import render_site, public
+from infogami.utils.view import public, render_site
 
 
 def create_site():

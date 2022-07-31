@@ -11,7 +11,6 @@ import web
 from infogami.utils import storage, template
 from infogami.utils.markdown import markdown
 
-
 # macros loaded from disk
 diskmacros = template.DiskTemplateSource()
 # macros specified in the code

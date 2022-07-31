@@ -2,12 +2,12 @@ import os
 import re
 import shutil
 import string
-
 from urllib.parse import urlencode
+
 import web
 
 import infogami
-from infogami.core.diff import simple_diff, better_diff
+from infogami.core.diff import better_diff, simple_diff
 from infogami.infobase import client
 from infogami.utils import i18n, macro, stats, storage
 from infogami.utils.context import context

@@ -1,6 +1,7 @@
-from infogami.utils.delegate import app
 import pytest
 import web
+
+from infogami.utils.delegate import app
 
 b = app.browser()
 

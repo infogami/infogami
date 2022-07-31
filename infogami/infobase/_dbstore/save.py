@@ -5,7 +5,7 @@ from collections import defaultdict
 import simplejson
 import web
 
-from infogami.infobase import config, common
+from infogami.infobase import common, config
 from infogami.infobase._dbstore.indexer import Indexer
 from infogami.infobase._dbstore.schema import INDEXED_DATATYPES, Schema
 

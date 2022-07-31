@@ -1,4 +1,5 @@
 import re
+
 import web
 
 from infogami.plugins.links.view import keyencode

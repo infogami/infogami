@@ -1,5 +1,6 @@
-import web
 from difflib import SequenceMatcher
+
+import web
 
 
 def better_diff(a, b):

@@ -1,13 +1,12 @@
 """
 module for doing database upgrades when code changes.
 """
+import web
+
 import infogami
 from infogami import tdb
-
 from infogami.core import db
 from infogami.utils.context import context as ctx
-
-import web
 
 
 def get_db_version():

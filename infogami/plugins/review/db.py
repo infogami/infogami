@@ -1,5 +1,6 @@
-from infogami import core
 import web
+
+from infogami import core
 
 
 class SQL:

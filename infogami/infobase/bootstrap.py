@@ -238,9 +238,10 @@ def bootstrap(site, admin_password):
     query = make_query()
     site.save_many(query)
 
-    from infogami.infobase import config
     import random
     import string
+
+    from infogami.infobase import config
 
     def random_password(length=20):
         chars = string.ascii_letters + string.digits

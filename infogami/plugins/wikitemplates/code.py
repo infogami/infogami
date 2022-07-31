@@ -12,7 +12,7 @@ from infogami import config
 from infogami.core.db import ValidationException
 from infogami.infobase import client
 from infogami.plugins.wikitemplates import db, forms
-from infogami.utils import delegate, macro, template, storage
+from infogami.utils import delegate, macro, storage, template
 from infogami.utils.context import context
 from infogami.utils.template import render
 from infogami.utils.view import require_login

@@ -61,7 +61,7 @@ class AccountManager:
             self.store_account_info(username, email, enc_password, data)
             if _activate:
                 self.activate(username)
-        except:
+        except Exception:
             logger.error(
                 "Failed to store registration info. username=%s",
                 username,

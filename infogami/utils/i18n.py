@@ -117,7 +117,7 @@ class i18n_string:
         try:
             a = [x or "" for x in a]
             return str(self) % tuple(web.safestr(x) for x in a)
-        except:
+        except Exception:
             traceback.print_exc()
             print(
                 'failed to substitute (%s/%s) in language %s'
@@ -159,7 +159,7 @@ def i18n_loadhook():
         web.ctx.lang = (
             parse_query_string() or parse_lang_cookie() or parse_lang_header() or ''
         )
-    except:
+    except Exception:
         traceback.print_exc()
         web.ctx.lang = None
 
@@ -208,7 +208,7 @@ def load_strings(plugin_path):
             namespace, lang = parse_path(dirstrip(p, root))
             data = read_strings(p)
             strings._update_strings(namespace, lang, data)
-        except:
+        except Exception:
             traceback.print_exc()
             print("failed to load strings from", p, file=web.debug)
 

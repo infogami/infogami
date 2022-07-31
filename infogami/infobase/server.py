@@ -175,7 +175,7 @@ def input(*required, **defaults):
 def to_int(value, key):
     try:
         return int(value)
-    except:
+    except Exception:
         raise common.BadData(
             message=f"Bad integer value for {repr(key)}: {repr(value)}"
         )

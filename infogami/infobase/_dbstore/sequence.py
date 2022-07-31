@@ -33,7 +33,7 @@ class SequenceImpl:
             else:
                 value = 1
                 self.db.insert("seq", name=name, value=value)
-        except:
+        except Exception:
             tx.rollback()
             raise
         else:
@@ -50,7 +50,7 @@ class SequenceImpl:
                 self.db.update("seq", value=value, where="name=$name", vars=locals())
             else:
                 self.db.insert("seq", name=name, value=value)
-        except:
+        except Exception:
             tx.rollback()
             raise
         else:

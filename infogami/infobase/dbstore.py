@@ -593,7 +593,7 @@ class DBSiteStore(common.SiteStore):
         t = self.db.transaction()
         try:
             f()
-        except:
+        except Exception:
             t.rollback()
             raise
         else:
@@ -662,7 +662,7 @@ class DBStore(common.Store):
         try:
             self.db.select('thing', limit=1)
             return True
-        except:
+        except Exception:
             return False
 
     def create(self, sitename):
@@ -707,7 +707,7 @@ class MultiDBStore(DBStore):
             sitestore = MultiDBSiteStore(self.db, self.schema, sitename, site_id)
             sitestore.initialize()
             self.sitestores[sitename] = sitestore
-        except:
+        except Exception:
             t.rollback()
             raise
         else:

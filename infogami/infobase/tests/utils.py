@@ -50,7 +50,7 @@ def teardown_db(mod):
     mod.db.ctx.clear()
     try:
         del mod.db
-    except:
+    except Exception:
         pass
 
 
@@ -65,7 +65,7 @@ def teardown_conn(mod):
     teardown_db(mod)
     try:
         del mod.conn
-    except:
+    except Exception:
         pass
 
 
@@ -83,7 +83,7 @@ def teardown_server(mod):
 
     try:
         del mod.site
-    except:
+    except Exception:
         pass
 
 

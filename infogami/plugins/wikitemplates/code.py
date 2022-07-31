@@ -225,7 +225,7 @@ def movetemplates(prefix_pattern=None):
         if isinstance(t, LazyTemplate):
             try:
                 t.func()
-            except:
+            except Exception:
                 print('unable to load template', t.name, file=web.debug)
                 raise
 

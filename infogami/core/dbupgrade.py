@@ -35,7 +35,7 @@ def apply_upgrades():
         mark_upgrades()
         tdb.commit()
         print('upgrade successful.', file=web.debug)
-    except:
+    except Exception:
         print('upgrade failed', file=web.debug)
         import traceback
 
@@ -63,7 +63,7 @@ def hash_passwords():
     for u in users:
         try:
             preferences = u._c('preferences')
-        except:
+        except Exception:
             # setup preferences for broken accounts, so that they can use forgot password.
             preferences = db.new_version(
                 u, 'preferences', db.get_type(ctx.site, 'type/thing'), dict(password='')

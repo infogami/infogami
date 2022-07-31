@@ -72,7 +72,7 @@ class SaveImpl:
             self.db.multiple_insert('data', data, seqname=False)
 
             self._update_index(records)
-        except:
+        except Exception:
             dbtx.rollback()
             raise
         else:
@@ -126,7 +126,7 @@ class SaveImpl:
         tx = self.db.transaction()
         try:
             self.indexUtil.update_index(records)
-        except:
+        except Exception:
             tx.rollback()
             raise
         else:
@@ -193,7 +193,7 @@ class SaveImpl:
                 + " FOR UPDATE NOWAIT",
                 vars=locals(),
             )
-        except:
+        except Exception:
             raise common.Conflict(keys=keys, reason="Edit conflict detected.")
 
         records = {r.key: r for r in rows}

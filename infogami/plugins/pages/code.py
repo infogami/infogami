@@ -80,7 +80,7 @@ def _savepage(page, create_dependents=True, comment=None):
             return name
         try:
             return db.get_version(context.site, name)
-        except:
+        except Exception:
             if create and create_dependents:
                 thing = db.new_version(context.site, name, getthing("type/thing"), {})
                 thing.save()
@@ -187,7 +187,7 @@ def _pushpages(pages):
         for p in pages.values():
             print('saving', p.name)
             _savepage(p)
-    except:
+    except Exception:
         tdb.rollback()
         raise
     else:
@@ -293,7 +293,7 @@ def dataload(filename):
         for line in lines:
             data = storify(eval(line))
             _savepage(data)
-    except:
+    except Exception:
         tdb.rollback()
         raise
     else:

@@ -72,7 +72,7 @@ class Infobase:
         for listener in self.event_listeners:
             try:
                 listener(event)
-            except:
+            except Exception:
                 common.record_exception()
                 pass
 
@@ -309,7 +309,7 @@ class Site:
             for t in triggers:
                 try:
                     t(self, old, new)
-                except:
+                except Exception:
                     print('Failed to execute trigger', t, file=web.debug)
                     import traceback
 

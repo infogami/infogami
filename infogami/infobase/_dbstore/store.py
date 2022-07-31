@@ -112,7 +112,7 @@ class Store:
 
             doc['_key'] = key
             doc['_rev'] = str(id)
-        except:
+        except Exception:
             tx.rollback()
             raise
         else:
@@ -139,7 +139,7 @@ class Store:
                 if rev is not None and str(row.id) != str(rev):
                     raise common.Conflict(key=key, message="Document update conflict")
                 self.delete_row(row.id)
-        except:
+        except Exception:
             tx.rollback()
             raise
         else:

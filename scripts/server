@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 """Script to run infogami server.
 
 USAGE:
@@ -12,16 +12,19 @@ USAGE:
     $ ./scripts/server infogami.yml startserver fastcgi 8080
 """
 import sys
-import _init_path
+
+import _init_path  # noqa: F401  Imported for its side effect of setting PYTHONPATH
 
 import infogami
 
+
 def main(args):
-    if len(args) < 1 or sys.argv[0] in ['-h', '--help']:
-        print >> sys.stderr, "USAGE: %s configfile [subcommand] [arguments]" % (sys.argv[0])
+    if len(args) < 1 or sys.argv[0] in ("-h", "--help"):
+        print(f"USAGE: {sys.argv[0]} configfile [subcommand] [arguments]", file=sys.stderr)
         sys.exit(1)
 
     infogami.main(*args)
+
 
 if __name__ == "__main__":
     main(sys.argv[1:])

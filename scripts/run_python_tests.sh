@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Used for GitHub actions
+# Used for GitHub Actions
 set -e
 
 # web.py needs to find the database on a host named postgres

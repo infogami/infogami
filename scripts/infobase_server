@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#!/usr/bin/env python
 """Script to run infobase.
 
 USAGE:
@@ -12,12 +12,15 @@ USAGE:
     $ python ./script/infobase_server infobase.yaml fastcgi 7070
 """
 import sys
-import _init_path
+
+import _init_path  # noqa: F401  Imported for its side effect of setting PYTHONPATH
+
 from infogami.infobase import server
 
+
 def main(args):
-    if len(args) < 1 or args[0] in ['-h', '--help']:
-        print >> sys.stderr, "USAGE: %s configfile [port]" % (sys.argv[0])
+    if len(args) < 1 or args[0] in ('-h', '--help'):
+        print(f"USAGE: {sys.argv[0]} configfile [port]", file=sys.stderr)
         sys.exit(1)
         
     server.start(*args)

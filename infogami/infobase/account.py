@@ -247,7 +247,7 @@ class AccountManager:
     def generate_hash(self, raw_password):
         return self._generate_salted_hash(self.secret_key, raw_password)
 
-    # Lagacy
+    # Legacy
 
     def find_user_by_email(self, email):
         """Returns key of the user with given email."""

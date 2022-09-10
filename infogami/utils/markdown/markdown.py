@@ -643,7 +643,7 @@ expression and needs support the following methods:
                                 a NanoDom node (as a part of the provided
                                 doc) or None
 
-All of python markdown's built-in patterns subclass from Patter,
+All of python markdown's built-in patterns subclass from Pattern,
 but you can add additional patterns that don't.
 
 Also note that all the regular expressions used by inline must

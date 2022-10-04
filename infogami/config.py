@@ -2,8 +2,6 @@
 Infogami configuration.
 """
 
-from typing import Optional
-
 
 def get(name, default=None):
     return globals().get(name, default)
@@ -15,7 +13,7 @@ cache_templates = True
 db_printing = False
 db_kind = 'SQL'
 
-db_parameters: Optional[dict[str, str]] = None
+db_parameters: dict[str, str] | None = None
 infobase_host = None
 site = "infogami.org"
 

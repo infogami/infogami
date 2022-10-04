@@ -101,9 +101,8 @@ class infobase_request:
 
         query = web.data()
         h = get_custom_headers()
-        comment = h.get('comment')
-        action = h.get('action')
-        data = dict(query=query, comment=comment, action=action)
+        data = {key: h.get(key) for key in ('action', 'comment', 'data')}
+        data['query'] = query
 
         conn = self.create_connection()
 

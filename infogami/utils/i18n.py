@@ -139,7 +139,7 @@ def i18n_loadhook():
 
         # take just the language part. ignore other details.
         # for example `en-gb;q=0.8` will be treated just as `en`.
-        langs = [t[:2] for t in tokens]
+        langs = [t[:2] for t in tokens if not t.startswith('*')]
         return langs and langs[0]
 
     def parse_lang_cookie():
